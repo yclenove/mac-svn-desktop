@@ -123,6 +123,33 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.checkoutDepths, [.files, .files])
     }
 
+    func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.listErrors = [.authentication]
+        backend.listResult = [
+            RemoteEntry(
+                name: "trunk",
+                path: "trunk",
+                kind: .directory,
+                size: nil,
+                revision: Revision(1),
+                author: "a",
+                date: nil
+            )
+        ]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let entries = try await service.list(url: "file:///repo", depth: .immediates, auth: nil)
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(entries.map(\.name), ["trunk"])
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["list", "list"])
+        XCTAssertEqual(backend.listCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.listDepths, [.immediates, .immediates])
+    }
+
     func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -247,6 +274,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCommitCredentials: [Credential?] = []
     private var recordedCheckoutCredentials: [Credential?] = []
     private var recordedCheckoutDepths: [SvnDepth] = []
+    private var recordedListCredentials: [Credential?] = []
+    private var recordedListDepths: [SvnDepth] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -296,15 +325,33 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCheckoutDepths
     }
 
+    var listCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedListCredentials
+    }
+
+    var listDepths: [SvnDepth] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedListDepths
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
+    var listResult: [RemoteEntry] = []
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
     var updateErrors: [SvnError] = []
     var checkoutErrors: [SvnError] = []
+    var listErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -372,6 +419,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return logResult
     }
 
+    func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
+        let error = recordList(depth: depth, auth: auth)
+        if let error {
+            throw error
+        }
+        return listResult
+    }
+
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
         let error = recordCheckout(depth: depth, auth: auth)
         if let error {
@@ -409,6 +464,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCheckoutDepths.append(depth)
         recordedCheckoutCredentials.append(auth)
         let error = checkoutErrors.isEmpty ? nil : checkoutErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordList(depth: SvnDepth, auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "list"))
+        recordedListDepths.append(depth)
+        recordedListCredentials.append(auth)
+        let error = listErrors.isEmpty ? nil : listErrors.removeFirst()
         callsLock.unlock()
         return error
     }

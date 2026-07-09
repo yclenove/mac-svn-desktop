@@ -109,6 +109,30 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testListPassesDepthAuthStdinAndParsesEntries() async throws {
+        let xml = """
+        <lists><list path="file:///repo/trunk"><entry kind="file"><name>README.txt</name><size>5</size><commit revision="2"><author>a</author></commit></entry></list></lists>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let entries = try await backend.list(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(entries.map(\.name), ["README.txt"])
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "list", "--xml", "--non-interactive",
+            "--depth", "immediates",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testNonZeroExitMapsSvnError() async {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E170001: auth failed", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

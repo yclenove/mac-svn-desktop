@@ -44,6 +44,19 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
     }
 
+    func testListRemoteTrunkReturnsImmediateChildrenMetadata() async throws {
+        let fixture = try makeFixture()
+
+        let entries = try await fixture.backend.list(url: fixture.trunkURL, depth: .immediates, auth: nil)
+        let names = Set(entries.map(\.name))
+
+        XCTAssertTrue(names.contains("README.txt"))
+        XCTAssertTrue(names.contains("src"))
+        XCTAssertEqual(entries.first(where: { $0.name == "src" })?.kind, .directory)
+        XCTAssertEqual(entries.first(where: { $0.name == "README.txt" })?.kind, .file)
+        XCTAssertNotNil(entries.first(where: { $0.name == "README.txt" })?.revision)
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

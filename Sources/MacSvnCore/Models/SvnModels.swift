@@ -183,6 +183,51 @@ public enum ChangedPathAction: String, Equatable, Sendable {
     }
 }
 
+public enum RemoteEntryKind: Equatable, Sendable {
+    case file
+    case directory
+    case unknown(String?)
+
+    public init(rawSvnKind: String?) {
+        switch rawSvnKind {
+        case "file":
+            self = .file
+        case "dir":
+            self = .directory
+        default:
+            self = .unknown(rawSvnKind)
+        }
+    }
+}
+
+public struct RemoteEntry: Equatable, Sendable {
+    public let name: String
+    public let path: String
+    public let kind: RemoteEntryKind
+    public let size: Int?
+    public let revision: Revision?
+    public let author: String?
+    public let date: Date?
+
+    public init(
+        name: String,
+        path: String,
+        kind: RemoteEntryKind,
+        size: Int?,
+        revision: Revision?,
+        author: String?,
+        date: Date?
+    ) {
+        self.name = name
+        self.path = path
+        self.kind = kind
+        self.size = size
+        self.revision = revision
+        self.author = author
+        self.date = date
+    }
+}
+
 public struct WorkingCopyRecord: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String

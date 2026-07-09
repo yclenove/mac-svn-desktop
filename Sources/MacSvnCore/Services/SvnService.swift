@@ -31,6 +31,13 @@ public actor SvnService {
         try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
     }
 
+    public func list(url: String, depth: SvnDepth, auth: Credential? = nil) async throws -> [RemoteEntry] {
+        let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.list(url: url, depth: depth, auth: auth)
+        }
+    }
+
     public func info(wc: URL, target: String) async throws -> SvnInfo {
         try await backend.info(wc: wc, target: target)
     }
