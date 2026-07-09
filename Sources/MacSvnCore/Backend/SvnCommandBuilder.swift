@@ -120,10 +120,14 @@ public enum SvnCommandBuilder {
     }
 
     public static func propset(name: String, value: String, target: String) -> SvnCommand {
-        SvnCommand(arguments: [
-            "propset", "--encoding", "UTF-8", "--non-interactive",
-            name, value, target
-        ])
+        var arguments = ["propset"]
+
+        if usesUTF8Encoding(forPropertyNamed: name) {
+            arguments += ["--encoding", "UTF-8"]
+        }
+
+        arguments += ["--non-interactive", name, value, target]
+        return SvnCommand(arguments: arguments)
     }
 
     public static func propdel(name: String, target: String) -> SvnCommand {
@@ -200,5 +204,18 @@ public enum SvnCommandBuilder {
 
     public static func info(target: String) -> SvnCommand {
         SvnCommand(arguments: ["info", "--xml", "--non-interactive", target])
+    }
+
+    private static func usesUTF8Encoding(forPropertyNamed name: String) -> Bool {
+        let textProperties: Set<String> = [
+            "svn:eol-style",
+            "svn:externals",
+            "svn:global-ignores",
+            "svn:ignore",
+            "svn:keywords",
+            "svn:mergeinfo",
+            "svn:mime-type"
+        ]
+        return textProperties.contains(name)
     }
 }
