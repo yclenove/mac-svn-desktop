@@ -234,7 +234,7 @@ public struct MergeSummary: Equatable, Sendable {
     }
 }
 
-public enum ConflictKind: Equatable, Sendable {
+public enum ConflictKind: Hashable, Sendable {
     case text
     case tree
     case property
