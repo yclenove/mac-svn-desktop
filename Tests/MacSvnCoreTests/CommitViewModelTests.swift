@@ -134,6 +134,69 @@ final class CommitViewModelTests: XCTestCase {
         XCTAssertEqual(skipFlags, [false, true])
     }
 
+    @MainActor
+    func testGenerateAICommitMessageFillsMessageWithoutCommitting() async {
+        let draft = AICommitMessageDraft(
+            message: "feat: 增加登录校验",
+            providerID: UUID(),
+            sourceFileCount: 1,
+            redactionMatches: [],
+            promptCount: 1,
+            usedMapReduce: false
+        )
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let generator = FakeAICommitMessageGenerator(result: .success(draft))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            aiCommitMessageGenerator: generator
+        )
+        viewModel.setSelected(false, for: "deleted.swift")
+
+        await viewModel.generateAICommitMessage(format: .conventionalChinese)
+        let calls = await generator.recordedCalls()
+        let commitCalls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.message, "feat: 增加登录校验")
+        XCTAssertEqual(viewModel.aiCommitMessageDraft, draft)
+        XCTAssertEqual(viewModel.aiCommitMessageState, .generated(draft))
+        XCTAssertEqual(calls.map(\.paths), [["modified.swift", "added.swift", "replaced.swift"]])
+        XCTAssertTrue(commitCalls.isEmpty)
+    }
+
+    @MainActor
+    func testGenerateAICommitMessageStoresUnavailableAndSelectionErrors() async {
+        let noGeneratorViewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([]))
+        )
+
+        await noGeneratorViewModel.generateAICommitMessage()
+
+        XCTAssertEqual(noGeneratorViewModel.aiCommitMessageState, .error("aiCommitMessageGeneratorUnavailable"))
+
+        let generator = FakeAICommitMessageGenerator(result: .failure(AICommitMessageError.emptySelection))
+        let emptySelectionViewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            aiCommitMessageGenerator: generator
+        )
+        emptySelectionViewModel.selectedPaths.removeAll()
+
+        await emptySelectionViewModel.generateAICommitMessage()
+
+        XCTAssertEqual(
+            emptySelectionViewModel.aiCommitMessageState,
+            .error(String(describing: AICommitMessageError.emptySelection))
+        )
+    }
+
     private func sampleStatuses() -> [FileStatus] {
         [
             FileStatus(path: "modified.swift", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
@@ -209,6 +272,41 @@ private actor FakeStatusProvider: StatusProviding {
 
     func status(wc: URL) async throws -> [FileStatus] {
         requests.append(wc)
+        return try result.get()
+    }
+}
+
+private struct AICommitMessageCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let format: AICommitMessageFormat
+    let privacySettings: AIPrivacySettings
+}
+
+private actor FakeAICommitMessageGenerator: AICommitMessageGenerating {
+    private let result: Result<AICommitMessageDraft, Error>
+    private var calls: [AICommitMessageCall] = []
+
+    init(result: Result<AICommitMessageDraft, Error>) {
+        self.result = result
+    }
+
+    func recordedCalls() -> [AICommitMessageCall] {
+        calls
+    }
+
+    func generateCommitMessage(
+        wc: URL,
+        paths: [String],
+        format: AICommitMessageFormat,
+        privacySettings: AIPrivacySettings
+    ) async throws -> AICommitMessageDraft {
+        calls.append(AICommitMessageCall(
+            wc: wc,
+            paths: paths,
+            format: format,
+            privacySettings: privacySettings
+        ))
         return try result.get()
     }
 }

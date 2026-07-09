@@ -19,6 +19,13 @@ public enum CommitViewState: Equatable, Sendable {
     case error(String)
 }
 
+public enum AICommitMessageViewState: Equatable, Sendable {
+    case idle
+    case generating
+    case generated(AICommitMessageDraft)
+    case error(String)
+}
+
 public enum CommitSelectionPolicy {
     public static func candidates(from statuses: [FileStatus]) -> [FileStatus] {
         statuses.filter { status in
@@ -48,9 +55,12 @@ public final class CommitViewModel {
     private let workingCopy: URL
     private let commitProvider: any CommitProviding
     private let statusProvider: any StatusProviding
+    private let aiCommitMessageGenerator: (any AICommitMessageGenerating)?
 
     public private(set) var state: CommitViewState = .idle
+    public private(set) var aiCommitMessageState: AICommitMessageViewState = .idle
     public private(set) var committedRevision: Revision?
+    public private(set) var aiCommitMessageDraft: AICommitMessageDraft?
     public private(set) var refreshedStatuses: [FileStatus] = []
     public private(set) var guardIssues: [CommitGuardIssue] = []
     public let candidateStatuses: [FileStatus]
@@ -61,11 +71,13 @@ public final class CommitViewModel {
         workingCopy: URL,
         statuses: [FileStatus],
         commitProvider: any CommitProviding,
-        statusProvider: any StatusProviding
+        statusProvider: any StatusProviding,
+        aiCommitMessageGenerator: (any AICommitMessageGenerating)? = nil
     ) {
         self.workingCopy = workingCopy
         self.commitProvider = commitProvider
         self.statusProvider = statusProvider
+        self.aiCommitMessageGenerator = aiCommitMessageGenerator
         self.candidateStatuses = CommitSelectionPolicy.candidates(from: statuses)
         self.selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
     }
@@ -85,6 +97,34 @@ public final class CommitViewModel {
             selectedPaths.insert(path)
         } else {
             selectedPaths.remove(path)
+        }
+    }
+
+    public func generateAICommitMessage(
+        format: AICommitMessageFormat = .conventionalChinese,
+        privacySettings: AIPrivacySettings = AIPrivacySettings()
+    ) async {
+        guard let aiCommitMessageGenerator else {
+            aiCommitMessageDraft = nil
+            aiCommitMessageState = .error("aiCommitMessageGeneratorUnavailable")
+            return
+        }
+
+        aiCommitMessageState = .generating
+
+        do {
+            let draft = try await aiCommitMessageGenerator.generateCommitMessage(
+                wc: workingCopy,
+                paths: orderedSelectedPaths,
+                format: format,
+                privacySettings: privacySettings
+            )
+            message = draft.message
+            aiCommitMessageDraft = draft
+            aiCommitMessageState = .generated(draft)
+        } catch {
+            aiCommitMessageDraft = nil
+            aiCommitMessageState = .error(String(describing: error))
         }
     }
 

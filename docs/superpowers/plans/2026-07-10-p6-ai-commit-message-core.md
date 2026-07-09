@@ -290,7 +290,7 @@ swift test --filter AICommitMessageGeneratorTests
 
 预期：新增 generator 测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift \
@@ -307,7 +307,7 @@ git commit -m "feat: add P6 AI commit message generator core"
 - 修改：`Sources/MacSvnCore/ViewModels/CommitViewModel.swift`
 - 修改测试：`Tests/MacSvnCoreTests/CommitViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `CommitViewModelTests` 新增：
 
@@ -406,7 +406,7 @@ private actor FakeAICommitMessageGenerator: AICommitMessageGenerating {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter CommitViewModelTests
@@ -414,7 +414,7 @@ swift test --filter CommitViewModelTests
 
 预期：编译失败，提示 `CommitViewModel` 初始化参数、`generateAICommitMessage` 或 AI 状态属性不存在。
 
-- [ ] **步骤 3：实现最少 ViewModel 接入**
+- [x] **步骤 3：实现最少 ViewModel 接入**
 
 在 `CommitViewModel.swift` 增加：
 
@@ -449,7 +449,7 @@ public func generateAICommitMessage(
 - 失败时清空 `aiCommitMessageDraft`，状态 `.error(String(describing: error))`；
 - 不调用 `commitProvider.commit`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter "AICommitMessageGeneratorTests|CommitViewModelTests"
