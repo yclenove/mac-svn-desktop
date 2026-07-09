@@ -649,7 +649,7 @@ git commit -m "feat: add P6 AI provider connectivity tester"
 **文件：**
 - 修改：`docs/superpowers/plans/2026-07-10-p6-ai-llm-keychain-clients-core.md`
 
-- [ ] **步骤 1：运行 P6 LLM Keychain 目标集合**
+- [x] **步骤 1：运行 P6 LLM Keychain 目标集合**
 
 ```bash
 swift test --filter "AIKeychainStoreTests|LLMHTTPClientTests|AIProviderConnectivityTesterTests|AIProviderSettingsViewModelTests|AICommitMessageGeneratorTests|AIPreCommitReviewerTests|AIConflictAssistantTests|AIReleaseNotesGeneratorTests|AIBlameEvolutionExplainerTests"
@@ -657,7 +657,7 @@ swift test --filter "AIKeychainStoreTests|LLMHTTPClientTests|AIProviderConnectiv
 
 预期：目标集合 PASS。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -665,7 +665,7 @@ swift test
 
 预期：全部 XCTest PASS。
 
-- [ ] **步骤 3：运行空白检查**
+- [x] **步骤 3：运行空白检查**
 
 ```bash
 git diff --check
@@ -673,7 +673,7 @@ git diff --check
 
 预期：无输出、退出码 0。
 
-- [ ] **步骤 4：更新计划勾选并提交验证记录**
+- [x] **步骤 4：更新计划勾选并提交验证记录**
 
 将本计划完成步骤勾选为 `[x]`，提交：
 
