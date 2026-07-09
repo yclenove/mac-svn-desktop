@@ -30,7 +30,7 @@
 - 创建：`Sources/MacSvnCore/Services/MacSvnDeepLinkParser.swift`
 - 创建测试：`Tests/MacSvnCoreTests/MacSvnAutomationParserTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `MacSvnAutomationParserTests`：
 
@@ -71,7 +71,7 @@ final class MacSvnAutomationParserTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter MacSvnAutomationParserTests
@@ -79,7 +79,7 @@ swift test --filter MacSvnAutomationParserTests
 
 预期：编译失败，提示 `MacSvnDeepLinkParser` 或相关模型不存在。
 
-- [ ] **步骤 3：实现深链模型与解析器**
+- [x] **步骤 3：实现深链模型与解析器**
 
 在 `AutomationModels.swift` 增加：
 
@@ -187,7 +187,7 @@ public struct MacSvnDeepLinkParser: Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter MacSvnAutomationParserTests
@@ -195,7 +195,7 @@ swift test --filter MacSvnAutomationParserTests
 
 预期：深链相关测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AutomationModels.swift Sources/MacSvnCore/Services/MacSvnDeepLinkParser.swift Tests/MacSvnCoreTests/MacSvnAutomationParserTests.swift docs/superpowers/plans/2026-07-10-p5-url-scheme-cli-core.md
