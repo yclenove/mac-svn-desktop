@@ -93,6 +93,30 @@ public struct SvnCliBackend: SvnBackend {
         return try ListXMLParser.parse(result.stdout)
     }
 
+    public func cat(
+        url: String,
+        revision: Revision? = nil,
+        sizeLimit: Int,
+        auth: Credential? = nil
+    ) async throws -> Data {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.cat(
+                url: normalizedRemoteURL(url),
+                revision: revision,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+
+        guard result.stdout.count <= sizeLimit else {
+            throw SvnError.fileTooLarge(limit: sizeLimit, actual: result.stdout.count)
+        }
+
+        return result.stdout
+    }
+
     public func checkout(
         url: String,
         to destination: URL,
@@ -131,5 +155,9 @@ public struct SvnCliBackend: SvnBackend {
         }
 
         return result
+    }
+
+    private func normalizedRemoteURL(_ value: String) -> String {
+        URL(string: value)?.absoluteString ?? value
     }
 }

@@ -150,6 +150,23 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.listDepths, [.immediates, .immediates])
     }
 
+    func testCatPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.catErrors = [.authentication]
+        backend.catResult = Data("hello".utf8)
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let data = try await service.cat(url: "file:///repo/trunk/README.txt", revision: nil, sizeLimit: 5, auth: nil)
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(String(data: data, encoding: .utf8), "hello")
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk/README.txt")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["cat", "cat"])
+        XCTAssertEqual(backend.catCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.catSizeLimits, [5, 5])
+    }
+
     func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -276,6 +293,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCheckoutDepths: [SvnDepth] = []
     private var recordedListCredentials: [Credential?] = []
     private var recordedListDepths: [SvnDepth] = []
+    private var recordedCatCredentials: [Credential?] = []
+    private var recordedCatSizeLimits: [Int] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -341,17 +360,35 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedListDepths
     }
 
+    var catCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCatCredentials
+    }
+
+    var catSizeLimits: [Int] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCatSizeLimits
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var listResult: [RemoteEntry] = []
+    var catResult = Data()
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
     var updateErrors: [SvnError] = []
     var checkoutErrors: [SvnError] = []
     var listErrors: [SvnError] = []
+    var catErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -427,6 +464,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return listResult
     }
 
+    func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data {
+        let error = recordCat(sizeLimit: sizeLimit, auth: auth)
+        if let error {
+            throw error
+        }
+        return catResult
+    }
+
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
         let error = recordCheckout(depth: depth, auth: auth)
         if let error {
@@ -474,6 +519,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedListDepths.append(depth)
         recordedListCredentials.append(auth)
         let error = listErrors.isEmpty ? nil : listErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordCat(sizeLimit: Int, auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "cat"))
+        recordedCatSizeLimits.append(sizeLimit)
+        recordedCatCredentials.append(auth)
+        let error = catErrors.isEmpty ? nil : catErrors.removeFirst()
         callsLock.unlock()
         return error
     }

@@ -93,6 +93,22 @@ public enum SvnCommandBuilder {
         ] + authArguments + [url])
     }
 
+    public static func cat(
+        url: String,
+        revision: Revision? = nil,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["cat", "--non-interactive"]
+
+        if let revision {
+            arguments += ["-r", revision.description]
+        }
+
+        arguments += authArguments
+        arguments.append(url)
+        return SvnCommand(arguments: arguments)
+    }
+
     public static func checkout(
         url: String,
         to destination: String,

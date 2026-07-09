@@ -12,6 +12,7 @@ public protocol SvnBackend: Sendable {
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws
     func info(wc: URL, target: String) async throws -> SvnInfo
 }

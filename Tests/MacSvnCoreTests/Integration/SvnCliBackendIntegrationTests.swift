@@ -57,6 +57,19 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertNotNil(entries.first(where: { $0.name == "README.txt" })?.revision)
     }
 
+    func testCatRemoteFileReturnsUtf8Contents() async throws {
+        let fixture = try makeFixture()
+
+        let data = try await fixture.backend.cat(
+            url: "\(fixture.trunkURL)/中文文件.txt",
+            revision: nil,
+            sizeLimit: 5 * 1024 * 1024,
+            auth: nil
+        )
+
+        XCTAssertEqual(String(data: data, encoding: .utf8), "中文内容\n")
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

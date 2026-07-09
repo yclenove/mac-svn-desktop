@@ -97,6 +97,21 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testCatUsesRevisionAuthenticationAndUrl() {
+        let command = SvnCommandBuilder.cat(
+            url: "file:///repo/trunk/README.txt",
+            revision: Revision(7),
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "cat", "--non-interactive",
+            "-r", "7",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk/README.txt"
+        ])
+    }
+
     func testCheckoutUsesDepthAuthenticationUrlAndDestination() {
         let command = SvnCommandBuilder.checkout(
             url: "file:///repo/trunk",

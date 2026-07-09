@@ -133,6 +133,42 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testCatPassesRevisionAuthStdinAndReturnsData() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("hello\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let data = try await backend.cat(
+            url: "file:///repo/trunk/README.txt",
+            revision: Revision(7),
+            sizeLimit: 10,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(String(data: data, encoding: .utf8), "hello\n")
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "cat", "--non-interactive",
+            "-r", "7",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk/README.txt"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testCatThrowsFileTooLargeWhenOutputExceedsLimit() async {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("abcdef".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        do {
+            _ = try await backend.cat(url: "file:///repo/trunk/big.txt", revision: nil, sizeLimit: 5, auth: nil)
+            XCTFail("Expected fileTooLarge")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .fileTooLarge(limit: 5, actual: 6))
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+    }
+
     func testNonZeroExitMapsSvnError() async {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E170001: auth failed", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

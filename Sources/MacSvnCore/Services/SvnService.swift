@@ -38,6 +38,18 @@ public actor SvnService {
         }
     }
 
+    public func cat(
+        url: String,
+        revision: Revision? = nil,
+        sizeLimit: Int,
+        auth: Credential? = nil
+    ) async throws -> Data {
+        let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.cat(url: url, revision: revision, sizeLimit: sizeLimit, auth: auth)
+        }
+    }
+
     public func info(wc: URL, target: String) async throws -> SvnInfo {
         try await backend.info(wc: wc, target: target)
     }
