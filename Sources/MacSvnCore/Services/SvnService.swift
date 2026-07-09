@@ -25,6 +25,10 @@ public actor SvnService {
         try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
     }
 
+    public func info(wc: URL, target: String) async throws -> SvnInfo {
+        try await backend.info(wc: wc, target: target)
+    }
+
     public func update(wc: URL, paths: [String] = [], revision: Revision? = nil) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
             try await backend.update(wc: wc, paths: paths, revision: revision)

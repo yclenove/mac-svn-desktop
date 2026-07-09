@@ -27,6 +27,21 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testInfoRunsInWorkingCopyAndParsesXml() async throws {
+        let xml = """
+        <info><entry path="." revision="3" kind="dir"><url>file:///repo/trunk</url><repository><root>file:///repo</root></repository></entry></info>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let info = try await backend.info(wc: wc, target: ".")
+
+        XCTAssertEqual(info, SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(3), kind: "dir"))
+        XCTAssertEqual(runner.calls.single?.arguments, ["info", "--xml", "--non-interactive", "."])
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
     func testCommitPassesAuthStdinAndParsesRevision() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 42.\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

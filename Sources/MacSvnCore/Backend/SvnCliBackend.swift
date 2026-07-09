@@ -67,6 +67,11 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.checkout(url: url, to: destination.path), currentDirectory: nil, stdin: nil)
     }
 
+    public func info(wc: URL, target: String) async throws -> SvnInfo {
+        let result = try await run(SvnCommandBuilder.info(target: target), currentDirectory: wc.path, stdin: nil)
+        return try InfoXMLParser.parse(result.stdout)
+    }
+
     private func run(_ command: SvnCommand, currentDirectory: String?, stdin: Data?) async throws -> ProcessResult {
         let result = try await runner.run(
             executable: svnExecutable,

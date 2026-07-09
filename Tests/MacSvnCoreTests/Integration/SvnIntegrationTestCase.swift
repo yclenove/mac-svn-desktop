@@ -112,6 +112,6 @@ private enum SvnIntegrationToolError: Error {
 
 private extension URL {
     var fileURLString: String {
-        absoluteString
+        absoluteString.hasSuffix("/") ? String(absoluteString.dropLast()) : absoluteString
     }
 }

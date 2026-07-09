@@ -75,4 +75,8 @@ public enum SvnCommandBuilder {
     public static func checkout(url: String, to destination: String) -> SvnCommand {
         SvnCommand(arguments: ["checkout", "--non-interactive", url, destination])
     }
+
+    public static func info(target: String) -> SvnCommand {
+        SvnCommand(arguments: ["info", "--xml", "--non-interactive", target])
+    }
 }

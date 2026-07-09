@@ -12,17 +12,20 @@ final class SvnServiceTests: XCTestCase {
         backend.logResult = [
             LogEntry(revision: Revision(3), author: "a", date: nil, message: "m", changedPaths: [])
         ]
+        backend.infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(3), kind: "dir")
         let service = SvnService(backend: backend)
         let wc = URL(fileURLWithPath: "/tmp/wc")
 
         let statuses = try await service.status(wc: wc)
         let diff = try await service.diff(wc: wc, target: "a.txt", r1: nil, r2: nil)
         let log = try await service.log(wc: wc, target: "trunk", from: Revision(9), batch: 10, verbose: true)
+        let info = try await service.info(wc: wc, target: ".")
 
         XCTAssertEqual(statuses, backend.statusResult)
         XCTAssertEqual(diff, "@@ diff")
         XCTAssertEqual(log, backend.logResult)
-        XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log"])
+        XCTAssertEqual(info, backend.infoResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log", "info"])
     }
 
     func testCommitRejectsEmptyMessage() async {
@@ -167,6 +170,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
+    var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var commitResult = Revision(1)
     var updateResult = UpdateSummary()
     var onUpdate: ((URL) async -> Void)?
@@ -226,6 +230,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     func checkout(url: String, to destination: URL) async throws {
         record("checkout")
+    }
+
+    func info(wc: URL, target: String) async throws -> SvnInfo {
+        record("info")
+        return infoResult
     }
 }
 

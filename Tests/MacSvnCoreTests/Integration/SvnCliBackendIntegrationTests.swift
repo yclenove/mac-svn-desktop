@@ -12,6 +12,18 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statuses, [])
     }
 
+    func testInfoReadsWorkingCopyUrlAndRevision() async throws {
+        let fixture = try makeFixture()
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let info = try await fixture.backend.info(wc: fixture.workingCopy, target: ".")
+
+        XCTAssertEqual(info.url, fixture.trunkURL)
+        XCTAssertEqual(info.repositoryRoot, fixture.repositoryURL)
+        XCTAssertEqual(info.revision, Revision(1))
+        XCTAssertEqual(info.kind, "dir")
+    }
+
     func testStatusSeesModifiedAddedAndDeletedFiles() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

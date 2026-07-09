@@ -207,3 +207,19 @@ public struct WorkspaceListFile: Codable, Equatable, Sendable {
         self.workspaces = workspaces
     }
 }
+
+public struct SvnInfo: Equatable, Sendable {
+    public let path: String
+    public let url: String
+    public let repositoryRoot: String?
+    public let revision: Revision?
+    public let kind: String?
+
+    public init(path: String, url: String, repositoryRoot: String?, revision: Revision?, kind: String?) {
+        self.path = path
+        self.url = url
+        self.repositoryRoot = repositoryRoot
+        self.revision = revision
+        self.kind = kind
+    }
+}
