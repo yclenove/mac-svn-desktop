@@ -66,6 +66,29 @@ public enum AIProviderError: Error, Equatable, Sendable {
     case providerNotFound(UUID)
 }
 
+public struct AIProviderConnectionTestResult: Codable, Equatable, Sendable {
+    public let providerID: UUID
+    public let latencyMilliseconds: Int
+    public let promptTokens: Int
+    public let completionTokens: Int
+
+    public init(
+        providerID: UUID,
+        latencyMilliseconds: Int,
+        promptTokens: Int,
+        completionTokens: Int
+    ) {
+        self.providerID = providerID
+        self.latencyMilliseconds = latencyMilliseconds
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+    }
+}
+
+public enum AIProviderConnectivityError: Error, Equatable, Sendable {
+    case pingFailed(String)
+}
+
 public struct AIRedactionMatch: Codable, Equatable, Sendable {
     public let ruleID: String
     public let matchCount: Int

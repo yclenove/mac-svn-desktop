@@ -218,7 +218,7 @@ swift test --filter AIProviderStoreTests
 - 创建：`Sources/MacSvnCore/ViewModels/AIProviderSettingsViewModel.swift`
 - 测试：`Tests/MacSvnCoreTests/AIProviderSettingsViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIProviderSettingsViewModelTests` 新增：
 
@@ -274,7 +274,7 @@ func testConnectionFailureStoresErrorAndClearsPreviousResult() async {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIProviderSettingsViewModelTests
@@ -282,7 +282,7 @@ swift test --filter AIProviderSettingsViewModelTests
 
 预期：编译失败，提示 `AIProviderSettingsViewModel` / `AIProviderConnectionTestResult` / `AIProviderConnectivityTesting` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 在 `AIModels.swift` 增加：
 
@@ -325,7 +325,7 @@ public enum AIProviderSettingsState: Equatable, Sendable {
 
 扩展 `AIProviderStore: AIProviderManaging`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter "AIProviderStoreTests|AIProviderSettingsViewModelTests"
