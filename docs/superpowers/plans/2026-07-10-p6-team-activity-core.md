@@ -341,7 +341,7 @@ git commit -m "feat: add P6 team activity aggregator core"
 - 创建：`Sources/MacSvnCore/ViewModels/TeamActivityViewModel.swift`
 - 创建测试：`Tests/MacSvnCoreTests/TeamActivityViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `TeamActivityViewModelTests`：
 
@@ -448,7 +448,7 @@ private actor FakeTeamActivityProvider: TeamActivityLogProviding, TeamActivityLo
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter TeamActivityViewModelTests
@@ -456,7 +456,7 @@ swift test --filter TeamActivityViewModelTests
 
 预期：编译失败，提示 `TeamActivityViewModel` 或 provider 协议不存在。
 
-- [ ] **步骤 3：实现 ViewModel**
+- [x] **步骤 3：实现 ViewModel**
 
 创建 `TeamActivityViewModel.swift`：
 
@@ -531,7 +531,7 @@ extension SvnService: TeamActivityLogProviding {}
 extension SvnService: TeamActivityLockProviding {}
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter "TeamActivityAggregatorTests|TeamActivityViewModelTests"
@@ -539,7 +539,7 @@ swift test --filter "TeamActivityAggregatorTests|TeamActivityViewModelTests"
 
 预期：团队活动聚合器与 ViewModel 测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/ViewModels/TeamActivityViewModel.swift Tests/MacSvnCoreTests/TeamActivityViewModelTests.swift docs/superpowers/plans/2026-07-10-p6-team-activity-core.md
