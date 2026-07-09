@@ -30,7 +30,7 @@
 - 创建：`Sources/MacSvnCore/Services/AICommitMessageGenerator.swift`
 - 测试：`Tests/MacSvnCoreTests/AICommitMessageGeneratorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `Tests/MacSvnCoreTests/AICommitMessageGeneratorTests.swift`：
 
@@ -200,7 +200,7 @@ final class AICommitMessageGeneratorTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AICommitMessageGeneratorTests
@@ -208,7 +208,7 @@ swift test --filter AICommitMessageGeneratorTests
 
 预期：编译失败，提示 `AICommitMessageGenerator` / `AILLMResponse` / `LLMChatting` / `AICommitMessageError` 未定义。
 
-- [ ] **步骤 3：实现最少模型与服务代码**
+- [x] **步骤 3：实现最少模型与服务代码**
 
 在 `AIModels.swift` 增加：
 
@@ -282,7 +282,7 @@ public protocol AICommitMessageGenerating: Sendable {
 - 超过时先逐文件发送“请摘要这个文件 diff”，再用摘要发送最终 prompt；
 - LLM 返回内容 trim 后为空时抛 `.emptyModelResponse`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AICommitMessageGeneratorTests

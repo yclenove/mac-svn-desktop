@@ -89,6 +89,72 @@ public enum AIProviderConnectivityError: Error, Equatable, Sendable {
     case pingFailed(String)
 }
 
+public enum AILLMRole: String, Codable, Equatable, Sendable {
+    case system
+    case user
+    case assistant
+}
+
+public struct AILLMMessage: Codable, Equatable, Sendable {
+    public let role: AILLMRole
+    public let content: String
+
+    public init(role: AILLMRole, content: String) {
+        self.role = role
+        self.content = content
+    }
+}
+
+public struct AILLMResponse: Codable, Equatable, Sendable {
+    public let content: String
+    public let promptTokens: Int?
+    public let completionTokens: Int?
+
+    public init(content: String, promptTokens: Int?, completionTokens: Int?) {
+        self.content = content
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+    }
+}
+
+public enum AICommitMessageFormat: String, Codable, Equatable, Sendable {
+    case oneLineChinese
+    case conventionalChinese
+    case companyTemplate
+}
+
+public struct AICommitMessageDraft: Codable, Equatable, Sendable {
+    public let message: String
+    public let providerID: UUID
+    public let sourceFileCount: Int
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+    public let usedMapReduce: Bool
+
+    public init(
+        message: String,
+        providerID: UUID,
+        sourceFileCount: Int,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int,
+        usedMapReduce: Bool
+    ) {
+        self.message = message
+        self.providerID = providerID
+        self.sourceFileCount = sourceFileCount
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+        self.usedMapReduce = usedMapReduce
+    }
+}
+
+public enum AICommitMessageError: Error, Equatable, Sendable {
+    case emptySelection
+    case missingDefaultProvider
+    case emptyDiff
+    case emptyModelResponse
+}
+
 public struct AIRedactionMatch: Codable, Equatable, Sendable {
     public let ruleID: String
     public let matchCount: Int
