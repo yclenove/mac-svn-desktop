@@ -71,6 +71,7 @@ final class SvnCliBackendTests: XCTestCase {
             wc: URL(fileURLWithPath: "/tmp/wc"),
             paths: ["src"],
             revision: Revision(9),
+            setDepth: .immediates,
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -79,7 +80,9 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, [
             "update", "--accept", "postpone", "--non-interactive",
             "--username", "u", "--password-from-stdin",
-            "-r", "9", "src"
+            "-r", "9",
+            "--set-depth", "immediates",
+            "src"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }

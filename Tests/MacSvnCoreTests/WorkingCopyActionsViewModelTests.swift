@@ -16,7 +16,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
             statusProvider: statusProvider
         )
 
-        await viewModel.update(paths: ["Sources"], revision: Revision(7))
+        await viewModel.update(paths: ["Sources"], revision: Revision(7), setDepth: .immediates)
         let actionCalls = await actionProvider.recordedCalls()
 
         XCTAssertEqual(viewModel.state, .updateCompleted(summary))
@@ -28,6 +28,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: ["Sources"],
                 revision: Revision(7),
+                setDepth: .immediates,
                 recursive: false
             )
         ])
@@ -54,6 +55,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: [],
                 revision: nil,
+                setDepth: nil,
                 recursive: false
             )
         ])
@@ -83,6 +85,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: ["new.swift"],
                 revision: nil,
+                setDepth: nil,
                 recursive: false
             ),
             ActionCall(
@@ -90,6 +93,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: ["old.swift"],
                 revision: nil,
+                setDepth: nil,
                 recursive: false
             ),
             ActionCall(
@@ -97,6 +101,7 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: ["changed.swift"],
                 revision: nil,
+                setDepth: nil,
                 recursive: true
             )
         ])
@@ -171,6 +176,7 @@ private struct ActionCall: Equatable, Sendable {
     let wc: URL
     let paths: [String]
     let revision: Revision?
+    let setDepth: SvnDepth?
     let recursive: Bool
 }
 
@@ -203,8 +209,15 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         calls
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?) async throws -> UpdateSummary {
-        calls.append(ActionCall(operation: .update, wc: wc, paths: paths, revision: revision, recursive: false))
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+        calls.append(ActionCall(
+            operation: .update,
+            wc: wc,
+            paths: paths,
+            revision: revision,
+            setDepth: setDepth,
+            recursive: false
+        ))
         if let updateError {
             throw updateError
         }
@@ -213,28 +226,28 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
     }
 
     func add(wc: URL, paths: [String]) async throws {
-        calls.append(ActionCall(operation: .add, wc: wc, paths: paths, revision: nil, recursive: false))
+        calls.append(ActionCall(operation: .add, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: false))
         if let addError {
             throw addError
         }
     }
 
     func delete(wc: URL, paths: [String]) async throws {
-        calls.append(ActionCall(operation: .delete, wc: wc, paths: paths, revision: nil, recursive: false))
+        calls.append(ActionCall(operation: .delete, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: false))
         if let deleteError {
             throw deleteError
         }
     }
 
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {
-        calls.append(ActionCall(operation: .revert, wc: wc, paths: paths, revision: nil, recursive: recursive))
+        calls.append(ActionCall(operation: .revert, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: recursive))
         if let revertError {
             throw revertError
         }
     }
 
     func cleanup(wc: URL) async throws {
-        calls.append(ActionCall(operation: .cleanup, wc: wc, paths: [], revision: nil, recursive: false))
+        calls.append(ActionCall(operation: .cleanup, wc: wc, paths: [], revision: nil, setDepth: nil, recursive: false))
         if let cleanupError {
             throw cleanupError
         }

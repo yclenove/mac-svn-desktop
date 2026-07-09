@@ -43,6 +43,15 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertFalse(command.arguments.contains("secret"))
     }
 
+    func testUpdateCanSetDepth() {
+        let command = SvnCommandBuilder.update(paths: [], revision: nil, setDepth: .files)
+
+        XCTAssertEqual(command.arguments, [
+            "update", "--accept", "postpone", "--non-interactive",
+            "--set-depth", "files"
+        ])
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

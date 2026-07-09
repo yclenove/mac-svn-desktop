@@ -23,9 +23,20 @@ public struct SvnCliBackend: SvnBackend {
         return try StatusXMLParser.parse(result.stdout)
     }
 
-    public func update(wc: URL, paths: [String] = [], revision: Revision? = nil, auth: Credential? = nil) async throws -> UpdateSummary {
+    public func update(
+        wc: URL,
+        paths: [String] = [],
+        revision: Revision? = nil,
+        setDepth: SvnDepth? = nil,
+        auth: Credential? = nil
+    ) async throws -> UpdateSummary {
         let authArguments = try AuthArguments.build(credential: auth)
-        let command = SvnCommandBuilder.update(paths: paths, revision: revision, authArguments: authArguments.arguments)
+        let command = SvnCommandBuilder.update(
+            paths: paths,
+            revision: revision,
+            setDepth: setDepth,
+            authArguments: authArguments.arguments
+        )
         let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
         return try UpdateOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
     }

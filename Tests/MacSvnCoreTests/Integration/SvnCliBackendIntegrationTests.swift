@@ -28,6 +28,22 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
     }
 
+    func testUpdateSetDepthFilesFetchesRootFilesAfterEmptyCheckout() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy, depth: .empty, auth: nil)
+
+        _ = try await fixture.backend.update(
+            wc: fixture.workingCopy,
+            paths: [],
+            revision: nil,
+            setDepth: .files,
+            auth: nil
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

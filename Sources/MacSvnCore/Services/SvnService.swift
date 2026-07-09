@@ -35,10 +35,15 @@ public actor SvnService {
         try await backend.info(wc: wc, target: target)
     }
 
-    public func update(wc: URL, paths: [String] = [], revision: Revision? = nil) async throws -> UpdateSummary {
+    public func update(
+        wc: URL,
+        paths: [String] = [],
+        revision: Revision? = nil,
+        setDepth: SvnDepth? = nil
+    ) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
             try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
-                try await backend.update(wc: wc, paths: paths, revision: revision, auth: auth)
+                try await backend.update(wc: wc, paths: paths, revision: revision, setDepth: setDepth, auth: auth)
             }
         }
     }

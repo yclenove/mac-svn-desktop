@@ -97,13 +97,14 @@ final class SvnServiceTests: XCTestCase {
         let service = SvnService(backend: backend, credentialProvider: provider)
         let wc = URL(fileURLWithPath: "/tmp/wc")
 
-        let summary = try await service.update(wc: wc)
+        let summary = try await service.update(wc: wc, paths: ["src"], revision: Revision(9), setDepth: .files)
         let requestedWorkingCopies = await provider.recordedWorkingCopies()
 
         XCTAssertEqual(summary, UpdateSummary(updated: 1, revision: Revision(9)))
         XCTAssertEqual(requestedWorkingCopies, [wc])
         XCTAssertEqual(backend.calls.map(\.name), ["update", "update"])
         XCTAssertEqual(backend.updateCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.updateSetDepths, [.files, .files])
     }
 
     func testCheckoutPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
@@ -242,6 +243,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private let callsLock = NSLock()
     private var recordedCalls: [Call] = []
     private var recordedUpdateCredentials: [Credential?] = []
+    private var recordedUpdateSetDepths: [SvnDepth?] = []
     private var recordedCommitCredentials: [Credential?] = []
     private var recordedCheckoutCredentials: [Credential?] = []
     private var recordedCheckoutDepths: [SvnDepth] = []
@@ -260,6 +262,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedUpdateCredentials
+    }
+
+    var updateSetDepths: [SvnDepth?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedUpdateSetDepths
     }
 
     var commitCredentials: [Credential?] {
@@ -313,8 +323,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return statusResult
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?, auth: Credential?) async throws -> UpdateSummary {
-        let error = recordUpdate(auth: auth)
+    func update(
+        wc: URL,
+        paths: [String],
+        revision: Revision?,
+        setDepth: SvnDepth?,
+        auth: Credential?
+    ) async throws -> UpdateSummary {
+        let error = recordUpdate(setDepth: setDepth, auth: auth)
         await onUpdate?(wc)
         if let error {
             throw error
@@ -368,9 +384,10 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return infoResult
     }
 
-    private func recordUpdate(auth: Credential?) -> SvnError? {
+    private func recordUpdate(setDepth: SvnDepth?, auth: Credential?) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "update"))
+        recordedUpdateSetDepths.append(setDepth)
         recordedUpdateCredentials.append(auth)
         let error = updateErrors.isEmpty ? nil : updateErrors.removeFirst()
         callsLock.unlock()
