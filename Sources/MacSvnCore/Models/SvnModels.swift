@@ -56,7 +56,7 @@ public struct Revision: Codable, Equatable, Hashable, Sendable, ExpressibleByInt
     }
 }
 
-public enum ItemStatus: String, Equatable, Sendable {
+public enum ItemStatus: String, Equatable, Hashable, Sendable {
     case unversioned
     case modified
     case added
