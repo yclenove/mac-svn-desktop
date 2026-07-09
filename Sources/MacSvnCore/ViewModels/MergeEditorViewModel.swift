@@ -26,6 +26,7 @@ public enum AIConflictAssistViewState: Equatable, Sendable {
     case idle
     case suggesting
     case suggested(AIConflictAssistSuggestion)
+    case previewed(AIConflictAssistPreview)
     case error(String)
 }
 
@@ -45,6 +46,7 @@ public final class MergeEditorViewModel {
     public private(set) var currentConflictIndex = 0
     public private(set) var hasUnsavedChanges = false
     public private(set) var aiConflictSuggestion: AIConflictAssistSuggestion?
+    public private(set) var aiConflictPreview: AIConflictAssistPreview?
 
     public init(
         provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving,
@@ -99,6 +101,7 @@ public final class MergeEditorViewModel {
         hasUnsavedChanges = false
         aiConflictAssistState = .idle
         aiConflictSuggestion = nil
+        aiConflictPreview = nil
 
         do {
             let text = try await provider.loadTextConflict(conflict)
@@ -151,7 +154,64 @@ public final class MergeEditorViewModel {
             )
             resolveConflict(atConflictIndex: currentConflictIndex, resolution: .manual(lines: suggestion.mergedLines))
             aiConflictSuggestion = suggestion
+            aiConflictPreview = nil
             aiConflictAssistState = .suggested(suggestion)
+        } catch {
+            aiConflictAssistState = .error(String(describing: error))
+        }
+    }
+
+    public func requestAIResolutionPreviewForAllConflicts(
+        privacySettings: AIPrivacySettings = AIPrivacySettings()
+    ) async {
+        guard let aiConflictAssistant else {
+            aiConflictAssistState = .error("aiConflictAssistantUnavailable")
+            return
+        }
+
+        guard let conflict else {
+            aiConflictAssistState = .error("missingConflict")
+            return
+        }
+
+        let contexts = conflictBlockIndices.enumerated().compactMap { conflictIndex, blockIndex -> AIConflictAssistContext? in
+            guard case .conflict(let hunk) = blocks[blockIndex] else {
+                return nil
+            }
+
+            return AIConflictAssistContext(
+                path: conflict.path,
+                conflictIndex: conflictIndex,
+                baseLines: hunk.baseLines,
+                mineLines: hunk.mineLines,
+                theirsLines: hunk.theirsLines,
+                leadingContext: leadingContext(before: blockIndex),
+                trailingContext: trailingContext(after: blockIndex)
+            )
+        }
+        guard !contexts.isEmpty else {
+            aiConflictAssistState = .error("missingConflict")
+            return
+        }
+
+        aiConflictAssistState = .suggesting
+
+        do {
+            let preview = try await aiConflictAssistant.suggestResolutions(
+                contexts: contexts,
+                privacySettings: privacySettings
+            )
+            aiConflictPreview = preview
+            aiConflictSuggestion = nil
+
+            for suggestion in preview.suggestions where suggestion.confidence != .low {
+                resolveConflict(
+                    atConflictIndex: suggestion.conflictIndex,
+                    resolution: .manual(lines: suggestion.mergedLines)
+                )
+            }
+
+            aiConflictAssistState = .previewed(preview)
         } catch {
             aiConflictAssistState = .error(String(describing: error))
         }

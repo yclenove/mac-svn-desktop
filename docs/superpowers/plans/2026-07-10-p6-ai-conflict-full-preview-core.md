@@ -215,7 +215,7 @@ git commit -m "feat: add P6 AI conflict full preview core"
 - 修改：`Sources/MacSvnCore/ViewModels/MergeEditorViewModel.swift`
 - 修改测试：`Tests/MacSvnCoreTests/MergeEditorViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `MergeEditorViewModelTests` 增加：
 
@@ -273,7 +273,7 @@ private struct AIConflictPreviewCall: Equatable, Sendable {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter MergeEditorViewModelTests
@@ -281,7 +281,7 @@ swift test --filter MergeEditorViewModelTests
 
 预期：编译失败，提示 `requestAIResolutionPreviewForAllConflicts`、`aiConflictPreview` 或 `.previewed` 不存在。
 
-- [ ] **步骤 3：实现最少 ViewModel 接入**
+- [x] **步骤 3：实现最少 ViewModel 接入**
 
 `MergeEditorViewModel` 增加：
 
@@ -298,7 +298,7 @@ swift test --filter MergeEditorViewModelTests
 6. `.low` 建议保持 unresolved；
 7. 不调用 `saveResolution` 或 `resolveWholeFile`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter "AIConflictAssistantTests|MergeEditorViewModelTests"
@@ -306,7 +306,7 @@ swift test --filter "AIConflictAssistantTests|MergeEditorViewModelTests"
 
 预期：批量预览与合并编辑器测试全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/ViewModels/MergeEditorViewModel.swift \

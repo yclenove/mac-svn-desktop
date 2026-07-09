@@ -324,6 +324,51 @@ final class MergeEditorViewModelTests: XCTestCase {
             .error(String(describing: AIConflictAssistError.emptyConflict))
         )
     }
+
+    @MainActor
+    func testAIConflictPreviewPrefillsNonLowConfidenceAndKeepsLowConfidenceUnresolved() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "one\nsame\ntwo\n",
+            mine: "mine-one\nsame\nmine-two\n",
+            theirs: "theirs-one\nsame\ntheirs-two\n"
+        )))
+        let preview = AIConflictAssistPreview(
+            suggestions: [
+                AIConflictBlockSuggestion(
+                    conflictIndex: 0,
+                    mergedLines: ["ai-one"],
+                    rationale: "第一块可合并。",
+                    confidence: .high
+                ),
+                AIConflictBlockSuggestion(
+                    conflictIndex: 1,
+                    mergedLines: ["ai-two"],
+                    rationale: "第二块低置信。",
+                    confidence: .low
+                )
+            ],
+            providerID: UUID(),
+            redactionMatches: [],
+            promptCount: 1
+        )
+        let assistant = FakeAIConflictAssistant(previewResult: .success(preview))
+        let viewModel = MergeEditorViewModel(provider: provider, aiConflictAssistant: assistant)
+
+        await viewModel.load(conflict: textConflict(path: "Sources/Login.swift"), wc: URL(fileURLWithPath: "/tmp/wc"))
+        await viewModel.requestAIResolutionPreviewForAllConflicts()
+
+        XCTAssertEqual(viewModel.aiConflictPreview, preview)
+        XCTAssertEqual(viewModel.aiConflictAssistState, .previewed(preview))
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 1)
+        XCTAssertNil(viewModel.mergedText())
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+        let calls = await assistant.recordedPreviewCalls()
+        XCTAssertEqual(calls[0].contexts.map(\.conflictIndex), [0, 1])
+        let saveCalls = await provider.recordedSaveCalls()
+        let wholeFileCalls = await provider.recordedWholeFileResolveCalls()
+        XCTAssertTrue(saveCalls.isEmpty)
+        XCTAssertTrue(wholeFileCalls.isEmpty)
+    }
 }
 
 private func textConflict(path: String = "README.txt") -> ConflictInfo {
@@ -404,16 +449,31 @@ private struct AIConflictAssistCall: Equatable, Sendable {
     let privacySettings: AIPrivacySettings
 }
 
+private struct AIConflictPreviewCall: Equatable, Sendable {
+    let contexts: [AIConflictAssistContext]
+    let privacySettings: AIPrivacySettings
+}
+
 private actor FakeAIConflictAssistant: AIConflictAssisting {
     private let result: Result<AIConflictAssistSuggestion, Error>
+    private let previewResult: Result<AIConflictAssistPreview, Error>
     private var calls: [AIConflictAssistCall] = []
+    private var previewCalls: [AIConflictPreviewCall] = []
 
-    init(result: Result<AIConflictAssistSuggestion, Error>) {
+    init(
+        result: Result<AIConflictAssistSuggestion, Error> = .failure(AIConflictAssistError.emptyConflict),
+        previewResult: Result<AIConflictAssistPreview, Error> = .failure(AIConflictAssistError.emptyConflict)
+    ) {
         self.result = result
+        self.previewResult = previewResult
     }
 
     func recordedCalls() -> [AIConflictAssistCall] {
         calls
+    }
+
+    func recordedPreviewCalls() -> [AIConflictPreviewCall] {
+        previewCalls
     }
 
     func suggestResolution(
@@ -428,6 +488,7 @@ private actor FakeAIConflictAssistant: AIConflictAssisting {
         contexts: [AIConflictAssistContext],
         privacySettings: AIPrivacySettings
     ) async throws -> AIConflictAssistPreview {
-        throw AIConflictAssistError.emptyConflict
+        previewCalls.append(AIConflictPreviewCall(contexts: contexts, privacySettings: privacySettings))
+        return try previewResult.get()
     }
 }
