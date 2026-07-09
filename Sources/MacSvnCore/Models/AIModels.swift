@@ -334,6 +334,68 @@ public enum AIReleaseNotesError: Error, Equatable, Sendable {
     case invalidModelResponse(String)
 }
 
+public struct AIBlameLineRange: Codable, Equatable, Sendable {
+    public let startLine: Int
+    public let endLine: Int
+
+    public init(startLine: Int, endLine: Int) {
+        self.startLine = startLine
+        self.endLine = endLine
+    }
+}
+
+public struct AIBlameEvolutionChange: Codable, Equatable, Sendable {
+    public let revision: Revision
+    public let title: String
+    public let explanation: String
+
+    public init(revision: Revision, title: String, explanation: String) {
+        self.revision = revision
+        self.title = title
+        self.explanation = explanation
+    }
+}
+
+public struct AIBlameEvolutionExplanation: Codable, Equatable, Sendable {
+    public let target: String
+    public let lineRange: AIBlameLineRange
+    public let summary: String
+    public let keyChanges: [AIBlameEvolutionChange]
+    public let providerID: UUID
+    public let evidenceRevisionCount: Int
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+
+    public init(
+        target: String,
+        lineRange: AIBlameLineRange,
+        summary: String,
+        keyChanges: [AIBlameEvolutionChange],
+        providerID: UUID,
+        evidenceRevisionCount: Int,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int
+    ) {
+        self.target = target
+        self.lineRange = lineRange
+        self.summary = summary
+        self.keyChanges = keyChanges
+        self.providerID = providerID
+        self.evidenceRevisionCount = evidenceRevisionCount
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+    }
+}
+
+public enum AIBlameEvolutionError: Error, Equatable, Sendable {
+    case emptyLineSelection
+    case missingDefaultProvider
+    case noRevisionEvidence
+    case emptyDiffChain
+    case emptyModelResponse
+    case invalidModelResponse(String)
+}
+
 public enum AIPreCommitReviewSeverity: String, Codable, Equatable, Sendable {
     case blockingSuggestion
     case generalSuggestion

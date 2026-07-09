@@ -28,7 +28,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIBlameEvolutionExplainer.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIBlameEvolutionExplainerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `AIBlameEvolutionExplainerTests`：
 
@@ -249,7 +249,7 @@ private actor FakeBlameEvolutionProviderManager: AIProviderManaging {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIBlameEvolutionExplainerTests
@@ -257,7 +257,7 @@ swift test --filter AIBlameEvolutionExplainerTests
 
 预期：编译失败，提示 `AIBlameEvolutionExplainer`、`AIBlameLineRange` 或 `AIBlameEvolutionExplanation` 不存在。
 
-- [ ] **步骤 3：实现最少模型与解释器代码**
+- [x] **步骤 3：实现最少模型与解释器代码**
 
 在 `AIModels.swift` 增加：
 
@@ -537,7 +537,7 @@ private struct BlameEvolutionChangePayload: Decodable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIBlameEvolutionExplainerTests
@@ -545,7 +545,7 @@ swift test --filter AIBlameEvolutionExplainerTests
 
 预期：主路径测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift Sources/MacSvnCore/Services/AIBlameEvolutionExplainer.swift Tests/MacSvnCoreTests/AIBlameEvolutionExplainerTests.swift docs/superpowers/plans/2026-07-10-p6-ai-blame-evolution-core.md
