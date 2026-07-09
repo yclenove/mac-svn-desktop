@@ -24,6 +24,20 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(info.kind, "dir")
     }
 
+    func testWorkspaceStoreImportsRealWorkingCopyMetadata() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let store = WorkspaceStore(fileURL: fixture.root.appendingPathComponent("workspaces.json"))
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let record = try await store.addExistingWorkingCopy(localPath: fixture.workingCopy, infoProvider: service)
+
+        XCTAssertEqual(record.name, "wc")
+        XCTAssertEqual(record.repoURL, fixture.trunkURL)
+        XCTAssertEqual(record.revision, Revision(1))
+        XCTAssertTrue(record.isValid)
+    }
+
     func testStatusSeesModifiedAddedAndDeletedFiles() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

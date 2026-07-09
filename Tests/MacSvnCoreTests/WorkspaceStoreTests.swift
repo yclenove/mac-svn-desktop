@@ -56,6 +56,80 @@ final class WorkspaceStoreTests: XCTestCase {
         XCTAssertEqual(reloaded, [record])
     }
 
+    func testAddExistingWorkingCopyReadsMetadataFromInfoProvider() async throws {
+        let root = temporaryRoot()
+        let workingCopy = try makeWorkingCopy(root: root, name: "ProjectA")
+        let provider = FakeInfoProvider(result: .success(SvnInfo(
+            path: ".",
+            url: "file:///repo/trunk",
+            repositoryRoot: "file:///repo",
+            revision: Revision(9),
+            kind: "dir"
+        )))
+        let store = makeStore(root: root)
+
+        let record = try await store.addExistingWorkingCopy(
+            localPath: workingCopy,
+            infoProvider: provider,
+            username: "yangchao"
+        )
+
+        XCTAssertEqual(record.name, "ProjectA")
+        XCTAssertEqual(record.repoURL, "file:///repo/trunk")
+        XCTAssertEqual(record.revision, Revision(9))
+        XCTAssertEqual(record.username, "yangchao")
+        let calls = await provider.recordedCalls()
+        XCTAssertEqual(calls, [workingCopy.resolvingSymlinksInPath()])
+    }
+
+    func testAddExistingWorkingCopyRejectsInvalidDirectoryBeforeReadingInfo() async throws {
+        let root = temporaryRoot()
+        let directory = root.appendingPathComponent("not-wc", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let provider = FakeInfoProvider(result: .success(SvnInfo(
+            path: ".",
+            url: "file:///repo/trunk",
+            repositoryRoot: "file:///repo",
+            revision: Revision(9),
+            kind: "dir"
+        )))
+        let store = makeStore(root: root)
+
+        do {
+            _ = try await store.addExistingWorkingCopy(localPath: directory, infoProvider: provider)
+            XCTFail("Expected invalid working copy error")
+        } catch let error as WorkspaceStoreError {
+            XCTAssertEqual(error, .invalidWorkingCopy(path: directory.path))
+        } catch {
+            XCTFail("Expected WorkspaceStoreError, got \(error)")
+        }
+
+        let calls = await provider.recordedCalls()
+        let records = await store.records()
+        XCTAssertEqual(calls, [])
+        XCTAssertEqual(records, [])
+    }
+
+    func testAddExistingWorkingCopyDoesNotPersistWhenInfoProviderFails() async throws {
+        let root = temporaryRoot()
+        let workingCopy = try makeWorkingCopy(root: root, name: "ProjectA")
+        let provider = FakeInfoProvider(result: .failure(FakeInfoProviderError.failed))
+        let store = makeStore(root: root)
+
+        do {
+            _ = try await store.addExistingWorkingCopy(localPath: workingCopy, infoProvider: provider)
+            XCTFail("Expected provider error")
+        } catch FakeInfoProviderError.failed {
+        } catch {
+            XCTFail("Expected FakeInfoProviderError.failed, got \(error)")
+        }
+
+        let calls = await provider.recordedCalls()
+        let records = await store.records()
+        XCTAssertEqual(calls, [workingCopy.resolvingSymlinksInPath()])
+        XCTAssertEqual(records, [])
+    }
+
     func testRemoveWorkingCopyOnlyRemovesRecord() async throws {
         let root = temporaryRoot()
         let workingCopy = try makeWorkingCopy(root: root, name: "ProjectA")
@@ -101,4 +175,27 @@ final class WorkspaceStoreTests: XCTestCase {
         temporaryRoots.append(root)
         return root
     }
+}
+
+private actor FakeInfoProvider: WorkingCopyInfoProviding {
+    private(set) var calls: [URL] = []
+    private let result: Result<SvnInfo, Error>
+
+    init(result: Result<SvnInfo, Error>) {
+        self.result = result
+    }
+
+    func info(wc: URL, target: String) async throws -> SvnInfo {
+        calls.append(wc)
+        XCTAssertEqual(target, ".")
+        return try result.get()
+    }
+
+    func recordedCalls() -> [URL] {
+        calls
+    }
+}
+
+private enum FakeInfoProviderError: Error {
+    case failed
 }

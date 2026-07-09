@@ -105,3 +105,5 @@ public actor SvnService {
         }
     }
 }
+
+extension SvnService: WorkingCopyInfoProviding {}

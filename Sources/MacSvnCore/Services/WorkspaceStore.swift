@@ -4,6 +4,10 @@ public enum WorkspaceStoreError: Error, Equatable, Sendable {
     case invalidWorkingCopy(path: String)
 }
 
+public protocol WorkingCopyInfoProviding: Sendable {
+    func info(wc: URL, target: String) async throws -> SvnInfo
+}
+
 public actor WorkspaceStore {
     private let store: PersistenceStore<WorkspaceListFile>
     private var cachedRecords: [WorkingCopyRecord] = []
@@ -59,6 +63,28 @@ public actor WorkspaceStore {
         cachedRecords = records
         try store.save(WorkspaceListFile(workspaces: records))
         return record
+    }
+
+    @discardableResult
+    public func addExistingWorkingCopy(
+        localPath: URL,
+        infoProvider: any WorkingCopyInfoProviding,
+        username: String? = nil,
+        name: String? = nil
+    ) async throws -> WorkingCopyRecord {
+        let resolvedPath = localPath.resolvingSymlinksInPath()
+        guard Self.isValidWorkingCopy(resolvedPath) else {
+            throw WorkspaceStoreError.invalidWorkingCopy(path: localPath.path)
+        }
+
+        let info = try await infoProvider.info(wc: resolvedPath, target: ".")
+        return try addWorkingCopy(
+            localPath: resolvedPath,
+            repoURL: info.url,
+            revision: info.revision,
+            username: username,
+            name: name
+        )
     }
 
     public func removeWorkingCopy(id: UUID) throws {
