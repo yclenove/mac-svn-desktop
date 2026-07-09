@@ -441,6 +441,78 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.commitCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testCommitGuardWarningsStopCommitUntilCallerSkipsWarnings() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitResult = Revision(42)
+        let issue = CommitGuardIssue(
+            ruleID: .conflictMarker,
+            severity: .warning,
+            path: "a.txt",
+            message: "Conflict marker remains.",
+            detail: nil
+        )
+        let guardProvider = FakeCommitGuardProvider(result: .success([issue]))
+        let service = SvnService(backend: backend, commitGuard: guardProvider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        do {
+            _ = try await service.commit(wc: wc, paths: ["a.txt"], message: "fix", auth: nil)
+            XCTFail("Expected commit guard warnings")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .commitGuardWarnings([issue]))
+        }
+
+        let revision = try await service.commit(
+            wc: wc,
+            paths: ["a.txt"],
+            message: "fix",
+            auth: nil,
+            skipGuardWarnings: true
+        )
+
+        XCTAssertEqual(revision, Revision(42))
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "status", "commit"])
+        let guardCalls = await guardProvider.recordedCalls()
+        XCTAssertEqual(guardCalls, [
+            CommitGuardCall(wc: wc, paths: ["a.txt"]),
+            CommitGuardCall(wc: wc, paths: ["a.txt"])
+        ])
+    }
+
+    func testCommitGuardBlockingIssuesCannotBeSkipped() async {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        let issue = CommitGuardIssue(
+            ruleID: .suspectedSecret,
+            severity: .blocking,
+            path: "a.txt",
+            message: "Secret detected.",
+            detail: nil
+        )
+        let guardProvider = FakeCommitGuardProvider(result: .success([issue]))
+        let service = SvnService(backend: backend, commitGuard: guardProvider)
+
+        do {
+            _ = try await service.commit(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["a.txt"],
+                message: "fix",
+                auth: nil,
+                skipGuardWarnings: true
+            )
+            XCTFail("Expected commit guard block")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .commitGuardBlocked([issue]))
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+    }
+
     func testConcurrentWritesOnSameWorkingCopyThrowBusy() async throws {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -951,6 +1023,29 @@ private actor FakeCredentialProvider: CredentialProviding {
     func credential(for wc: URL) async throws -> Credential? {
         requests.append(wc)
         return credential
+    }
+}
+
+private struct CommitGuardCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+}
+
+private actor FakeCommitGuardProvider: CommitGuardChecking {
+    private let result: Result<[CommitGuardIssue], Error>
+    private var calls: [CommitGuardCall] = []
+
+    init(result: Result<[CommitGuardIssue], Error>) {
+        self.result = result
+    }
+
+    func evaluate(wc: URL, paths: [String]) async throws -> [CommitGuardIssue] {
+        calls.append(CommitGuardCall(wc: wc, paths: paths))
+        return try result.get()
+    }
+
+    func recordedCalls() -> [CommitGuardCall] {
+        calls
     }
 }
 

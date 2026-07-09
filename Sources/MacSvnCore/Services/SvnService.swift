@@ -4,6 +4,8 @@ public enum SvnServiceError: Error, Equatable, Sendable {
     case emptyCommitMessage
     case wcBusy(operation: String)
     case localChangesPreventSwitch(paths: [String])
+    case commitGuardWarnings([CommitGuardIssue])
+    case commitGuardBlocked([CommitGuardIssue])
 }
 
 public protocol CredentialProviding: Sendable {
@@ -13,11 +15,17 @@ public protocol CredentialProviding: Sendable {
 public actor SvnService {
     private let backend: any SvnBackend
     private let credentialProvider: (any CredentialProviding)?
+    private let commitGuard: (any CommitGuardChecking)?
     private var activeWriteOperations: [URL: String] = [:]
 
-    public init(backend: any SvnBackend, credentialProvider: (any CredentialProviding)? = nil) {
+    public init(
+        backend: any SvnBackend,
+        credentialProvider: (any CredentialProviding)? = nil,
+        commitGuard: (any CommitGuardChecking)? = nil
+    ) {
         self.backend = backend
         self.credentialProvider = credentialProvider
+        self.commitGuard = commitGuard
     }
 
     public func status(wc: URL) async throws -> [FileStatus] {
@@ -162,7 +170,22 @@ public actor SvnService {
         }
     }
 
-    public func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
+    public func commit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        auth: Credential?
+    ) async throws -> Revision {
+        try await commit(wc: wc, paths: paths, message: message, auth: auth, skipGuardWarnings: false)
+    }
+
+    public func commit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        auth: Credential?,
+        skipGuardWarnings: Bool = false
+    ) async throws -> Revision {
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SvnServiceError.emptyCommitMessage
         }
@@ -173,6 +196,17 @@ public actor SvnService {
 
             guard conflicts.isEmpty else {
                 throw SvnError.conflict(paths: conflicts)
+            }
+
+            let guardIssues = try await commitGuard?.evaluate(wc: wc, paths: paths) ?? []
+            let blockingIssues = guardIssues.filter { $0.severity == .blocking }
+            guard blockingIssues.isEmpty else {
+                throw SvnServiceError.commitGuardBlocked(blockingIssues)
+            }
+
+            let warningIssues = guardIssues.filter { $0.severity == .warning }
+            if !warningIssues.isEmpty, !skipGuardWarnings {
+                throw SvnServiceError.commitGuardWarnings(warningIssues)
             }
 
             return try await retryingAuthentication(wc: wc, initialAuth: auth) { auth in
