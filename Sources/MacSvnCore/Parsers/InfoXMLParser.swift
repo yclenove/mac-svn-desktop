@@ -27,6 +27,11 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentRepositoryRoot: String?
     private var currentRevision: Revision?
     private var currentKind: String?
+    private var currentConflicts: [ConflictInfo] = []
+    private var isCollectingTextConflict = false
+    private var currentConflictBaseFile: String?
+    private var currentConflictMineFile: String?
+    private var currentConflictTheirsFile: String?
     private var currentText = ""
     private var elementStack: [String] = []
 
@@ -40,15 +45,39 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
         elementStack.append(elementName)
         currentText = ""
 
-        guard elementName == "entry", info == nil else {
+        guard info == nil else {
             return
         }
 
-        currentPath = attributeDict["path"] ?? ""
-        currentRevision = attributeDict["revision"].flatMap(Int.init).map { Revision($0) }
-        currentKind = attributeDict["kind"]
-        currentURL = ""
-        currentRepositoryRoot = nil
+        switch elementName {
+        case "entry":
+            currentPath = attributeDict["path"] ?? ""
+            currentRevision = attributeDict["revision"].flatMap(Int.init).map { Revision($0) }
+            currentKind = attributeDict["kind"]
+            currentURL = ""
+            currentRepositoryRoot = nil
+            currentConflicts = []
+        case "conflict":
+            isCollectingTextConflict = true
+            currentConflictBaseFile = nil
+            currentConflictMineFile = nil
+            currentConflictTheirsFile = nil
+        case "tree-conflict":
+            currentConflicts.append(ConflictInfo(
+                path: attributeDict["victim"] ?? currentPath,
+                kind: .tree,
+                baseFile: nil,
+                mineFile: nil,
+                theirsFile: nil,
+                treeConflict: TreeConflictDetails(
+                    operation: attributeDict["operation"],
+                    action: attributeDict["action"],
+                    reason: attributeDict["reason"]
+                )
+            ))
+        default:
+            break
+        }
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
@@ -68,13 +97,30 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
             currentURL = trimmedText
         case "root" where elementStack.suffix(2) == ["repository", "root"] && info == nil:
             currentRepositoryRoot = trimmedText
+        case "prev-base-file" where isCollectingTextConflict && info == nil:
+            currentConflictBaseFile = trimmedText
+        case "prev-wc-file" where isCollectingTextConflict && info == nil:
+            currentConflictMineFile = trimmedText
+        case "cur-base-file" where isCollectingTextConflict && info == nil:
+            currentConflictTheirsFile = trimmedText
+        case "conflict" where info == nil:
+            currentConflicts.append(ConflictInfo(
+                path: currentPath,
+                kind: .text,
+                baseFile: currentConflictBaseFile,
+                mineFile: currentConflictMineFile,
+                theirsFile: currentConflictTheirsFile,
+                treeConflict: nil
+            ))
+            isCollectingTextConflict = false
         case "entry" where info == nil:
             info = SvnInfo(
                 path: currentPath,
                 url: currentURL,
                 repositoryRoot: currentRepositoryRoot,
                 revision: currentRevision,
-                kind: currentKind
+                kind: currentKind,
+                conflicts: currentConflicts
             )
         default:
             break

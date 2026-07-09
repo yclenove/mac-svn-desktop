@@ -234,6 +234,56 @@ public struct MergeSummary: Equatable, Sendable {
     }
 }
 
+public enum ConflictKind: Equatable, Sendable {
+    case text
+    case tree
+    case property
+    case unknown
+}
+
+public struct TreeConflictDetails: Equatable, Sendable {
+    public let operation: String?
+    public let action: String?
+    public let reason: String?
+
+    public init(operation: String?, action: String?, reason: String?) {
+        self.operation = operation
+        self.action = action
+        self.reason = reason
+    }
+}
+
+public struct ConflictInfo: Equatable, Sendable {
+    public let path: String
+    public let kind: ConflictKind
+    public let baseFile: String?
+    public let mineFile: String?
+    public let theirsFile: String?
+    public let treeConflict: TreeConflictDetails?
+
+    public init(
+        path: String,
+        kind: ConflictKind,
+        baseFile: String?,
+        mineFile: String?,
+        theirsFile: String?,
+        treeConflict: TreeConflictDetails?
+    ) {
+        self.path = path
+        self.kind = kind
+        self.baseFile = baseFile
+        self.mineFile = mineFile
+        self.theirsFile = theirsFile
+        self.treeConflict = treeConflict
+    }
+}
+
+public enum ResolveAccept: String, Equatable, Sendable {
+    case working
+    case mineFull = "mine-full"
+    case theirsFull = "theirs-full"
+}
+
 public struct Credential: Equatable, Sendable {
     public let username: String
     public let password: String
@@ -423,13 +473,22 @@ public struct SvnInfo: Equatable, Sendable {
     public let repositoryRoot: String?
     public let revision: Revision?
     public let kind: String?
+    public let conflicts: [ConflictInfo]
 
-    public init(path: String, url: String, repositoryRoot: String?, revision: Revision?, kind: String?) {
+    public init(
+        path: String,
+        url: String,
+        repositoryRoot: String?,
+        revision: Revision?,
+        kind: String?,
+        conflicts: [ConflictInfo] = []
+    ) {
         self.path = path
         self.url = url
         self.repositoryRoot = repositoryRoot
         self.revision = revision
         self.kind = kind
+        self.conflicts = conflicts
     }
 }
 

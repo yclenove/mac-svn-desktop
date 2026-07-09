@@ -96,6 +96,14 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.cleanup(), currentDirectory: wc.path, stdin: nil)
     }
 
+    public func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {
+        _ = try await run(
+            SvnCommandBuilder.resolve(path: path, accept: accept),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         let result = try await run(SvnCommandBuilder.diff(target: target, r1: r1, r2: r2), currentDirectory: wc.path, stdin: nil)
         return String(decoding: result.stdout, as: UTF8.self)

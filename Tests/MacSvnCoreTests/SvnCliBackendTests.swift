@@ -140,6 +140,22 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testResolveRunsInWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.resolve(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            path: "README.txt",
+            accept: .working
+        )
+
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "resolve", "--accept", "working", "--non-interactive", "README.txt"
+        ])
+    }
+
     func testCheckoutPassesDepthAuthStdinAndRunsOutsideWorkingCopy() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

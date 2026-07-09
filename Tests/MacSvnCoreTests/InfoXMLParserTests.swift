@@ -33,6 +33,58 @@ final class InfoXMLParserTests: XCTestCase {
         XCTAssertEqual(info.kind, "dir")
     }
 
+    func testParsesTextConflictFiles() throws {
+        let xml = """
+        <info>
+          <entry path="README.txt" revision="3" kind="file">
+            <url>file:///repo/trunk/README.txt</url>
+            <conflict>
+              <prev-base-file>README.txt.r1</prev-base-file>
+              <prev-wc-file>README.txt.mine</prev-wc-file>
+              <cur-base-file>README.txt.r3</cur-base-file>
+            </conflict>
+          </entry>
+        </info>
+        """
+
+        let info = try InfoXMLParser.parse(Data(xml.utf8))
+
+        XCTAssertEqual(info.conflicts, [
+            ConflictInfo(
+                path: "README.txt",
+                kind: .text,
+                baseFile: "README.txt.r1",
+                mineFile: "README.txt.mine",
+                theirsFile: "README.txt.r3",
+                treeConflict: nil
+            )
+        ])
+    }
+
+    func testParsesTreeConflictDetails() throws {
+        let xml = """
+        <info>
+          <entry path="src/main.txt" revision="3" kind="file">
+            <url>file:///repo/trunk/src/main.txt</url>
+            <tree-conflict victim="src/main.txt" kind="file" operation="update" action="delete" reason="edited"/>
+          </entry>
+        </info>
+        """
+
+        let info = try InfoXMLParser.parse(Data(xml.utf8))
+
+        XCTAssertEqual(info.conflicts, [
+            ConflictInfo(
+                path: "src/main.txt",
+                kind: .tree,
+                baseFile: nil,
+                mineFile: nil,
+                theirsFile: nil,
+                treeConflict: TreeConflictDetails(operation: "update", action: "delete", reason: "edited")
+            )
+        ])
+    }
+
     func testInvalidXMLThrowsParseError() {
         XCTAssertThrowsError(try InfoXMLParser.parse(Data("<info>".utf8))) { error in
             guard case .parse = error as? SvnError else {

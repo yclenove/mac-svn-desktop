@@ -252,6 +252,20 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.mergeCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testResolveUsesBackendWriteOperation() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+
+        try await service.resolve(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            path: "README.txt",
+            accept: .theirsFull
+        )
+
+        XCTAssertEqual(backend.calls.map(\.name), ["resolve"])
+        XCTAssertEqual(backend.resolveAccepts, [.theirsFull])
+    }
+
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.listErrors = [.authentication]
@@ -452,6 +466,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCopyCredentials: [Credential?] = []
     private var recordedSwitchCredentials: [Credential?] = []
     private var recordedMergeCredentials: [Credential?] = []
+    private var recordedResolveAccepts: [ResolveAccept] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -563,6 +578,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedMergeCredentials
+    }
+
+    var resolveAccepts: [ResolveAccept] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedResolveAccepts
     }
 
     var statusResult: [FileStatus] = []
@@ -712,6 +735,17 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             throw error
         }
         return mergeResult
+    }
+
+    func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {
+        recordResolve(accept: accept)
+    }
+
+    private func recordResolve(accept: ResolveAccept) {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "resolve"))
+        recordedResolveAccepts.append(accept)
+        callsLock.unlock()
     }
 
     func info(wc: URL, target: String) async throws -> SvnInfo {

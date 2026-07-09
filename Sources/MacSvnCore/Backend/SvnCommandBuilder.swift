@@ -71,6 +71,12 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
+    public static func resolve(path: String, accept: ResolveAccept) -> SvnCommand {
+        SvnCommand(arguments: [
+            "resolve", "--accept", accept.rawValue, "--non-interactive", path
+        ])
+    }
+
     public static func add(paths: [String]) -> SvnCommand {
         SvnCommand(arguments: ["add", "--non-interactive"] + paths)
     }

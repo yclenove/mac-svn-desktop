@@ -191,6 +191,44 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testConflictServiceListsTextConflictAndResolveMineFull() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let otherWC = fixture.root.appendingPathComponent("wc-other", isDirectory: true)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: otherWC)
+        try "mine change\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "theirs change\n".write(
+            to: otherWC.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        _ = try await service.commit(
+            wc: otherWC,
+            paths: ["README.txt"],
+            message: "theirs change",
+            auth: nil
+        )
+
+        _ = try await service.update(wc: fixture.workingCopy)
+        let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
+        let conflicts = try await conflictService.conflicts(wc: fixture.workingCopy)
+
+        XCTAssertEqual(conflicts.first?.path, "README.txt")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: conflicts.first?.baseFile ?? ""))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: conflicts.first?.mineFile ?? ""))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: conflicts.first?.theirsFile ?? ""))
+
+        try await conflictService.resolveWholeFile(conflicts[0], wc: fixture.workingCopy, accept: .mineFull)
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertFalse(statuses.contains { $0.itemStatus == .conflicted || $0.isTreeConflict })
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

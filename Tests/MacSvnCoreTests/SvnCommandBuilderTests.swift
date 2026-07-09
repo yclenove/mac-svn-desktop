@@ -81,6 +81,14 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testResolveUsesAcceptNonInteractiveAndPath() {
+        let command = SvnCommandBuilder.resolve(path: "README.txt", accept: .mineFull)
+
+        XCTAssertEqual(command.arguments, [
+            "resolve", "--accept", "mine-full", "--non-interactive", "README.txt"
+        ])
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

@@ -189,6 +189,12 @@ public actor SvnService {
         }
     }
 
+    public func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {
+        try await withWriteLock(wc: wc, operation: "resolve") {
+            try await backend.resolve(wc: wc, path: path, accept: accept)
+        }
+    }
+
     private func withWriteLock<T: Sendable>(
         wc: URL,
         operation: String,
