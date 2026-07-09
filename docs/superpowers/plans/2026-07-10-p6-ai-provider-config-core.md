@@ -30,7 +30,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIProviderStore.swift`
 - 测试：`Tests/MacSvnCoreTests/AIProviderStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIProviderStoreTests` 新增：
 
@@ -113,7 +113,7 @@ func testSaveProviderRejectsInvalidLimitsAndMissingRequiredFields() async throws
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIProviderStoreTests
@@ -121,7 +121,7 @@ swift test --filter AIProviderStoreTests
 
 预期：编译失败，提示 `AIProvider` / `AIProviderStore` / `AIProviderError` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 在 `AIModels.swift` 增加：
 
@@ -203,7 +203,7 @@ public protocol AIProviderManaging: Sendable {
 - `deleteProvider` 删除后如果默认被删，则设置为剩余第一个 provider 的 id 或 nil；
 - 绝不接收或保存明文 API key，只保存 `apiKeyRef` 字符串。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIProviderStoreTests
