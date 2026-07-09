@@ -26,7 +26,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIDataRedactor.swift`
 - 测试：`Tests/MacSvnCoreTests/AIDataRedactorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `AIDataRedactorTests`：
 
@@ -63,7 +63,7 @@ final class AIDataRedactorTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -73,7 +73,7 @@ swift test --filter AIDataRedactorTests/testRedactsDefaultSecretPatternsAndRepor
 
 预期：编译失败，提示 `AIDataRedactor` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 新增模型：
 
@@ -104,7 +104,7 @@ public enum AIRedactionError: Error, Equatable, Sendable {
   - `private-key-block`: `-----BEGIN [A-Z ]*PRIVATE KEY-----[\\s\\S]*?-----END [A-Z ]*PRIVATE KEY-----`
 - 按规则顺序应用；某规则有匹配才写入 `matches`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -114,7 +114,7 @@ public enum AIRedactionError: Error, Equatable, Sendable {
 - 修改：`Sources/MacSvnCore/Services/AIDataRedactor.swift`
 - 测试：`Tests/MacSvnCoreTests/AIDataRedactorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在测试文件增加：
 
@@ -140,7 +140,7 @@ func testInvalidCustomPatternThrows() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -150,7 +150,7 @@ swift test --filter "AIDataRedactorTests/testRedactsCustomPatternsAfterDefaultRu
 
 预期：编译失败或测试失败，因为 `redact(_:customPatterns:)` 尚未支持自定义规则。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 扩展 `redact` 签名：
 
@@ -160,7 +160,7 @@ public func redact(_ text: String, customPatterns: [String] = []) throws -> AIRe
 
 将 `customPatterns.enumerated()` 追加为规则 ID `custom:<index>`。构造 `NSRegularExpression` 失败时抛 `.invalidPattern(pattern)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -170,7 +170,7 @@ public func redact(_ text: String, customPatterns: [String] = []) throws -> AIRe
 - 修改：`Sources/MacSvnCore/Models/AIModels.swift`
 - 测试：`Tests/MacSvnCoreTests/AIDataRedactorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```swift
 func testAIPrivacySettingsDefaultsToDiffOnlyAndRedactionEnabled() {
@@ -182,7 +182,7 @@ func testAIPrivacySettingsDefaultsToDiffOnlyAndRedactionEnabled() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -192,7 +192,7 @@ swift test --filter AIDataRedactorTests/testAIPrivacySettingsDefaultsToDiffOnlyA
 
 预期：编译失败，提示 `AIPrivacySettings` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 新增：
 
@@ -214,7 +214,7 @@ public struct AIPrivacySettings: Codable, Equatable, Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行 AI 目标集合**
+- [x] **步骤 4：运行 AI 目标集合**
 
 运行：
 
@@ -226,7 +226,7 @@ swift test --filter AIDataRedactorTests
 
 ## 任务 4：全量验证与提交
 
-- [ ] **步骤 1：运行目标集合**
+- [x] **步骤 1：运行目标集合**
 
 ```bash
 swift test --filter "AIDataRedactorTests|CommitGuardServiceTests|CommitViewModelTests"
@@ -234,7 +234,7 @@ swift test --filter "AIDataRedactorTests|CommitGuardServiceTests|CommitViewModel
 
 预期：0 failures。这里额外覆盖已有提交守护/提交 ViewModel，确认新 AI 脱敏 Core 没破坏现有提交前检查链路。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -243,7 +243,7 @@ git diff --check
 
 预期：测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift \
