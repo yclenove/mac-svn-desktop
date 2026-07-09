@@ -114,3 +114,52 @@ public struct Credential: Equatable, Sendable {
         self.password = password
     }
 }
+
+public struct LogEntry: Equatable, Sendable {
+    public let revision: Revision
+    public let author: String
+    public let date: Date?
+    public let message: String
+    public let changedPaths: [ChangedPath]
+
+    public init(revision: Revision, author: String, date: Date?, message: String, changedPaths: [ChangedPath]) {
+        self.revision = revision
+        self.author = author
+        self.date = date
+        self.message = message
+        self.changedPaths = changedPaths
+    }
+}
+
+public struct ChangedPath: Equatable, Sendable {
+    public let path: String
+    public let action: ChangedPathAction
+    public let kind: String?
+    public let copyFromPath: String?
+    public let copyFromRevision: Revision?
+
+    public init(path: String, action: ChangedPathAction, kind: String?, copyFromPath: String?, copyFromRevision: Revision?) {
+        self.path = path
+        self.action = action
+        self.kind = kind
+        self.copyFromPath = copyFromPath
+        self.copyFromRevision = copyFromRevision
+    }
+}
+
+public enum ChangedPathAction: String, Equatable, Sendable {
+    case added = "A"
+    case modified = "M"
+    case deleted = "D"
+    case replaced = "R"
+    case unknown
+
+    public init(rawSvnAction: String?) {
+        guard let rawSvnAction, let action = ChangedPathAction(rawValue: rawSvnAction) else {
+            self = .unknown
+            return
+        }
+
+        self = action
+    }
+}

@@ -27,4 +27,34 @@ final class SvnCommandBuilderTests: XCTestCase {
             "update", "--accept", "postpone", "--non-interactive", "-r", "42", "src"
         ])
     }
+
+    func testAddUsesNonInteractiveAndPaths() {
+        let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
+        XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])
+    }
+
+    func testDeleteUsesNonInteractiveAndPaths() {
+        let command = SvnCommandBuilder.delete(paths: ["old.txt"])
+        XCTAssertEqual(command.arguments, ["delete", "--non-interactive", "old.txt"])
+    }
+
+    func testRevertCanBeRecursive() {
+        let command = SvnCommandBuilder.revert(paths: ["dir"], recursive: true)
+        XCTAssertEqual(command.arguments, ["revert", "--non-interactive", "--recursive", "dir"])
+    }
+
+    func testCleanupUsesNonInteractive() {
+        let command = SvnCommandBuilder.cleanup()
+        XCTAssertEqual(command.arguments, ["cleanup", "--non-interactive"])
+    }
+
+    func testDiffCanTargetRevisionRange() {
+        let command = SvnCommandBuilder.diff(target: "a.txt", r1: Revision(1), r2: Revision(3))
+        XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "1:3", "a.txt"])
+    }
+
+    func testLogUsesXmlVerboseAndBatch() {
+        let command = SvnCommandBuilder.log(target: "trunk", from: Revision(20), batch: 100, verbose: true)
+        XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])
+    }
 }
