@@ -35,7 +35,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIKeychainStore.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIKeychainStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `AIKeychainStoreTests.swift`，先用 fake keychain 验证 ref 稳定、明文不出 ref、保存/读取/删除闭环：
 
@@ -98,7 +98,7 @@ private actor FakeKeychainAccessor: KeychainAccessing {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIKeychainStoreTests
@@ -106,7 +106,7 @@ swift test --filter AIKeychainStoreTests
 
 预期：编译失败，提示 `AIKeychainStore` / `KeychainAccessing` / `AIKeychainError` 不存在。
 
-- [ ] **步骤 3：实现最少 Keychain Store**
+- [x] **步骤 3：实现最少 Keychain Store**
 
 创建 `AIKeychainStore.swift`，公共接口如下，`SystemKeychainAccessor` 按本步骤列出的规则补齐真实 `SecItem` 调用：
 
@@ -182,7 +182,7 @@ public actor AIKeychainStore: AIAPIKeyStoring {
 - `genericPassword` 对 `errSecItemNotFound` 返回 `nil`，其他非 `errSecSuccess` 抛 `.unhandledStatus(status)`。
 - 密码 Data 使用 UTF-8；解码失败抛 `.invalidPasswordData`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIKeychainStoreTests
@@ -190,7 +190,7 @@ swift test --filter AIKeychainStoreTests
 
 预期：`AIKeychainStoreTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AIKeychainStore.swift Tests/MacSvnCoreTests/AIKeychainStoreTests.swift docs/superpowers/plans/2026-07-10-p6-ai-llm-keychain-clients-core.md
