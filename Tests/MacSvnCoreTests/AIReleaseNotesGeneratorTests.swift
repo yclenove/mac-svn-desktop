@@ -87,6 +87,73 @@ final class AIReleaseNotesGeneratorTests: XCTestCase {
         XCTAssertTrue(prompt.contains("***REDACTED***"))
         XCTAssertFalse(prompt.contains("sk-1234567890abcdef"))
     }
+
+    func testThrowsForMissingInputsAndInvalidModelResponse() async throws {
+        let provider = AIProvider(
+            name: "Local",
+            kind: .ollama,
+            baseURL: "http://localhost:11434",
+            model: "llama3",
+            apiKeyRef: nil,
+            maxTokens: 4096,
+            temperature: 0.1
+        )
+        let entry = LogEntry(revision: Revision(1), author: "a", date: nil, message: "m", changedPaths: [])
+
+        try await assertGenerateThrows(
+            providerManager: FakeReleaseNotesProviderManager(providers: []),
+            llmClient: FakeReleaseNotesLLMClient(responses: []),
+            entries: [entry],
+            expected: .missingDefaultProvider
+        )
+        try await assertGenerateThrows(
+            providerManager: FakeReleaseNotesProviderManager(providers: [provider]),
+            llmClient: FakeReleaseNotesLLMClient(responses: []),
+            entries: [],
+            expected: .emptyLogSelection
+        )
+        try await assertGenerateThrows(
+            providerManager: FakeReleaseNotesProviderManager(providers: [provider]),
+            llmClient: FakeReleaseNotesLLMClient(responses: [
+                AILLMResponse(content: "   ", promptTokens: nil, completionTokens: nil)
+            ]),
+            entries: [entry],
+            expected: .emptyModelResponse
+        )
+        try await assertGenerateThrows(
+            providerManager: FakeReleaseNotesProviderManager(providers: [provider]),
+            llmClient: FakeReleaseNotesLLMClient(responses: [
+                AILLMResponse(content: "not json", promptTokens: nil, completionTokens: nil)
+            ]),
+            entries: [entry],
+            expected: .invalidModelResponse("not json")
+        )
+    }
+
+    private func assertGenerateThrows(
+        providerManager: FakeReleaseNotesProviderManager,
+        llmClient: FakeReleaseNotesLLMClient,
+        entries: [LogEntry],
+        expected: AIReleaseNotesError,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async throws {
+        let generator = AIReleaseNotesGenerator(providerManager: providerManager, llmClient: llmClient)
+
+        do {
+            _ = try await generator.generate(
+                entries: entries,
+                title: "v1.2.0",
+                template: .standardMarkdown,
+                privacySettings: AIPrivacySettings()
+            )
+            XCTFail("Expected \(expected)", file: file, line: line)
+        } catch let error as AIReleaseNotesError {
+            XCTAssertEqual(error, expected, file: file, line: line)
+        } catch {
+            XCTFail("Expected AIReleaseNotesError, got \(error)", file: file, line: line)
+        }
+    }
 }
 
 private struct ReleaseNotesLLMCall: Equatable, Sendable {

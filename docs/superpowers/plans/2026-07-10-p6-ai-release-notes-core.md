@@ -150,7 +150,7 @@ git commit -m "feat: add P6 AI release notes generator core"
 - 修改：`Sources/MacSvnCore/Services/AIReleaseNotesGenerator.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AIReleaseNotesGeneratorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIReleaseNotesGeneratorTests` 增加：
 
@@ -198,7 +198,7 @@ func testThrowsForMissingInputsAndInvalidModelResponse() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIReleaseNotesGeneratorTests
@@ -206,7 +206,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 
 预期：错误路径测试失败或编译失败。
 
-- [ ] **步骤 3：实现最少错误处理**
+- [x] **步骤 3：实现最少错误处理**
 
 实现要求：
 - provider 列表为空抛 `.missingDefaultProvider`；
@@ -214,7 +214,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 - 空 LLM 响应抛 `.emptyModelResponse`；
 - 非 JSON 或 schema 不匹配抛 `.invalidModelResponse(trimmed)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIReleaseNotesGeneratorTests
@@ -222,7 +222,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 
 预期：全部 `AIReleaseNotesGeneratorTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AIReleaseNotesGenerator.swift Tests/MacSvnCoreTests/AIReleaseNotesGeneratorTests.swift docs/superpowers/plans/2026-07-10-p6-ai-release-notes-core.md
