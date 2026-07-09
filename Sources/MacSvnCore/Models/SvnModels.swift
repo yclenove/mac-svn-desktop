@@ -514,6 +514,54 @@ public enum ChangedPathAction: String, Equatable, Sendable {
     }
 }
 
+public enum CommandPaletteActionID: String, Codable, Equatable, Hashable, Sendable {
+    case commit
+    case update
+    case switchBranch
+    case openWorkingCopy
+}
+
+public struct CommandPaletteAction: Equatable, Sendable {
+    public let id: CommandPaletteActionID
+    public let title: String
+    public let keywords: [String]
+
+    public init(id: CommandPaletteActionID, title: String, keywords: [String]) {
+        self.id = id
+        self.title = title
+        self.keywords = keywords
+    }
+}
+
+public struct CommandPaletteFileItem: Equatable, Sendable {
+    public let path: String
+
+    public init(path: String) {
+        self.path = path
+    }
+}
+
+public enum CommandPaletteResultKind: Equatable, Sendable {
+    case action(CommandPaletteActionID)
+    case file(path: String)
+    case log(revision: Revision)
+    case aiChat(query: String)
+}
+
+public struct CommandPaletteResult: Equatable, Sendable {
+    public let kind: CommandPaletteResultKind
+    public let title: String
+    public let subtitle: String?
+    public let score: Int
+
+    public init(kind: CommandPaletteResultKind, title: String, subtitle: String?, score: Int) {
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.score = score
+    }
+}
+
 public enum RemoteEntryKind: Equatable, Sendable {
     case file
     case directory

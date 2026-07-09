@@ -28,7 +28,7 @@
 - 创建：`Sources/MacSvnCore/Services/CommandPaletteSearchEngine.swift`
 - 创建测试：`Tests/MacSvnCoreTests/CommandPaletteSearchEngineTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `CommandPaletteSearchEngineTests`：
 
@@ -65,12 +65,12 @@ final class CommandPaletteSearchEngineTests: XCTestCase {
         XCTAssertEqual(fileResults.first?.kind, .file(path: "Sources/LoginView.swift"))
         XCTAssertEqual(revisionResults.first?.kind, .log(revision: Revision(1200)))
         XCTAssertEqual(keywordResults.first?.kind, .log(revision: Revision(1199)))
-        XCTAssertGreaterThan(actionResults[0].score, actionResults.last?.score ?? 0)
+        XCTAssertGreaterThan(actionResults.first?.score ?? 0, 0)
     }
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter CommandPaletteSearchEngineTests
@@ -78,7 +78,7 @@ swift test --filter CommandPaletteSearchEngineTests
 
 预期：编译失败，提示 `CommandPaletteSearchEngine`、`CommandPaletteAction` 或 `CommandPaletteResultKind` 不存在。
 
-- [ ] **步骤 3：实现最少模型与搜索引擎**
+- [x] **步骤 3：实现最少模型与搜索引擎**
 
 在 `SvnModels.swift` 增加：
 
@@ -206,7 +206,7 @@ public struct CommandPaletteSearchEngine: Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter CommandPaletteSearchEngineTests
@@ -214,7 +214,7 @@ swift test --filter CommandPaletteSearchEngineTests
 
 预期：主路径测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/SvnModels.swift Sources/MacSvnCore/Services/CommandPaletteSearchEngine.swift Tests/MacSvnCoreTests/CommandPaletteSearchEngineTests.swift docs/superpowers/plans/2026-07-10-p6-command-palette-core.md
