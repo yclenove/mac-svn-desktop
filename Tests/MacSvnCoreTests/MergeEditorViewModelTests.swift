@@ -1,0 +1,190 @@
+import XCTest
+@testable import MacSvnCore
+
+final class MergeEditorViewModelTests: XCTestCase {
+    @MainActor
+    func testLoadTextConflictBuildsMergeBlocksAndSelectsFirstConflict() async {
+        let conflict = textConflict()
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "a\nbase\nz\n",
+            mine: "a\nmine\nz\n",
+            theirs: "a\ntheirs\nz\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.load(conflict: conflict, wc: wc)
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.conflict, conflict)
+        XCTAssertEqual(viewModel.workingCopy, wc)
+        XCTAssertEqual(viewModel.conflictBlockIndices, [1])
+        XCTAssertEqual(viewModel.currentConflictIndex, 0)
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 1)
+        XCTAssertFalse(viewModel.canSaveResolved)
+        let loadCalls = await provider.recordedLoadCalls()
+        XCTAssertEqual(loadCalls, [conflict])
+    }
+
+    @MainActor
+    func testNavigationMovesAcrossConflictBlocks() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "one\nsame\ntwo\n",
+            mine: "mine-one\nsame\nmine-two\n",
+            theirs: "theirs-one\nsame\ntheirs-two\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.nextConflict()
+        XCTAssertEqual(viewModel.currentConflictIndex, 1)
+        viewModel.nextConflict()
+        XCTAssertEqual(viewModel.currentConflictIndex, 1)
+        viewModel.previousConflict()
+        XCTAssertEqual(viewModel.currentConflictIndex, 0)
+    }
+
+    @MainActor
+    func testResolveCurrentConflictUpdatesBlocksAndSaveReadiness() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "a\nbase\nz\n",
+            mine: "a\nmine\nz\n",
+            theirs: "a\ntheirs\nz\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.resolveCurrent(.takeMine)
+
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 0)
+        XCTAssertTrue(viewModel.canSaveResolved)
+        XCTAssertEqual(viewModel.mergedText(), "a\nmine\nz\n")
+    }
+
+    @MainActor
+    func testManualResolutionAndTakeBothAreAppliedToMergedText() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "a\nbase\nz\n",
+            mine: "a\nmine\nz\n",
+            theirs: "a\ntheirs\nz\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.resolveCurrent(.takeBoth(mineFirst: false))
+        XCTAssertEqual(viewModel.mergedText(), "a\ntheirs\nmine\nz\n")
+
+        viewModel.resolveConflict(atConflictIndex: 0, resolution: .manual(lines: ["manual"]))
+        XCTAssertEqual(viewModel.mergedText(), "a\nmanual\nz\n")
+    }
+
+    @MainActor
+    func testSaveBlocksWhenConflictsRemain() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "base\n",
+            mine: "mine\n",
+            theirs: "theirs\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        await viewModel.saveResolved()
+
+        XCTAssertEqual(viewModel.state, .error("unresolvedConflicts"))
+        let saveCalls = await provider.recordedSaveCalls()
+        XCTAssertTrue(saveCalls.isEmpty)
+    }
+
+    @MainActor
+    func testSaveResolvedWritesMergedTextThroughProvider() async {
+        let conflict = textConflict()
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "base\n",
+            mine: "mine\n",
+            theirs: "theirs\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: conflict, wc: wc)
+        viewModel.resolveCurrent(.takeTheirs)
+        await viewModel.saveResolved()
+
+        XCTAssertEqual(viewModel.state, .saved)
+        let saveCalls = await provider.recordedSaveCalls()
+        XCTAssertEqual(saveCalls, [
+            MergeEditorSaveCall(conflict: conflict, wc: wc, mergedText: "theirs\n")
+        ])
+    }
+
+    @MainActor
+    func testSaveFailureStoresError() async {
+        let provider = FakeMergeEditorProvider(
+            loadResult: .success((
+                base: "base\n",
+                mine: "mine\n",
+                theirs: "theirs\n"
+            )),
+            saveError: SvnError.network(detail: "offline")
+        )
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.resolveCurrent(.takeMine)
+        await viewModel.saveResolved()
+
+        XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.network(detail: "offline"))))
+    }
+}
+
+private func textConflict(path: String = "README.txt") -> ConflictInfo {
+    ConflictInfo(
+        path: path,
+        kind: .text,
+        baseFile: nil,
+        mineFile: nil,
+        theirsFile: nil,
+        treeConflict: nil
+    )
+}
+
+struct MergeEditorSaveCall: Equatable {
+    let conflict: ConflictInfo
+    let wc: URL
+    let mergedText: String
+}
+
+actor FakeMergeEditorProvider: TextConflictLoading, ConflictResolutionSaving {
+    let loadResult: Result<(base: String, mine: String, theirs: String), Error>
+    let saveError: Error?
+    private var loadCalls: [ConflictInfo] = []
+    private var saveCalls: [MergeEditorSaveCall] = []
+
+    init(
+        loadResult: Result<(base: String, mine: String, theirs: String), Error>,
+        saveError: Error? = nil
+    ) {
+        self.loadResult = loadResult
+        self.saveError = saveError
+    }
+
+    func loadTextConflict(_ conflict: ConflictInfo) async throws -> (base: String, mine: String, theirs: String) {
+        loadCalls.append(conflict)
+        return try loadResult.get()
+    }
+
+    func saveResolution(_ conflict: ConflictInfo, wc: URL, mergedText: String) async throws {
+        if let saveError {
+            throw saveError
+        }
+        saveCalls.append(MergeEditorSaveCall(conflict: conflict, wc: wc, mergedText: mergedText))
+    }
+
+    func recordedLoadCalls() -> [ConflictInfo] {
+        loadCalls
+    }
+
+    func recordedSaveCalls() -> [MergeEditorSaveCall] {
+        saveCalls
+    }
+}
