@@ -129,7 +129,7 @@ git commit -m "feat: add P6 AI SVN tool risk models"
 - 创建/修改：`Sources/MacSvnCore/Services/AISVNToolRegistry.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AISVNToolRegistryTests` 增加：
 
@@ -159,7 +159,7 @@ func testReadOnlyStatusExecutesThroughServiceAndWritesAuditRecord() async throws
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -167,7 +167,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：编译失败，提示 `AISVNToolRegistry`、`AISVNToolCall` 或 `InMemoryAIToolAuditStore` 不存在。
 
-- [ ] **步骤 3：实现最少服务代码**
+- [x] **步骤 3：实现最少服务代码**
 
 实现要求：
 - `AISVNToolCall` 保存原始 tool 名和字符串参数；
@@ -177,7 +177,7 @@ swift test --filter AISVNToolRegistryTests
 - `AISVNToolResult.content` 使用可读文本，供 Chat 面板直接展示；
 - 成功时写入 `AISVNToolAuditRecord(outcome: .completed)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -185,7 +185,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：模型分级和只读执行测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift Sources/MacSvnCore/Services/AISVNToolRegistry.swift Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift docs/superpowers/plans/2026-07-10-p6-ai-svn-agent-tool-registry-core.md

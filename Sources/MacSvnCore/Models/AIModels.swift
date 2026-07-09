@@ -153,6 +153,99 @@ public enum AISVNToolName: String, Codable, CaseIterable, Equatable, Sendable {
     }
 }
 
+public struct AISVNToolCall: Codable, Equatable, Sendable {
+    public let name: String
+    public let arguments: [String: String]
+
+    public init(name: String, arguments: [String: String]) {
+        self.name = name
+        self.arguments = arguments
+    }
+}
+
+public struct AISVNToolResult: Codable, Equatable, Sendable {
+    public let content: String
+    public let metadata: [String: String]
+
+    public init(content: String, metadata: [String: String] = [:]) {
+        self.content = content
+        self.metadata = metadata
+    }
+}
+
+public struct AISVNToolConfirmation: Codable, Equatable, Sendable {
+    public let id: UUID
+    public let toolName: String
+    public let risk: AISVNToolRisk
+    public let commandPreview: String
+    public let impactPaths: [String]
+    public let warning: String
+
+    public init(
+        id: UUID = UUID(),
+        toolName: String,
+        risk: AISVNToolRisk,
+        commandPreview: String,
+        impactPaths: [String],
+        warning: String
+    ) {
+        self.id = id
+        self.toolName = toolName
+        self.risk = risk
+        self.commandPreview = commandPreview
+        self.impactPaths = impactPaths
+        self.warning = warning
+    }
+}
+
+public enum AISVNToolDecision: Equatable, Sendable {
+    case completed(AISVNToolResult)
+    case confirmationRequired(AISVNToolConfirmation)
+}
+
+public enum AISVNToolAuditOutcome: String, Codable, Equatable, Sendable {
+    case completed
+    case confirmationRequired
+    case failed
+}
+
+public struct AISVNToolAuditRecord: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let sessionID: String
+    public let toolName: String
+    public let risk: AISVNToolRisk?
+    public let arguments: [String: String]
+    public let outcome: AISVNToolAuditOutcome
+    public let summary: String?
+    public let createdAt: Date
+
+    public init(
+        id: UUID = UUID(),
+        sessionID: String,
+        toolName: String,
+        risk: AISVNToolRisk?,
+        arguments: [String: String],
+        outcome: AISVNToolAuditOutcome,
+        summary: String?,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.sessionID = sessionID
+        self.toolName = toolName
+        self.risk = risk
+        self.arguments = arguments
+        self.outcome = outcome
+        self.summary = summary
+        self.createdAt = createdAt
+    }
+}
+
+public enum AISVNToolError: Error, Equatable, Sendable {
+    case forbiddenTool(String)
+    case missingArgument(String)
+    case invalidArgument(name: String, value: String)
+}
+
 public enum AICommitMessageFormat: String, Codable, Equatable, Sendable {
     case oneLineChinese
     case conventionalChinese
