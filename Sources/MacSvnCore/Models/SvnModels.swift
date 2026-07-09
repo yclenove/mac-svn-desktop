@@ -161,6 +161,56 @@ public struct SvnLock: Equatable, Sendable {
     }
 }
 
+public enum CommitGuardRuleID: String, Codable, Equatable, Hashable, Sendable {
+    case conflictMarker
+    case largeFile
+    case deniedPath
+    case suspectedSecret
+}
+
+public enum CommitGuardSeverity: String, Codable, Equatable, Sendable {
+    case warning
+    case blocking
+}
+
+public struct CommitGuardIssue: Equatable, Sendable {
+    public let ruleID: CommitGuardRuleID
+    public let severity: CommitGuardSeverity
+    public let path: String
+    public let message: String
+    public let detail: String?
+
+    public init(
+        ruleID: CommitGuardRuleID,
+        severity: CommitGuardSeverity,
+        path: String,
+        message: String,
+        detail: String? = nil
+    ) {
+        self.ruleID = ruleID
+        self.severity = severity
+        self.path = path
+        self.message = message
+        self.detail = detail
+    }
+}
+
+public struct CommitGuardConfiguration: Equatable, Sendable {
+    public var largeFileThresholdBytes: Int
+    public var deniedPathPatterns: [String]
+    public var hardBlockedRules: Set<CommitGuardRuleID>
+
+    public init(
+        largeFileThresholdBytes: Int = 10 * 1024 * 1024,
+        deniedPathPatterns: [String] = ["*.log", "node_modules/**", ".DS_Store"],
+        hardBlockedRules: Set<CommitGuardRuleID> = []
+    ) {
+        self.largeFileThresholdBytes = largeFileThresholdBytes
+        self.deniedPathPatterns = deniedPathPatterns
+        self.hardBlockedRules = hardBlockedRules
+    }
+}
+
 public struct UpdateSummary: Equatable, Sendable {
     public var added: Int
     public var updated: Int
