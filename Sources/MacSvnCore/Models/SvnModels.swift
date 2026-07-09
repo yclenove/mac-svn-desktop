@@ -603,6 +603,81 @@ public struct WorkspaceListFile: Codable, Equatable, Sendable {
     }
 }
 
+public struct MenuBarMonitorConfiguration: Equatable, Sendable {
+    public var pollIntervalMinutes: Int
+    public var remoteLogBatchSize: Int
+
+    public init(pollIntervalMinutes: Int = 10, remoteLogBatchSize: Int = 50) {
+        self.pollIntervalMinutes = max(1, pollIntervalMinutes)
+        self.remoteLogBatchSize = max(1, remoteLogBatchSize)
+    }
+}
+
+public enum MenuBarWorkingCopySnapshotState: Equatable, Sendable {
+    case loaded
+    case invalidWorkingCopy
+    case error(String)
+}
+
+public struct MenuBarWorkingCopySnapshot: Equatable, Sendable {
+    public let recordID: UUID
+    public let name: String
+    public let localPath: String
+    public let repoURL: String
+    public let state: MenuBarWorkingCopySnapshotState
+    public let localChangeCount: Int
+    public let conflictedCount: Int
+    public let remoteNewCommitCount: Int
+    public let remoteLatestRevision: Revision?
+    public let notificationSummary: String?
+
+    public init(
+        recordID: UUID,
+        name: String,
+        localPath: String,
+        repoURL: String,
+        state: MenuBarWorkingCopySnapshotState,
+        localChangeCount: Int,
+        conflictedCount: Int,
+        remoteNewCommitCount: Int,
+        remoteLatestRevision: Revision?,
+        notificationSummary: String?
+    ) {
+        self.recordID = recordID
+        self.name = name
+        self.localPath = localPath
+        self.repoURL = repoURL
+        self.state = state
+        self.localChangeCount = localChangeCount
+        self.conflictedCount = conflictedCount
+        self.remoteNewCommitCount = remoteNewCommitCount
+        self.remoteLatestRevision = remoteLatestRevision
+        self.notificationSummary = notificationSummary
+    }
+}
+
+public struct MenuBarStatusSnapshot: Equatable, Sendable {
+    public let checkedAt: Date
+    public let workingCopies: [MenuBarWorkingCopySnapshot]
+
+    public init(checkedAt: Date, workingCopies: [MenuBarWorkingCopySnapshot]) {
+        self.checkedAt = checkedAt
+        self.workingCopies = workingCopies
+    }
+
+    public var totalLocalChangeCount: Int {
+        workingCopies.reduce(0) { $0 + $1.localChangeCount }
+    }
+
+    public var totalRemoteNewCommitCount: Int {
+        workingCopies.reduce(0) { $0 + $1.remoteNewCommitCount }
+    }
+
+    public var hasAttentionItems: Bool {
+        totalLocalChangeCount > 0 || totalRemoteNewCommitCount > 0
+    }
+}
+
 public struct RepoBookmark: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String
