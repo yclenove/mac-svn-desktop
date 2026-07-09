@@ -181,7 +181,23 @@ public enum SvnCommandBuilder {
         if verbose {
             arguments.append("-v")
         }
-        arguments += ["--non-interactive", "-r", "\(from):0", "-l", String(batch)]
+        arguments += ["--non-interactive", "-r", "\(from):0", "-l", svnLimitArgument(batch)]
+        arguments += authArguments
+        arguments.append(target)
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func logFromHead(
+        target: String,
+        batch: Int,
+        verbose: Bool,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["log", "--xml"]
+        if verbose {
+            arguments.append("-v")
+        }
+        arguments += ["--non-interactive", "-r", "HEAD:0", "-l", svnLimitArgument(batch)]
         arguments += authArguments
         arguments.append(target)
         return SvnCommand(arguments: arguments)
@@ -304,5 +320,9 @@ public enum SvnCommandBuilder {
             "svn:mime-type"
         ]
         return textProperties.contains(name)
+    }
+
+    private static func svnLimitArgument(_ batch: Int) -> String {
+        String(min(batch, Int(Int32.max)))
     }
 }

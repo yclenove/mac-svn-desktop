@@ -153,6 +153,53 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testLogFromHeadUsesHeadToZeroRangeBatchAndTarget() {
+        let command = SvnCommandBuilder.logFromHead(
+            target: "file:///repo/trunk",
+            batch: 100,
+            verbose: false
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "log", "--xml", "--non-interactive",
+            "-r", "HEAD:0",
+            "-l", "100",
+            "file:///repo/trunk"
+        ])
+    }
+
+    func testLogFromHeadClampsBatchToSvnLimitRange() {
+        let command = SvnCommandBuilder.logFromHead(
+            target: "file:///repo/trunk",
+            batch: Int.max,
+            verbose: false
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "log", "--xml", "--non-interactive",
+            "-r", "HEAD:0",
+            "-l", "2147483647",
+            "file:///repo/trunk"
+        ])
+    }
+
+    func testLogFromHeadCanIncludeVerboseAndAuthenticationArgumentsBeforeTarget() {
+        let command = SvnCommandBuilder.logFromHead(
+            target: "file:///repo/trunk",
+            batch: 50,
+            verbose: true,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "log", "--xml", "-v", "--non-interactive",
+            "-r", "HEAD:0",
+            "-l", "50",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+    }
+
     func testListUsesXmlDepthAuthAndUrl() {
         let command = SvnCommandBuilder.list(
             url: "file:///repo/trunk",

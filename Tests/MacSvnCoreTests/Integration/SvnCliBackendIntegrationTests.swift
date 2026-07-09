@@ -199,6 +199,54 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(entries.first?.changedPaths.isEmpty ?? true)
     }
 
+    func testRemoteLogFromHeadReadsLatestHistory() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let mkdirRevision = try await service.mkdir(
+            url: "\(fixture.trunkURL)/latest-history",
+            message: "add latest history directory",
+            auth: nil
+        )
+
+        let entries = try await fixture.backend.remoteLogFromHead(
+            url: fixture.repositoryURL,
+            batch: 10,
+            verbose: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(entries.first?.revision, mkdirRevision)
+        XCTAssertFalse(entries.first?.changedPaths.isEmpty ?? true)
+        XCTAssertTrue(entries.contains { $0.revision == Revision(1) })
+    }
+
+    func testGitMigrationSourceAnalyzerReadsFixtureRepository() async throws {
+        let fixture = try makeFixture()
+        let gitExecutable = try requireGitExecutable()
+        let service = SvnService(backend: fixture.backend)
+        let analyzer = GitMigrationSourceAnalyzer(
+            environmentChecker: GitMigrationEnvironmentChecker(
+                gitExecutable: gitExecutable,
+                runner: ProcessRunner(),
+                timeout: 30
+            ),
+            listProvider: service,
+            logProvider: service
+        )
+
+        let analysis = try await analyzer.analyze(repositoryRoot: fixture.repositoryURL, auth: nil)
+
+        XCTAssertEqual(analysis.repositoryRoot, fixture.repositoryURL)
+        XCTAssertEqual(analysis.layout.kind, .standard)
+        XCTAssertEqual(analysis.layout.trunkPath, "trunk")
+        XCTAssertEqual(analysis.layout.branchesPath, "branches")
+        XCTAssertEqual(analysis.layout.tagsPath, "tags")
+        XCTAssertEqual(analysis.layout.confidence, 1.0)
+        XCTAssertTrue(analysis.authors.map(\.svnUsername).contains(NSUserName()))
+        XCTAssertGreaterThanOrEqual(analysis.totalRevisionCount, 1)
+        XCTAssertGreaterThanOrEqual(analysis.latestRevision?.value ?? 0, analysis.oldestRevision?.value ?? 0)
+    }
+
     func testServiceListsBranchesAndTagsFromRepositoryRoot() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

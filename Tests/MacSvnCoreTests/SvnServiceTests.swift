@@ -534,6 +534,29 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.remoteLogCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testRemoteLogFromHeadPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.remoteLogFromHeadErrors = [.authentication]
+        backend.remoteLogFromHeadResult = [
+            LogEntry(revision: Revision(9), author: "a", date: nil, message: "m", changedPaths: [])
+        ]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let entries = try await service.remoteLogFromHead(
+            url: "file:///repo/trunk",
+            batch: 10,
+            verbose: true,
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(entries.map(\.revision), [Revision(9)])
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["remoteLogFromHead", "remoteLogFromHead"])
+        XCTAssertEqual(backend.remoteLogFromHeadCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -737,6 +760,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCatCredentials: [Credential?] = []
     private var recordedCatSizeLimits: [Int] = []
     private var recordedRemoteLogCredentials: [Credential?] = []
+    private var recordedRemoteLogFromHeadCredentials: [Credential?] = []
     private var recordedCopyCredentials: [Credential?] = []
     private var recordedMkdirCredentials: [Credential?] = []
     private var recordedRemoteDeleteCredentials: [Credential?] = []
@@ -850,6 +874,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedRemoteLogCredentials
     }
 
+    var remoteLogFromHeadCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedRemoteLogFromHeadCredentials
+    }
+
     var copyCredentials: [Credential?] {
         callsLock.lock()
         defer {
@@ -925,6 +957,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var listResult: [RemoteEntry] = []
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
+    var remoteLogFromHeadResult: [LogEntry] = []
     var copyResult = Revision(1)
     var mkdirResult = Revision(1)
     var remoteDeleteResult = Revision(1)
@@ -940,6 +973,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var listErrors: [SvnError] = []
     var catErrors: [SvnError] = []
     var remoteLogErrors: [SvnError] = []
+    var remoteLogFromHeadErrors: [SvnError] = []
     var copyErrors: [SvnError] = []
     var mkdirErrors: [SvnError] = []
     var remoteDeleteErrors: [SvnError] = []
@@ -1072,6 +1106,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             throw error
         }
         return remoteLogResult
+    }
+
+    func remoteLogFromHead(url: String, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry] {
+        let error = recordRemoteLogFromHead(auth: auth)
+        if let error {
+            throw error
+        }
+        return remoteLogFromHeadResult
     }
 
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
@@ -1239,6 +1281,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "remoteLog"))
         recordedRemoteLogCredentials.append(auth)
         let error = remoteLogErrors.isEmpty ? nil : remoteLogErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordRemoteLogFromHead(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "remoteLogFromHead"))
+        recordedRemoteLogFromHeadCredentials.append(auth)
+        let error = remoteLogFromHeadErrors.isEmpty ? nil : remoteLogFromHeadErrors.removeFirst()
         callsLock.unlock()
         return error
     }
