@@ -203,6 +203,60 @@ final class MergeEditorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.hasUnsavedChanges)
         XCTAssertTrue(viewModel.shouldWarnBeforeClose)
     }
+
+    @MainActor
+    func testDirtyStateTracksLoadResolveSaveAndDiscard() async {
+        let conflict = textConflict()
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "a\nbase\nz\n",
+            mine: "a\nmine\nz\n",
+            theirs: "a\ntheirs\nz\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: conflict, wc: wc)
+        XCTAssertFalse(viewModel.hasUnsavedChanges)
+        XCTAssertFalse(viewModel.shouldWarnBeforeClose)
+
+        viewModel.resolveCurrent(.manual(lines: ["manual"]))
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+        XCTAssertTrue(viewModel.shouldWarnBeforeClose)
+
+        viewModel.discardEdits()
+        XCTAssertFalse(viewModel.hasUnsavedChanges)
+        XCTAssertFalse(viewModel.shouldWarnBeforeClose)
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 1)
+
+        viewModel.resolveCurrent(.takeTheirs)
+        await viewModel.saveResolved()
+
+        XCTAssertEqual(viewModel.state, .saved)
+        XCTAssertFalse(viewModel.hasUnsavedChanges)
+        XCTAssertFalse(viewModel.shouldWarnBeforeClose)
+    }
+
+    @MainActor
+    func testSaveFailureKeepsUnsavedChanges() async {
+        let provider = FakeMergeEditorProvider(
+            loadResult: .success((
+                base: "base\n",
+                mine: "mine\n",
+                theirs: "theirs\n"
+            )),
+            saveError: SvnError.network(detail: "offline")
+        )
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.resolveCurrent(.takeMine)
+        await viewModel.saveResolved()
+
+        XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.network(detail: "offline"))))
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+        XCTAssertTrue(viewModel.shouldWarnBeforeClose)
+    }
 }
 
 private func textConflict(path: String = "README.txt") -> ConflictInfo {

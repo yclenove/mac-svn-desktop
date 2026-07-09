@@ -27,6 +27,7 @@ public enum MergeEditorState: Equatable, Sendable {
 public final class MergeEditorViewModel {
     private let provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving
     private var preservesTrailingNewline = false
+    private var loadedBlocksSnapshot: [MergeBlock] = []
 
     public private(set) var state: MergeEditorState = .idle
     public private(set) var conflict: ConflictInfo?
@@ -79,6 +80,7 @@ public final class MergeEditorViewModel {
         self.conflict = conflict
         workingCopy = wc
         blocks = []
+        loadedBlocksSnapshot = []
         currentConflictIndex = 0
         hasUnsavedChanges = false
 
@@ -90,10 +92,12 @@ public final class MergeEditorViewModel {
                 mine: Self.lines(text.mine),
                 theirs: Self.lines(text.theirs)
             )
+            loadedBlocksSnapshot = blocks
             currentConflictIndex = conflictBlockIndices.isEmpty ? 0 : 0
             hasUnsavedChanges = false
             state = .loaded
         } catch {
+            loadedBlocksSnapshot = []
             hasUnsavedChanges = false
             state = .error(String(describing: error))
         }
@@ -195,6 +199,17 @@ public final class MergeEditorViewModel {
             state = .saved
         } catch {
             state = .error(String(describing: error))
+        }
+    }
+
+    public func discardEdits() {
+        blocks = loadedBlocksSnapshot
+        let conflictCount = conflictBlockIndices.count
+        currentConflictIndex = conflictCount == 0 ? 0 : min(currentConflictIndex, conflictCount - 1)
+        hasUnsavedChanges = false
+
+        if case .error = state {
+            state = .loaded
         }
     }
 
