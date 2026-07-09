@@ -19,3 +19,16 @@ public enum MacSvnDeepLinkParserError: Error, Equatable, Sendable {
     case missingParameter(String)
     case invalidRevision(String)
 }
+
+public enum MacSvnCLICommand: Equatable, Sendable {
+    case open(path: String)
+    case status(path: String)
+    case commitUI(path: String, initialMessage: String?)
+}
+
+public enum MacSvnCLICommandParserError: Error, Equatable, Sendable {
+    case emptyArguments
+    case unknownCommand(String)
+    case missingValue(String)
+    case unexpectedArgument(String)
+}

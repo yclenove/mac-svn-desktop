@@ -212,7 +212,7 @@ git commit -m "feat: add P5 macsvn deep link parser core"
 - 创建：`Sources/MacSvnCore/Services/MacSvnCLICommandParser.swift`
 - 修改测试：`Tests/MacSvnCoreTests/MacSvnAutomationParserTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `MacSvnAutomationParserTests` 增加：
 
@@ -249,7 +249,7 @@ func testCLICommandParserRejectsEmptyUnknownMissingAndUnexpectedArguments() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter MacSvnAutomationParserTests
@@ -257,7 +257,7 @@ swift test --filter MacSvnAutomationParserTests
 
 预期：编译失败，提示 `MacSvnCLICommandParser` 或 `MacSvnCLICommand` 不存在。
 
-- [ ] **步骤 3：实现 CLI 命令模型与解析器**
+- [x] **步骤 3：实现 CLI 命令模型与解析器**
 
 在 `AutomationModels.swift` 增加：
 
@@ -291,9 +291,9 @@ public struct MacSvnCLICommandParser: Sendable {
 
         switch command {
         case "open":
-            return .open(path: try singlePath(arguments, command: command))
+            return .open(path: try singlePath(arguments))
         case "status":
-            return .status(path: try singlePath(arguments, command: command))
+            return .status(path: try singlePath(arguments))
         case "commit-ui":
             return try parseCommitUI(Array(arguments.dropFirst()))
         default:
@@ -301,7 +301,7 @@ public struct MacSvnCLICommandParser: Sendable {
         }
     }
 
-    private func singlePath(_ arguments: [String], command: String) throws -> String {
+    private func singlePath(_ arguments: [String]) throws -> String {
         guard arguments.count >= 2, !arguments[1].isEmpty else {
             throw MacSvnCLICommandParserError.missingValue("path")
         }
@@ -338,7 +338,7 @@ public struct MacSvnCLICommandParser: Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter MacSvnAutomationParserTests
@@ -346,7 +346,7 @@ swift test --filter MacSvnAutomationParserTests
 
 预期：全部 `MacSvnAutomationParserTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AutomationModels.swift Sources/MacSvnCore/Services/MacSvnCLICommandParser.swift Tests/MacSvnCoreTests/MacSvnAutomationParserTests.swift docs/superpowers/plans/2026-07-10-p5-url-scheme-cli-core.md

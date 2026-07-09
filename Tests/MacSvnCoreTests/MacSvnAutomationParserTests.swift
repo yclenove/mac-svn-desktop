@@ -31,4 +31,35 @@ final class MacSvnAutomationParserTests: XCTestCase {
             XCTAssertEqual(error as? MacSvnDeepLinkParserError, .invalidRevision("abc"))
         }
     }
+
+    func testCLICommandParserParsesOpenStatusAndCommitUICommands() throws {
+        let parser = MacSvnCLICommandParser()
+
+        XCTAssertEqual(try parser.parse(["open", "/Users/me/repo"]), .open(path: "/Users/me/repo"))
+        XCTAssertEqual(try parser.parse(["status", "/Users/me/repo"]), .status(path: "/Users/me/repo"))
+        XCTAssertEqual(
+            try parser.parse(["commit-ui", "/Users/me/repo", "--message", "修复登录失败"]),
+            .commitUI(path: "/Users/me/repo", initialMessage: "修复登录失败")
+        )
+    }
+
+    func testCLICommandParserRejectsEmptyUnknownMissingAndUnexpectedArguments() {
+        let parser = MacSvnCLICommandParser()
+
+        XCTAssertThrowsError(try parser.parse([])) { error in
+            XCTAssertEqual(error as? MacSvnCLICommandParserError, .emptyArguments)
+        }
+        XCTAssertThrowsError(try parser.parse(["blame", "/repo/file.swift"])) { error in
+            XCTAssertEqual(error as? MacSvnCLICommandParserError, .unknownCommand("blame"))
+        }
+        XCTAssertThrowsError(try parser.parse(["open"])) { error in
+            XCTAssertEqual(error as? MacSvnCLICommandParserError, .missingValue("path"))
+        }
+        XCTAssertThrowsError(try parser.parse(["status", "/repo", "--json"])) { error in
+            XCTAssertEqual(error as? MacSvnCLICommandParserError, .unexpectedArgument("--json"))
+        }
+        XCTAssertThrowsError(try parser.parse(["commit-ui", "/repo", "--message"])) { error in
+            XCTAssertEqual(error as? MacSvnCLICommandParserError, .missingValue("--message"))
+        }
+    }
 }
