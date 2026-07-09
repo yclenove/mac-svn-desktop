@@ -323,6 +323,48 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.resolveAccepts, [.theirsFull])
     }
 
+    func testApplyPatchUsesBackendWriteOperation() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let patchFile = URL(fileURLWithPath: "/tmp/shelf.patch")
+
+        try await service.applyPatch(wc: wc, patchFile: patchFile)
+
+        XCTAssertEqual(backend.calls.map(\.name), ["applyPatch"])
+        XCTAssertEqual(backend.patchFiles, [patchFile])
+    }
+
+    func testApplyPatchWriteLockBlocksConcurrentWritesOnSameWorkingCopy() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let patchStarted = XCTestExpectation(description: "patch started")
+        let releasePatch = AsyncGate()
+        backend.onApplyPatch = {
+            patchStarted.fulfill()
+            await releasePatch.wait()
+        }
+
+        let patchTask = Task {
+            try await service.applyPatch(wc: wc, patchFile: URL(fileURLWithPath: "/tmp/shelf.patch"))
+        }
+
+        await fulfillment(of: [patchStarted], timeout: 1)
+
+        do {
+            _ = try await service.update(wc: wc, paths: [], revision: nil)
+            XCTFail("Expected wc busy")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .wcBusy(operation: "patch"))
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        await releasePatch.open()
+        _ = try await patchTask.value
+    }
+
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.listErrors = [.authentication]
@@ -596,6 +638,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedSwitchCredentials: [Credential?] = []
     private var recordedMergeCredentials: [Credential?] = []
     private var recordedResolveAccepts: [ResolveAccept] = []
+    private var recordedPatchFiles: [URL] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -717,6 +760,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedResolveAccepts
     }
 
+    var patchFiles: [URL] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedPatchFiles
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var blameResult: [BlameLine] = []
@@ -743,6 +794,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var switchErrors: [SvnError] = []
     var mergeErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
+    var onApplyPatch: (() async -> Void)?
 
     private func record(_ name: String) {
         callsLock.lock()
@@ -910,10 +962,22 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordResolve(accept: accept)
     }
 
+    func applyPatch(wc: URL, patchFile: URL) async throws {
+        recordApplyPatch(patchFile: patchFile)
+        await onApplyPatch?()
+    }
+
     private func recordResolve(accept: ResolveAccept) {
         callsLock.lock()
         recordedCalls.append(Call(name: "resolve"))
         recordedResolveAccepts.append(accept)
+        callsLock.unlock()
+    }
+
+    private func recordApplyPatch(patchFile: URL) {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "applyPatch"))
+        recordedPatchFiles.append(patchFile)
         callsLock.unlock()
     }
 

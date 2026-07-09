@@ -109,6 +109,14 @@ public struct SvnCliBackend: SvnBackend {
         return String(decoding: result.stdout, as: UTF8.self)
     }
 
+    public func applyPatch(wc: URL, patchFile: URL) async throws {
+        _ = try await run(
+            SvnCommandBuilder.patch(patchFile: patchFile.path),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func blame(wc: URL, target: String) async throws -> [BlameLine] {
         let result = try await run(SvnCommandBuilder.blame(target: target), currentDirectory: wc.path, stdin: nil)
         return try BlameXMLParser.parse(result.stdout)

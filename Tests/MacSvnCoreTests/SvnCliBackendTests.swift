@@ -257,6 +257,19 @@ final class SvnCliBackendTests: XCTestCase {
         ])
     }
 
+    func testApplyPatchRunsPatchInWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.applyPatch(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            patchFile: URL(fileURLWithPath: "/tmp/shelf.patch")
+        )
+
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, ["patch", "--non-interactive", "/tmp/shelf.patch"])
+    }
+
     func testCheckoutPassesDepthAuthStdinAndRunsOutsideWorkingCopy() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

@@ -13,6 +13,7 @@ public protocol SvnBackend: Sendable {
     func cleanup(wc: URL) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    func applyPatch(wc: URL, patchFile: URL) async throws
     func blame(wc: URL, target: String) async throws -> [BlameLine]
     func properties(wc: URL, target: String) async throws -> [SvnProperty]
     func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty?

@@ -125,6 +125,11 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "1:3", "a.txt"])
     }
 
+    func testPatchUsesNonInteractiveAndPatchFile() {
+        let command = SvnCommandBuilder.patch(patchFile: "/tmp/shelf.patch")
+        XCTAssertEqual(command.arguments, ["patch", "--non-interactive", "/tmp/shelf.patch"])
+    }
+
     func testLogUsesXmlVerboseAndBatch() {
         let command = SvnCommandBuilder.log(target: "trunk", from: Revision(20), batch: 100, verbose: true)
         XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])

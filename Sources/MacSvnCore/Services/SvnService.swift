@@ -245,6 +245,12 @@ public actor SvnService {
         }
     }
 
+    public func applyPatch(wc: URL, patchFile: URL) async throws {
+        try await withWriteLock(wc: wc, operation: "patch") {
+            try await backend.applyPatch(wc: wc, patchFile: patchFile)
+        }
+    }
+
     public func setProperty(wc: URL, target: String, name: String, value: String) async throws {
         try await withWriteLock(wc: wc, operation: "setProperty") {
             try await backend.setProperty(wc: wc, target: target, name: name, value: value)

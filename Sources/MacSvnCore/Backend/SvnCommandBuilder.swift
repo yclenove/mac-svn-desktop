@@ -113,6 +113,10 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
+    public static func patch(patchFile: String) -> SvnCommand {
+        SvnCommand(arguments: ["patch", "--non-interactive", patchFile])
+    }
+
     public static func blame(target: String) -> SvnCommand {
         SvnCommand(arguments: ["blame", "--xml", "--non-interactive", target])
     }
