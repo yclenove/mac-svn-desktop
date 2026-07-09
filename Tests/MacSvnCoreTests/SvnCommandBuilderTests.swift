@@ -2,6 +2,11 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCommandBuilderTests: XCTestCase {
+    func testVersionUsesQuietFlag() {
+        let command = SvnCommandBuilder.version()
+        XCTAssertEqual(command.arguments, ["--version", "--quiet"])
+    }
+
     func testStatusUsesXmlAndNonInteractive() {
         let command = SvnCommandBuilder.status()
         XCTAssertEqual(command.arguments, ["status", "--xml", "--non-interactive"])

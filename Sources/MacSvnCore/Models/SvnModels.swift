@@ -10,6 +10,22 @@ public struct SvnVersion: Equatable, Sendable {
         self.minor = minor
         self.patch = patch
     }
+
+    public static func parse(_ output: String) throws -> SvnVersion {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: ".")
+
+        guard
+            parts.count == 3,
+            let major = Int(parts[0]),
+            let minor = Int(parts[1]),
+            let patch = Int(parts[2])
+        else {
+            throw SvnError.parse(detail: "Unable to parse svn version: \(trimmed)")
+        }
+
+        return SvnVersion(major: major, minor: minor, patch: patch)
+    }
 }
 
 public struct Revision: Equatable, Hashable, Sendable, ExpressibleByIntegerLiteral, CustomStringConvertible {

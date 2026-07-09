@@ -7,6 +7,10 @@ public struct SvnCommand: Equatable, Sendable {
 }
 
 public enum SvnCommandBuilder {
+    public static func version() -> SvnCommand {
+        SvnCommand(arguments: ["--version", "--quiet"])
+    }
+
     public static func status() -> SvnCommand {
         SvnCommand(arguments: ["status", "--xml", "--non-interactive"])
     }
