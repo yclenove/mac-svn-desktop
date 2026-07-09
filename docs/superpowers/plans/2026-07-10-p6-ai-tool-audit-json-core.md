@@ -121,7 +121,7 @@ private extension JSONDecoder {
 }
 ```
 
-- [x] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证接入行为**
 
 ```bash
 swift test --filter AIToolAuditStoreTests
@@ -209,7 +209,7 @@ git commit -m "feat: add P6 AI tool audit JSON store"
 **文件：**
 - 修改测试：`Tests/MacSvnCoreTests/AIToolAuditStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIToolAuditStoreTests` 追加：
 
@@ -271,7 +271,7 @@ private actor FakeAuditToolService: AISVNToolServicing {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIToolAuditStoreTests/testRegistryPersistsCompletedConfirmationAndFailedAuditRecords
@@ -279,11 +279,11 @@ swift test --filter AIToolAuditStoreTests/testRegistryPersistsCompletedConfirmat
 
 预期：若任务 1 已实现，测试应通过；如果 store 没有正确持久化 registry 写入，则 FAIL。
 
-- [ ] **步骤 3：实现最少接入修正**
+- [x] **步骤 3：确认无需生产代码修正**
 
 通常无需修改生产代码，因为 `AIToolAuditStore` 已符合 `AIToolAuditing`。如果测试失败，只修正 `AIToolAuditStore.append(_:)` 的读写流程，不修改 `AISVNToolRegistry` 的安全分级行为。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIToolAuditStoreTests
@@ -292,7 +292,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：JSON store 与原 registry 测试均 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Tests/MacSvnCoreTests/AIToolAuditStoreTests.swift docs/superpowers/plans/2026-07-10-p6-ai-tool-audit-json-core.md
