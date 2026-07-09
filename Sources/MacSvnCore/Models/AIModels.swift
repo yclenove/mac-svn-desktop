@@ -235,6 +235,72 @@ public enum AIPreCommitReviewError: Error, Equatable, Sendable {
     case invalidModelResponse(String)
 }
 
+public enum AIConflictConfidence: String, Codable, Equatable, Sendable {
+    case low
+    case medium
+    case high
+}
+
+public struct AIConflictAssistContext: Codable, Equatable, Sendable {
+    public let path: String
+    public let conflictIndex: Int
+    public let baseLines: [String]
+    public let mineLines: [String]
+    public let theirsLines: [String]
+    public let leadingContext: [String]
+    public let trailingContext: [String]
+
+    public init(
+        path: String,
+        conflictIndex: Int,
+        baseLines: [String],
+        mineLines: [String],
+        theirsLines: [String],
+        leadingContext: [String],
+        trailingContext: [String]
+    ) {
+        self.path = path
+        self.conflictIndex = conflictIndex
+        self.baseLines = baseLines
+        self.mineLines = mineLines
+        self.theirsLines = theirsLines
+        self.leadingContext = leadingContext
+        self.trailingContext = trailingContext
+    }
+}
+
+public struct AIConflictAssistSuggestion: Codable, Equatable, Sendable {
+    public let mergedLines: [String]
+    public let rationale: String
+    public let confidence: AIConflictConfidence
+    public let providerID: UUID
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+
+    public init(
+        mergedLines: [String],
+        rationale: String,
+        confidence: AIConflictConfidence,
+        providerID: UUID,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int
+    ) {
+        self.mergedLines = mergedLines
+        self.rationale = rationale
+        self.confidence = confidence
+        self.providerID = providerID
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+    }
+}
+
+public enum AIConflictAssistError: Error, Equatable, Sendable {
+    case missingDefaultProvider
+    case emptyConflict
+    case emptyModelResponse
+    case invalidModelResponse(String)
+}
+
 public struct AIRedactionMatch: Codable, Equatable, Sendable {
     public let ruleID: String
     public let matchCount: Int

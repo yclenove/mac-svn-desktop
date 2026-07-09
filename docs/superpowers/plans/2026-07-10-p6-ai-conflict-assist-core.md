@@ -34,7 +34,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIConflictAssistant.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIConflictAssistantTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `Tests/MacSvnCoreTests/AIConflictAssistantTests.swift`：
 
@@ -246,7 +246,7 @@ private actor FakeConflictProviderManager: AIProviderManaging {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -256,7 +256,7 @@ swift test --filter AIConflictAssistantTests
 
 预期：编译失败，提示 `AIConflictAssistant`、`AIConflictAssistContext`、`AIConflictAssistSuggestion` 或 `AIConflictAssistError` 未定义。
 
-- [ ] **步骤 3：实现最少模型与服务代码**
+- [x] **步骤 3：实现最少模型与服务代码**
 
 在 `Sources/MacSvnCore/Models/AIModels.swift` 追加：
 
@@ -309,7 +309,7 @@ public enum AIConflictAssistError: Error, Equatable, Sendable {
 
 `mergedText` 使用换行拆成 `mergedLines`，空响应抛 `.emptyModelResponse`，JSON 解析失败抛 `.invalidModelResponse(rawText)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行：
 
@@ -319,7 +319,7 @@ swift test --filter AIConflictAssistantTests
 
 预期：`AIConflictAssistantTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift \
