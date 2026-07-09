@@ -32,4 +32,25 @@ final class CommandPaletteSearchEngineTests: XCTestCase {
         XCTAssertEqual(keywordResults.first?.kind, .log(revision: Revision(1199)))
         XCTAssertGreaterThan(actionResults.first?.score ?? 0, 0)
     }
+
+    func testSearchReturnsAIChatHandoffForNaturalLanguageWithoutStructuredMatches() {
+        let engine = CommandPaletteSearchEngine(actions: [], files: [], logs: [])
+
+        let results = engine.search("帮我把未提交修改按功能分组")
+
+        XCTAssertEqual(results, [
+            CommandPaletteResult(
+                kind: .aiChat(query: "帮我把未提交修改按功能分组"),
+                title: "转给 AI 助手",
+                subtitle: "帮我把未提交修改按功能分组",
+                score: 1
+            )
+        ])
+    }
+
+    func testSearchReturnsEmptyForWhitespaceOnlyQuery() {
+        let engine = CommandPaletteSearchEngine(actions: [], files: [], logs: [])
+
+        XCTAssertEqual(engine.search("   "), [])
+    }
 }

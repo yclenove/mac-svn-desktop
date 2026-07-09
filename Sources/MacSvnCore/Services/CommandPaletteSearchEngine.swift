@@ -18,6 +18,17 @@ public struct CommandPaletteSearchEngine: Sendable {
         }
 
         let results = actionResults(query: query) + fileResults(query: query) + logResults(query: query)
+        guard !results.isEmpty else {
+            return [
+                CommandPaletteResult(
+                    kind: .aiChat(query: query),
+                    title: "转给 AI 助手",
+                    subtitle: query,
+                    score: 1
+                )
+            ]
+        }
+
         return Array(results.sorted { lhs, rhs in
             if lhs.score != rhs.score {
                 return lhs.score > rhs.score

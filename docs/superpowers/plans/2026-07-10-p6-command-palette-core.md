@@ -230,7 +230,7 @@ git commit -m "feat: add P6 command palette search core"
 - 修改：`Sources/MacSvnCore/Services/CommandPaletteSearchEngine.swift`
 - 修改测试：`Tests/MacSvnCoreTests/CommandPaletteSearchEngineTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `CommandPaletteSearchEngineTests` 增加：
 
@@ -257,7 +257,7 @@ func testSearchReturnsEmptyForWhitespaceOnlyQuery() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter CommandPaletteSearchEngineTests
@@ -265,14 +265,14 @@ swift test --filter CommandPaletteSearchEngineTests
 
 预期：自然语言 handoff 测试失败，因为任务 1 实现无结构化命中时返回空数组。
 
-- [ ] **步骤 3：实现 AI handoff**
+- [x] **步骤 3：实现 AI handoff**
 
 实现要求：
 - 空白查询返回空数组；
 - 非空查询如果没有结构化 action/file/log 命中，返回一个 `.aiChat(query:)` 结果；
 - 如果已有结构化命中，不追加 AI Chat 结果，避免抢占明确命令。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter CommandPaletteSearchEngineTests
@@ -280,7 +280,7 @@ swift test --filter CommandPaletteSearchEngineTests
 
 预期：全部 `CommandPaletteSearchEngineTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/CommandPaletteSearchEngine.swift Tests/MacSvnCoreTests/CommandPaletteSearchEngineTests.swift docs/superpowers/plans/2026-07-10-p6-command-palette-core.md
