@@ -5,12 +5,18 @@ public enum SvnServiceError: Error, Equatable, Sendable {
     case wcBusy(operation: String)
 }
 
+public protocol CredentialProviding: Sendable {
+    func credential(for wc: URL) async throws -> Credential?
+}
+
 public actor SvnService {
     private let backend: any SvnBackend
+    private let credentialProvider: (any CredentialProviding)?
     private var activeWriteOperations: [URL: String] = [:]
 
-    public init(backend: any SvnBackend) {
+    public init(backend: any SvnBackend, credentialProvider: (any CredentialProviding)? = nil) {
         self.backend = backend
+        self.credentialProvider = credentialProvider
     }
 
     public func status(wc: URL) async throws -> [FileStatus] {
@@ -31,7 +37,9 @@ public actor SvnService {
 
     public func update(wc: URL, paths: [String] = [], revision: Revision? = nil) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
-            try await backend.update(wc: wc, paths: paths, revision: revision)
+            try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
+                try await backend.update(wc: wc, paths: paths, revision: revision, auth: auth)
+            }
         }
     }
 
@@ -48,7 +56,9 @@ public actor SvnService {
                 throw SvnError.conflict(paths: conflicts)
             }
 
-            return try await backend.commit(wc: wc, paths: paths, message: message, auth: auth)
+            return try await retryingAuthentication(wc: wc, initialAuth: auth) { auth in
+                try await backend.commit(wc: wc, paths: paths, message: message, auth: auth)
+            }
         }
     }
 
@@ -102,6 +112,22 @@ public actor SvnService {
             }
 
             return status.itemStatus == .conflicted || status.isTreeConflict
+        }
+    }
+
+    private func retryingAuthentication<T: Sendable>(
+        wc: URL,
+        initialAuth: Credential?,
+        operation: (Credential?) async throws -> T
+    ) async throws -> T {
+        do {
+            return try await operation(initialAuth)
+        } catch SvnError.authentication {
+            guard let credential = try await credentialProvider?.credential(for: wc) else {
+                throw SvnError.authentication
+            }
+
+            return try await operation(credential)
         }
     }
 }

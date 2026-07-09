@@ -89,6 +89,73 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["status", "commit"])
     }
 
+    func testUpdatePromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.updateErrors = [.authentication]
+        backend.updateResult = UpdateSummary(updated: 1, revision: Revision(9))
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let summary = try await service.update(wc: wc)
+        let requestedWorkingCopies = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(summary, UpdateSummary(updated: 1, revision: Revision(9)))
+        XCTAssertEqual(requestedWorkingCopies, [wc])
+        XCTAssertEqual(backend.calls.map(\.name), ["update", "update"])
+        XCTAssertEqual(backend.updateCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
+    func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitErrors = [.authentication]
+        backend.commitResult = Revision(42)
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let revision = try await service.commit(
+            wc: wc,
+            paths: ["a.txt"],
+            message: "fix",
+            auth: nil
+        )
+        let requestedWorkingCopies = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(revision, Revision(42))
+        XCTAssertEqual(requestedWorkingCopies, [wc])
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "commit", "commit"])
+        XCTAssertEqual(backend.commitCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
+    func testCommitOnlyPromptsOnceWhenAuthenticationRetryFails() async {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitErrors = [.authentication, .authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        do {
+            _ = try await service.commit(wc: wc, paths: ["a.txt"], message: "fix", auth: nil)
+            XCTFail("Expected authentication error")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .authentication)
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+        let requestedWorkingCopies = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(requestedWorkingCopies, [wc])
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "commit", "commit"])
+        XCTAssertEqual(backend.commitCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testConcurrentWritesOnSameWorkingCopyThrowBusy() async throws {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -158,6 +225,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     private let callsLock = NSLock()
     private var recordedCalls: [Call] = []
+    private var recordedUpdateCredentials: [Credential?] = []
+    private var recordedCommitCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -167,12 +236,30 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCalls
     }
 
+    var updateCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedUpdateCredentials
+    }
+
+    var commitCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCommitCredentials
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var commitResult = Revision(1)
+    var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
+    var updateErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -191,14 +278,20 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return statusResult
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?) async throws -> UpdateSummary {
-        record("update")
+    func update(wc: URL, paths: [String], revision: Revision?, auth: Credential?) async throws -> UpdateSummary {
+        let error = recordUpdate(auth: auth)
         await onUpdate?(wc)
+        if let error {
+            throw error
+        }
         return updateResult
     }
 
     func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
-        record("commit")
+        let error = recordCommit(auth: auth)
+        if let error {
+            throw error
+        }
         return commitResult
     }
 
@@ -235,6 +328,42 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     func info(wc: URL, target: String) async throws -> SvnInfo {
         record("info")
         return infoResult
+    }
+
+    private func recordUpdate(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "update"))
+        recordedUpdateCredentials.append(auth)
+        let error = updateErrors.isEmpty ? nil : updateErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordCommit(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "commit"))
+        recordedCommitCredentials.append(auth)
+        let error = commitErrors.isEmpty ? nil : commitErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+}
+
+private actor FakeCredentialProvider: CredentialProviding {
+    private var requests: [URL] = []
+    private let credential: Credential?
+
+    func recordedWorkingCopies() -> [URL] {
+        return requests
+    }
+
+    init(credential: Credential?) {
+        self.credential = credential
+    }
+
+    func credential(for wc: URL) async throws -> Credential? {
+        requests.append(wc)
+        return credential
     }
 }
 

@@ -22,8 +22,9 @@ public enum SvnCommandBuilder {
         ] + authArguments + paths)
     }
 
-    public static func update(paths: [String] = [], revision: Revision? = nil) -> SvnCommand {
+    public static func update(paths: [String] = [], revision: Revision? = nil, authArguments: [String] = []) -> SvnCommand {
         var arguments = ["update", "--accept", "postpone", "--non-interactive"]
+        arguments += authArguments
 
         if let revision {
             arguments += ["-r", revision.description]

@@ -28,6 +28,21 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testUpdateCanIncludeAuthenticationArgumentsWithoutPassword() {
+        let command = SvnCommandBuilder.update(
+            paths: ["src"],
+            revision: Revision(42),
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "update", "--accept", "postpone", "--non-interactive",
+            "--username", "u", "--password-from-stdin",
+            "-r", "42", "src"
+        ])
+        XCTAssertFalse(command.arguments.contains("secret"))
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

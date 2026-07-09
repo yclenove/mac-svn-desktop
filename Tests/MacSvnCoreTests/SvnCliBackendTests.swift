@@ -63,6 +63,27 @@ final class SvnCliBackendTests: XCTestCase {
         ])
     }
 
+    func testUpdatePassesAuthStdinWithoutLeakingPasswordInArguments() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Updated to revision 9.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let summary = try await backend.update(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["src"],
+            revision: Revision(9),
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(summary.revision, Revision(9))
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "update", "--accept", "postpone", "--non-interactive",
+            "--username", "u", "--password-from-stdin",
+            "-r", "9", "src"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testNonZeroExitMapsSvnError() async {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E170001: auth failed", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
