@@ -44,8 +44,20 @@ public struct QuickLookDiffPreviewService: Sendable {
             return .unsupported(.outsideWorkingCopy)
         }
 
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: standardizedFileURL.path, isDirectory: &isDirectory) else {
+            return .unsupported(.missing)
+        }
+        guard !isDirectory.boolValue else {
+            return .unsupported(.directory)
+        }
+
         do {
             let diff = try await diffProvider.diff(wc: workingCopy, target: target, r1: nil, r2: nil)
+            if Self.isBinaryUnsupportedDiff(diff) {
+                return .unsupported(.binary(Self.binaryDetails(for: standardizedFileURL)))
+            }
+
             return .preview(QuickLookDiffPreview(
                 workingCopy: workingCopy,
                 fileURL: standardizedFileURL,
@@ -65,5 +77,21 @@ public struct QuickLookDiffPreviewService: Sendable {
             return nil
         }
         return String(filePath.dropFirst(wcPath.count + 1))
+    }
+
+    private static func isBinaryUnsupportedDiff(_ diff: String) -> Bool {
+        let normalized = diff.lowercased()
+        return (normalized.contains("cannot display") && normalized.contains("binary"))
+            || normalized.contains("binary files")
+    }
+
+    private static func binaryDetails(for fileURL: URL) -> BinaryFileDetails? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path) else {
+            return nil
+        }
+
+        let size = (attributes[.size] as? NSNumber)?.uint64Value
+        let modifiedAt = attributes[.modificationDate] as? Date
+        return BinaryFileDetails(size: size, modifiedAt: modifiedAt)
     }
 }

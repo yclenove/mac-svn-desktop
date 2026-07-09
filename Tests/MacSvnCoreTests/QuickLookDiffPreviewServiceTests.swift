@@ -40,6 +40,55 @@ final class QuickLookDiffPreviewServiceTests: XCTestCase {
         ])
     }
 
+    func testPreviewRejectsOutsideWorkingCopyDirectoriesAndMissingFilesWithoutCallingDiff() async throws {
+        let workingCopy = try makeTemporaryDirectory()
+        let outsideFile = FileManager.default.temporaryDirectory.appendingPathComponent("outside-\(UUID().uuidString).swift")
+        try "outside\n".write(to: outsideFile, atomically: true, encoding: .utf8)
+        let directoryURL = workingCopy.appendingPathComponent("Sources", isDirectory: true)
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        let missingFile = workingCopy.appendingPathComponent("Missing.swift")
+        let provider = FakeQuickLookDiffProvider(result: .success(""))
+        let service = QuickLookDiffPreviewService(workingCopy: workingCopy, diffProvider: provider)
+
+        let outside = await service.preview(fileURL: outsideFile)
+        let directory = await service.preview(fileURL: directoryURL)
+        let missing = await service.preview(fileURL: missingFile)
+        let calls = await provider.recordedCalls()
+
+        XCTAssertEqual(outside, .unsupported(.outsideWorkingCopy))
+        XCTAssertEqual(directory, .unsupported(.directory))
+        XCTAssertEqual(missing, .unsupported(.missing))
+        XCTAssertEqual(calls, [])
+    }
+
+    func testPreviewMapsBinaryDiffToUnsupportedWithLocalFileDetails() async throws {
+        let workingCopy = try makeTemporaryDirectory()
+        let fileURL = workingCopy.appendingPathComponent("image.bin")
+        try Data([1, 2, 3, 4, 5]).write(to: fileURL)
+        let provider = FakeQuickLookDiffProvider(result: .success("Cannot display: file marked as a binary type.\n"))
+        let service = QuickLookDiffPreviewService(workingCopy: workingCopy, diffProvider: provider)
+
+        let result = await service.preview(fileURL: fileURL)
+
+        guard case .unsupported(.binary(let details)) = result else {
+            return XCTFail("Expected binary unsupported result, got \(result)")
+        }
+        XCTAssertEqual(details?.size, 5)
+        XCTAssertNotNil(details?.modifiedAt)
+    }
+
+    func testPreviewMapsProviderFailureToError() async throws {
+        let workingCopy = try makeTemporaryDirectory()
+        let fileURL = workingCopy.appendingPathComponent("App.swift")
+        try "let value = 1\n".write(to: fileURL, atomically: true, encoding: .utf8)
+        let provider = FakeQuickLookDiffProvider(result: .failure(SvnError.network(detail: "offline")))
+        let service = QuickLookDiffPreviewService(workingCopy: workingCopy, diffProvider: provider)
+
+        let result = await service.preview(fileURL: fileURL)
+
+        XCTAssertEqual(result, .error(String(describing: SvnError.network(detail: "offline"))))
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

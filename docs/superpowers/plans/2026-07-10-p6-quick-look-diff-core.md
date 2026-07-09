@@ -213,7 +213,7 @@ git commit -m "feat: add P6 quick look diff preview core"
 - 修改：`Sources/MacSvnCore/Services/QuickLookDiffPreviewService.swift`
 - 修改测试：`Tests/MacSvnCoreTests/QuickLookDiffPreviewServiceTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 追加以下测试：
 
@@ -268,7 +268,7 @@ func testPreviewMapsProviderFailureToError() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter QuickLookDiffPreviewServiceTests
@@ -276,7 +276,7 @@ swift test --filter QuickLookDiffPreviewServiceTests
 
 预期：测试失败，目录/缺失文件当前会调用 diff，二进制 diff 当前返回 `.preview`。
 
-- [ ] **步骤 3：实现不可预览与错误处理**
+- [x] **步骤 3：实现不可预览与错误处理**
 
 在 `preview(fileURL:)` 中调用 `fileExists(atPath:isDirectory:)`：
 
@@ -317,7 +317,7 @@ private static func binaryDetails(for fileURL: URL) -> BinaryFileDetails? {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter QuickLookDiffPreviewServiceTests
@@ -325,7 +325,7 @@ swift test --filter QuickLookDiffPreviewServiceTests
 
 预期：Quick Look diff 目标测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/QuickLookDiffPreviewService.swift Tests/MacSvnCoreTests/QuickLookDiffPreviewServiceTests.swift docs/superpowers/plans/2026-07-10-p6-quick-look-diff-core.md
