@@ -54,7 +54,8 @@ final class CommitViewModelTests: XCTestCase {
                 wc: URL(fileURLWithPath: "/tmp/wc"),
                 paths: ["modified.swift", "added.swift", "replaced.swift"],
                 message: "修复：登录超时",
-                auth: Credential(username: "u", password: "p")
+                auth: Credential(username: "u", password: "p"),
+                skipGuardWarnings: false
             )
         ])
         XCTAssertEqual(statusRequests, [URL(fileURLWithPath: "/tmp/wc")])
@@ -99,6 +100,40 @@ final class CommitViewModelTests: XCTestCase {
         XCTAssertTrue(commitCalls.isEmpty)
     }
 
+    @MainActor
+    func testCommitGuardWarningsStoreConfirmationStateBeforeRetry() async {
+        let issue = CommitGuardIssue(
+            ruleID: .largeFile,
+            severity: .warning,
+            path: "big.bin",
+            message: "Large file.",
+            detail: nil
+        )
+        let commitProvider = FakeCommitProvider(results: [
+            .failure(SvnServiceError.commitGuardWarnings([issue])),
+            .success(Revision(42))
+        ])
+        let statusProvider = FakeStatusProvider(result: .success([]))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: statusProvider
+        )
+        viewModel.message = "fix"
+
+        await viewModel.commit(auth: nil)
+
+        XCTAssertEqual(viewModel.state, .guardWarnings([issue]))
+        XCTAssertEqual(viewModel.guardIssues, [issue])
+
+        await viewModel.commit(auth: nil, skipGuardWarnings: true)
+        let skipFlags = await commitProvider.recordedCalls().map(\.skipGuardWarnings)
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(42)))
+        XCTAssertEqual(skipFlags, [false, true])
+    }
+
     private func sampleStatuses() -> [FileStatus] {
         [
             FileStatus(path: "modified.swift", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
@@ -120,23 +155,43 @@ private struct CommitCall: Equatable, Sendable {
     let paths: [String]
     let message: String
     let auth: Credential?
+    let skipGuardWarnings: Bool
 }
 
 private actor FakeCommitProvider: CommitProviding {
-    private let result: Result<Revision, Error>
+    private var results: [Result<Revision, Error>]
     private var calls: [CommitCall] = []
 
     init(result: Result<Revision, Error>) {
-        self.result = result
+        self.results = [result]
+    }
+
+    init(results: [Result<Revision, Error>]) {
+        self.results = results
     }
 
     func recordedCalls() -> [CommitCall] {
         calls
     }
 
-    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
-        calls.append(CommitCall(wc: wc, paths: paths, message: message, auth: auth))
-        return try result.get()
+    func commit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        auth: Credential?,
+        skipGuardWarnings: Bool
+    ) async throws -> Revision {
+        calls.append(CommitCall(
+            wc: wc,
+            paths: paths,
+            message: message,
+            auth: auth,
+            skipGuardWarnings: skipGuardWarnings
+        ))
+        guard !results.isEmpty else {
+            return Revision(0)
+        }
+        return try results.removeFirst().get()
     }
 }
 

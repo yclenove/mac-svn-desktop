@@ -2,13 +2,20 @@ import Foundation
 import Observation
 
 public protocol CommitProviding: Sendable {
-    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision
+    func commit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        auth: Credential?,
+        skipGuardWarnings: Bool
+    ) async throws -> Revision
 }
 
 public enum CommitViewState: Equatable, Sendable {
     case idle
     case committing
     case committed(Revision)
+    case guardWarnings([CommitGuardIssue])
     case error(String)
 }
 
@@ -45,6 +52,7 @@ public final class CommitViewModel {
     public private(set) var state: CommitViewState = .idle
     public private(set) var committedRevision: Revision?
     public private(set) var refreshedStatuses: [FileStatus] = []
+    public private(set) var guardIssues: [CommitGuardIssue] = []
     public let candidateStatuses: [FileStatus]
     public var selectedPaths: Set<String>
     public var message = ""
@@ -80,7 +88,7 @@ public final class CommitViewModel {
         }
     }
 
-    public func commit(auth: Credential?) async {
+    public func commit(auth: Credential?, skipGuardWarnings: Bool = false) async {
         let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedMessage.isEmpty else {
             state = .error("emptyCommitMessage")
@@ -100,11 +108,16 @@ public final class CommitViewModel {
                 wc: workingCopy,
                 paths: paths,
                 message: message,
-                auth: auth
+                auth: auth,
+                skipGuardWarnings: skipGuardWarnings
             )
             committedRevision = revision
+            guardIssues = []
             refreshedStatuses = try await statusProvider.status(wc: workingCopy)
             state = .committed(revision)
+        } catch SvnServiceError.commitGuardWarnings(let issues) {
+            guardIssues = issues
+            state = .guardWarnings(issues)
         } catch {
             state = .error(String(describing: error))
         }
