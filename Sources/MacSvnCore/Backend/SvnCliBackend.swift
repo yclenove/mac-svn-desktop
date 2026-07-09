@@ -259,6 +259,25 @@ public struct SvnCliBackend: SvnBackend {
         )
     }
 
+    public func export(
+        url: String,
+        to destination: URL,
+        revision: Revision? = nil,
+        auth: Credential? = nil
+    ) async throws {
+        let authArguments = try AuthArguments.build(credential: auth)
+        _ = try await run(
+            SvnCommandBuilder.export(
+                url: normalizedRemoteURL(url),
+                to: destination.path,
+                revision: revision,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+    }
+
     public func copy(
         source: String,
         destination: String,

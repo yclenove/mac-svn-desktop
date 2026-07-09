@@ -226,6 +226,23 @@ public enum SvnCommandBuilder {
         ] + authArguments + [url, destination])
     }
 
+    public static func export(
+        url: String,
+        to destination: String,
+        revision: Revision? = nil,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["export", "--non-interactive"]
+
+        if let revision {
+            arguments += ["-r", revision.description]
+        }
+
+        arguments += authArguments
+        arguments += [url, destination]
+        return SvnCommand(arguments: arguments)
+    }
+
     public static func copy(
         source: String,
         destination: String,

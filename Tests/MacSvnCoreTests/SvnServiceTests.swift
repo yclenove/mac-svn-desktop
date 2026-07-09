@@ -180,6 +180,27 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.checkoutDepths, [.files, .files])
     }
 
+    func testExportPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.exportErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let destination = URL(fileURLWithPath: "/tmp/export")
+
+        try await service.export(
+            url: "file:///repo/trunk",
+            to: destination,
+            revision: Revision(7),
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["export", "export"])
+        XCTAssertEqual(backend.exportCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.exportRevisions, [Revision(7), Revision(7)])
+    }
+
     func testCopyRejectsEmptyMessageBeforeBackendCall() async throws {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -709,6 +730,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCommitCredentials: [Credential?] = []
     private var recordedCheckoutCredentials: [Credential?] = []
     private var recordedCheckoutDepths: [SvnDepth] = []
+    private var recordedExportCredentials: [Credential?] = []
+    private var recordedExportRevisions: [Revision?] = []
     private var recordedListCredentials: [Credential?] = []
     private var recordedListDepths: [SvnDepth] = []
     private var recordedCatCredentials: [Credential?] = []
@@ -769,6 +792,22 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedCheckoutDepths
+    }
+
+    var exportCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedExportCredentials
+    }
+
+    var exportRevisions: [Revision?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedExportRevisions
     }
 
     var listCredentials: [Credential?] {
@@ -897,6 +936,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var updateResult = UpdateSummary()
     var updateErrors: [SvnError] = []
     var checkoutErrors: [SvnError] = []
+    var exportErrors: [SvnError] = []
     var listErrors: [SvnError] = []
     var catErrors: [SvnError] = []
     var remoteLogErrors: [SvnError] = []
@@ -1041,6 +1081,13 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         }
     }
 
+    func export(url: String, to destination: URL, revision: Revision?, auth: Credential?) async throws {
+        let error = recordExport(revision: revision, auth: auth)
+        if let error {
+            throw error
+        }
+    }
+
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
         let error = recordCopy(auth: auth)
         if let error {
@@ -1153,6 +1200,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCheckoutDepths.append(depth)
         recordedCheckoutCredentials.append(auth)
         let error = checkoutErrors.isEmpty ? nil : checkoutErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordExport(revision: Revision?, auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "export"))
+        recordedExportRevisions.append(revision)
+        recordedExportCredentials.append(auth)
+        let error = exportErrors.isEmpty ? nil : exportErrors.removeFirst()
         callsLock.unlock()
         return error
     }

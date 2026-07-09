@@ -12,6 +12,41 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statuses, [])
     }
 
+    func testSnapshotGitMigrationExportsAndCommitsRepository() async throws {
+        let fixture = try makeFixture()
+        let gitExecutable = try requireGitExecutable()
+        let destination = fixture.root.appendingPathComponent("git-snapshot", isDirectory: true)
+        let svnService = SvnService(backend: fixture.backend)
+        let gitBackend = ConfiguringGitBackend(
+            gitExecutable: gitExecutable,
+            runner: ProcessRunner(),
+            timeout: 30
+        )
+        let migrationService = GitMigrationService(svnExporter: svnService, gitBackend: gitBackend)
+
+        let report = try await migrationService.snapshotMigrate(
+            sourceURL: fixture.trunkURL,
+            destination: destination,
+            commitMessage: "Initial SVN snapshot"
+        )
+        let logResult = try await ProcessRunner().run(
+            executable: gitExecutable,
+            arguments: ["log", "--oneline", "-1", "--pretty=%s"],
+            stdin: nil,
+            currentDirectory: destination.path,
+            timeout: 30
+        )
+
+        XCTAssertEqual(report.completedSteps, [.svnExport, .gitInit, .gitAdd, .gitCommit])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("README.txt").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent(".git").path))
+        XCTAssertEqual(logResult.exitCode, 0)
+        XCTAssertEqual(
+            String(data: logResult.stdout, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+            "Initial SVN snapshot"
+        )
+    }
+
     func testBlameReadsLineRevisionAuthorFromWorkingCopy() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)
@@ -572,6 +607,20 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         return text.hasSuffix("\n") ? Array(splitLines.dropLast()) : splitLines
     }
 
+    private func requireGitExecutable() throws -> String {
+        let candidates = [
+            "/opt/homebrew/bin/git",
+            "/usr/local/bin/git",
+            "/usr/bin/git"
+        ]
+
+        guard let git = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            throw XCTSkip("git executable is not available.")
+        }
+
+        return git
+    }
+
     private func makeLocalEditRemoteDeleteTreeConflict(
         fixture: SvnIntegrationFixture,
         service: SvnService
@@ -597,5 +646,43 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
         let conflicts = try await conflictService.conflicts(wc: fixture.workingCopy)
         return try XCTUnwrap(conflicts.first { $0.kind == .tree && $0.path == "README.txt" })
+    }
+}
+
+private struct ConfiguringGitBackend: GitBackend {
+    let gitExecutable: String
+    let runner: any ProcessRunning
+    let timeout: TimeInterval
+
+    func initRepository(at repository: URL) async throws {
+        try await base.initRepository(at: repository)
+        try await runGit(["config", "user.name", "MacSVN Test"], repository: repository)
+        try await runGit(["config", "user.email", "macsvn@example.invalid"], repository: repository)
+    }
+
+    func addAll(repository: URL) async throws {
+        try await base.addAll(repository: repository)
+    }
+
+    func commit(repository: URL, message: String) async throws {
+        try await base.commit(repository: repository, message: message)
+    }
+
+    private var base: GitCliBackend {
+        GitCliBackend(gitExecutable: gitExecutable, runner: runner, timeout: timeout)
+    }
+
+    private func runGit(_ arguments: [String], repository: URL) async throws {
+        let result = try await runner.run(
+            executable: gitExecutable,
+            arguments: arguments,
+            stdin: nil,
+            currentDirectory: repository.path,
+            timeout: timeout
+        )
+
+        guard result.exitCode == 0 else {
+            throw SvnError.other(code: Int(result.exitCode), stderr: result.stderr)
+        }
     }
 }

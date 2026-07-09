@@ -199,6 +199,23 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testExportUsesRevisionAuthenticationUrlAndDestination() {
+        let command = SvnCommandBuilder.export(
+            url: "file:///repo/trunk",
+            to: "/tmp/export",
+            revision: Revision(7),
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "export", "--non-interactive",
+            "-r", "7",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "/tmp/export"
+        ])
+        XCTAssertFalse(command.arguments.contains("secret"))
+    }
+
     func testCopyUsesUtf8MessageAuthSourceAndDestination() {
         let command = SvnCommandBuilder.copy(
             source: "file:///repo/trunk",

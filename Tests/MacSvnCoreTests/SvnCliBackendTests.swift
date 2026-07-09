@@ -292,6 +292,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testExportPassesRevisionAuthStdinAndRunsWithoutWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.export(
+            url: "file:///repo/trunk",
+            to: URL(fileURLWithPath: "/tmp/export"),
+            revision: Revision(7),
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, nil)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "export", "--non-interactive",
+            "-r", "7",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "/tmp/export"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testCopyPassesAuthStdinRunsWithoutWorkingCopyAndParsesRevision() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 12.\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

@@ -154,6 +154,20 @@ public actor SvnService {
         }
     }
 
+    public func export(
+        url: String,
+        to destination: URL,
+        revision: Revision? = nil,
+        auth: Credential? = nil
+    ) async throws {
+        try await withWriteLock(wc: destination, operation: "export") {
+            let credentialScope = credentialScope(for: url)
+            try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.export(url: url, to: destination, revision: revision, auth: auth)
+            }
+        }
+    }
+
     public func copy(
         source: String,
         destination: String,
