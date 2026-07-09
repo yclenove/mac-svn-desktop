@@ -592,6 +592,53 @@ public struct RepoBookmarkListFile: Codable, Equatable, Sendable {
     }
 }
 
+public enum ShelveKind: String, Codable, Equatable, Sendable {
+    case manual
+    case safety
+}
+
+public struct ShelveSnapshot: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let wcPath: String
+    public let name: String
+    public let paths: [String]
+    public let patchRelativePath: String
+    public let createdAt: Date
+    public let kind: ShelveKind
+
+    public init(
+        id: UUID,
+        wcPath: String,
+        name: String,
+        paths: [String],
+        patchRelativePath: String,
+        createdAt: Date,
+        kind: ShelveKind
+    ) {
+        self.id = id
+        self.wcPath = wcPath
+        self.name = name
+        self.paths = paths
+        self.patchRelativePath = patchRelativePath
+        self.createdAt = createdAt
+        self.kind = kind
+    }
+
+    public var patchFileName: String {
+        URL(fileURLWithPath: patchRelativePath).lastPathComponent
+    }
+}
+
+public struct ShelveListFile: Codable, Equatable, Sendable {
+    public var version: Int
+    public var snapshots: [ShelveSnapshot]
+
+    public init(version: Int = 1, snapshots: [ShelveSnapshot] = []) {
+        self.version = version
+        self.snapshots = snapshots
+    }
+}
+
 public struct SvnInfo: Equatable, Sendable {
     public let path: String
     public let url: String
