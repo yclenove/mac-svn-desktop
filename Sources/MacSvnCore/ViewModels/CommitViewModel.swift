@@ -26,6 +26,13 @@ public enum AICommitMessageViewState: Equatable, Sendable {
     case error(String)
 }
 
+public enum AIPreCommitReviewViewState: Equatable, Sendable {
+    case idle
+    case reviewing
+    case reviewed(AIPreCommitReviewResult)
+    case error(String)
+}
+
 public enum CommitSelectionPolicy {
     public static func candidates(from statuses: [FileStatus]) -> [FileStatus] {
         statuses.filter { status in
@@ -56,11 +63,14 @@ public final class CommitViewModel {
     private let commitProvider: any CommitProviding
     private let statusProvider: any StatusProviding
     private let aiCommitMessageGenerator: (any AICommitMessageGenerating)?
+    private let aiPreCommitReviewer: (any AIPreCommitReviewing)?
 
     public private(set) var state: CommitViewState = .idle
     public private(set) var aiCommitMessageState: AICommitMessageViewState = .idle
+    public private(set) var aiPreCommitReviewState: AIPreCommitReviewViewState = .idle
     public private(set) var committedRevision: Revision?
     public private(set) var aiCommitMessageDraft: AICommitMessageDraft?
+    public private(set) var aiPreCommitReviewResult: AIPreCommitReviewResult?
     public private(set) var refreshedStatuses: [FileStatus] = []
     public private(set) var guardIssues: [CommitGuardIssue] = []
     public let candidateStatuses: [FileStatus]
@@ -72,12 +82,14 @@ public final class CommitViewModel {
         statuses: [FileStatus],
         commitProvider: any CommitProviding,
         statusProvider: any StatusProviding,
-        aiCommitMessageGenerator: (any AICommitMessageGenerating)? = nil
+        aiCommitMessageGenerator: (any AICommitMessageGenerating)? = nil,
+        aiPreCommitReviewer: (any AIPreCommitReviewing)? = nil
     ) {
         self.workingCopy = workingCopy
         self.commitProvider = commitProvider
         self.statusProvider = statusProvider
         self.aiCommitMessageGenerator = aiCommitMessageGenerator
+        self.aiPreCommitReviewer = aiPreCommitReviewer
         self.candidateStatuses = CommitSelectionPolicy.candidates(from: statuses)
         self.selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
     }
@@ -125,6 +137,31 @@ public final class CommitViewModel {
         } catch {
             aiCommitMessageDraft = nil
             aiCommitMessageState = .error(String(describing: error))
+        }
+    }
+
+    public func runAIPreCommitReview(
+        privacySettings: AIPrivacySettings = AIPrivacySettings()
+    ) async {
+        guard let aiPreCommitReviewer else {
+            aiPreCommitReviewResult = nil
+            aiPreCommitReviewState = .error("aiPreCommitReviewerUnavailable")
+            return
+        }
+
+        aiPreCommitReviewState = .reviewing
+
+        do {
+            let result = try await aiPreCommitReviewer.review(
+                wc: workingCopy,
+                paths: orderedSelectedPaths,
+                privacySettings: privacySettings
+            )
+            aiPreCommitReviewResult = result
+            aiPreCommitReviewState = .reviewed(result)
+        } catch {
+            aiPreCommitReviewResult = nil
+            aiPreCommitReviewState = .error(String(describing: error))
         }
     }
 

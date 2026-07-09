@@ -197,6 +197,85 @@ final class CommitViewModelTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testRunAIPreCommitReviewStoresResultWithoutCommittingOrBlocking() async {
+        let result = AIPreCommitReviewResult(
+            summary: "发现 1 条阻断建议",
+            findings: [
+                AIPreCommitReviewFinding(
+                    severity: .blockingSuggestion,
+                    category: .correctness,
+                    path: "modified.swift",
+                    line: 12,
+                    message: "可能空指针。",
+                    rationale: "AI 建议人工检查。"
+                )
+            ],
+            providerID: UUID(),
+            sourceFileCount: 1,
+            redactionMatches: [],
+            promptCount: 1,
+            usedMapReduce: false
+        )
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let reviewer = FakeAIPreCommitReviewer(result: .success(result))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            aiPreCommitReviewer: reviewer
+        )
+        viewModel.message = "fix"
+        viewModel.setSelected(false, for: "deleted.swift")
+
+        await viewModel.runAIPreCommitReview()
+        let reviewCalls = await reviewer.recordedCalls()
+        let commitCallsBeforeCommit = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.aiPreCommitReviewResult, result)
+        XCTAssertEqual(viewModel.aiPreCommitReviewState, .reviewed(result))
+        XCTAssertEqual(reviewCalls.map(\.paths), [["modified.swift", "added.swift", "replaced.swift"]])
+        XCTAssertTrue(commitCallsBeforeCommit.isEmpty)
+        XCTAssertTrue(viewModel.canCommit)
+
+        await viewModel.commit(auth: nil)
+        let commitCallsAfterCommit = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(commitCallsAfterCommit.count, 1)
+    }
+
+    @MainActor
+    func testRunAIPreCommitReviewStoresUnavailableAndSelectionErrors() async {
+        let noReviewerViewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([]))
+        )
+
+        await noReviewerViewModel.runAIPreCommitReview()
+
+        XCTAssertEqual(noReviewerViewModel.aiPreCommitReviewState, .error("aiPreCommitReviewerUnavailable"))
+
+        let reviewer = FakeAIPreCommitReviewer(result: .failure(AIPreCommitReviewError.emptySelection))
+        let emptySelectionViewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            aiPreCommitReviewer: reviewer
+        )
+        emptySelectionViewModel.selectedPaths.removeAll()
+
+        await emptySelectionViewModel.runAIPreCommitReview()
+
+        XCTAssertEqual(
+            emptySelectionViewModel.aiPreCommitReviewState,
+            .error(String(describing: AIPreCommitReviewError.emptySelection))
+        )
+    }
+
     private func sampleStatuses() -> [FileStatus] {
         [
             FileStatus(path: "modified.swift", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
@@ -272,6 +351,38 @@ private actor FakeStatusProvider: StatusProviding {
 
     func status(wc: URL) async throws -> [FileStatus] {
         requests.append(wc)
+        return try result.get()
+    }
+}
+
+private struct AIPreCommitReviewCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let privacySettings: AIPrivacySettings
+}
+
+private actor FakeAIPreCommitReviewer: AIPreCommitReviewing {
+    private let result: Result<AIPreCommitReviewResult, Error>
+    private var calls: [AIPreCommitReviewCall] = []
+
+    init(result: Result<AIPreCommitReviewResult, Error>) {
+        self.result = result
+    }
+
+    func recordedCalls() -> [AIPreCommitReviewCall] {
+        calls
+    }
+
+    func review(
+        wc: URL,
+        paths: [String],
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIPreCommitReviewResult {
+        calls.append(AIPreCommitReviewCall(
+            wc: wc,
+            paths: paths,
+            privacySettings: privacySettings
+        ))
         return try result.get()
     }
 }
