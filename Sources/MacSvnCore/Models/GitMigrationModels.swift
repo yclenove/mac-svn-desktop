@@ -134,3 +134,34 @@ public struct GitMigrationSourceAnalysis: Equatable, Sendable {
 public enum GitMigrationSourceAnalysisError: Error, Equatable, Sendable {
     case emptyRepositoryRoot
 }
+
+public struct GitMigrationAuthorMapping: Equatable, Sendable {
+    public let svnUsername: String
+    public var gitName: String
+    public var gitEmail: String
+
+    public init(svnUsername: String, gitName: String, gitEmail: String) {
+        self.svnUsername = svnUsername
+        self.gitName = gitName
+        self.gitEmail = gitEmail
+    }
+}
+
+public struct GitMigrationAuthorMappingCoverage: Equatable, Sendable {
+    public let totalCount: Int
+    public let coveredCount: Int
+
+    public init(totalCount: Int, coveredCount: Int) {
+        self.totalCount = totalCount
+        self.coveredCount = coveredCount
+    }
+
+    public var isComplete: Bool {
+        totalCount > 0 && totalCount == coveredCount
+    }
+}
+
+public enum GitMigrationAuthorMappingError: Error, Equatable, Sendable {
+    case incompleteAuthors([String])
+    case invalidAuthorsFileLine(String)
+}
