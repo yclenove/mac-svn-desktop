@@ -36,6 +36,33 @@ public struct SvnCliBackend: SvnBackend {
         return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
     }
 
+    public func add(wc: URL, paths: [String]) async throws {
+        _ = try await run(SvnCommandBuilder.add(paths: paths), currentDirectory: wc.path, stdin: nil)
+    }
+
+    public func delete(wc: URL, paths: [String]) async throws {
+        _ = try await run(SvnCommandBuilder.delete(paths: paths), currentDirectory: wc.path, stdin: nil)
+    }
+
+    public func revert(wc: URL, paths: [String], recursive: Bool) async throws {
+        _ = try await run(SvnCommandBuilder.revert(paths: paths, recursive: recursive), currentDirectory: wc.path, stdin: nil)
+    }
+
+    public func cleanup(wc: URL) async throws {
+        _ = try await run(SvnCommandBuilder.cleanup(), currentDirectory: wc.path, stdin: nil)
+    }
+
+    public func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
+        let result = try await run(SvnCommandBuilder.diff(target: target, r1: r1, r2: r2), currentDirectory: wc.path, stdin: nil)
+        return String(decoding: result.stdout, as: UTF8.self)
+    }
+
+    public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
+        let command = SvnCommandBuilder.log(target: target, from: from, batch: batch, verbose: verbose)
+        let result = try await run(command, currentDirectory: wc.path, stdin: nil)
+        return try LogXMLParser.parse(result.stdout)
+    }
+
     private func run(_ command: SvnCommand, currentDirectory: String?, stdin: Data?) async throws -> ProcessResult {
         let result = try await runner.run(
             executable: svnExecutable,
