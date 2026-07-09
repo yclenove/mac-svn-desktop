@@ -238,6 +238,40 @@ public enum SvnCommandBuilder {
         ] + authArguments + [source, destination])
     }
 
+    public static func mkdir(
+        url: String,
+        message: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "mkdir", "--encoding", "UTF-8", "--non-interactive",
+            "-m", message
+        ] + authArguments + [url])
+    }
+
+    public static func delete(
+        url: String,
+        message: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "delete", "--encoding", "UTF-8", "--non-interactive",
+            "-m", message
+        ] + authArguments + [url])
+    }
+
+    public static func move(
+        source: String,
+        destination: String,
+        message: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "move", "--encoding", "UTF-8", "--non-interactive",
+            "-m", message
+        ] + authArguments + [source, destination])
+    }
+
     public static func info(target: String) -> SvnCommand {
         SvnCommand(arguments: ["info", "--xml", "--non-interactive", target])
     }

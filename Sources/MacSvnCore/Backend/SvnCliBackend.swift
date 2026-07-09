@@ -279,6 +279,62 @@ public struct SvnCliBackend: SvnBackend {
         return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
     }
 
+    public func mkdir(
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.mkdir(
+                url: normalizedRemoteURL(url),
+                message: message,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+        return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
+    }
+
+    public func delete(
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.delete(
+                url: normalizedRemoteURL(url),
+                message: message,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+        return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
+    }
+
+    public func move(
+        source: String,
+        destination: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.move(
+                source: normalizedRemoteURL(source),
+                destination: normalizedRemoteURL(destination),
+                message: message,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+        return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
+    }
+
     public func info(wc: URL, target: String) async throws -> SvnInfo {
         let result = try await run(SvnCommandBuilder.info(target: target), currentDirectory: wc.path, stdin: nil)
         return try InfoXMLParser.parse(result.stdout)

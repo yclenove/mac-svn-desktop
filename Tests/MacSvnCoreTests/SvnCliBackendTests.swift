@@ -315,6 +315,58 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testRemoteRepositoryWritesPassAuthStdinRunWithoutWorkingCopyAndParseRevisions() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 15.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let credential = Credential(username: "u", password: "secret")
+
+        let mkdirRevision = try await backend.mkdir(
+            url: "file:///repo/trunk/docs",
+            message: "创建目录：docs",
+            auth: credential
+        )
+        let deleteRevision = try await backend.delete(
+            url: "file:///repo/trunk/old.txt",
+            message: "删除远端文件",
+            auth: credential
+        )
+        let moveRevision = try await backend.move(
+            source: "file:///repo/trunk/old.txt",
+            destination: "file:///repo/trunk/new.txt",
+            message: "移动远端文件",
+            auth: credential
+        )
+
+        XCTAssertEqual([mkdirRevision, deleteRevision, moveRevision], [Revision(15), Revision(15), Revision(15)])
+        XCTAssertEqual(runner.calls.map(\.stdin), [
+            Data("secret\n".utf8),
+            Data("secret\n".utf8),
+            Data("secret\n".utf8)
+        ])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), [nil, nil, nil])
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            [
+                "mkdir", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "创建目录：docs",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/docs"
+            ],
+            [
+                "delete", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "删除远端文件",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/old.txt"
+            ],
+            [
+                "move", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "移动远端文件",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/old.txt", "file:///repo/trunk/new.txt"
+            ]
+        ])
+        XCTAssertFalse(runner.calls.flatMap(\.arguments).contains("secret"))
+    }
+
     func testListPassesDepthAuthStdinAndParsesEntries() async throws {
         let xml = """
         <lists><list path="file:///repo/trunk"><entry kind="file"><name>README.txt</name><size>5</size><commit revision="2"><author>a</author></commit></entry></list></lists>

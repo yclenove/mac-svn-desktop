@@ -28,5 +28,8 @@ public protocol SvnBackend: Sendable {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
+    func mkdir(url: String, message: String, auth: Credential?) async throws -> Revision
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision
+    func move(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
     func info(wc: URL, target: String) async throws -> SvnInfo
 }

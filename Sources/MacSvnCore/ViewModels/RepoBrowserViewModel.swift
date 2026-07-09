@@ -13,6 +13,13 @@ public protocol RepoLogProviding: Sendable {
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
 }
 
+public protocol RepoRemoteOperationProviding: Sendable {
+    func mkdir(url: String, message: String, auth: Credential?) async throws -> Revision
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
+    func move(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
+}
+
 public enum RepoBrowserState: Equatable, Sendable {
     case idle
     case loading
@@ -44,6 +51,20 @@ public enum RepoLogState: Equatable, Sendable {
     case error(String)
 }
 
+public enum RepoRemoteOperation: Equatable, Sendable {
+    case mkdir
+    case delete
+    case copy
+    case move
+}
+
+public enum RepoRemoteOperationState: Equatable, Sendable {
+    case idle
+    case running(RepoRemoteOperation)
+    case completed(RepoRemoteOperation, revision: Revision)
+    case error(String)
+}
+
 @MainActor
 @Observable
 public final class RepoBrowserViewModel {
@@ -52,6 +73,7 @@ public final class RepoBrowserViewModel {
     private let listProvider: any RepoListProviding
     private let previewProvider: (any RepoPreviewProviding)?
     private let logProvider: (any RepoLogProviding)?
+    private let remoteOperationProvider: (any RepoRemoteOperationProviding)?
     private let bookmarkManager: (any RepoBookmarkManaging)?
     private let logBatchSize: Int
 
@@ -64,17 +86,20 @@ public final class RepoBrowserViewModel {
     private var hasMoreLogByURL: [String: Bool] = [:]
     public private(set) var bookmarks: [RepoBookmark] = []
     public private(set) var bookmarkState: RepoBookmarkState = .idle
+    public private(set) var remoteOperationState: RepoRemoteOperationState = .idle
 
     public init(
         listProvider: any RepoListProviding,
         previewProvider: (any RepoPreviewProviding)? = nil,
         bookmarkManager: (any RepoBookmarkManaging)? = nil,
         logProvider: (any RepoLogProviding)? = nil,
+        remoteOperationProvider: (any RepoRemoteOperationProviding)? = nil,
         logBatchSize: Int = 100
     ) {
         self.listProvider = listProvider
         self.previewProvider = previewProvider ?? (listProvider as? any RepoPreviewProviding)
         self.logProvider = logProvider ?? (listProvider as? any RepoLogProviding)
+        self.remoteOperationProvider = remoteOperationProvider ?? (listProvider as? any RepoRemoteOperationProviding)
         self.bookmarkManager = bookmarkManager
         self.logBatchSize = max(1, logBatchSize)
     }
@@ -223,6 +248,62 @@ public final class RepoBrowserViewModel {
         }
     }
 
+    public func createDirectory(
+        named name: String,
+        in parentURL: String,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            remoteOperationState = .error("emptyRemoteEntryName")
+            return
+        }
+
+        let url = remoteURL(baseURL: parentURL, entryPath: trimmedName)
+        await performRemoteOperation(.mkdir, refreshURL: parentURL, auth: auth) { provider in
+            try await provider.mkdir(url: url, message: message, auth: auth)
+        }
+    }
+
+    public func delete(
+        entry: RemoteEntry,
+        baseURL: String,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        let url = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        await performRemoteOperation(.delete, refreshURL: baseURL, auth: auth) { provider in
+            try await provider.delete(url: url, message: message, auth: auth)
+        }
+    }
+
+    public func copy(
+        entry: RemoteEntry,
+        baseURL: String,
+        to destinationURL: String,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        await performRemoteOperation(.copy, refreshURL: baseURL, auth: auth) { provider in
+            try await provider.copy(source: sourceURL, destination: destinationURL, message: message, auth: auth)
+        }
+    }
+
+    public func move(
+        entry: RemoteEntry,
+        baseURL: String,
+        to destinationURL: String,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        await performRemoteOperation(.move, refreshURL: baseURL, auth: auth) { provider in
+            try await provider.move(source: sourceURL, destination: destinationURL, message: message, auth: auth)
+        }
+    }
+
     public func loadBookmarks() async {
         guard let bookmarkManager else {
             bookmarkState = .error("bookmarksUnavailable")
@@ -274,6 +355,28 @@ public final class RepoBrowserViewModel {
         }
     }
 
+    private func performRemoteOperation(
+        _ operation: RepoRemoteOperation,
+        refreshURL: String,
+        auth: Credential?,
+        body: (any RepoRemoteOperationProviding) async throws -> Revision
+    ) async {
+        guard let remoteOperationProvider else {
+            remoteOperationState = .error("remoteOperationsUnavailable")
+            return
+        }
+
+        remoteOperationState = .running(operation)
+
+        do {
+            let revision = try await body(remoteOperationProvider)
+            await loadChildren(of: refreshURL, auth: auth)
+            remoteOperationState = .completed(operation, revision: revision)
+        } catch {
+            remoteOperationState = .error(String(describing: error))
+        }
+    }
+
     private func remoteURL(baseURL: String, entryPath: String) -> String {
         if baseURL.hasSuffix("/") {
             return baseURL + entryPath
@@ -305,3 +408,4 @@ public final class RepoBrowserViewModel {
 extension SvnService: RepoListProviding {}
 extension SvnService: RepoPreviewProviding {}
 extension SvnService: RepoLogProviding {}
+extension SvnService: RepoRemoteOperationProviding {}

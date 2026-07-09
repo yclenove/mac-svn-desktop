@@ -215,6 +215,51 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testRemoteRepositoryWriteCommandsUseUtf8MessageAuthAndUrls() {
+        let authArguments = ["--username", "u", "--password-from-stdin"]
+
+        XCTAssertEqual(
+            SvnCommandBuilder.mkdir(
+                url: "file:///repo/trunk/docs",
+                message: "创建目录：docs",
+                authArguments: authArguments
+            ).arguments,
+            [
+                "mkdir", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "创建目录：docs",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/docs"
+            ]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.delete(
+                url: "file:///repo/trunk/old.txt",
+                message: "删除远端文件",
+                authArguments: authArguments
+            ).arguments,
+            [
+                "delete", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "删除远端文件",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/old.txt"
+            ]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.move(
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/trunk/new.txt",
+                message: "移动远端文件",
+                authArguments: authArguments
+            ).arguments,
+            [
+                "move", "--encoding", "UTF-8", "--non-interactive",
+                "-m", "移动远端文件",
+                "--username", "u", "--password-from-stdin",
+                "file:///repo/trunk/old.txt", "file:///repo/trunk/new.txt"
+            ]
+        )
+    }
+
     func testInfoUsesXmlAndNonInteractive() {
         let command = SvnCommandBuilder.info(target: ".")
         XCTAssertEqual(command.arguments, ["info", "--xml", "--non-interactive", "."])

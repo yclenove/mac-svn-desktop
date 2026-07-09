@@ -222,6 +222,86 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.copyCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testRemoteRepositoryWritesRejectEmptyMessagesBeforeBackendCall() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+
+        do {
+            _ = try await service.mkdir(url: "file:///repo/trunk/docs", message: "  ", auth: nil)
+            XCTFail("Expected emptyCommitMessage")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .emptyCommitMessage)
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        do {
+            _ = try await service.delete(url: "file:///repo/trunk/old.txt", message: "\n", auth: nil)
+            XCTFail("Expected emptyCommitMessage")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .emptyCommitMessage)
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        do {
+            _ = try await service.move(
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/trunk/new.txt",
+                message: "",
+                auth: nil
+            )
+            XCTFail("Expected emptyCommitMessage")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .emptyCommitMessage)
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        XCTAssertTrue(backend.calls.isEmpty)
+    }
+
+    func testRemoteRepositoryWritesPromptForCredentialsAndRetryOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.mkdirErrors = [.authentication]
+        backend.remoteDeleteErrors = [.authentication]
+        backend.moveErrors = [.authentication]
+        backend.mkdirResult = Revision(13)
+        backend.remoteDeleteResult = Revision(14)
+        backend.moveResult = Revision(15)
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let mkdirRevision = try await service.mkdir(
+            url: "file:///repo/trunk/docs",
+            message: "创建目录：docs",
+            auth: nil
+        )
+        let deleteRevision = try await service.delete(
+            url: "file:///repo/trunk/old.txt",
+            message: "删除远端文件",
+            auth: nil
+        )
+        let moveRevision = try await service.move(
+            source: "file:///repo/trunk/old.txt",
+            destination: "file:///repo/trunk/new.txt",
+            message: "移动远端文件",
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual([mkdirRevision, deleteRevision, moveRevision], [Revision(13), Revision(14), Revision(15)])
+        XCTAssertEqual(requestedScopes, [
+            URL(string: "file:///repo/trunk/docs")!,
+            URL(string: "file:///repo/trunk/old.txt")!,
+            URL(string: "file:///repo/trunk/new.txt")!
+        ])
+        XCTAssertEqual(backend.calls.map(\.name), ["mkdir", "mkdir", "remoteDelete", "remoteDelete", "move", "move"])
+        XCTAssertEqual(backend.mkdirCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.remoteDeleteCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.moveCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testSwitchBlocksLocalChangesBeforeBackendSwitchByDefault() async {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -635,6 +715,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCatSizeLimits: [Int] = []
     private var recordedRemoteLogCredentials: [Credential?] = []
     private var recordedCopyCredentials: [Credential?] = []
+    private var recordedMkdirCredentials: [Credential?] = []
+    private var recordedRemoteDeleteCredentials: [Credential?] = []
+    private var recordedMoveCredentials: [Credential?] = []
     private var recordedSwitchCredentials: [Credential?] = []
     private var recordedMergeCredentials: [Credential?] = []
     private var recordedResolveAccepts: [ResolveAccept] = []
@@ -736,6 +819,30 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCopyCredentials
     }
 
+    var mkdirCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedMkdirCredentials
+    }
+
+    var remoteDeleteCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedRemoteDeleteCredentials
+    }
+
+    var moveCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedMoveCredentials
+    }
+
     var switchCredentials: [Credential?] {
         callsLock.lock()
         defer {
@@ -780,6 +887,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
     var copyResult = Revision(1)
+    var mkdirResult = Revision(1)
+    var remoteDeleteResult = Revision(1)
+    var moveResult = Revision(1)
     var switchResult = UpdateSummary()
     var mergeResult = MergeSummary()
     var commitResult = Revision(1)
@@ -791,6 +901,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var catErrors: [SvnError] = []
     var remoteLogErrors: [SvnError] = []
     var copyErrors: [SvnError] = []
+    var mkdirErrors: [SvnError] = []
+    var remoteDeleteErrors: [SvnError] = []
+    var moveErrors: [SvnError] = []
     var switchErrors: [SvnError] = []
     var mergeErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
@@ -936,6 +1049,35 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return copyResult
     }
 
+    func mkdir(url: String, message: String, auth: Credential?) async throws -> Revision {
+        let error = recordRemoteWrite(name: "mkdir", credentials: &recordedMkdirCredentials, errors: &mkdirErrors, auth: auth)
+        if let error {
+            throw error
+        }
+        return mkdirResult
+    }
+
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision {
+        let error = recordRemoteWrite(
+            name: "remoteDelete",
+            credentials: &recordedRemoteDeleteCredentials,
+            errors: &remoteDeleteErrors,
+            auth: auth
+        )
+        if let error {
+            throw error
+        }
+        return remoteDeleteResult
+    }
+
+    func move(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        let error = recordRemoteWrite(name: "move", credentials: &recordedMoveCredentials, errors: &moveErrors, auth: auth)
+        if let error {
+            throw error
+        }
+        return moveResult
+    }
+
     func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary {
         let error = recordSwitch(auth: auth)
         if let error {
@@ -1049,6 +1191,20 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "copy"))
         recordedCopyCredentials.append(auth)
         let error = copyErrors.isEmpty ? nil : copyErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordRemoteWrite(
+        name: String,
+        credentials: inout [Credential?],
+        errors: inout [SvnError],
+        auth: Credential?
+    ) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: name))
+        credentials.append(auth)
+        let error = errors.isEmpty ? nil : errors.removeFirst()
         callsLock.unlock()
         return error
     }

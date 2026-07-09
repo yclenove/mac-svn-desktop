@@ -200,6 +200,63 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertTrue(branchList.branches.map(\.name).contains("from-copy"))
     }
 
+    func testServiceRemoteRepositoryWritesCreateCopyMoveAndDeleteUrls() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let docsURL = "\(fixture.trunkURL)/docs"
+        let copiedURL = "\(docsURL)/copied.txt"
+        let movedURL = "\(docsURL)/moved.txt"
+
+        let mkdirRevision = try await service.mkdir(
+            url: docsURL,
+            message: "创建远端目录 docs",
+            auth: nil
+        )
+        let trunkAfterMkdir = try await service.list(url: fixture.trunkURL, depth: .immediates, auth: nil)
+
+        let copyRevision = try await service.copy(
+            source: "\(fixture.trunkURL)/README.txt",
+            destination: copiedURL,
+            message: "复制 README 到 docs",
+            auth: nil
+        )
+        let docsAfterCopy = try await service.list(url: docsURL, depth: .immediates, auth: nil)
+
+        let moveRevision = try await service.move(
+            source: copiedURL,
+            destination: movedURL,
+            message: "移动 docs 文件",
+            auth: nil
+        )
+        let docsAfterMove = try await service.list(url: docsURL, depth: .immediates, auth: nil)
+
+        let deleteFileRevision = try await service.delete(
+            url: movedURL,
+            message: "删除 docs 文件",
+            auth: nil
+        )
+        let docsAfterFileDelete = try await service.list(url: docsURL, depth: .immediates, auth: nil)
+
+        let deleteDirectoryRevision = try await service.delete(
+            url: docsURL,
+            message: "删除 docs 目录",
+            auth: nil
+        )
+        let trunkAfterDelete = try await service.list(url: fixture.trunkURL, depth: .immediates, auth: nil)
+
+        XCTAssertGreaterThan(mkdirRevision.value, 1)
+        XCTAssertGreaterThan(copyRevision.value, mkdirRevision.value)
+        XCTAssertGreaterThan(moveRevision.value, copyRevision.value)
+        XCTAssertGreaterThan(deleteFileRevision.value, moveRevision.value)
+        XCTAssertGreaterThan(deleteDirectoryRevision.value, deleteFileRevision.value)
+        XCTAssertTrue(trunkAfterMkdir.map(\.name).contains("docs"))
+        XCTAssertTrue(docsAfterCopy.map(\.name).contains("copied.txt"))
+        XCTAssertFalse(docsAfterMove.map(\.name).contains("copied.txt"))
+        XCTAssertTrue(docsAfterMove.map(\.name).contains("moved.txt"))
+        XCTAssertFalse(docsAfterFileDelete.map(\.name).contains("moved.txt"))
+        XCTAssertFalse(trunkAfterDelete.map(\.name).contains("docs"))
+    }
+
     func testServiceSwitchChangesWorkingCopyUrlToBranch() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

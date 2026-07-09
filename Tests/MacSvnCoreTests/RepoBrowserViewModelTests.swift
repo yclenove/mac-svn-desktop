@@ -275,6 +275,114 @@ final class RepoBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.logEntries(for: "file:///repo/trunk/src"), [])
     }
 
+    @MainActor
+    func testRemoteOperationsCallProviderUpdateStateAndRefreshChildren() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([
+                RemoteEntry(name: "docs", path: "docs", kind: .directory, size: nil, revision: Revision(5), author: nil, date: nil)
+            ]),
+            catResult: .success(Data()),
+            remoteOperationResults: [
+                .success(Revision(5)),
+                .success(Revision(6)),
+                .success(Revision(7)),
+                .success(Revision(8))
+            ]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(
+            name: "old.txt",
+            path: "old.txt",
+            kind: .file,
+            size: 10,
+            revision: Revision(4),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.createDirectory(named: " docs ", in: "file:///repo/trunk", message: "创建目录：docs")
+        await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件")
+        await viewModel.copy(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "file:///repo/branches/old.txt",
+            message: "复制旧文件"
+        )
+        await viewModel.move(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "file:///repo/trunk/new.txt",
+            message: "移动旧文件"
+        )
+        let operationCalls = await provider.recordedRemoteOperationCalls()
+        let listCalls = await provider.recordedListCalls()
+
+        XCTAssertEqual(viewModel.remoteOperationState, .completed(.move, revision: Revision(8)))
+        XCTAssertEqual(viewModel.state(for: "file:///repo/trunk"), .loaded)
+        XCTAssertEqual(viewModel.children(of: "file:///repo/trunk").map(\.name), ["docs"])
+        XCTAssertEqual(operationCalls, [
+            RepoRemoteOperationCall(
+                operation: .mkdir,
+                source: nil,
+                destination: "file:///repo/trunk/docs",
+                message: "创建目录：docs",
+                auth: nil
+            ),
+            RepoRemoteOperationCall(
+                operation: .delete,
+                source: "file:///repo/trunk/old.txt",
+                destination: nil,
+                message: "删除旧文件",
+                auth: nil
+            ),
+            RepoRemoteOperationCall(
+                operation: .copy,
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/branches/old.txt",
+                message: "复制旧文件",
+                auth: nil
+            ),
+            RepoRemoteOperationCall(
+                operation: .move,
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/trunk/new.txt",
+                message: "移动旧文件",
+                auth: nil
+            )
+        ])
+        XCTAssertEqual(
+            listCalls,
+            Array(repeating: RepoListCall(url: "file:///repo/trunk", depth: .immediates, auth: nil), count: 4)
+        )
+    }
+
+    @MainActor
+    func testRemoteOperationUnavailableAndInvalidDirectoryNameStoreErrors() async {
+        let provider = FakeRepoListProvider(result: .success([]))
+        let viewModel = RepoBrowserViewModel(listProvider: provider)
+
+        await viewModel.createDirectory(named: "docs", in: "file:///repo/trunk", message: "创建目录")
+        XCTAssertEqual(viewModel.remoteOperationState, .error("remoteOperationsUnavailable"))
+
+        let remoteProvider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(2))]
+        )
+        let remoteViewModel = RepoBrowserViewModel(
+            listProvider: remoteProvider,
+            previewProvider: remoteProvider,
+            remoteOperationProvider: remoteProvider
+        )
+
+        await remoteViewModel.createDirectory(named: "  ", in: "file:///repo/trunk", message: "创建目录")
+        XCTAssertEqual(remoteViewModel.remoteOperationState, .error("emptyRemoteEntryName"))
+    }
+
     private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {
         RepoBookmark(
             id: UUID(),
@@ -318,6 +426,14 @@ private struct RepoLogCall: Equatable, Sendable {
     let auth: Credential?
 }
 
+private struct RepoRemoteOperationCall: Equatable, Sendable {
+    let operation: RepoRemoteOperation
+    let source: String?
+    let destination: String?
+    let message: String
+    let auth: Credential?
+}
+
 private actor FakeRepoListProvider: RepoListProviding {
     private let result: Result<[RemoteEntry], Error>
     private var calls: [RepoListCall] = []
@@ -336,22 +452,26 @@ private actor FakeRepoListProvider: RepoListProviding {
     }
 }
 
-private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding, RepoLogProviding {
+private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding, RepoLogProviding, RepoRemoteOperationProviding {
     private let listResult: Result<[RemoteEntry], Error>
     private let catResult: Result<Data, Error>
     private var logResults: [Result<[LogEntry], Error>]
+    private var remoteOperationResults: [Result<Revision, Error>]
     private var listCalls: [RepoListCall] = []
     private var catCalls: [RepoCatCall] = []
     private var logCalls: [RepoLogCall] = []
+    private var remoteOperationCalls: [RepoRemoteOperationCall] = []
 
     init(
         listResult: Result<[RemoteEntry], Error>,
         catResult: Result<Data, Error>,
-        logResults: [Result<[LogEntry], Error>] = []
+        logResults: [Result<[LogEntry], Error>] = [],
+        remoteOperationResults: [Result<Revision, Error>] = []
     ) {
         self.listResult = listResult
         self.catResult = catResult
         self.logResults = logResults
+        self.remoteOperationResults = remoteOperationResults
     }
 
     func recordedListCalls() -> [RepoListCall] {
@@ -364,6 +484,10 @@ private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding, 
 
     func recordedLogCalls() -> [RepoLogCall] {
         logCalls
+    }
+
+    func recordedRemoteOperationCalls() -> [RepoRemoteOperationCall] {
+        remoteOperationCalls
     }
 
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
@@ -382,6 +506,57 @@ private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding, 
             return []
         }
         return try logResults.removeFirst().get()
+    }
+
+    func mkdir(url: String, message: String, auth: Credential?) async throws -> Revision {
+        remoteOperationCalls.append(RepoRemoteOperationCall(
+            operation: .mkdir,
+            source: nil,
+            destination: url,
+            message: message,
+            auth: auth
+        ))
+        return try nextRemoteOperationResult()
+    }
+
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision {
+        remoteOperationCalls.append(RepoRemoteOperationCall(
+            operation: .delete,
+            source: url,
+            destination: nil,
+            message: message,
+            auth: auth
+        ))
+        return try nextRemoteOperationResult()
+    }
+
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        remoteOperationCalls.append(RepoRemoteOperationCall(
+            operation: .copy,
+            source: source,
+            destination: destination,
+            message: message,
+            auth: auth
+        ))
+        return try nextRemoteOperationResult()
+    }
+
+    func move(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        remoteOperationCalls.append(RepoRemoteOperationCall(
+            operation: .move,
+            source: source,
+            destination: destination,
+            message: message,
+            auth: auth
+        ))
+        return try nextRemoteOperationResult()
+    }
+
+    private func nextRemoteOperationResult() throws -> Revision {
+        guard !remoteOperationResults.isEmpty else {
+            return Revision(1)
+        }
+        return try remoteOperationResults.removeFirst().get()
     }
 }
 

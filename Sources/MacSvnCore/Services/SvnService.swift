@@ -160,13 +160,51 @@ public actor SvnService {
         message: String,
         auth: Credential? = nil
     ) async throws -> Revision {
-        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw SvnServiceError.emptyCommitMessage
-        }
+        try requireCommitMessage(message)
 
-        let credentialScope = URL(string: destination) ?? URL(fileURLWithPath: destination)
+        let credentialScope = credentialScope(for: destination)
         return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
             try await backend.copy(source: source, destination: destination, message: message, auth: auth)
+        }
+    }
+
+    public func mkdir(
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        try requireCommitMessage(message)
+
+        let credentialScope = credentialScope(for: url)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.mkdir(url: url, message: message, auth: auth)
+        }
+    }
+
+    public func delete(
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        try requireCommitMessage(message)
+
+        let credentialScope = credentialScope(for: url)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.delete(url: url, message: message, auth: auth)
+        }
+    }
+
+    public func move(
+        source: String,
+        destination: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        try requireCommitMessage(message)
+
+        let credentialScope = credentialScope(for: destination)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.move(source: source, destination: destination, message: message, auth: auth)
         }
     }
 
@@ -317,6 +355,16 @@ public actor SvnService {
                 return status.path
             }
         }
+    }
+
+    private func requireCommitMessage(_ message: String) throws {
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SvnServiceError.emptyCommitMessage
+        }
+    }
+
+    private func credentialScope(for value: String) -> URL {
+        URL(string: value) ?? URL(fileURLWithPath: value)
     }
 
     private func retryingAuthentication<T: Sendable>(
