@@ -229,6 +229,71 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(statuses.contains { $0.itemStatus == .conflicted || $0.isTreeConflict })
     }
 
+    func testMergeEngineResolvesTextConflictAndCommitSucceeds() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
+        let otherWC = fixture.root.appendingPathComponent("wc-other-merge-engine", isDirectory: true)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: otherWC)
+        try "mine change\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "theirs change\n".write(
+            to: otherWC.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        _ = try await service.commit(
+            wc: otherWC,
+            paths: ["README.txt"],
+            message: "theirs change",
+            auth: nil
+        )
+        _ = try await service.update(wc: fixture.workingCopy)
+
+        let conflicts = try await conflictService.conflicts(wc: fixture.workingCopy)
+        let conflict = try XCTUnwrap(conflicts.first)
+        let text = try await conflictService.loadTextConflict(conflict)
+        let blocks = MergeEngine.merge3(
+            base: lines(text.base),
+            mine: lines(text.mine),
+            theirs: lines(text.theirs)
+        )
+        let resolvedBlocks = blocks.map { block -> MergeBlock in
+            guard case .conflict(let hunk) = block else {
+                return block
+            }
+
+            return .conflict(ConflictHunk(
+                baseLines: hunk.baseLines,
+                mineLines: hunk.mineLines,
+                theirsLines: hunk.theirsLines,
+                resolution: .takeBoth(mineFirst: true)
+            ))
+        }
+        let merged = try XCTUnwrap(MergeEngine.mergedLines(from: resolvedBlocks))
+
+        try await conflictService.saveResolution(
+            conflict,
+            wc: fixture.workingCopy,
+            mergedText: merged.joined(separator: "\n") + "\n"
+        )
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertFalse(statuses.contains { $0.itemStatus == .conflicted || $0.isTreeConflict })
+        let revision = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "resolve conflict with merge engine",
+            auth: nil
+        )
+
+        XCTAssertGreaterThan(revision.value, 1)
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 
@@ -306,5 +371,10 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
 
         XCTAssertEqual(entries.first?.revision, revision)
         XCTAssertEqual(entries.first?.message, message)
+    }
+
+    private func lines(_ text: String) -> [Substring] {
+        let splitLines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        return text.hasSuffix("\n") ? Array(splitLines.dropLast()) : splitLines
     }
 }
