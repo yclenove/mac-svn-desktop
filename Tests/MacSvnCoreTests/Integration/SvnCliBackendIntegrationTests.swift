@@ -294,6 +294,40 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertGreaterThan(revision.value, 1)
     }
 
+    func testTreeConflictKeepLocalResolvesAndKeepsWorkingFile() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
+        let conflict = try await makeLocalEditRemoteDeleteTreeConflict(fixture: fixture, service: service)
+
+        try await conflictService.resolveTreeConflict(
+            conflict,
+            wc: fixture.workingCopy,
+            resolution: .keepLocal
+        )
+
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertFalse(statuses.contains { $0.itemStatus == .conflicted || $0.isTreeConflict })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
+    }
+
+    func testTreeConflictAcceptRemoteResolvesAndRemovesWorkingFile() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
+        let conflict = try await makeLocalEditRemoteDeleteTreeConflict(fixture: fixture, service: service)
+
+        try await conflictService.resolveTreeConflict(
+            conflict,
+            wc: fixture.workingCopy,
+            resolution: .acceptRemote
+        )
+
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertFalse(statuses.contains { $0.itemStatus == .conflicted || $0.isTreeConflict })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 
@@ -376,5 +410,32 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
     private func lines(_ text: String) -> [Substring] {
         let splitLines = text.split(separator: "\n", omittingEmptySubsequences: false)
         return text.hasSuffix("\n") ? Array(splitLines.dropLast()) : splitLines
+    }
+
+    private func makeLocalEditRemoteDeleteTreeConflict(
+        fixture: SvnIntegrationFixture,
+        service: SvnService
+    ) async throws -> ConflictInfo {
+        let otherWC = fixture.root.appendingPathComponent("wc-tree-other-\(UUID().uuidString)", isDirectory: true)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: otherWC)
+        try "local edit before remote delete\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try await fixture.backend.delete(wc: otherWC, paths: ["README.txt"])
+        _ = try await service.commit(
+            wc: otherWC,
+            paths: ["README.txt"],
+            message: "delete readme remotely",
+            auth: nil
+        )
+        _ = try await service.update(wc: fixture.workingCopy)
+
+        let conflictService = ConflictService(statusProvider: service, infoProvider: service, resolveProvider: service)
+        let conflicts = try await conflictService.conflicts(wc: fixture.workingCopy)
+        return try XCTUnwrap(conflicts.first { $0.kind == .tree && $0.path == "README.txt" })
     }
 }

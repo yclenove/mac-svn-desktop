@@ -12,19 +12,26 @@ public protocol ConflictResolving: Sendable {
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
 }
 
+public protocol ConflictReverting: Sendable {
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws
+}
+
 public actor ConflictService {
     private let statusProvider: any ConflictStatusProviding
     private let infoProvider: any ConflictInfoProviding
     private let resolveProvider: any ConflictResolving
+    private let revertProvider: (any ConflictReverting)?
 
     public init(
         statusProvider: any ConflictStatusProviding,
         infoProvider: any ConflictInfoProviding,
-        resolveProvider: any ConflictResolving
+        resolveProvider: any ConflictResolving,
+        revertProvider: (any ConflictReverting)? = nil
     ) {
         self.statusProvider = statusProvider
         self.infoProvider = infoProvider
         self.resolveProvider = resolveProvider
+        self.revertProvider = revertProvider ?? (resolveProvider as? any ConflictReverting)
     }
 
     public func conflicts(wc: URL) async throws -> [ConflictInfo] {
@@ -66,6 +73,22 @@ public actor ConflictService {
 
     public func resolveWholeFile(_ conflict: ConflictInfo, wc: URL, accept: ResolveAccept) async throws {
         try await resolveProvider.resolve(wc: wc, path: conflict.path, accept: accept)
+    }
+
+    public func resolveTreeConflict(_ conflict: ConflictInfo, wc: URL, resolution: TreeConflictResolution) async throws {
+        guard conflict.kind == .tree else {
+            throw SvnError.parse(detail: "Expected tree conflict for \(conflict.path).")
+        }
+
+        try await resolveProvider.resolve(wc: wc, path: conflict.path, accept: .working)
+
+        if resolution == .acceptRemote {
+            guard let revertProvider else {
+                throw SvnError.parse(detail: "Tree conflict remote resolution requires revert support for \(conflict.path).")
+            }
+
+            try await revertProvider.revert(wc: wc, paths: [conflict.path], recursive: false)
+        }
     }
 
     private func fallbackConflict(from status: FileStatus) -> ConflictInfo {
@@ -114,3 +137,4 @@ public actor ConflictService {
 extension SvnService: ConflictStatusProviding {}
 extension SvnService: ConflictInfoProviding {}
 extension SvnService: ConflictResolving {}
+extension SvnService: ConflictReverting {}

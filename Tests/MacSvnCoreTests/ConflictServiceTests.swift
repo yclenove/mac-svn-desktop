@@ -133,6 +133,80 @@ final class ConflictServiceTests: XCTestCase {
             ResolveCall(wc: wc, path: "README.txt", accept: .mineFull)
         ])
     }
+
+    func testResolveTreeConflictKeepsLocalByMarkingWorkingResolved() async throws {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeConflictProvider()
+        let service = ConflictService(statusProvider: provider, infoProvider: provider, resolveProvider: provider)
+        let conflict = ConflictInfo(
+            path: "tree.txt",
+            kind: .tree,
+            baseFile: nil,
+            mineFile: nil,
+            theirsFile: nil,
+            treeConflict: TreeConflictDetails(operation: "update", action: "delete", reason: "edited")
+        )
+
+        try await service.resolveTreeConflict(conflict, wc: wc, resolution: .keepLocal)
+        let resolves = await provider.recordedResolves()
+        let reverts = await provider.recordedReverts()
+
+        XCTAssertEqual(resolves, [
+            ResolveCall(wc: wc, path: "tree.txt", accept: .working)
+        ])
+        XCTAssertEqual(reverts, [])
+    }
+
+    func testResolveTreeConflictAcceptsRemoteByResolvingWorkingAndRevertingPath() async throws {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeConflictProvider()
+        let service = ConflictService(statusProvider: provider, infoProvider: provider, resolveProvider: provider)
+        let conflict = ConflictInfo(
+            path: "tree.txt",
+            kind: .tree,
+            baseFile: nil,
+            mineFile: nil,
+            theirsFile: nil,
+            treeConflict: TreeConflictDetails(operation: "update", action: "delete", reason: "edited")
+        )
+
+        try await service.resolveTreeConflict(conflict, wc: wc, resolution: .acceptRemote)
+        let resolves = await provider.recordedResolves()
+        let reverts = await provider.recordedReverts()
+
+        XCTAssertEqual(resolves, [
+            ResolveCall(wc: wc, path: "tree.txt", accept: .working)
+        ])
+        XCTAssertEqual(reverts, [
+            RevertCall(wc: wc, paths: ["tree.txt"], recursive: false)
+        ])
+    }
+
+    func testResolveTreeConflictRejectsNonTreeConflict() async {
+        let provider = FakeConflictProvider()
+        let service = ConflictService(statusProvider: provider, infoProvider: provider, resolveProvider: provider)
+        let conflict = ConflictInfo(
+            path: "README.txt",
+            kind: .text,
+            baseFile: nil,
+            mineFile: nil,
+            theirsFile: nil,
+            treeConflict: nil
+        )
+
+        do {
+            try await service.resolveTreeConflict(
+                conflict,
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                resolution: .keepLocal
+            )
+            XCTFail("Expected parse error")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .parse(detail: "Expected tree conflict for README.txt."))
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+    }
 }
 
 private struct ResolveCall: Equatable, Sendable {
@@ -141,10 +215,17 @@ private struct ResolveCall: Equatable, Sendable {
     let accept: ResolveAccept
 }
 
-private actor FakeConflictProvider: ConflictStatusProviding, ConflictInfoProviding, ConflictResolving {
+private struct RevertCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let recursive: Bool
+}
+
+private actor FakeConflictProvider: ConflictStatusProviding, ConflictInfoProviding, ConflictResolving, ConflictReverting {
     private let statuses: [FileStatus]
     private let infos: [String: SvnInfo]
     private var resolves: [ResolveCall] = []
+    private var reverts: [RevertCall] = []
 
     init(statuses: [FileStatus] = [], infos: [String: SvnInfo] = [:]) {
         self.statuses = statuses
@@ -153,6 +234,10 @@ private actor FakeConflictProvider: ConflictStatusProviding, ConflictInfoProvidi
 
     func recordedResolves() -> [ResolveCall] {
         resolves
+    }
+
+    func recordedReverts() -> [RevertCall] {
+        reverts
     }
 
     func status(wc: URL) async throws -> [FileStatus] {
@@ -169,5 +254,9 @@ private actor FakeConflictProvider: ConflictStatusProviding, ConflictInfoProvidi
 
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {
         resolves.append(ResolveCall(wc: wc, path: path, accept: accept))
+    }
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws {
+        reverts.append(RevertCall(wc: wc, paths: paths, recursive: recursive))
     }
 }

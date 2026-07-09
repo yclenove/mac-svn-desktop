@@ -89,6 +89,17 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testResolveCanAcceptTreeConflictSides() {
+        XCTAssertEqual(
+            SvnCommandBuilder.resolve(path: "tree.txt", accept: .mineConflict).arguments,
+            ["resolve", "--accept", "mine-conflict", "--non-interactive", "tree.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.resolve(path: "tree.txt", accept: .theirsConflict).arguments,
+            ["resolve", "--accept", "theirs-conflict", "--non-interactive", "tree.txt"]
+        )
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

@@ -280,8 +280,15 @@ public struct ConflictInfo: Equatable, Sendable {
 
 public enum ResolveAccept: String, Equatable, Sendable {
     case working
+    case mineConflict = "mine-conflict"
+    case theirsConflict = "theirs-conflict"
     case mineFull = "mine-full"
     case theirsFull = "theirs-full"
+}
+
+public enum TreeConflictResolution: Equatable, Sendable {
+    case keepLocal
+    case acceptRemote
 }
 
 public struct Credential: Equatable, Sendable {

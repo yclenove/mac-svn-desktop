@@ -4,7 +4,13 @@
 
 **目标：** 实现 FR-CF-06 的 Core 非 UI 部分：树冲突展示可读详情，并提供“保留本地 / 接受远端”两种处理动作，最终调用 `svn resolve --accept mine-conflict/theirs-conflict`。
 
-**架构：** 扩展 `ResolveAccept` 支持 svn 1.14 `mine-conflict` 与 `theirs-conflict`；在 `ConflictService` 中新增 `resolveTreeConflict(_:wc:resolution:)`，把领域语义 `TreeConflictResolution.keepLocal/acceptRemote` 映射到底层 accept 值。新增 `TreeConflictViewModel` 作为后续 SwiftUI 绑定层，只负责展示详情、状态、调用 resolve，不直接接触后端。
+**架构：** 扩展 `ResolveAccept` 支持 svn 1.14 `mine-conflict` 与 `theirs-conflict`；在 `ConflictService` 中新增 `resolveTreeConflict(_:wc:resolution:)`，把领域语义 `TreeConflictResolution.keepLocal/acceptRemote` 映射为真实可执行的非交互 SVN 操作。新增 `TreeConflictViewModel` 作为后续 SwiftUI 绑定层，只负责展示详情、状态、调用 resolve，不直接接触后端。
+
+**实现备注（2026-07-09 验证）：** `svn help resolve` 虽列出 `mine-conflict/theirs-conflict`，但对常见树冲突「local file edit, incoming file delete upon update」会返回 `W195024 Inapplicable conflict resolution option`。真实可用的非交互流程是：
+- `keepLocal`：`svn resolve --accept working <path>`，等价于交互式「Ignore incoming deletion」/ 标记当前工作副本状态为解决；
+- `acceptRemote`：先 `svn resolve --accept working <path>` 清 tree conflict，再 `svn revert <path>` 让 incoming deletion 生效。
+
+底层命令构造仍保留 `mine-conflict/theirs-conflict`，供文本/属性冲突或其他 SVN 场景使用；树冲突语义不得直接映射到这两个值。
 
 **技术栈：** Swift 6.1、Observation、XCTest concurrency、svn CLI 1.14。
 
