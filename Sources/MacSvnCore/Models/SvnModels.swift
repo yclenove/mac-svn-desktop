@@ -93,6 +93,20 @@ public struct FileStatus: Equatable, Sendable {
     }
 }
 
+public struct BlameLine: Equatable, Sendable {
+    public let lineNumber: Int
+    public let revision: Revision?
+    public let author: String?
+    public let date: Date?
+
+    public init(lineNumber: Int, revision: Revision?, author: String?, date: Date?) {
+        self.lineNumber = lineNumber
+        self.revision = revision
+        self.author = author
+        self.date = date
+    }
+}
+
 public struct UpdateSummary: Equatable, Sendable {
     public var added: Int
     public var updated: Int
