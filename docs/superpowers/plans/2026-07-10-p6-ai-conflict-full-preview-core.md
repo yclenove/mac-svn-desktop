@@ -320,7 +320,7 @@ git commit -m "feat: connect P6 AI conflict full preview to merge editor"
 
 ## 任务 3：全量验证与计划收尾
 
-- [ ] **步骤 1：运行 FR-AI-03 目标集合**
+- [x] **步骤 1：运行 FR-AI-03 目标集合**
 
 ```bash
 swift test --filter "AIConflictAssistantTests|MergeEditorViewModelTests|MergeEngineTests"
@@ -328,7 +328,7 @@ swift test --filter "AIConflictAssistantTests|MergeEditorViewModelTests|MergeEng
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -337,7 +337,7 @@ git diff --check
 
 预期：全量测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add docs/superpowers/plans/2026-07-10-p6-ai-conflict-full-preview-core.md
