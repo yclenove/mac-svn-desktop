@@ -201,7 +201,7 @@ git commit -m "feat: add P6 AI SVN read-only tool registry"
 - 修改：`Sources/MacSvnCore/Services/AISVNToolRegistry.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AISVNToolRegistryTests` 增加：
 
@@ -236,7 +236,7 @@ func testWriteToolsReturnConfirmationWithoutExecutingService() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -244,7 +244,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：测试失败或编译失败，提示写工具没有返回 confirmation。
 
-- [ ] **步骤 3：实现最少确认逻辑**
+- [x] **步骤 3：实现最少确认逻辑**
 
 实现要求：
 - `.lowRiskWrite` 与 `.highRiskWrite` 都不调用 service；
@@ -253,7 +253,7 @@ swift test --filter AISVNToolRegistryTests
 - 高危工具 warning 包含中文「高危」；
 - 审计 outcome 为 `.confirmationRequired`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -261,7 +261,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：写工具确认门测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AISVNToolRegistry.swift Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift docs/superpowers/plans/2026-07-10-p6-ai-svn-agent-tool-registry-core.md

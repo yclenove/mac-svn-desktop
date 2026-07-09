@@ -54,7 +54,15 @@ public struct AISVNToolRegistry: Sendable {
             )
             return .completed(result)
         case .lowRiskWrite, .highRiskWrite:
-            throw AISVNToolError.invalidArgument(name: "tool", value: call.name)
+            let confirmation = try makeConfirmation(toolName, arguments: call.arguments)
+            await audit(
+                call: call,
+                sessionID: sessionID,
+                risk: toolName.risk,
+                outcome: .confirmationRequired,
+                summary: confirmation.commandPreview
+            )
+            return .confirmationRequired(confirmation)
         }
     }
 
@@ -156,6 +164,64 @@ public struct AISVNToolRegistry: Sendable {
         ))
     }
 
+    private func makeConfirmation(
+        _ toolName: AISVNToolName,
+        arguments: [String: String]
+    ) throws -> AISVNToolConfirmation {
+        let impactPaths = pathsArgument(arguments["paths"])
+        let command: String
+
+        switch toolName {
+        case .svnUpdate:
+            _ = try requiredArgument("wc", arguments: arguments)
+            command = "svn update \(impactPaths.joined(separator: " "))".trimmingCharacters(in: .whitespaces)
+        case .svnAdd:
+            _ = try requiredArgument("wc", arguments: arguments)
+            command = "svn add \(impactPaths.joined(separator: " "))".trimmingCharacters(in: .whitespaces)
+        case .svnCleanup:
+            _ = try requiredArgument("wc", arguments: arguments)
+            command = "svn cleanup"
+        case .svnCommit:
+            _ = try requiredArgument("wc", arguments: arguments)
+            let message = arguments["message"] ?? ""
+            command = "svn commit \(impactPaths.joined(separator: " ")) -m \"\(message)\""
+                .trimmingCharacters(in: .whitespaces)
+        case .svnRevert:
+            _ = try requiredArgument("wc", arguments: arguments)
+            command = "svn revert \(impactPaths.joined(separator: " "))".trimmingCharacters(in: .whitespaces)
+        case .svnMerge:
+            _ = try requiredArgument("wc", arguments: arguments)
+            let source = try requiredArgument("source", arguments: arguments)
+            let range = arguments["range"].map { "-r \($0) " } ?? ""
+            command = "svn merge \(range)\(source)"
+        case .svnSwitch:
+            _ = try requiredArgument("wc", arguments: arguments)
+            let url = try requiredArgument("url", arguments: arguments)
+            command = "svn switch \(url)"
+        case .svnDelete:
+            if let url = arguments["url"]?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
+                command = "svn delete \(url)"
+            } else {
+                _ = try requiredArgument("wc", arguments: arguments)
+                command = "svn delete \(impactPaths.joined(separator: " "))".trimmingCharacters(in: .whitespaces)
+            }
+        case .svnCopy:
+            let source = try requiredArgument("source", arguments: arguments)
+            let destination = try requiredArgument("destination", arguments: arguments)
+            command = "svn copy \(source) \(destination)"
+        case .svnStatus, .svnLog, .svnDiff, .svnInfo, .svnList, .svnBlame, .svnCat:
+            throw AISVNToolError.invalidArgument(name: "tool", value: toolName.rawValue)
+        }
+
+        return AISVNToolConfirmation(
+            toolName: toolName.rawValue,
+            risk: toolName.risk,
+            commandPreview: command,
+            impactPaths: impactPaths,
+            warning: warning(for: toolName.risk)
+        )
+    }
+
     private func wcArgument(_ arguments: [String: String]) throws -> URL {
         URL(fileURLWithPath: try requiredArgument("wc", arguments: arguments))
     }
@@ -187,6 +253,28 @@ public struct AISVNToolRegistry: Sendable {
             return nil
         }
         return Bool(value)
+    }
+
+    private func pathsArgument(_ value: String?) -> [String] {
+        guard let value else {
+            return []
+        }
+
+        return value
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func warning(for risk: AISVNToolRisk) -> String {
+        switch risk {
+        case .readOnly:
+            return ""
+        case .lowRiskWrite:
+            return "需要确认后执行。"
+        case .highRiskWrite:
+            return "高危写操作，需要确认影响范围后执行。"
+        }
     }
 
     private func formatStatus(_ status: FileStatus) -> String {

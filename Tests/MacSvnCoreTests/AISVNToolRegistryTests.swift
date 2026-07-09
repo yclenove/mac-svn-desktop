@@ -46,6 +46,36 @@ final class AISVNToolRegistryTests: XCTestCase {
         XCTAssertEqual(records.map(\.risk), [.readOnly])
         XCTAssertEqual(records.map(\.outcome), [.completed])
     }
+
+    func testWriteToolsReturnConfirmationWithoutExecutingService() async throws {
+        let service = FakeAISVNToolService()
+        let audit = InMemoryAIToolAuditStore()
+        let registry = AISVNToolRegistry(service: service, auditStore: audit)
+
+        let lowRisk = try await registry.handle(
+            AISVNToolCall(name: "svn_update", arguments: ["wc": "/tmp/wc", "paths": "README.md,Sources/App.swift"]),
+            sessionID: "session-2"
+        )
+        let highRisk = try await registry.handle(
+            AISVNToolCall(name: "svn_revert", arguments: ["wc": "/tmp/wc", "paths": "README.md"]),
+            sessionID: "session-2"
+        )
+
+        guard case .confirmationRequired(let updateConfirmation) = lowRisk,
+              case .confirmationRequired(let revertConfirmation) = highRisk else {
+            return XCTFail("Expected confirmation requests")
+        }
+        XCTAssertEqual(updateConfirmation.risk, .lowRiskWrite)
+        XCTAssertEqual(updateConfirmation.impactPaths, ["README.md", "Sources/App.swift"])
+        XCTAssertTrue(updateConfirmation.commandPreview.contains("svn update"))
+        XCTAssertEqual(revertConfirmation.risk, .highRiskWrite)
+        XCTAssertEqual(revertConfirmation.impactPaths, ["README.md"])
+        XCTAssertTrue(revertConfirmation.warning.contains("高危"))
+        let serviceCalls = await service.recordedCalls()
+        XCTAssertEqual(serviceCalls, [])
+        let records = await audit.records(sessionID: "session-2")
+        XCTAssertEqual(records.map(\.outcome), [.confirmationRequired, .confirmationRequired])
+    }
 }
 
 private actor FakeAISVNToolService: AISVNToolServicing {
