@@ -223,7 +223,7 @@ git commit -m "feat: add P6 finder sync badge core"
 - 修改：`Sources/MacSvnCore/Services/FinderSyncPresentationBuilder.swift`
 - 修改测试：`Tests/MacSvnCoreTests/FinderSyncPresentationBuilderTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 追加以下测试：
 
@@ -284,7 +284,7 @@ private func isEnabled(_ id: FinderSyncMenuActionID, in presentation: FinderSync
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter FinderSyncPresentationBuilderTests
@@ -292,7 +292,7 @@ swift test --filter FinderSyncPresentationBuilderTests
 
 预期：测试失败，因为 `menuActions` 目前为空。
 
-- [ ] **步骤 3：实现菜单动作规则**
+- [x] **步骤 3：实现菜单动作规则**
 
 在 `presentation(for:statuses:)` 中取最高优先级状态并生成菜单：
 
@@ -331,7 +331,7 @@ private static func menuActions(for status: FileStatus?) -> [FinderSyncMenuActio
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter FinderSyncPresentationBuilderTests
@@ -339,7 +339,7 @@ swift test --filter FinderSyncPresentationBuilderTests
 
 预期：Finder Sync Core 目标测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/FinderSyncPresentationBuilder.swift Tests/MacSvnCoreTests/FinderSyncPresentationBuilderTests.swift docs/superpowers/plans/2026-07-10-p6-finder-sync-core.md

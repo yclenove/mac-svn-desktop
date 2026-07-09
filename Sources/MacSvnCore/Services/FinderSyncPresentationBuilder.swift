@@ -56,15 +56,15 @@ public struct FinderSyncPresentationBuilder: Sendable {
     public func presentation(for targetPath: String, statuses: [FileStatus]) -> FinderSyncPresentation {
         let normalizedTarget = Self.normalize(targetPath)
         let matchedStatuses = Self.statusesMatching(targetPath: normalizedTarget, statuses: statuses)
-        let badge = matchedStatuses
-            .map(Self.badge)
-            .sorted { Self.priority($0) > Self.priority($1) }
-            .first ?? .normal
+        let dominantStatus = matchedStatuses.sorted {
+            Self.priority(Self.badge(for: $0)) > Self.priority(Self.badge(for: $1))
+        }.first
+        let badge = dominantStatus.map(Self.badge) ?? .normal
 
         return FinderSyncPresentation(
             targetPath: normalizedTarget,
             badge: badge,
-            menuActions: []
+            menuActions: Self.menuActions(for: dominantStatus)
         )
     }
 
@@ -123,6 +123,30 @@ public struct FinderSyncPresentationBuilder: Sendable {
         case .normal:
             return 0
         }
+    }
+
+    private static func menuActions(for status: FileStatus?) -> [FinderSyncMenuAction] {
+        let itemStatus = status?.itemStatus ?? .normal
+        let isConflicted = status?.isTreeConflict == true || itemStatus == .conflicted
+        let isUnversioned = itemStatus == .unversioned
+        let isIgnored = itemStatus == .ignored
+        let isVersioned = !isUnversioned && !isIgnored
+        let hasLocalChange = isConflicted
+            || [.modified, .added, .deleted, .missing, .replaced].contains(itemStatus)
+        let canCommit = hasLocalChange && !isConflicted
+        let canDiff = isConflicted || [.modified, .added, .deleted, .replaced].contains(itemStatus)
+        let canDelete = isVersioned && ![.deleted, .missing, .conflicted].contains(itemStatus)
+
+        return [
+            FinderSyncMenuAction(id: .update, title: "更新", isEnabled: true),
+            FinderSyncMenuAction(id: .commit, title: "提交", isEnabled: canCommit),
+            FinderSyncMenuAction(id: .log, title: "查看日志", isEnabled: isVersioned),
+            FinderSyncMenuAction(id: .diff, title: "查看差异", isEnabled: canDiff),
+            FinderSyncMenuAction(id: .revert, title: "还原", isEnabled: hasLocalChange),
+            FinderSyncMenuAction(id: .add, title: "加入版本控制", isEnabled: isUnversioned),
+            FinderSyncMenuAction(id: .delete, title: "SVN 删除", isEnabled: canDelete),
+            FinderSyncMenuAction(id: .resolve, title: "解决冲突", isEnabled: isConflicted)
+        ]
     }
 
     private static func normalize(_ path: String) -> String {
