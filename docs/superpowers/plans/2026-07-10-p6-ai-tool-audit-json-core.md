@@ -29,7 +29,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIToolAuditStore.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIToolAuditStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `AIToolAuditStoreTests.swift`：
 
@@ -121,7 +121,7 @@ private extension JSONDecoder {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIToolAuditStoreTests
@@ -129,7 +129,7 @@ swift test --filter AIToolAuditStoreTests
 
 预期：编译失败，提示 `AIToolAuditStore` 不存在。
 
-- [ ] **步骤 3：实现最少 Store**
+- [x] **步骤 3：实现最少 Store**
 
 创建 `AIToolAuditStore.swift`：
 
@@ -186,7 +186,7 @@ public actor AIToolAuditStore: AIToolAuditing {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIToolAuditStoreTests
@@ -194,7 +194,7 @@ swift test --filter AIToolAuditStoreTests
 
 预期：`AIToolAuditStoreTests` 2 个测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AIToolAuditStore.swift Tests/MacSvnCoreTests/AIToolAuditStoreTests.swift docs/superpowers/plans/2026-07-10-p6-ai-tool-audit-json-core.md
