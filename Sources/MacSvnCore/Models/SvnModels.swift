@@ -107,6 +107,32 @@ public struct BlameLine: Equatable, Sendable {
     }
 }
 
+public struct SvnProperty: Equatable, Sendable {
+    public let target: String
+    public let name: String
+    public let value: String
+
+    public init(target: String, name: String, value: String) {
+        self.target = target
+        self.name = name
+        self.value = value
+    }
+}
+
+public struct SvnPropertyTemplate: Equatable, Sendable {
+    public let name: String
+    public let defaultValue: String
+    public let appliesToDirectory: Bool
+    public let appliesToFile: Bool
+
+    public init(name: String, defaultValue: String, appliesToDirectory: Bool, appliesToFile: Bool) {
+        self.name = name
+        self.defaultValue = defaultValue
+        self.appliesToDirectory = appliesToDirectory
+        self.appliesToFile = appliesToFile
+    }
+}
+
 public struct UpdateSummary: Equatable, Sendable {
     public var added: Int
     public var updated: Int
