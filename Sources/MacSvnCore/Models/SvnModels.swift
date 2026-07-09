@@ -133,6 +133,34 @@ public struct SvnPropertyTemplate: Equatable, Sendable {
     }
 }
 
+public struct SvnLock: Equatable, Sendable {
+    public let target: String
+    public let token: String?
+    public let owner: String?
+    public let comment: String?
+    public let created: Date?
+    public let isOwnedByWorkingCopy: Bool
+    public let isRepositoryLocked: Bool
+
+    public init(
+        target: String,
+        token: String?,
+        owner: String?,
+        comment: String?,
+        created: Date?,
+        isOwnedByWorkingCopy: Bool,
+        isRepositoryLocked: Bool
+    ) {
+        self.target = target
+        self.token = token
+        self.owner = owner
+        self.comment = comment
+        self.created = created
+        self.isOwnedByWorkingCopy = isOwnedByWorkingCopy
+        self.isRepositoryLocked = isRepositoryLocked
+    }
+}
+
 public struct UpdateSummary: Equatable, Sendable {
     public var added: Int
     public var updated: Int
