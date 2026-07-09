@@ -133,6 +133,111 @@ final class AIConflictAssistantTests: XCTestCase {
             XCTFail("Expected AIConflictAssistError, got \(error)", file: file, line: line)
         }
     }
+
+    func testSuggestResolutionsParsesBlockSuggestionsAndRedactsAllContexts() async throws {
+        let provider = AIProvider(
+            name: "DeepSeek",
+            kind: .openAICompatible,
+            baseURL: "https://api.deepseek.com/v1",
+            model: "deepseek-chat",
+            apiKeyRef: "keychain://deepseek",
+            maxTokens: 32_000,
+            temperature: 0.2
+        )
+        let llm = FakeConflictLLMClient(responses: [
+            AILLMResponse(
+                content: """
+                {
+                  "suggestions": [
+                    {
+                      "conflictIndex": 0,
+                      "mergedText": "first merged",
+                      "rationale": "第一块可自动合并。",
+                      "confidence": "high"
+                    },
+                    {
+                      "conflictIndex": 1,
+                      "mergedText": "second merged",
+                      "rationale": "第二块风险高，需要人工确认。",
+                      "confidence": "low"
+                    }
+                  ]
+                }
+                """,
+                promptTokens: 240,
+                completionTokens: 80
+            )
+        ])
+        let assistant = AIConflictAssistant(
+            providerManager: FakeConflictProviderManager(providers: [provider]),
+            llmClient: llm
+        )
+        let contexts = [
+            AIConflictAssistContext(
+                path: "Sources/Login.swift",
+                conflictIndex: 0,
+                baseLines: ["let token = \"sk-1234567890abcdef\""],
+                mineLines: ["let token = credentialStore.token"],
+                theirsLines: ["let token = \"sk-1234567890abcdef\"", "try auth.login()"],
+                leadingContext: [],
+                trailingContext: []
+            ),
+            AIConflictAssistContext(
+                path: "Sources/Login.swift",
+                conflictIndex: 1,
+                baseLines: ["return false"],
+                mineLines: ["return isValid"],
+                theirsLines: ["return hasPermission"],
+                leadingContext: [],
+                trailingContext: []
+            )
+        ]
+
+        let preview = try await assistant.suggestResolutions(
+            contexts: contexts,
+            privacySettings: AIPrivacySettings()
+        )
+        let calls = await llm.recordedCalls()
+        let prompt = calls[0].messages.map(\.content).joined(separator: "\n")
+
+        XCTAssertEqual(preview.providerID, provider.id)
+        XCTAssertEqual(preview.promptCount, 1)
+        XCTAssertEqual(preview.redactionMatches.map(\.ruleID), ["openai-api-key"])
+        XCTAssertEqual(preview.suggestions.map(\.conflictIndex), [0, 1])
+        XCTAssertEqual(preview.suggestions.map(\.mergedLines), [["first merged"], ["second merged"]])
+        XCTAssertEqual(preview.suggestions.map(\.confidence), [.high, .low])
+        XCTAssertTrue(prompt.contains("***REDACTED***"))
+        XCTAssertFalse(prompt.contains("sk-1234567890abcdef"))
+        XCTAssertTrue(prompt.contains("suggestions"))
+    }
+
+    func testSuggestResolutionsRejectsEmptyContextList() async throws {
+        let provider = AIProvider(
+            name: "Local",
+            kind: .ollama,
+            baseURL: "http://localhost:11434",
+            model: "llama3",
+            apiKeyRef: nil,
+            maxTokens: 4096,
+            temperature: 0.1
+        )
+        let assistant = AIConflictAssistant(
+            providerManager: FakeConflictProviderManager(providers: [provider]),
+            llmClient: FakeConflictLLMClient(responses: [])
+        )
+
+        do {
+            _ = try await assistant.suggestResolutions(
+                contexts: [],
+                privacySettings: AIPrivacySettings()
+            )
+            XCTFail("Expected emptyConflict")
+        } catch let error as AIConflictAssistError {
+            XCTAssertEqual(error, .emptyConflict)
+        } catch {
+            XCTFail("Expected AIConflictAssistError, got \(error)")
+        }
+    }
 }
 
 private func validContext() -> AIConflictAssistContext {

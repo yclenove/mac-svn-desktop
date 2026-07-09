@@ -423,4 +423,11 @@ private actor FakeAIConflictAssistant: AIConflictAssisting {
         calls.append(AIConflictAssistCall(context: context, privacySettings: privacySettings))
         return try result.get()
     }
+
+    func suggestResolutions(
+        contexts: [AIConflictAssistContext],
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIConflictAssistPreview {
+        throw AIConflictAssistError.emptyConflict
+    }
 }

@@ -294,6 +294,44 @@ public struct AIConflictAssistSuggestion: Codable, Equatable, Sendable {
     }
 }
 
+public struct AIConflictBlockSuggestion: Codable, Equatable, Sendable {
+    public let conflictIndex: Int
+    public let mergedLines: [String]
+    public let rationale: String
+    public let confidence: AIConflictConfidence
+
+    public init(
+        conflictIndex: Int,
+        mergedLines: [String],
+        rationale: String,
+        confidence: AIConflictConfidence
+    ) {
+        self.conflictIndex = conflictIndex
+        self.mergedLines = mergedLines
+        self.rationale = rationale
+        self.confidence = confidence
+    }
+}
+
+public struct AIConflictAssistPreview: Codable, Equatable, Sendable {
+    public let suggestions: [AIConflictBlockSuggestion]
+    public let providerID: UUID
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+
+    public init(
+        suggestions: [AIConflictBlockSuggestion],
+        providerID: UUID,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int
+    ) {
+        self.suggestions = suggestions
+        self.providerID = providerID
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+    }
+}
+
 public enum AIConflictAssistError: Error, Equatable, Sendable {
     case missingDefaultProvider
     case emptyConflict

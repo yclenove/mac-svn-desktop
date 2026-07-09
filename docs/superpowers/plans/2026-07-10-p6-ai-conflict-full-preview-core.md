@@ -33,7 +33,7 @@
 - 修改：`Sources/MacSvnCore/Services/AIConflictAssistant.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AIConflictAssistantTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIConflictAssistantTests` 增加：
 
@@ -143,7 +143,7 @@ func testSuggestResolutionsRejectsEmptyContextList() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIConflictAssistantTests
@@ -151,7 +151,7 @@ swift test --filter AIConflictAssistantTests
 
 预期：编译失败，提示 `suggestResolutions`、`AIConflictAssistPreview` 或 `AIConflictBlockSuggestion` 不存在。
 
-- [ ] **步骤 3：实现最少模型与服务代码**
+- [x] **步骤 3：实现最少模型与服务代码**
 
 在 `AIModels.swift` 增加：
 
@@ -187,7 +187,7 @@ func suggestResolutions(
 - redaction matches 来自整个批量 prompt；
 - `promptCount` 为 1。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIConflictAssistantTests
@@ -195,12 +195,13 @@ swift test --filter AIConflictAssistantTests
 
 预期：`AIConflictAssistantTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift \
   Sources/MacSvnCore/Services/AIConflictAssistant.swift \
   Tests/MacSvnCoreTests/AIConflictAssistantTests.swift \
+  Tests/MacSvnCoreTests/MergeEditorViewModelTests.swift \
   docs/superpowers/plans/2026-07-10-p6-ai-conflict-full-preview-core.md
 git diff --cached --check
 git commit -m "feat: add P6 AI conflict full preview core"
