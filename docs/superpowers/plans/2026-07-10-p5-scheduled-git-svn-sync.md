@@ -31,7 +31,7 @@
 - 修改：`Sources/MacSvnCore/Services/GitMigrationSyncStore.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationSyncStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `GitMigrationSyncStoreTests` 增加：
 
@@ -79,7 +79,7 @@ func testUpdateScheduleRejectsNonPositiveInterval() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -89,7 +89,7 @@ swift test --filter "GitMigrationSyncStoreTests/testUpdateSchedulePersistsEnable
 
 预期：编译失败，提示 `updateSchedule`、`isScheduledSyncEnabled`、`syncIntervalMinutes` 或 `invalidScheduleInterval` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 修改 `GitMigrationSyncError`：
 
@@ -123,7 +123,7 @@ func updateSchedule(id: UUID, isEnabled: Bool, intervalMinutes: Int?) async thro
 - `isEnabled == false` 时允许 `intervalMinutes == nil`，并保存 disabled 状态；
 - 找不到记录抛 `.recordNotFound(id)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -133,7 +133,7 @@ func updateSchedule(id: UUID, isEnabled: Bool, intervalMinutes: Int?) async thro
 - 创建：`Sources/MacSvnCore/Services/GitMigrationSyncScheduler.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationSyncSchedulerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `GitMigrationSyncSchedulerTests`：
 
@@ -175,7 +175,7 @@ final class GitMigrationSyncSchedulerTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -185,7 +185,7 @@ swift test --filter GitMigrationSyncSchedulerTests
 
 预期：编译失败，提示 `GitMigrationSyncScheduler` 或 scheduled report 类型未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 新增模型：
 
@@ -256,7 +256,7 @@ Due 规则：
 
 `runDueSyncs` 顺序执行 due records；单条失败记录到 `failedRecordIDs`，后续记录继续执行。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -266,7 +266,7 @@ Due 规则：
 - 修改：`Sources/MacSvnCore/ViewModels/GitMigrationSyncViewModel.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationSyncViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `GitMigrationSyncViewModelTests` 增加：
 
@@ -291,7 +291,7 @@ func testConfigureScheduleUpdatesRecordState() async {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -301,7 +301,7 @@ swift test --filter GitMigrationSyncViewModelTests/testConfigureScheduleUpdatesR
 
 预期：编译失败，提示 provider 或 ViewModel 缺少调度方法。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 扩展 `GitMigrationSyncProviding`：
 
@@ -323,13 +323,13 @@ public func configureSchedule(
 
 让 `GitMigrationSyncService` 转发到 store 的 `updateSchedule`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
 ## 任务 4：全量验证与提交
 
-- [ ] **步骤 1：运行目标集合**
+- [x] **步骤 1：运行目标集合**
 
 ```bash
 swift test --filter "GitMigrationSyncStoreTests|GitMigrationSyncSchedulerTests|GitMigrationSyncServiceTests|GitMigrationSyncViewModelTests"
@@ -337,7 +337,7 @@ swift test --filter "GitMigrationSyncStoreTests|GitMigrationSyncSchedulerTests|G
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test

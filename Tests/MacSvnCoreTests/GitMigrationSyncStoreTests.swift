@@ -92,6 +92,74 @@ final class GitMigrationSyncStoreTests: XCTestCase {
         }
     }
 
+    func testUpdateSchedulePersistsEnabledInterval() async throws {
+        let store = makeStore()
+        let record = try await store.addRecord(
+            sourceURL: "file:///repo",
+            repository: URL(fileURLWithPath: "/tmp/history"),
+            targetRemote: nil
+        )
+
+        let updated = try await store.updateSchedule(
+            id: record.id,
+            isEnabled: true,
+            intervalMinutes: 30
+        )
+
+        XCTAssertTrue(updated.isScheduledSyncEnabled)
+        XCTAssertEqual(updated.syncIntervalMinutes, 30)
+        let records = try await store.loadRecords()
+        XCTAssertEqual(records, [updated])
+    }
+
+    func testUpdateScheduleRejectsNonPositiveInterval() async throws {
+        let store = makeStore()
+        let record = try await store.addRecord(
+            sourceURL: "file:///repo",
+            repository: URL(fileURLWithPath: "/tmp/history"),
+            targetRemote: nil
+        )
+
+        do {
+            _ = try await store.updateSchedule(
+                id: record.id,
+                isEnabled: true,
+                intervalMinutes: 0
+            )
+            XCTFail("Expected invalid interval")
+        } catch let error as GitMigrationSyncError {
+            XCTAssertEqual(error, .invalidScheduleInterval(0))
+        } catch {
+            XCTFail("Expected GitMigrationSyncError, got \(error)")
+        }
+    }
+
+    func testLoadRecordsDecodesLegacyRecordsWithoutScheduleFields() async throws {
+        let root = temporaryRoot()
+        let fileURL = root.appendingPathComponent("migrations.json")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try """
+        {
+          "records" : [
+            {
+              "createdAt" : "2026-07-10T00:00:00Z",
+              "id" : "00000000-0000-0000-0000-000000000001",
+              "repositoryPath" : "/tmp/history",
+              "sourceURL" : "file:///repo"
+            }
+          ],
+          "version" : 1
+        }
+        """.write(to: fileURL, atomically: true, encoding: .utf8)
+        let store = makeStore(root: root)
+
+        let records = try await store.loadRecords()
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertFalse(records[0].isScheduledSyncEnabled)
+        XCTAssertNil(records[0].syncIntervalMinutes)
+    }
+
     func testAddRecordRejectsEmptySourceURL() async {
         let store = makeStore()
 

@@ -9,6 +9,7 @@ public protocol GitMigrationSyncProviding: Sendable {
         targetRemote: String?
     ) async throws -> GitMigrationSyncRecord
     func sync(record: GitMigrationSyncRecord) async throws -> GitMigrationSyncReport
+    func updateSchedule(id: UUID, isEnabled: Bool, intervalMinutes: Int?) async throws -> GitMigrationSyncRecord
 }
 
 public enum GitMigrationSyncState: Equatable, Sendable {
@@ -72,6 +73,26 @@ public final class GitMigrationSyncViewModel {
             lastReport = report
             upsert(report.updatedRecord)
             state = .completed(report)
+        } catch {
+            state = .error(String(describing: error))
+        }
+    }
+
+    public func configureSchedule(
+        _ record: GitMigrationSyncRecord,
+        isEnabled: Bool,
+        intervalMinutes: Int?
+    ) async {
+        state = .running
+
+        do {
+            let updatedRecord = try await provider.updateSchedule(
+                id: record.id,
+                isEnabled: isEnabled,
+                intervalMinutes: intervalMinutes
+            )
+            upsert(updatedRecord)
+            state = .idle
         } catch {
             state = .error(String(describing: error))
         }

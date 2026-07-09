@@ -4,6 +4,7 @@ public protocol GitMigrationSyncRecordStoring: Sendable {
     func loadRecords() async throws -> [GitMigrationSyncRecord]
     func addRecord(sourceURL: String, repository: URL, targetRemote: String?) async throws -> GitMigrationSyncRecord
     func updateSyncMetadata(id: UUID, latestRevision: Revision?, syncedAt: Date) async throws -> GitMigrationSyncRecord
+    func updateSchedule(id: UUID, isEnabled: Bool, intervalMinutes: Int?) async throws -> GitMigrationSyncRecord
 }
 
 public actor GitMigrationSyncStore: GitMigrationSyncRecordStoring {
@@ -80,6 +81,31 @@ public actor GitMigrationSyncStore: GitMigrationSyncRecordStoring {
 
         records[index].lastSyncedRevision = latestRevision
         records[index].lastSyncedAt = syncedAt
+        cachedRecords = records
+        try store.save(GitMigrationSyncListFile(records: records))
+        return records[index]
+    }
+
+    @discardableResult
+    public func updateSchedule(
+        id: UUID,
+        isEnabled: Bool,
+        intervalMinutes: Int?
+    ) async throws -> GitMigrationSyncRecord {
+        if let intervalMinutes, intervalMinutes <= 0 {
+            throw GitMigrationSyncError.invalidScheduleInterval(intervalMinutes)
+        }
+        if isEnabled, intervalMinutes == nil {
+            throw GitMigrationSyncError.invalidScheduleInterval(0)
+        }
+
+        var records = try await loadRecords()
+        guard let index = records.firstIndex(where: { $0.id == id }) else {
+            throw GitMigrationSyncError.recordNotFound(id)
+        }
+
+        records[index].isScheduledSyncEnabled = isEnabled
+        records[index].syncIntervalMinutes = intervalMinutes
         cachedRecords = records
         try store.save(GitMigrationSyncListFile(records: records))
         return records[index]

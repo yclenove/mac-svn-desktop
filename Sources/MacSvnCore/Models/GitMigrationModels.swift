@@ -213,6 +213,7 @@ public enum GitMigrationSyncError: Error, Equatable, Sendable {
     case emptySourceURL
     case emptyRepositoryPath
     case recordNotFound(UUID)
+    case invalidScheduleInterval(Int)
 }
 
 public struct GitMigrationSyncRecord: Codable, Equatable, Identifiable, Sendable {
@@ -223,6 +224,8 @@ public struct GitMigrationSyncRecord: Codable, Equatable, Identifiable, Sendable
     public var createdAt: Date
     public var lastSyncedAt: Date?
     public var lastSyncedRevision: Revision?
+    public var isScheduledSyncEnabled: Bool
+    public var syncIntervalMinutes: Int?
 
     public init(
         id: UUID,
@@ -231,7 +234,9 @@ public struct GitMigrationSyncRecord: Codable, Equatable, Identifiable, Sendable
         targetRemote: String?,
         createdAt: Date,
         lastSyncedAt: Date?,
-        lastSyncedRevision: Revision?
+        lastSyncedRevision: Revision?,
+        isScheduledSyncEnabled: Bool = false,
+        syncIntervalMinutes: Int? = nil
     ) {
         self.id = id
         self.sourceURL = sourceURL
@@ -240,6 +245,46 @@ public struct GitMigrationSyncRecord: Codable, Equatable, Identifiable, Sendable
         self.createdAt = createdAt
         self.lastSyncedAt = lastSyncedAt
         self.lastSyncedRevision = lastSyncedRevision
+        self.isScheduledSyncEnabled = isScheduledSyncEnabled
+        self.syncIntervalMinutes = syncIntervalMinutes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case sourceURL
+        case repositoryPath
+        case targetRemote
+        case createdAt
+        case lastSyncedAt
+        case lastSyncedRevision
+        case isScheduledSyncEnabled
+        case syncIntervalMinutes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        sourceURL = try container.decode(String.self, forKey: .sourceURL)
+        repositoryPath = try container.decode(String.self, forKey: .repositoryPath)
+        targetRemote = try container.decodeIfPresent(String.self, forKey: .targetRemote)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
+        lastSyncedRevision = try container.decodeIfPresent(Revision.self, forKey: .lastSyncedRevision)
+        isScheduledSyncEnabled = try container.decodeIfPresent(Bool.self, forKey: .isScheduledSyncEnabled) ?? false
+        syncIntervalMinutes = try container.decodeIfPresent(Int.self, forKey: .syncIntervalMinutes)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(sourceURL, forKey: .sourceURL)
+        try container.encode(repositoryPath, forKey: .repositoryPath)
+        try container.encodeIfPresent(targetRemote, forKey: .targetRemote)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(lastSyncedAt, forKey: .lastSyncedAt)
+        try container.encodeIfPresent(lastSyncedRevision, forKey: .lastSyncedRevision)
+        try container.encode(isScheduledSyncEnabled, forKey: .isScheduledSyncEnabled)
+        try container.encodeIfPresent(syncIntervalMinutes, forKey: .syncIntervalMinutes)
     }
 }
 
@@ -279,5 +324,21 @@ public struct GitMigrationSyncReport: Equatable, Sendable {
         self.completedSteps = completedSteps
         self.latestRevision = latestRevision
         self.updatedRecord = updatedRecord
+    }
+}
+
+public struct GitMigrationScheduledSyncReport: Equatable, Sendable {
+    public let attemptedRecordIDs: [UUID]
+    public let completedReports: [GitMigrationSyncReport]
+    public let failedRecordIDs: [UUID]
+
+    public init(
+        attemptedRecordIDs: [UUID],
+        completedReports: [GitMigrationSyncReport],
+        failedRecordIDs: [UUID]
+    ) {
+        self.attemptedRecordIDs = attemptedRecordIDs
+        self.completedReports = completedReports
+        self.failedRecordIDs = failedRecordIDs
     }
 }

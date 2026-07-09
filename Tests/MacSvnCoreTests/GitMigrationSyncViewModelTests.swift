@@ -55,6 +55,25 @@ final class GitMigrationSyncViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.other(code: 1, stderr: "boom"))))
     }
 
+    @MainActor
+    func testConfigureScheduleUpdatesRecordState() async {
+        let record = makeRecord()
+        var scheduled = record
+        scheduled.isScheduledSyncEnabled = true
+        scheduled.syncIntervalMinutes = 30
+        let provider = FakeGitMigrationSyncProvider(
+            records: [record],
+            scheduleResult: scheduled
+        )
+        let viewModel = GitMigrationSyncViewModel(provider: provider)
+
+        await viewModel.loadRecords()
+        await viewModel.configureSchedule(record, isEnabled: true, intervalMinutes: 30)
+
+        XCTAssertEqual(viewModel.records, [scheduled])
+        XCTAssertEqual(viewModel.state, .idle)
+    }
+
     private func makeRecord() -> GitMigrationSyncRecord {
         GitMigrationSyncRecord(
             id: UUID(),
@@ -72,11 +91,13 @@ private actor FakeGitMigrationSyncProvider: GitMigrationSyncProviding {
     private let recordsResult: Result<[GitMigrationSyncRecord], Error>
     private let registerResult: Result<GitMigrationSyncRecord, Error>
     private let syncResult: Result<GitMigrationSyncReport, Error>
+    private let scheduleResult: Result<GitMigrationSyncRecord, Error>
 
     init(
         records: [GitMigrationSyncRecord] = [],
         registerResult: GitMigrationSyncRecord? = nil,
-        syncResult: GitMigrationSyncReport? = nil
+        syncResult: GitMigrationSyncReport? = nil,
+        scheduleResult: GitMigrationSyncRecord? = nil
     ) {
         self.recordsResult = .success(records)
         self.registerResult = .success(registerResult ?? records.first ?? GitMigrationSyncRecord(
@@ -103,12 +124,22 @@ private actor FakeGitMigrationSyncProvider: GitMigrationSyncProviding {
                 lastSyncedRevision: nil
             )
         ))
+        self.scheduleResult = .success(scheduleResult ?? records.first ?? GitMigrationSyncRecord(
+            id: UUID(),
+            sourceURL: "file:///repo",
+            repositoryPath: "/tmp/history",
+            targetRemote: nil,
+            createdAt: Date(timeIntervalSince1970: 10),
+            lastSyncedAt: nil,
+            lastSyncedRevision: nil
+        ))
     }
 
     init(error: Error) {
         self.recordsResult = .failure(error)
         self.registerResult = .failure(error)
         self.syncResult = .failure(error)
+        self.scheduleResult = .failure(error)
     }
 
     func loadRecords() async throws -> [GitMigrationSyncRecord] {
@@ -125,5 +156,13 @@ private actor FakeGitMigrationSyncProvider: GitMigrationSyncProviding {
 
     func sync(record: GitMigrationSyncRecord) async throws -> GitMigrationSyncReport {
         try syncResult.get()
+    }
+
+    func updateSchedule(
+        id: UUID,
+        isEnabled: Bool,
+        intervalMinutes: Int?
+    ) async throws -> GitMigrationSyncRecord {
+        try scheduleResult.get()
     }
 }

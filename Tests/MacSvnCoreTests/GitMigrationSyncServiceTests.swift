@@ -168,4 +168,33 @@ private actor FakeGitMigrationSyncStore: GitMigrationSyncRecordStoring {
         savedRecords = [updated]
         return updated
     }
+
+    func updateSchedule(
+        id: UUID,
+        isEnabled: Bool,
+        intervalMinutes: Int?
+    ) async throws -> GitMigrationSyncRecord {
+        let existing = savedRecords.first { $0.id == id } ?? GitMigrationSyncRecord(
+            id: id,
+            sourceURL: "file:///repo",
+            repositoryPath: "/tmp/history",
+            targetRemote: nil,
+            createdAt: Date(timeIntervalSince1970: 10),
+            lastSyncedAt: nil,
+            lastSyncedRevision: nil
+        )
+        let updated = GitMigrationSyncRecord(
+            id: existing.id,
+            sourceURL: existing.sourceURL,
+            repositoryPath: existing.repositoryPath,
+            targetRemote: existing.targetRemote,
+            createdAt: existing.createdAt,
+            lastSyncedAt: existing.lastSyncedAt,
+            lastSyncedRevision: existing.lastSyncedRevision,
+            isScheduledSyncEnabled: isEnabled,
+            syncIntervalMinutes: intervalMinutes
+        )
+        savedRecords = [updated]
+        return updated
+    }
 }

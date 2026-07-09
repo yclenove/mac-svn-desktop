@@ -62,6 +62,19 @@ public actor GitMigrationSyncService {
         )
     }
 
+    @discardableResult
+    public func updateSchedule(
+        id: UUID,
+        isEnabled: Bool,
+        intervalMinutes: Int?
+    ) async throws -> GitMigrationSyncRecord {
+        try await store.updateSchedule(
+            id: id,
+            isEnabled: isEnabled,
+            intervalMinutes: intervalMinutes
+        )
+    }
+
     private func normalizedRemote(_ remote: String?) -> String? {
         let trimmedRemote = remote?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let trimmedRemote, !trimmedRemote.isEmpty else {
