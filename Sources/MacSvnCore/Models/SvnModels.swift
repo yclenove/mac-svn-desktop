@@ -28,7 +28,7 @@ public struct SvnVersion: Equatable, Sendable {
     }
 }
 
-public struct Revision: Equatable, Hashable, Sendable, ExpressibleByIntegerLiteral, CustomStringConvertible {
+public struct Revision: Codable, Equatable, Hashable, Sendable, ExpressibleByIntegerLiteral, CustomStringConvertible {
     public let value: Int
 
     public init(_ value: Int) {
@@ -161,5 +161,49 @@ public enum ChangedPathAction: String, Equatable, Sendable {
         }
 
         self = action
+    }
+}
+
+public struct WorkingCopyRecord: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var localPath: String
+    public var repoURL: String
+    public var username: String?
+    public var addedAt: Date
+    public var lastOpenedAt: Date
+    public var isValid: Bool
+    public var revision: Revision?
+
+    public init(
+        id: UUID,
+        name: String,
+        localPath: String,
+        repoURL: String,
+        username: String?,
+        addedAt: Date,
+        lastOpenedAt: Date,
+        isValid: Bool,
+        revision: Revision?
+    ) {
+        self.id = id
+        self.name = name
+        self.localPath = localPath
+        self.repoURL = repoURL
+        self.username = username
+        self.addedAt = addedAt
+        self.lastOpenedAt = lastOpenedAt
+        self.isValid = isValid
+        self.revision = revision
+    }
+}
+
+public struct WorkspaceListFile: Codable, Equatable, Sendable {
+    public var version: Int
+    public var workspaces: [WorkingCopyRecord]
+
+    public init(version: Int = 1, workspaces: [WorkingCopyRecord] = []) {
+        self.version = version
+        self.workspaces = workspaces
     }
 }
