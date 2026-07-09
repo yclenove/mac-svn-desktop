@@ -32,6 +32,18 @@ public struct GitCliBackend: GitBackend {
         return GitSvnMetadataParser.parseRevisions(from: output)
     }
 
+    public func svnFetch(repository: URL) async throws {
+        try await run(GitCommandBuilder.svnFetch(), repository: repository)
+    }
+
+    public func pushAll(repository: URL, remote: String) async throws {
+        try await run(GitCommandBuilder.pushAll(remote: remote), repository: repository)
+    }
+
+    public func pushTags(repository: URL, remote: String) async throws {
+        try await run(GitCommandBuilder.pushTags(remote: remote), repository: repository)
+    }
+
     public func svnClone(
         sourceURL: String,
         destination: URL,

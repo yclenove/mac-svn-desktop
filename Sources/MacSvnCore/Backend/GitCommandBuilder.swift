@@ -25,6 +25,18 @@ public enum GitCommandBuilder {
         GitCommand(arguments: ["log", "--all", "--format=%B"])
     }
 
+    public static func svnFetch() -> GitCommand {
+        GitCommand(arguments: ["svn", "fetch"])
+    }
+
+    public static func pushAll(remote: String) -> GitCommand {
+        GitCommand(arguments: ["push", remote, "--all"])
+    }
+
+    public static func pushTags(remote: String) -> GitCommand {
+        GitCommand(arguments: ["push", remote, "--tags"])
+    }
+
     public static func svnClone(
         sourceURL: String,
         destination: URL,

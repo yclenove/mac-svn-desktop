@@ -141,6 +141,54 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(report.unexpectedRevisions, [])
     }
 
+    func testIncrementalGitSvnSyncFetchesNewSvnRevision() async throws {
+        let fixture = try makeFixture()
+        let gitExecutable = try requireGitExecutable()
+        try await requireGitSvn(gitExecutable: gitExecutable)
+        let destination = fixture.root.appendingPathComponent("git-history-sync", isDirectory: true)
+        let svnService = SvnService(backend: fixture.backend)
+        let gitBackend = GitCliBackend(gitExecutable: gitExecutable, runner: ProcessRunner(), timeout: 60)
+        let migrationService = GitMigrationService(svnExporter: svnService, gitBackend: gitBackend)
+        let syncStore = GitMigrationSyncStore(fileURL: fixture.root.appendingPathComponent("migrations.json"))
+        let syncService = GitMigrationSyncService(store: syncStore, gitBackend: gitBackend)
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+
+        _ = try await migrationService.historyMigrate(
+            sourceURL: fixture.repositoryURL,
+            destination: destination,
+            layout: layout,
+            authorMappings: [
+                GitMigrationAuthorMapping(
+                    svnUsername: NSUserName(),
+                    gitName: "MacSVN Test",
+                    gitEmail: "macsvn@example.invalid"
+                )
+            ]
+        )
+        let newRevision = try await svnService.mkdir(
+            url: "\(fixture.trunkURL)/post-migration",
+            message: "add post migration directory",
+            auth: nil
+        )
+        let record = try await syncService.registerMigration(
+            sourceURL: fixture.repositoryURL,
+            repository: destination,
+            targetRemote: nil
+        )
+
+        let report = try await syncService.sync(record: record)
+
+        XCTAssertEqual(report.latestRevision, newRevision)
+        XCTAssertEqual(report.updatedRecord.lastSyncedRevision, newRevision)
+        XCTAssertTrue(report.completedSteps.contains(.gitSvnFetch))
+    }
+
     func testBlameReadsLineRevisionAuthorFromWorkingCopy() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

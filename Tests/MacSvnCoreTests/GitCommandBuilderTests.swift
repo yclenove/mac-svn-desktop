@@ -24,6 +24,15 @@ final class GitCommandBuilderTests: XCTestCase {
         )
     }
 
+    func testSvnFetchUsesGitSvnFetch() {
+        XCTAssertEqual(GitCommandBuilder.svnFetch().arguments, ["svn", "fetch"])
+    }
+
+    func testPushCommandsUseRemoteAllBranchesAndTags() {
+        XCTAssertEqual(GitCommandBuilder.pushAll(remote: "origin").arguments, ["push", "origin", "--all"])
+        XCTAssertEqual(GitCommandBuilder.pushTags(remote: "origin").arguments, ["push", "origin", "--tags"])
+    }
+
     func testSvnCloneUsesStandardLayoutAuthorsFileRevisionAndUsername() {
         let layout = GitMigrationRepositoryLayout(
             kind: .standard,

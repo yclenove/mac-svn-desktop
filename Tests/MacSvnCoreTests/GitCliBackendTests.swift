@@ -99,6 +99,27 @@ final class GitCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.first?.arguments, ["log", "--all", "--format=%B"])
         XCTAssertEqual(runner.calls.first?.currentDirectory, "/tmp/history")
     }
+
+    func testGitBackendRunsSvnFetchAndPushesRemoteInRepository() async throws {
+        let runner = RecordingGitProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = GitCliBackend(gitExecutable: "/usr/bin/git", runner: runner)
+        let repository = URL(fileURLWithPath: "/tmp/history")
+
+        try await backend.svnFetch(repository: repository)
+        try await backend.pushAll(repository: repository, remote: "origin")
+        try await backend.pushTags(repository: repository, remote: "origin")
+
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["svn", "fetch"],
+            ["push", "origin", "--all"],
+            ["push", "origin", "--tags"]
+        ])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/history", "/tmp/history", "/tmp/history"])
+    }
 }
 
 private final class RecordingGitProcessRunner: ProcessRunning, @unchecked Sendable {

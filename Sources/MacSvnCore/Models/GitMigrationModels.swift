@@ -208,3 +208,76 @@ public enum GitMigrationAuthorMappingError: Error, Equatable, Sendable {
     case incompleteAuthors([String])
     case invalidAuthorsFileLine(String)
 }
+
+public enum GitMigrationSyncError: Error, Equatable, Sendable {
+    case emptySourceURL
+    case emptyRepositoryPath
+    case recordNotFound(UUID)
+}
+
+public struct GitMigrationSyncRecord: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public var sourceURL: String
+    public var repositoryPath: String
+    public var targetRemote: String?
+    public var createdAt: Date
+    public var lastSyncedAt: Date?
+    public var lastSyncedRevision: Revision?
+
+    public init(
+        id: UUID,
+        sourceURL: String,
+        repositoryPath: String,
+        targetRemote: String?,
+        createdAt: Date,
+        lastSyncedAt: Date?,
+        lastSyncedRevision: Revision?
+    ) {
+        self.id = id
+        self.sourceURL = sourceURL
+        self.repositoryPath = repositoryPath
+        self.targetRemote = targetRemote
+        self.createdAt = createdAt
+        self.lastSyncedAt = lastSyncedAt
+        self.lastSyncedRevision = lastSyncedRevision
+    }
+}
+
+public struct GitMigrationSyncListFile: Codable, Equatable, Sendable {
+    public var version: Int
+    public var records: [GitMigrationSyncRecord]
+
+    public init(version: Int = 1, records: [GitMigrationSyncRecord] = []) {
+        self.version = version
+        self.records = records
+    }
+}
+
+public enum GitMigrationSyncStep: Equatable, Sendable {
+    case gitSvnFetch
+    case revisionScan
+    case gitPushBranches
+    case gitPushTags
+}
+
+public struct GitMigrationSyncReport: Equatable, Sendable {
+    public let recordID: UUID
+    public let repositoryPath: String
+    public let completedSteps: [GitMigrationSyncStep]
+    public let latestRevision: Revision?
+    public let updatedRecord: GitMigrationSyncRecord
+
+    public init(
+        recordID: UUID,
+        repositoryPath: String,
+        completedSteps: [GitMigrationSyncStep],
+        latestRevision: Revision?,
+        updatedRecord: GitMigrationSyncRecord
+    ) {
+        self.recordID = recordID
+        self.repositoryPath = repositoryPath
+        self.completedSteps = completedSteps
+        self.latestRevision = latestRevision
+        self.updatedRecord = updatedRecord
+    }
+}
