@@ -25,7 +25,7 @@
 - 创建：`Sources/MacSvnCore/Services/FinderSyncPresentationBuilder.swift`
 - 创建测试：`Tests/MacSvnCoreTests/FinderSyncPresentationBuilderTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `FinderSyncPresentationBuilderTests.swift`：
 
@@ -54,7 +54,7 @@ final class FinderSyncPresentationBuilderTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter FinderSyncPresentationBuilderTests/testPresentationUsesExactFileBadgeAndHighestPriorityDirectoryBadge
@@ -62,7 +62,7 @@ swift test --filter FinderSyncPresentationBuilderTests/testPresentationUsesExact
 
 预期：编译失败，提示 `FinderSyncPresentationBuilder` 或 `FinderSyncBadge` 不存在。
 
-- [ ] **步骤 3：实现最少角标模型与聚合规则**
+- [x] **步骤 3：实现最少角标模型与聚合规则**
 
 创建 `FinderSyncPresentationBuilder.swift`：
 
@@ -200,7 +200,7 @@ public struct FinderSyncPresentationBuilder: Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter FinderSyncPresentationBuilderTests/testPresentationUsesExactFileBadgeAndHighestPriorityDirectoryBadge
@@ -208,7 +208,7 @@ swift test --filter FinderSyncPresentationBuilderTests/testPresentationUsesExact
 
 预期：角标主路径测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/FinderSyncPresentationBuilder.swift Tests/MacSvnCoreTests/FinderSyncPresentationBuilderTests.swift docs/superpowers/plans/2026-07-10-p6-finder-sync-core.md
