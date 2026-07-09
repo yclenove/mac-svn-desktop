@@ -338,7 +338,7 @@ git commit -m "feat: add P6 AI conflict assistant core"
 - 修改：`Sources/MacSvnCore/ViewModels/MergeEditorViewModel.swift`
 - 修改测试：`Tests/MacSvnCoreTests/MergeEditorViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `MergeEditorViewModelTests` 增加：
 
@@ -439,7 +439,7 @@ private actor FakeAIConflictAssistant: AIConflictAssisting {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -449,7 +449,7 @@ swift test --filter MergeEditorViewModelTests
 
 预期：编译失败，提示 `MergeEditorViewModel` 初始化参数、`requestAIResolutionForCurrentConflict` 或 `AIConflictAssistViewState` 不存在。
 
-- [ ] **步骤 3：实现最少 ViewModel 接入**
+- [x] **步骤 3：实现最少 ViewModel 接入**
 
 在 `MergeEditorViewModel.swift` 增加：
 
@@ -489,7 +489,7 @@ public func requestAIResolutionForCurrentConflict(
 
 上下文构造：`leadingContext` 取当前 conflict block 前一个 `.stable` block 的最后 3 行，`trailingContext` 取后一个 `.stable` block 的前 3 行。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行：
 
@@ -499,7 +499,7 @@ swift test --filter "AIConflictAssistantTests|MergeEditorViewModelTests"
 
 预期：AI 冲突服务与 MergeEditorViewModel 测试全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/ViewModels/MergeEditorViewModel.swift \

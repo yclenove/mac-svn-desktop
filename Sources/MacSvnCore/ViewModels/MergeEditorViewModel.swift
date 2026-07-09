@@ -22,22 +22,36 @@ public enum MergeEditorState: Equatable, Sendable {
     case error(String)
 }
 
+public enum AIConflictAssistViewState: Equatable, Sendable {
+    case idle
+    case suggesting
+    case suggested(AIConflictAssistSuggestion)
+    case error(String)
+}
+
 @MainActor
 @Observable
 public final class MergeEditorViewModel {
     private let provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving
+    private let aiConflictAssistant: (any AIConflictAssisting)?
     private var preservesTrailingNewline = false
     private var loadedBlocksSnapshot: [MergeBlock] = []
 
     public private(set) var state: MergeEditorState = .idle
+    public private(set) var aiConflictAssistState: AIConflictAssistViewState = .idle
     public private(set) var conflict: ConflictInfo?
     public private(set) var workingCopy: URL?
     public private(set) var blocks: [MergeBlock] = []
     public private(set) var currentConflictIndex = 0
     public private(set) var hasUnsavedChanges = false
+    public private(set) var aiConflictSuggestion: AIConflictAssistSuggestion?
 
-    public init(provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving) {
+    public init(
+        provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving,
+        aiConflictAssistant: (any AIConflictAssisting)? = nil
+    ) {
         self.provider = provider
+        self.aiConflictAssistant = aiConflictAssistant
     }
 
     public var conflictBlockIndices: [Int] {
@@ -83,6 +97,8 @@ public final class MergeEditorViewModel {
         loadedBlocksSnapshot = []
         currentConflictIndex = 0
         hasUnsavedChanges = false
+        aiConflictAssistState = .idle
+        aiConflictSuggestion = nil
 
         do {
             let text = try await provider.loadTextConflict(conflict)
@@ -100,6 +116,44 @@ public final class MergeEditorViewModel {
             loadedBlocksSnapshot = []
             hasUnsavedChanges = false
             state = .error(String(describing: error))
+        }
+    }
+
+    public func requestAIResolutionForCurrentConflict(
+        privacySettings: AIPrivacySettings = AIPrivacySettings()
+    ) async {
+        guard let aiConflictAssistant else {
+            aiConflictAssistState = .error("aiConflictAssistantUnavailable")
+            return
+        }
+
+        guard let conflict,
+              let blockIndex = currentBlockIndex,
+              case .conflict(let hunk) = blocks[blockIndex] else {
+            aiConflictAssistState = .error("missingConflict")
+            return
+        }
+
+        aiConflictAssistState = .suggesting
+
+        do {
+            let suggestion = try await aiConflictAssistant.suggestResolution(
+                context: AIConflictAssistContext(
+                    path: conflict.path,
+                    conflictIndex: currentConflictIndex,
+                    baseLines: hunk.baseLines,
+                    mineLines: hunk.mineLines,
+                    theirsLines: hunk.theirsLines,
+                    leadingContext: leadingContext(before: blockIndex),
+                    trailingContext: trailingContext(after: blockIndex)
+                ),
+                privacySettings: privacySettings
+            )
+            resolveConflict(atConflictIndex: currentConflictIndex, resolution: .manual(lines: suggestion.mergedLines))
+            aiConflictSuggestion = suggestion
+            aiConflictAssistState = .suggested(suggestion)
+        } catch {
+            aiConflictAssistState = .error(String(describing: error))
         }
     }
 
@@ -216,6 +270,34 @@ public final class MergeEditorViewModel {
     private static func lines(_ text: String) -> [Substring] {
         let splitLines = text.split(separator: "\n", omittingEmptySubsequences: false)
         return text.hasSuffix("\n") ? Array(splitLines.dropLast()) : splitLines
+    }
+
+    private func leadingContext(before blockIndex: Int) -> [String] {
+        guard blockIndex > 0 else {
+            return []
+        }
+
+        for index in stride(from: blockIndex - 1, through: 0, by: -1) {
+            if case .stable(let lines) = blocks[index] {
+                return Array(lines.suffix(3))
+            }
+        }
+
+        return []
+    }
+
+    private func trailingContext(after blockIndex: Int) -> [String] {
+        guard blockIndex + 1 < blocks.count else {
+            return []
+        }
+
+        for index in (blockIndex + 1)..<blocks.count {
+            if case .stable(let lines) = blocks[index] {
+                return Array(lines.prefix(3))
+            }
+        }
+
+        return []
     }
 }
 

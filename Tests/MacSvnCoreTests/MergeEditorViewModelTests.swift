@@ -257,6 +257,73 @@ final class MergeEditorViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.hasUnsavedChanges)
         XCTAssertTrue(viewModel.shouldWarnBeforeClose)
     }
+
+    @MainActor
+    func testAIConflictSuggestionPrefillsCurrentConflictAsManualResolutionWithoutSaving() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "a\nbase\nz\n",
+            mine: "a\nmine\nz\n",
+            theirs: "a\ntheirs\nz\n"
+        )))
+        let suggestion = AIConflictAssistSuggestion(
+            mergedLines: ["ai merged"],
+            rationale: "保留双方语义。",
+            confidence: .medium,
+            providerID: UUID(),
+            redactionMatches: [],
+            promptCount: 1
+        )
+        let assistant = FakeAIConflictAssistant(result: .success(suggestion))
+        let viewModel = MergeEditorViewModel(provider: provider, aiConflictAssistant: assistant)
+        let conflict = textConflict(path: "Sources/Login.swift")
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.load(conflict: conflict, wc: wc)
+        await viewModel.requestAIResolutionForCurrentConflict()
+
+        XCTAssertEqual(viewModel.aiConflictAssistState, .suggested(suggestion))
+        XCTAssertEqual(viewModel.aiConflictSuggestion, suggestion)
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 0)
+        XCTAssertEqual(viewModel.mergedText(), "a\nai merged\nz\n")
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+        XCTAssertTrue(viewModel.canSaveResolved)
+        let calls = await assistant.recordedCalls()
+        XCTAssertEqual(calls.map(\.context.path), ["Sources/Login.swift"])
+        XCTAssertEqual(calls[0].context.baseLines, ["base"])
+        XCTAssertEqual(calls[0].context.mineLines, ["mine"])
+        XCTAssertEqual(calls[0].context.theirsLines, ["theirs"])
+        let saveCalls = await provider.recordedSaveCalls()
+        let wholeFileCalls = await provider.recordedWholeFileResolveCalls()
+        XCTAssertTrue(saveCalls.isEmpty)
+        XCTAssertTrue(wholeFileCalls.isEmpty)
+    }
+
+    @MainActor
+    func testAIConflictSuggestionUnavailableMissingConflictAndProviderErrors() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "base\n",
+            mine: "mine\n",
+            theirs: "theirs\n"
+        )))
+        let noAssistant = MergeEditorViewModel(provider: provider)
+
+        await noAssistant.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        await noAssistant.requestAIResolutionForCurrentConflict()
+        XCTAssertEqual(noAssistant.aiConflictAssistState, .error("aiConflictAssistantUnavailable"))
+
+        let assistant = FakeAIConflictAssistant(result: .failure(AIConflictAssistError.emptyConflict))
+        let noConflictLoaded = MergeEditorViewModel(provider: provider, aiConflictAssistant: assistant)
+        await noConflictLoaded.requestAIResolutionForCurrentConflict()
+        XCTAssertEqual(noConflictLoaded.aiConflictAssistState, .error("missingConflict"))
+
+        let loaded = MergeEditorViewModel(provider: provider, aiConflictAssistant: assistant)
+        await loaded.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        await loaded.requestAIResolutionForCurrentConflict()
+        XCTAssertEqual(
+            loaded.aiConflictAssistState,
+            .error(String(describing: AIConflictAssistError.emptyConflict))
+        )
+    }
 }
 
 private func textConflict(path: String = "README.txt") -> ConflictInfo {
@@ -329,5 +396,31 @@ actor FakeMergeEditorProvider: TextConflictLoading, ConflictResolutionSaving, Wh
 
     func recordedWholeFileResolveCalls() -> [MergeEditorWholeFileResolveCall] {
         wholeFileResolveCalls
+    }
+}
+
+private struct AIConflictAssistCall: Equatable, Sendable {
+    let context: AIConflictAssistContext
+    let privacySettings: AIPrivacySettings
+}
+
+private actor FakeAIConflictAssistant: AIConflictAssisting {
+    private let result: Result<AIConflictAssistSuggestion, Error>
+    private var calls: [AIConflictAssistCall] = []
+
+    init(result: Result<AIConflictAssistSuggestion, Error>) {
+        self.result = result
+    }
+
+    func recordedCalls() -> [AIConflictAssistCall] {
+        calls
+    }
+
+    func suggestResolution(
+        context: AIConflictAssistContext,
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIConflictAssistSuggestion {
+        calls.append(AIConflictAssistCall(context: context, privacySettings: privacySettings))
+        return try result.get()
     }
 }
