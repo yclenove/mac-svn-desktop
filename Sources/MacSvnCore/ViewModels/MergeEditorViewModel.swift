@@ -9,6 +9,10 @@ public protocol ConflictResolutionSaving: Sendable {
     func saveResolution(_ conflict: ConflictInfo, wc: URL, mergedText: String) async throws
 }
 
+public protocol WholeFileConflictResolving: Sendable {
+    func resolveWholeFile(_ conflict: ConflictInfo, wc: URL, accept: ResolveAccept) async throws
+}
+
 public enum MergeEditorState: Equatable, Sendable {
     case idle
     case loading
@@ -21,7 +25,7 @@ public enum MergeEditorState: Equatable, Sendable {
 @MainActor
 @Observable
 public final class MergeEditorViewModel {
-    private let provider: any TextConflictLoading & ConflictResolutionSaving
+    private let provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving
     private var preservesTrailingNewline = false
 
     public private(set) var state: MergeEditorState = .idle
@@ -29,8 +33,9 @@ public final class MergeEditorViewModel {
     public private(set) var workingCopy: URL?
     public private(set) var blocks: [MergeBlock] = []
     public private(set) var currentConflictIndex = 0
+    public private(set) var hasUnsavedChanges = false
 
-    public init(provider: any TextConflictLoading & ConflictResolutionSaving) {
+    public init(provider: any TextConflictLoading & ConflictResolutionSaving & WholeFileConflictResolving) {
         self.provider = provider
     }
 
@@ -56,6 +61,10 @@ public final class MergeEditorViewModel {
         state == .loaded && unresolvedConflictCount == 0
     }
 
+    public var shouldWarnBeforeClose: Bool {
+        hasUnsavedChanges
+    }
+
     public var currentBlockIndex: Int? {
         let indices = conflictBlockIndices
         guard indices.indices.contains(currentConflictIndex) else {
@@ -71,6 +80,7 @@ public final class MergeEditorViewModel {
         workingCopy = wc
         blocks = []
         currentConflictIndex = 0
+        hasUnsavedChanges = false
 
         do {
             let text = try await provider.loadTextConflict(conflict)
@@ -81,8 +91,10 @@ public final class MergeEditorViewModel {
                 theirs: Self.lines(text.theirs)
             )
             currentConflictIndex = conflictBlockIndices.isEmpty ? 0 : 0
+            hasUnsavedChanges = false
             state = .loaded
         } catch {
+            hasUnsavedChanges = false
             state = .error(String(describing: error))
         }
     }
@@ -127,6 +139,7 @@ public final class MergeEditorViewModel {
             theirsLines: hunk.theirsLines,
             resolution: resolution
         ))
+        hasUnsavedChanges = true
     }
 
     public func mergedText() -> String? {
@@ -153,6 +166,32 @@ public final class MergeEditorViewModel {
 
         do {
             try await provider.saveResolution(conflict, wc: workingCopy, mergedText: mergedText)
+            hasUnsavedChanges = false
+            state = .saved
+        } catch {
+            state = .error(String(describing: error))
+        }
+    }
+
+    public func resolveWholeFileMine() async {
+        await resolveWholeFile(accept: .mineFull)
+    }
+
+    public func resolveWholeFileTheirs() async {
+        await resolveWholeFile(accept: .theirsFull)
+    }
+
+    public func resolveWholeFile(accept: ResolveAccept) async {
+        guard let conflict, let workingCopy else {
+            state = .error("missingConflict")
+            return
+        }
+
+        state = .saving
+
+        do {
+            try await provider.resolveWholeFile(conflict, wc: workingCopy, accept: accept)
+            hasUnsavedChanges = false
             state = .saved
         } catch {
             state = .error(String(describing: error))
@@ -167,3 +206,4 @@ public final class MergeEditorViewModel {
 
 extension ConflictService: TextConflictLoading {}
 extension ConflictService: ConflictResolutionSaving {}
+extension ConflictService: WholeFileConflictResolving {}

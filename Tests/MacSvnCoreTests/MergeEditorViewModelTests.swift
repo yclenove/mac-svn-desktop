@@ -135,6 +135,74 @@ final class MergeEditorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.network(detail: "offline"))))
     }
+
+    @MainActor
+    func testResolveWholeFileMineForwardsMineFullAndMarksSaved() async {
+        let conflict = textConflict()
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "base\n",
+            mine: "mine\n",
+            theirs: "theirs\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: conflict, wc: wc)
+        viewModel.resolveCurrent(.takeMine)
+        await viewModel.resolveWholeFileMine()
+
+        XCTAssertEqual(viewModel.state, .saved)
+        XCTAssertFalse(viewModel.hasUnsavedChanges)
+        XCTAssertFalse(viewModel.shouldWarnBeforeClose)
+        let calls = await provider.recordedWholeFileResolveCalls()
+        XCTAssertEqual(calls, [
+            MergeEditorWholeFileResolveCall(conflict: conflict, wc: wc, accept: .mineFull)
+        ])
+    }
+
+    @MainActor
+    func testResolveWholeFileTheirsForwardsTheirsFullAndMarksSaved() async {
+        let conflict = textConflict()
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "base\n",
+            mine: "mine\n",
+            theirs: "theirs\n"
+        )))
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: conflict, wc: wc)
+        await viewModel.resolveWholeFileTheirs()
+
+        XCTAssertEqual(viewModel.state, .saved)
+        let calls = await provider.recordedWholeFileResolveCalls()
+        XCTAssertEqual(calls, [
+            MergeEditorWholeFileResolveCall(conflict: conflict, wc: wc, accept: .theirsFull)
+        ])
+    }
+
+    @MainActor
+    func testResolveWholeFileFailureStoresErrorAndKeepsDirtyState() async {
+        let provider = FakeMergeEditorProvider(
+            loadResult: .success((
+                base: "base\n",
+                mine: "mine\n",
+                theirs: "theirs\n"
+            )),
+            wholeFileResolveError: SvnError.network(detail: "offline")
+        )
+        let viewModel = MergeEditorViewModel(provider: provider)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        viewModel.resolveCurrent(.takeMine)
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+
+        await viewModel.resolveWholeFileMine()
+
+        XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.network(detail: "offline"))))
+        XCTAssertTrue(viewModel.hasUnsavedChanges)
+        XCTAssertTrue(viewModel.shouldWarnBeforeClose)
+    }
 }
 
 private func textConflict(path: String = "README.txt") -> ConflictInfo {
@@ -154,18 +222,28 @@ struct MergeEditorSaveCall: Equatable {
     let mergedText: String
 }
 
-actor FakeMergeEditorProvider: TextConflictLoading, ConflictResolutionSaving {
+struct MergeEditorWholeFileResolveCall: Equatable {
+    let conflict: ConflictInfo
+    let wc: URL
+    let accept: ResolveAccept
+}
+
+actor FakeMergeEditorProvider: TextConflictLoading, ConflictResolutionSaving, WholeFileConflictResolving {
     let loadResult: Result<(base: String, mine: String, theirs: String), Error>
     let saveError: Error?
+    let wholeFileResolveError: Error?
     private var loadCalls: [ConflictInfo] = []
     private var saveCalls: [MergeEditorSaveCall] = []
+    private var wholeFileResolveCalls: [MergeEditorWholeFileResolveCall] = []
 
     init(
         loadResult: Result<(base: String, mine: String, theirs: String), Error>,
-        saveError: Error? = nil
+        saveError: Error? = nil,
+        wholeFileResolveError: Error? = nil
     ) {
         self.loadResult = loadResult
         self.saveError = saveError
+        self.wholeFileResolveError = wholeFileResolveError
     }
 
     func loadTextConflict(_ conflict: ConflictInfo) async throws -> (base: String, mine: String, theirs: String) {
@@ -180,11 +258,22 @@ actor FakeMergeEditorProvider: TextConflictLoading, ConflictResolutionSaving {
         saveCalls.append(MergeEditorSaveCall(conflict: conflict, wc: wc, mergedText: mergedText))
     }
 
+    func resolveWholeFile(_ conflict: ConflictInfo, wc: URL, accept: ResolveAccept) async throws {
+        if let wholeFileResolveError {
+            throw wholeFileResolveError
+        }
+        wholeFileResolveCalls.append(MergeEditorWholeFileResolveCall(conflict: conflict, wc: wc, accept: accept))
+    }
+
     func recordedLoadCalls() -> [ConflictInfo] {
         loadCalls
     }
 
     func recordedSaveCalls() -> [MergeEditorSaveCall] {
         saveCalls
+    }
+
+    func recordedWholeFileResolveCalls() -> [MergeEditorWholeFileResolveCall] {
+        wholeFileResolveCalls
     }
 }
