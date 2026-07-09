@@ -58,6 +58,39 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(afterDelete.contains { $0.name == "custom:reviewer" })
     }
 
+    func testLocksListLockUnlockAndDetectRepositoryLockFromAnotherWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let otherWC = fixture.root.appendingPathComponent("wc-lock-other", isDirectory: true)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: otherWC)
+
+        try await service.lock(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "锁定：编辑中",
+            force: false
+        )
+        let mineLocks = try await service.locks(wc: fixture.workingCopy, targets: ["README.txt"])
+
+        XCTAssertEqual(mineLocks.first?.target, "README.txt")
+        XCTAssertEqual(mineLocks.first?.owner, NSUserName())
+        XCTAssertEqual(mineLocks.first?.comment, "锁定：编辑中")
+        XCTAssertTrue(mineLocks.first?.isOwnedByWorkingCopy ?? false)
+        XCTAssertTrue(mineLocks.first?.isRepositoryLocked ?? false)
+
+        try await service.unlock(wc: fixture.workingCopy, paths: ["README.txt"], force: false)
+        let afterUnlock = try await service.locks(wc: fixture.workingCopy, targets: ["README.txt"])
+        XCTAssertEqual(afterUnlock, [])
+
+        try await service.lock(wc: otherWC, paths: ["README.txt"], message: "other", force: false)
+        let otherLocks = try await service.locks(wc: fixture.workingCopy, targets: ["README.txt"])
+
+        XCTAssertFalse(otherLocks.first?.isOwnedByWorkingCopy ?? true)
+        XCTAssertTrue(otherLocks.first?.isRepositoryLocked ?? false)
+    }
+
     func testCheckoutWithEmptyDepthCreatesWorkingCopyWithoutChildren() async throws {
         let fixture = try makeFixture()
 
