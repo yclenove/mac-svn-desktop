@@ -174,11 +174,71 @@ final class DiffViewModelTests: XCTestCase {
         await failingViewModel.load(target: "a.swift")
         XCTAssertEqual(failingViewModel.sideBySideRows, [])
     }
+
+    @MainActor
+    func testOpenExternalDiffStoresLaunchResultAndPassesArguments() async {
+        let result = ExternalDiffLaunchResult(
+            leftFile: URL(fileURLWithPath: "/tmp/base.txt"),
+            rightFile: URL(fileURLWithPath: "/tmp/wc/a.swift"),
+            processResult: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        )
+        let opener = FakeExternalDiffOpener(result: .success(result))
+        let tool = ExternalDiffToolConfiguration(
+            name: "Kaleidoscope",
+            executablePath: "/usr/local/bin/ksdiff",
+            arguments: ["{left}", "{right}"]
+        )
+        let workingCopy = URL(fileURLWithPath: "/tmp/wc")
+        let viewModel = DiffViewModel(
+            workingCopy: workingCopy,
+            diffProvider: FakeDiffProvider(result: .success("")),
+            externalDiffOpener: opener
+        )
+
+        await viewModel.openExternalDiff(target: "a.swift", tool: tool, r1: Revision(1), r2: Revision(2))
+        let calls = await opener.recordedCalls()
+
+        XCTAssertEqual(viewModel.externalDiffState, .opened(result))
+        XCTAssertEqual(calls, [
+            ExternalDiffOpenCall(
+                wc: workingCopy,
+                target: "a.swift",
+                tool: tool,
+                r1: Revision(1),
+                r2: Revision(2)
+            )
+        ])
+    }
+
+    @MainActor
+    func testOpenExternalDiffWithoutOpenerStoresUnavailableError() async {
+        let viewModel = DiffViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            diffProvider: FakeDiffProvider(result: .success(""))
+        )
+        let tool = ExternalDiffToolConfiguration(
+            name: "Kaleidoscope",
+            executablePath: "/usr/local/bin/ksdiff",
+            arguments: ["{left}", "{right}"]
+        )
+
+        await viewModel.openExternalDiff(target: "a.swift", tool: tool)
+
+        XCTAssertEqual(viewModel.externalDiffState, .error("externalDiffUnavailable"))
+    }
 }
 
 private struct DiffCall: Equatable, Sendable {
     let wc: URL
     let target: String
+    let r1: Revision?
+    let r2: Revision?
+}
+
+private struct ExternalDiffOpenCall: Equatable, Sendable {
+    let wc: URL
+    let target: String
+    let tool: ExternalDiffToolConfiguration
     let r1: Revision?
     let r2: Revision?
 }
@@ -197,6 +257,30 @@ private actor FakeDiffProvider: DiffProviding {
 
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         calls.append(DiffCall(wc: wc, target: target, r1: r1, r2: r2))
+        return try result.get()
+    }
+}
+
+private actor FakeExternalDiffOpener: ExternalDiffOpening {
+    private let result: Result<ExternalDiffLaunchResult, Error>
+    private var calls: [ExternalDiffOpenCall] = []
+
+    init(result: Result<ExternalDiffLaunchResult, Error>) {
+        self.result = result
+    }
+
+    func recordedCalls() -> [ExternalDiffOpenCall] {
+        calls
+    }
+
+    func open(
+        wc: URL,
+        target: String,
+        tool: ExternalDiffToolConfiguration,
+        r1: Revision?,
+        r2: Revision?
+    ) async throws -> ExternalDiffLaunchResult {
+        calls.append(ExternalDiffOpenCall(wc: wc, target: target, tool: tool, r1: r1, r2: r2))
         return try result.get()
     }
 }

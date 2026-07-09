@@ -723,22 +723,41 @@ public struct BranchList: Equatable, Sendable {
     }
 }
 
+public struct ExternalDiffToolConfiguration: Codable, Equatable, Sendable {
+    public var name: String
+    public var executablePath: String
+    public var arguments: [String]
+
+    public init(
+        name: String,
+        executablePath: String,
+        arguments: [String] = ["{left}", "{right}"]
+    ) {
+        self.name = name
+        self.executablePath = executablePath
+        self.arguments = arguments
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var svnPath: String?
     public var logBatchSize: Int
     public var branchLayout: BranchLayout
     public var processTimeout: TimeInterval
+    public var externalDiffTool: ExternalDiffToolConfiguration?
 
     public init(
         svnPath: String? = nil,
         logBatchSize: Int = 100,
         branchLayout: BranchLayout = BranchLayout(),
-        processTimeout: TimeInterval = 120
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
         self.branchLayout = branchLayout
         self.processTimeout = processTimeout
+        self.externalDiffTool = externalDiffTool
     }
 }
 

@@ -23,6 +23,13 @@ public enum DiffViewState: Equatable, Sendable {
     case error(String)
 }
 
+public enum ExternalDiffState: Equatable, Sendable {
+    case idle
+    case opening
+    case opened(ExternalDiffLaunchResult)
+    case error(String)
+}
+
 public enum UnifiedDiffLineKind: Equatable, Sendable {
     case metadata
     case hunk
@@ -118,15 +125,22 @@ public struct SideBySideDiffRow: Equatable, Identifiable, Sendable {
 public final class DiffViewModel {
     private let workingCopy: URL
     private let diffProvider: any DiffProviding
+    private let externalDiffOpener: (any ExternalDiffOpening)?
 
     public private(set) var state: DiffViewState = .idle
+    public private(set) var externalDiffState: ExternalDiffState = .idle
     public private(set) var diffText = ""
     public private(set) var lines: [UnifiedDiffLine] = []
     public private(set) var sideBySideRows: [SideBySideDiffRow] = []
 
-    public init(workingCopy: URL, diffProvider: any DiffProviding) {
+    public init(
+        workingCopy: URL,
+        diffProvider: any DiffProviding,
+        externalDiffOpener: (any ExternalDiffOpening)? = nil
+    ) {
         self.workingCopy = workingCopy
         self.diffProvider = diffProvider
+        self.externalDiffOpener = externalDiffOpener
     }
 
     public func load(target: String, r1: Revision? = nil, r2: Revision? = nil) async {
@@ -151,6 +165,33 @@ public final class DiffViewModel {
             lines = []
             sideBySideRows = []
             state = .error(String(describing: error))
+        }
+    }
+
+    public func openExternalDiff(
+        target: String,
+        tool: ExternalDiffToolConfiguration,
+        r1: Revision? = nil,
+        r2: Revision? = nil
+    ) async {
+        guard let externalDiffOpener else {
+            externalDiffState = .error("externalDiffUnavailable")
+            return
+        }
+
+        externalDiffState = .opening
+
+        do {
+            let result = try await externalDiffOpener.open(
+                wc: workingCopy,
+                target: target,
+                tool: tool,
+                r1: r1,
+                r2: r2
+            )
+            externalDiffState = .opened(result)
+        } catch {
+            externalDiffState = .error(String(describing: error))
         }
     }
 

@@ -22,16 +22,23 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(settings.logBatchSize, 100)
         XCTAssertEqual(settings.branchLayout, BranchLayout())
         XCTAssertEqual(settings.processTimeout, 120)
+        XCTAssertNil(settings.externalDiffTool)
     }
 
     func testUpdatePersistsSettings() async throws {
         let root = temporaryRoot()
         let store = makeStore(root: root)
+        let externalDiffTool = ExternalDiffToolConfiguration(
+            name: "Kaleidoscope",
+            executablePath: "/usr/local/bin/ksdiff",
+            arguments: ["--wait", "{left}", "{right}"]
+        )
         let updated = AppSettings(
             svnPath: "/custom/svn",
             logBatchSize: 50,
             branchLayout: BranchLayout(trunk: "main", branches: "dev/branches", tags: "releases"),
-            processTimeout: 45
+            processTimeout: 45,
+            externalDiffTool: externalDiffTool
         )
 
         try await store.update(updated)
@@ -48,7 +55,12 @@ final class SettingsStoreTests: XCTestCase {
             svnPath: "/custom/svn",
             logBatchSize: 50,
             branchLayout: BranchLayout(trunk: "main", branches: "dev/branches", tags: "releases"),
-            processTimeout: 45
+            processTimeout: 45,
+            externalDiffTool: ExternalDiffToolConfiguration(
+                name: "Beyond Compare",
+                executablePath: "/Applications/Beyond Compare.app/Contents/MacOS/bcomp",
+                arguments: ["{left}", "{right}"]
+            )
         ))
 
         let defaults = try await store.reset()
