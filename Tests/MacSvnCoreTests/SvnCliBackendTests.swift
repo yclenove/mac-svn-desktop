@@ -109,6 +109,29 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testCopyPassesAuthStdinRunsWithoutWorkingCopyAndParsesRevision() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 12.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let revision = try await backend.copy(
+            source: "file:///repo/trunk",
+            destination: "file:///repo/branches/feature-one",
+            message: "创建分支：feature-one",
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(revision, Revision(12))
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, nil)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "copy", "--encoding", "UTF-8", "--non-interactive",
+            "-m", "创建分支：feature-one",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "file:///repo/branches/feature-one"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testListPassesDepthAuthStdinAndParsesEntries() async throws {
         let xml = """
         <lists><list path="file:///repo/trunk"><entry kind="file"><name>README.txt</name><size>5</size><commit revision="2"><author>a</author></commit></entry></list></lists>

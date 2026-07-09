@@ -129,6 +129,18 @@ public enum SvnCommandBuilder {
         ] + authArguments + [url, destination])
     }
 
+    public static func copy(
+        source: String,
+        destination: String,
+        message: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "copy", "--encoding", "UTF-8", "--non-interactive",
+            "-m", message
+        ] + authArguments + [source, destination])
+    }
+
     public static func info(target: String) -> SvnCommand {
         SvnCommand(arguments: ["info", "--xml", "--non-interactive", target])
     }

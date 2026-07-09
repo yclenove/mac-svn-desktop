@@ -100,6 +100,27 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(branchList.tags.map(\.name), ["v1.0"])
     }
 
+    func testServiceCopyCreatesRemoteBranch() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let destination = "\(fixture.repositoryURL)/branches/from-copy"
+
+        let revision = try await service.copy(
+            source: fixture.trunkURL,
+            destination: destination,
+            message: "创建分支：from-copy",
+            auth: nil
+        )
+        let branchList = try await service.branches(
+            repositoryRoot: fixture.repositoryURL,
+            layout: BranchLayout(),
+            auth: nil
+        )
+
+        XCTAssertGreaterThan(revision.value, 1)
+        XCTAssertTrue(branchList.branches.map(\.name).contains("from-copy"))
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

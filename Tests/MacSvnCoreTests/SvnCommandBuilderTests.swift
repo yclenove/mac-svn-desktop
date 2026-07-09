@@ -146,6 +146,22 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testCopyUsesUtf8MessageAuthSourceAndDestination() {
+        let command = SvnCommandBuilder.copy(
+            source: "file:///repo/trunk",
+            destination: "file:///repo/branches/feature-one",
+            message: "创建分支：feature-one",
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "copy", "--encoding", "UTF-8", "--non-interactive",
+            "-m", "创建分支：feature-one",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "file:///repo/branches/feature-one"
+        ])
+    }
+
     func testInfoUsesXmlAndNonInteractive() {
         let command = SvnCommandBuilder.info(target: ".")
         XCTAssertEqual(command.arguments, ["info", "--xml", "--non-interactive", "."])

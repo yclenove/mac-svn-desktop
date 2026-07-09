@@ -123,6 +123,48 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.checkoutDepths, [.files, .files])
     }
 
+    func testCopyRejectsEmptyMessageBeforeBackendCall() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+
+        do {
+            _ = try await service.copy(
+                source: "file:///repo/trunk",
+                destination: "file:///repo/branches/dev",
+                message: "  ",
+                auth: nil
+            )
+            XCTFail("Expected emptyCommitMessage")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .emptyCommitMessage)
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        XCTAssertTrue(backend.calls.isEmpty)
+    }
+
+    func testCopyPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.copyErrors = [.authentication]
+        backend.copyResult = Revision(12)
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let revision = try await service.copy(
+            source: "file:///repo/trunk",
+            destination: "file:///repo/branches/dev",
+            message: "create dev",
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(revision, Revision(12))
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/branches/dev")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["copy", "copy"])
+        XCTAssertEqual(backend.copyCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.listErrors = [.authentication]
@@ -320,6 +362,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCatCredentials: [Credential?] = []
     private var recordedCatSizeLimits: [Int] = []
     private var recordedRemoteLogCredentials: [Credential?] = []
+    private var recordedCopyCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -409,6 +452,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedRemoteLogCredentials
     }
 
+    var copyCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCopyCredentials
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
@@ -416,6 +467,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var listResult: [RemoteEntry] = []
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
+    var copyResult = Revision(1)
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
@@ -424,6 +476,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var listErrors: [SvnError] = []
     var catErrors: [SvnError] = []
     var remoteLogErrors: [SvnError] = []
+    var copyErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -522,6 +575,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         }
     }
 
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        let error = recordCopy(auth: auth)
+        if let error {
+            throw error
+        }
+        return copyResult
+    }
+
     func info(wc: URL, target: String) async throws -> SvnInfo {
         record("info")
         return infoResult
@@ -581,6 +642,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "remoteLog"))
         recordedRemoteLogCredentials.append(auth)
         let error = remoteLogErrors.isEmpty ? nil : remoteLogErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordCopy(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "copy"))
+        recordedCopyCredentials.append(auth)
+        let error = copyErrors.isEmpty ? nil : copyErrors.removeFirst()
         callsLock.unlock()
         return error
     }

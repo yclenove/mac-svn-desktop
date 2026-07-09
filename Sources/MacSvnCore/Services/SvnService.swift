@@ -93,6 +93,22 @@ public actor SvnService {
         }
     }
 
+    public func copy(
+        source: String,
+        destination: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SvnServiceError.emptyCommitMessage
+        }
+
+        let credentialScope = URL(string: destination) ?? URL(fileURLWithPath: destination)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.copy(source: source, destination: destination, message: message, auth: auth)
+        }
+    }
+
     public func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SvnServiceError.emptyCommitMessage
