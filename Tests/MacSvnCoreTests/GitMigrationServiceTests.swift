@@ -224,6 +224,34 @@ final class GitMigrationServiceTests: XCTestCase {
         let events = await recorder.recordedEvents()
         XCTAssertTrue(events.isEmpty)
     }
+
+    func testReconcileHistoryMigrationReadsGitSvnRevisionsAndReturnsReport() async throws {
+        let recorder = MigrationRecorder()
+        let repository = URL(fileURLWithPath: "/tmp/history")
+        let git = FakeGitMigrationGitBackend(
+            recorder: recorder,
+            gitSvnRevisions: [
+                GitSvnRevisionMetadata(revision: Revision(1)),
+                GitSvnRevisionMetadata(revision: Revision(3))
+            ]
+        )
+        let service = GitMigrationService(
+            svnExporter: FakeGitMigrationSvnExporter(recorder: recorder),
+            gitBackend: git
+        )
+
+        let report = try await service.reconcileHistoryMigration(
+            sourceRevisions: [Revision(1), Revision(2), Revision(3)],
+            gitRepository: repository
+        )
+
+        XCTAssertEqual(report.missingRevisions, [Revision(2)])
+        XCTAssertFalse(report.isConsistent)
+        let events = await recorder.recordedEvents()
+        XCTAssertEqual(events, [
+            .gitSvnRevisions(repository: repository)
+        ])
+    }
 }
 
 private enum MigrationEvent: Equatable, Sendable {
@@ -231,6 +259,7 @@ private enum MigrationEvent: Equatable, Sendable {
     case gitInit(repository: URL)
     case gitAdd(repository: URL)
     case gitCommit(repository: URL, message: String)
+    case gitSvnRevisions(repository: URL)
     case gitSvnClone(
         sourceURL: String,
         destination: URL,
@@ -263,6 +292,7 @@ private struct FakeGitMigrationSvnExporter: GitMigrationSvnExporting {
 
 private struct FakeGitMigrationGitBackend: GitBackend {
     let recorder: MigrationRecorder
+    var gitSvnRevisions: [GitSvnRevisionMetadata] = []
 
     func initRepository(at repository: URL) async throws {
         await recorder.append(.gitInit(repository: repository))
@@ -274,6 +304,11 @@ private struct FakeGitMigrationGitBackend: GitBackend {
 
     func commit(repository: URL, message: String) async throws {
         await recorder.append(.gitCommit(repository: repository, message: message))
+    }
+
+    func gitSvnRevisions(repository: URL) async throws -> [GitSvnRevisionMetadata] {
+        await recorder.append(.gitSvnRevisions(repository: repository))
+        return gitSvnRevisions
     }
 
     func svnClone(

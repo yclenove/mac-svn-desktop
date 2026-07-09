@@ -76,6 +76,29 @@ final class GitCliBackendTests: XCTestCase {
         XCTAssertNil(runner.calls.first?.stdin)
         XCTAssertNil(runner.calls.first?.currentDirectory)
     }
+
+    func testGitBackendReadsGitSvnRevisionsFromRepositoryLog() async throws {
+        let stdout = Data("""
+        initial
+        git-svn-id: file:///repo/trunk@1 abc
+
+        second
+        git-svn-id: file:///repo/trunk@2 abc
+        """.utf8)
+        let runner = RecordingGitProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: stdout, stderr: "", duration: 0.01)
+        ])
+        let backend = GitCliBackend(gitExecutable: "/usr/bin/git", runner: runner)
+
+        let revisions = try await backend.gitSvnRevisions(repository: URL(fileURLWithPath: "/tmp/history"))
+
+        XCTAssertEqual(revisions, [
+            GitSvnRevisionMetadata(revision: Revision(1)),
+            GitSvnRevisionMetadata(revision: Revision(2))
+        ])
+        XCTAssertEqual(runner.calls.first?.arguments, ["log", "--all", "--format=%B"])
+        XCTAssertEqual(runner.calls.first?.currentDirectory, "/tmp/history")
+    }
 }
 
 private final class RecordingGitProcessRunner: ProcessRunning, @unchecked Sendable {

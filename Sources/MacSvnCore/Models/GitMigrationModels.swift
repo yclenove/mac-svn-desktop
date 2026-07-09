@@ -147,6 +147,37 @@ public enum GitMigrationSourceAnalysisError: Error, Equatable, Sendable {
     case emptyRepositoryRoot
 }
 
+public struct GitSvnRevisionMetadata: Equatable, Sendable {
+    public let revision: Revision
+
+    public init(revision: Revision) {
+        self.revision = revision
+    }
+}
+
+public struct GitMigrationRevisionReconciliationReport: Equatable, Sendable {
+    public let sourceRevisionCount: Int
+    public let migratedRevisionCount: Int
+    public let missingRevisions: [Revision]
+    public let unexpectedRevisions: [Revision]
+
+    public init(
+        sourceRevisionCount: Int,
+        migratedRevisionCount: Int,
+        missingRevisions: [Revision],
+        unexpectedRevisions: [Revision]
+    ) {
+        self.sourceRevisionCount = sourceRevisionCount
+        self.migratedRevisionCount = migratedRevisionCount
+        self.missingRevisions = missingRevisions
+        self.unexpectedRevisions = unexpectedRevisions
+    }
+
+    public var isConsistent: Bool {
+        missingRevisions.isEmpty && unexpectedRevisions.isEmpty
+    }
+}
+
 public struct GitMigrationAuthorMapping: Equatable, Sendable {
     public let svnUsername: String
     public var gitName: String

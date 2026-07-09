@@ -8,17 +8,20 @@ public actor GitMigrationService {
     private let svnExporter: any GitMigrationSvnExporting
     private let gitBackend: any GitBackend
     private let authorMapper: GitMigrationAuthorMapper
+    private let revisionReconciler: GitMigrationRevisionReconciler
     private let fileManager: FileManager
 
     public init(
         svnExporter: any GitMigrationSvnExporting,
         gitBackend: any GitBackend,
         authorMapper: GitMigrationAuthorMapper = GitMigrationAuthorMapper(),
+        revisionReconciler: GitMigrationRevisionReconciler = GitMigrationRevisionReconciler(),
         fileManager: FileManager = .default
     ) {
         self.svnExporter = svnExporter
         self.gitBackend = gitBackend
         self.authorMapper = authorMapper
+        self.revisionReconciler = revisionReconciler
         self.fileManager = fileManager
     }
 
@@ -102,6 +105,17 @@ public actor GitMigrationService {
             authorsFilePath: authorsFile.path,
             layout: layout,
             revisionRange: revisionRange
+        )
+    }
+
+    public func reconcileHistoryMigration(
+        sourceRevisions: [Revision],
+        gitRepository: URL
+    ) async throws -> GitMigrationRevisionReconciliationReport {
+        let migratedRevisions = try await gitBackend.gitSvnRevisions(repository: gitRepository)
+        return revisionReconciler.reconcile(
+            sourceRevisions: sourceRevisions,
+            migratedRevisions: migratedRevisions
         )
     }
 

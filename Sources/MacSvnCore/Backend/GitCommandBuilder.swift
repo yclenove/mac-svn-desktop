@@ -21,6 +21,10 @@ public enum GitCommandBuilder {
         GitCommand(arguments: ["commit", "-m", message])
     }
 
+    public static func logGitSvnMetadata() -> GitCommand {
+        GitCommand(arguments: ["log", "--all", "--format=%B"])
+    }
+
     public static func svnClone(
         sourceURL: String,
         destination: URL,

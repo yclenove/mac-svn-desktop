@@ -93,6 +93,54 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testHistoryGitSvnMigrationProducesConsistentRevisionReconciliation() async throws {
+        let fixture = try makeFixture()
+        let gitExecutable = try requireGitExecutable()
+        try await requireGitSvn(gitExecutable: gitExecutable)
+        let destination = fixture.root.appendingPathComponent("git-history-reconcile", isDirectory: true)
+        let svnService = SvnService(backend: fixture.backend)
+        let migrationService = GitMigrationService(
+            svnExporter: svnService,
+            gitBackend: GitCliBackend(gitExecutable: gitExecutable, runner: ProcessRunner(), timeout: 60)
+        )
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+        let sourceLogEntries = try await fixture.backend.remoteLogFromHead(
+            url: fixture.repositoryURL,
+            batch: 100,
+            verbose: false,
+            auth: nil
+        )
+        let sourceRevisions = sourceLogEntries.map(\.revision)
+
+        _ = try await migrationService.historyMigrate(
+            sourceURL: fixture.repositoryURL,
+            destination: destination,
+            layout: layout,
+            authorMappings: [
+                GitMigrationAuthorMapping(
+                    svnUsername: NSUserName(),
+                    gitName: "MacSVN Test",
+                    gitEmail: "macsvn@example.invalid"
+                )
+            ]
+        )
+        let report = try await migrationService.reconcileHistoryMigration(
+            sourceRevisions: sourceRevisions,
+            gitRepository: destination
+        )
+
+        XCTAssertTrue(report.isConsistent)
+        XCTAssertEqual(report.sourceRevisionCount, Set(sourceRevisions).count)
+        XCTAssertEqual(report.missingRevisions, [])
+        XCTAssertEqual(report.unexpectedRevisions, [])
+    }
+
     func testBlameReadsLineRevisionAuthorFromWorkingCopy() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

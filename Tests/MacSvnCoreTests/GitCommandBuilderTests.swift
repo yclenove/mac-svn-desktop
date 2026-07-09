@@ -17,6 +17,13 @@ final class GitCommandBuilderTests: XCTestCase {
         )
     }
 
+    func testLogGitSvnMetadataUsesAllCommitBodies() {
+        XCTAssertEqual(
+            GitCommandBuilder.logGitSvnMetadata().arguments,
+            ["log", "--all", "--format=%B"]
+        )
+    }
+
     func testSvnCloneUsesStandardLayoutAuthorsFileRevisionAndUsername() {
         let layout = GitMigrationRepositoryLayout(
             kind: .standard,
