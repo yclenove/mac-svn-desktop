@@ -43,6 +43,12 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
+    public static func switchTo(url: String, authArguments: [String] = []) -> SvnCommand {
+        SvnCommand(arguments: [
+            "switch", "--accept", "postpone", "--non-interactive"
+        ] + authArguments + [url])
+    }
+
     public static func add(paths: [String]) -> SvnCommand {
         SvnCommand(arguments: ["add", "--non-interactive"] + paths)
     }

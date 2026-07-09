@@ -52,6 +52,19 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testSwitchUsesPostponeNonInteractiveAuthAndUrl() {
+        let command = SvnCommandBuilder.switchTo(
+            url: "file:///repo/branches/feature-one",
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "switch", "--accept", "postpone", "--non-interactive",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/branches/feature-one"
+        ])
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

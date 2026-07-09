@@ -41,6 +41,20 @@ public struct SvnCliBackend: SvnBackend {
         return try UpdateOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
     }
 
+    public func switchTo(
+        wc: URL,
+        url: String,
+        auth: Credential? = nil
+    ) async throws -> UpdateSummary {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.switchTo(
+            url: normalizedRemoteURL(url),
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
+        return try UpdateOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
+    }
+
     public func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
         let authArguments = try AuthArguments.build(credential: auth)
         let command = SvnCommandBuilder.commit(paths: paths, message: message, authArguments: authArguments.arguments)

@@ -121,6 +121,28 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertTrue(branchList.branches.map(\.name).contains("from-copy"))
     }
 
+    func testServiceSwitchChangesWorkingCopyUrlToBranch() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/switch-copy"
+
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "创建分支：switch-copy",
+            auth: nil
+        )
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        _ = try await service.switchTo(
+            wc: fixture.workingCopy,
+            url: branchURL,
+            auth: nil
+        )
+        let info = try await fixture.backend.info(wc: fixture.workingCopy, target: ".")
+
+        XCTAssertEqual(info.url, branchURL)
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

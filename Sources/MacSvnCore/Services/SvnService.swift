@@ -3,6 +3,7 @@ import Foundation
 public enum SvnServiceError: Error, Equatable, Sendable {
     case emptyCommitMessage
     case wcBusy(operation: String)
+    case localChangesPreventSwitch(paths: [String])
 }
 
 public protocol CredentialProviding: Sendable {
@@ -76,6 +77,27 @@ public actor SvnService {
         try await withWriteLock(wc: wc, operation: "update") {
             try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
                 try await backend.update(wc: wc, paths: paths, revision: revision, setDepth: setDepth, auth: auth)
+            }
+        }
+    }
+
+    public func switchTo(
+        wc: URL,
+        url: String,
+        auth: Credential? = nil,
+        allowLocalChanges: Bool = false
+    ) async throws -> UpdateSummary {
+        try await withWriteLock(wc: wc, operation: "switch") {
+            let statuses = try await backend.status(wc: wc)
+            let localChangePaths = localChangePaths(from: statuses)
+
+            guard allowLocalChanges || localChangePaths.isEmpty else {
+                throw SvnServiceError.localChangesPreventSwitch(paths: localChangePaths)
+            }
+
+            let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
+            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.switchTo(wc: wc, url: url, auth: auth)
             }
         }
     }
@@ -178,6 +200,21 @@ public actor SvnService {
             }
 
             return status.itemStatus == .conflicted || status.isTreeConflict
+        }
+    }
+
+    private func localChangePaths(from statuses: [FileStatus]) -> [String] {
+        statuses.compactMap { status in
+            if status.isTreeConflict {
+                return status.path
+            }
+
+            switch status.itemStatus {
+            case .normal, .none, .ignored, .external:
+                return nil
+            case .unversioned, .modified, .added, .deleted, .missing, .conflicted, .replaced, .incomplete, .obstructed:
+                return status.path
+            }
         }
     }
 

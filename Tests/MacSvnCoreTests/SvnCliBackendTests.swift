@@ -87,6 +87,31 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testSwitchPassesAuthStdinRunsInWorkingCopyAndParsesSummary() async throws {
+        let output = """
+        U    README.txt
+        Updated to revision 9.
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(output.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let summary = try await backend.switchTo(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            url: "file:///repo/branches/feature-one",
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(summary, UpdateSummary(updated: 1, revision: Revision(9)))
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "switch", "--accept", "postpone", "--non-interactive",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/branches/feature-one"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testCheckoutPassesDepthAuthStdinAndRunsOutsideWorkingCopy() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

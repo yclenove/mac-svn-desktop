@@ -165,6 +165,69 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.copyCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testSwitchBlocksLocalChangesBeforeBackendSwitchByDefault() async {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "README.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+        let service = SvnService(backend: backend)
+
+        do {
+            _ = try await service.switchTo(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                url: "file:///repo/branches/feature-one",
+                auth: nil
+            )
+            XCTFail("Expected localChangesPreventSwitch")
+        } catch let error as SvnServiceError {
+            XCTAssertEqual(error, .localChangesPreventSwitch(paths: ["README.txt", "new.txt"]))
+        } catch {
+            XCTFail("Expected SvnServiceError, got \(error)")
+        }
+
+        XCTAssertEqual(backend.calls.map(\.name), ["status"])
+    }
+
+    func testSwitchAllowsLocalChangesWhenConfirmed() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "README.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.switchResult = UpdateSummary(updated: 1, revision: Revision(9))
+        let service = SvnService(backend: backend)
+
+        let summary = try await service.switchTo(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            url: "file:///repo/branches/feature-one",
+            auth: nil,
+            allowLocalChanges: true
+        )
+
+        XCTAssertEqual(summary, UpdateSummary(updated: 1, revision: Revision(9)))
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "switch"])
+    }
+
+    func testSwitchPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.switchErrors = [.authentication]
+        backend.switchResult = UpdateSummary(revision: Revision(10))
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let summary = try await service.switchTo(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            url: "file:///repo/branches/feature-one",
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(summary, UpdateSummary(revision: Revision(10)))
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/branches/feature-one")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "switch", "switch"])
+        XCTAssertEqual(backend.switchCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.listErrors = [.authentication]
@@ -363,6 +426,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCatSizeLimits: [Int] = []
     private var recordedRemoteLogCredentials: [Credential?] = []
     private var recordedCopyCredentials: [Credential?] = []
+    private var recordedSwitchCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -460,6 +524,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCopyCredentials
     }
 
+    var switchCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedSwitchCredentials
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
@@ -468,6 +540,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
     var copyResult = Revision(1)
+    var switchResult = UpdateSummary()
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
@@ -477,6 +550,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var catErrors: [SvnError] = []
     var remoteLogErrors: [SvnError] = []
     var copyErrors: [SvnError] = []
+    var switchErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -583,6 +657,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return copyResult
     }
 
+    func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary {
+        let error = recordSwitch(auth: auth)
+        if let error {
+            throw error
+        }
+        return switchResult
+    }
+
     func info(wc: URL, target: String) async throws -> SvnInfo {
         record("info")
         return infoResult
@@ -651,6 +733,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "copy"))
         recordedCopyCredentials.append(auth)
         let error = copyErrors.isEmpty ? nil : copyErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordSwitch(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "switch"))
+        recordedSwitchCredentials.append(auth)
+        let error = switchErrors.isEmpty ? nil : switchErrors.removeFirst()
         callsLock.unlock()
         return error
     }
