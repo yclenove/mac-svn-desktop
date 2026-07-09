@@ -133,6 +133,52 @@ public struct SvnPropertyTemplate: Equatable, Sendable {
     }
 }
 
+public struct MergeInfoRevisionRange: Equatable, Sendable {
+    public let start: Revision
+    public let end: Revision
+
+    public init(start: Revision, end: Revision) {
+        self.start = start
+        self.end = end
+    }
+
+    public var revisionCount: Int {
+        guard end.value >= start.value else {
+            return 0
+        }
+
+        return end.value - start.value + 1
+    }
+
+    public var revisions: [Revision] {
+        guard revisionCount > 0 else {
+            return []
+        }
+
+        return (start.value...end.value).map { Revision($0) }
+    }
+}
+
+public struct MergeInfoEntry: Equatable, Sendable {
+    public let sourcePath: String
+    public let ranges: [MergeInfoRevisionRange]
+
+    public init(sourcePath: String, ranges: [MergeInfoRevisionRange]) {
+        self.sourcePath = sourcePath
+        self.ranges = ranges
+    }
+
+    public var revisionCount: Int {
+        ranges.reduce(0) { partial, range in
+            partial + range.revisionCount
+        }
+    }
+
+    public var revisions: [Revision] {
+        ranges.flatMap(\.revisions)
+    }
+}
+
 public struct SvnLock: Equatable, Sendable {
     public let target: String
     public let token: String?
