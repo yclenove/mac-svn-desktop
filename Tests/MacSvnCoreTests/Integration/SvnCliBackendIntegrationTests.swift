@@ -25,6 +25,39 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertNotNil(lines.first?.author)
     }
 
+    func testPropertiesSetListGetDeleteOnWorkingCopyFile() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await service.setProperty(
+            wc: fixture.workingCopy,
+            target: "README.txt",
+            name: "custom:reviewer",
+            value: "杨超"
+        )
+
+        let listed = try await service.properties(wc: fixture.workingCopy, target: "README.txt")
+        let value = try await service.propertyValue(
+            wc: fixture.workingCopy,
+            target: "README.txt",
+            name: "custom:reviewer"
+        )
+
+        XCTAssertTrue(listed.contains(SvnProperty(target: "README.txt", name: "custom:reviewer", value: "杨超")))
+        XCTAssertEqual(value?.name, "custom:reviewer")
+        XCTAssertEqual(value?.value, "杨超")
+
+        try await service.deleteProperty(
+            wc: fixture.workingCopy,
+            target: "README.txt",
+            name: "custom:reviewer"
+        )
+        let afterDelete = try await service.properties(wc: fixture.workingCopy, target: "README.txt")
+
+        XCTAssertFalse(afterDelete.contains { $0.name == "custom:reviewer" })
+    }
+
     func testCheckoutWithEmptyDepthCreatesWorkingCopyWithoutChildren() async throws {
         let fixture = try makeFixture()
 
