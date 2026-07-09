@@ -407,6 +407,30 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
     }
 
+    func testShelveRevertsWorkingCopyAndRestoreAppliesPatch() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let store = ShelveStore(rootDirectory: fixture.root.appendingPathComponent("shelves", isDirectory: true))
+        let shelve = ShelveService(store: store, svn: service)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+        try "changed through shelve\n".write(to: readme, atomically: true, encoding: .utf8)
+
+        let snapshot = try await shelve.shelve(
+            wc: fixture.workingCopy,
+            name: "readme change",
+            paths: ["README.txt"]
+        )
+        let revertedText = try String(contentsOf: readme, encoding: .utf8)
+        XCTAssertFalse(revertedText.contains("changed through shelve"))
+
+        try await shelve.restore(snapshot, deleteAfterRestore: false)
+
+        let restoredText = try String(contentsOf: readme, encoding: .utf8)
+        XCTAssertTrue(restoredText.contains("changed through shelve"))
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 
