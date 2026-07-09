@@ -214,4 +214,10 @@ final class SvnCommandBuilderTests: XCTestCase {
         let command = SvnCommandBuilder.info(target: ".")
         XCTAssertEqual(command.arguments, ["info", "--xml", "--non-interactive", "."])
     }
+
+    func testBlameUsesXmlNonInteractiveAndTarget() {
+        let command = SvnCommandBuilder.blame(target: "README.txt")
+
+        XCTAssertEqual(command.arguments, ["blame", "--xml", "--non-interactive", "README.txt"])
+    }
 }

@@ -42,6 +42,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testBlameRunsInWorkingCopyAndParsesXml() async throws {
+        let xml = """
+        <blame><target path="README.txt"><entry line-number="1"><commit revision="7"><author>yangchao</author><date>2026-07-09T06:00:00.000000Z</date></commit></entry></target></blame>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let lines = try await backend.blame(wc: wc, target: "README.txt")
+
+        XCTAssertEqual(lines, [
+            BlameLine(
+                lineNumber: 1,
+                revision: Revision(7),
+                author: "yangchao",
+                date: ISO8601DateFormatter.svnXML.date(from: "2026-07-09T06:00:00.000000Z")
+            )
+        ])
+        XCTAssertEqual(runner.calls.single?.arguments, ["blame", "--xml", "--non-interactive", "README.txt"])
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
     func testCommitPassesAuthStdinAndParsesRevision() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 42.\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

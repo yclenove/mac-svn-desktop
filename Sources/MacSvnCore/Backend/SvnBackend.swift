@@ -13,6 +13,7 @@ public protocol SvnBackend: Sendable {
     func cleanup(wc: URL) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    func blame(wc: URL, target: String) async throws -> [BlameLine]
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry]
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]

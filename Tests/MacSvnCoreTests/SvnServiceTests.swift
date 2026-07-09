@@ -28,6 +28,20 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log", "info"])
     }
 
+    func testBlameForwardsToBackend() async throws {
+        let backend = MockSvnBackend()
+        backend.blameResult = [
+            BlameLine(lineNumber: 1, revision: Revision(7), author: "yangchao", date: nil)
+        ]
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let lines = try await service.blame(wc: wc, target: "README.txt")
+
+        XCTAssertEqual(lines, backend.blameResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["blame"])
+    }
+
     func testCommitRejectsEmptyMessage() async {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -590,6 +604,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     var statusResult: [FileStatus] = []
     var diffResult = ""
+    var blameResult: [BlameLine] = []
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var listResult: [RemoteEntry] = []
@@ -669,6 +684,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         record("diff")
         return diffResult
+    }
+
+    func blame(wc: URL, target: String) async throws -> [BlameLine] {
+        record("blame")
+        return blameResult
     }
 
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {

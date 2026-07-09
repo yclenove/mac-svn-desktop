@@ -109,6 +109,11 @@ public struct SvnCliBackend: SvnBackend {
         return String(decoding: result.stdout, as: UTF8.self)
     }
 
+    public func blame(wc: URL, target: String) async throws -> [BlameLine] {
+        let result = try await run(SvnCommandBuilder.blame(target: target), currentDirectory: wc.path, stdin: nil)
+        return try BlameXMLParser.parse(result.stdout)
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         let command = SvnCommandBuilder.log(target: target, from: from, batch: batch, verbose: verbose)
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)

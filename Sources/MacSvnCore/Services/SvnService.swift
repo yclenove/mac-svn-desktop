@@ -28,6 +28,10 @@ public actor SvnService {
         try await backend.diff(wc: wc, target: target, r1: r1, r2: r2)
     }
 
+    public func blame(wc: URL, target: String) async throws -> [BlameLine] {
+        try await backend.blame(wc: wc, target: target)
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
     }
