@@ -321,7 +321,7 @@ git commit -m "feat: add P5 menu bar status snapshot core"
 - 修改：`Sources/MacSvnCore/Services/MenuBarStatusSnapshotter.swift`
 - 修改测试：`Tests/MacSvnCoreTests/MenuBarStatusSnapshotterTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `MenuBarStatusSnapshotterTests` 增加：
 
@@ -406,7 +406,7 @@ private actor FakeMenuBarStatusProvider: StatusProviding {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter MenuBarStatusSnapshotterTests
@@ -414,7 +414,7 @@ swift test --filter MenuBarStatusSnapshotterTests
 
 预期：无效 WC / provider failure 测试失败，因为任务 1 实现会抛出错误或仍尝试远端查询。
 
-- [ ] **步骤 3：实现容错隔离**
+- [x] **步骤 3：实现容错隔离**
 
 实现要求：
 - `record.isValid == false` 时返回 `.invalidWorkingCopy`，不调用 status/remote log；
@@ -422,7 +422,7 @@ swift test --filter MenuBarStatusSnapshotterTests
 - 错误/无效快照的本地、冲突、远端计数均为 0，`notificationSummary == nil`；
 - `MenuBarMonitorConfiguration` 已在任务 1 中做正数夹取，配置测试应通过。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter MenuBarStatusSnapshotterTests
@@ -430,7 +430,7 @@ swift test --filter MenuBarStatusSnapshotterTests
 
 预期：全部 `MenuBarStatusSnapshotterTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/MenuBarStatusSnapshotter.swift Tests/MacSvnCoreTests/MenuBarStatusSnapshotterTests.swift docs/superpowers/plans/2026-07-10-p5-menu-bar-status-core.md

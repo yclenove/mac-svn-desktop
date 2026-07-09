@@ -27,34 +27,42 @@ public actor MenuBarStatusSnapshotter: MenuBarStatusSnapshotting {
         var snapshots: [MenuBarWorkingCopySnapshot] = []
 
         for record in records {
-            snapshots.append(try await snapshot(record: record))
+            snapshots.append(await snapshot(record: record))
         }
 
         return MenuBarStatusSnapshot(checkedAt: now, workingCopies: snapshots)
     }
 
-    private func snapshot(record: WorkingCopyRecord) async throws -> MenuBarWorkingCopySnapshot {
-        let statuses = try await statusProvider.status(wc: URL(fileURLWithPath: record.localPath))
-        let remoteEntries = try await remoteLogProvider.remoteLogFromHead(
-            url: record.repoURL,
-            batch: configuration.remoteLogBatchSize,
-            verbose: false,
-            auth: nil
-        )
-        let remoteNewEntries = Self.remoteNewEntries(remoteEntries, baseline: record.revision)
+    private func snapshot(record: WorkingCopyRecord) async -> MenuBarWorkingCopySnapshot {
+        guard record.isValid else {
+            return Self.emptySnapshot(record: record, state: .invalidWorkingCopy)
+        }
 
-        return MenuBarWorkingCopySnapshot(
-            recordID: record.id,
-            name: record.name,
-            localPath: record.localPath,
-            repoURL: record.repoURL,
-            state: .loaded,
-            localChangeCount: Self.localChangeCount(statuses),
-            conflictedCount: Self.conflictedCount(statuses),
-            remoteNewCommitCount: remoteNewEntries.count,
-            remoteLatestRevision: remoteEntries.map(\.revision).max { $0.value < $1.value },
-            notificationSummary: Self.notificationSummary(recordName: record.name, newEntries: remoteNewEntries)
-        )
+        do {
+            let statuses = try await statusProvider.status(wc: URL(fileURLWithPath: record.localPath))
+            let remoteEntries = try await remoteLogProvider.remoteLogFromHead(
+                url: record.repoURL,
+                batch: configuration.remoteLogBatchSize,
+                verbose: false,
+                auth: nil
+            )
+            let remoteNewEntries = Self.remoteNewEntries(remoteEntries, baseline: record.revision)
+
+            return MenuBarWorkingCopySnapshot(
+                recordID: record.id,
+                name: record.name,
+                localPath: record.localPath,
+                repoURL: record.repoURL,
+                state: .loaded,
+                localChangeCount: Self.localChangeCount(statuses),
+                conflictedCount: Self.conflictedCount(statuses),
+                remoteNewCommitCount: remoteNewEntries.count,
+                remoteLatestRevision: remoteEntries.map(\.revision).max { $0.value < $1.value },
+                notificationSummary: Self.notificationSummary(recordName: record.name, newEntries: remoteNewEntries)
+            )
+        } catch {
+            return Self.emptySnapshot(record: record, state: .error(String(describing: error)))
+        }
     }
 
     private static func localChangeCount(_ statuses: [FileStatus]) -> Int {
@@ -86,6 +94,24 @@ public actor MenuBarStatusSnapshotter: MenuBarStatusSnapshotting {
         }
 
         return "\(recordName) 有 \(newEntries.count) 个新提交（\(first.author): \(first.message)）"
+    }
+
+    private static func emptySnapshot(
+        record: WorkingCopyRecord,
+        state: MenuBarWorkingCopySnapshotState
+    ) -> MenuBarWorkingCopySnapshot {
+        MenuBarWorkingCopySnapshot(
+            recordID: record.id,
+            name: record.name,
+            localPath: record.localPath,
+            repoURL: record.repoURL,
+            state: state,
+            localChangeCount: 0,
+            conflictedCount: 0,
+            remoteNewCommitCount: 0,
+            remoteLatestRevision: nil,
+            notificationSummary: nil
+        )
     }
 }
 

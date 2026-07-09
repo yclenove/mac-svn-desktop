@@ -59,6 +59,58 @@ final class MenuBarStatusSnapshotterTests: XCTestCase {
             RemoteLogCall(url: "https://svn.example.com/repo/trunk", batch: 10, verbose: false, auth: nil)
         ])
     }
+
+    func testSnapshotIsolatesInvalidWorkingCopiesAndProviderFailures() async throws {
+        let invalid = WorkingCopyRecord(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+            name: "MissingWC",
+            localPath: "/tmp/MissingWC",
+            repoURL: "https://svn.example.com/repo/missing",
+            username: nil,
+            addedAt: Date(timeIntervalSince1970: 1),
+            lastOpenedAt: Date(timeIntervalSince1970: 1),
+            isValid: false,
+            revision: Revision(1)
+        )
+        let failing = WorkingCopyRecord(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
+            name: "FailingWC",
+            localPath: "/tmp/FailingWC",
+            repoURL: "https://svn.example.com/repo/failing",
+            username: nil,
+            addedAt: Date(timeIntervalSince1970: 1),
+            lastOpenedAt: Date(timeIntervalSince1970: 1),
+            isValid: true,
+            revision: Revision(1)
+        )
+        let statusProvider = FakeMenuBarStatusProvider(
+            statuses: [:],
+            errors: [URL(fileURLWithPath: "/tmp/FailingWC"): FakeMenuBarError.failed]
+        )
+        let remoteLogProvider = FakeMenuBarRemoteLogProvider(entries: [:])
+        let snapshotter = MenuBarStatusSnapshotter(statusProvider: statusProvider, remoteLogProvider: remoteLogProvider)
+
+        let snapshot = try await snapshotter.snapshot(records: [invalid, failing], now: Date(timeIntervalSince1970: 2))
+
+        XCTAssertEqual(snapshot.workingCopies.map(\.state), [
+            .invalidWorkingCopy,
+            .error(String(describing: FakeMenuBarError.failed))
+        ])
+        XCTAssertEqual(snapshot.totalLocalChangeCount, 0)
+        XCTAssertEqual(snapshot.totalRemoteNewCommitCount, 0)
+        XCTAssertFalse(snapshot.hasAttentionItems)
+        let statusCalls = await statusProvider.recordedCalls()
+        let remoteLogCalls = await remoteLogProvider.recordedCalls()
+        XCTAssertEqual(statusCalls, [URL(fileURLWithPath: "/tmp/FailingWC")])
+        XCTAssertEqual(remoteLogCalls, [])
+    }
+
+    func testConfigurationClampsInvalidValuesToPositiveDefaults() {
+        let configuration = MenuBarMonitorConfiguration(pollIntervalMinutes: 0, remoteLogBatchSize: -5)
+
+        XCTAssertEqual(configuration.pollIntervalMinutes, 1)
+        XCTAssertEqual(configuration.remoteLogBatchSize, 1)
+    }
 }
 
 private struct RemoteLogCall: Equatable, Sendable {
@@ -70,10 +122,12 @@ private struct RemoteLogCall: Equatable, Sendable {
 
 private actor FakeMenuBarStatusProvider: StatusProviding {
     private let statuses: [URL: [FileStatus]]
+    private let errors: [URL: FakeMenuBarError]
     private var calls: [URL] = []
 
-    init(statuses: [URL: [FileStatus]]) {
+    init(statuses: [URL: [FileStatus]], errors: [URL: FakeMenuBarError] = [:]) {
         self.statuses = statuses
+        self.errors = errors
     }
 
     func recordedCalls() -> [URL] {
@@ -82,8 +136,15 @@ private actor FakeMenuBarStatusProvider: StatusProviding {
 
     func status(wc: URL) async throws -> [FileStatus] {
         calls.append(wc)
+        if let error = errors[wc] {
+            throw error
+        }
         return statuses[wc] ?? []
     }
+}
+
+private enum FakeMenuBarError: Error {
+    case failed
 }
 
 private actor FakeMenuBarRemoteLogProvider: MenuBarRemoteLogProviding {
