@@ -220,4 +220,23 @@ final class SvnCommandBuilderTests: XCTestCase {
 
         XCTAssertEqual(command.arguments, ["blame", "--xml", "--non-interactive", "README.txt"])
     }
+
+    func testPropertyCommandsUseXmlUtf8AndNonInteractive() {
+        XCTAssertEqual(
+            SvnCommandBuilder.proplist(target: "README.txt").arguments,
+            ["proplist", "--xml", "--verbose", "--non-interactive", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.propget(name: "svn:eol-style", target: "README.txt").arguments,
+            ["propget", "--xml", "--non-interactive", "svn:eol-style", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.propset(name: "svn:eol-style", value: "native", target: "README.txt").arguments,
+            ["propset", "--encoding", "UTF-8", "--non-interactive", "svn:eol-style", "native", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.propdel(name: "svn:eol-style", target: "README.txt").arguments,
+            ["propdel", "--non-interactive", "svn:eol-style", "README.txt"]
+        )
+    }
 }

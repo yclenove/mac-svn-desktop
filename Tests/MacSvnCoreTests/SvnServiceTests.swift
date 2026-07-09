@@ -42,6 +42,25 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["blame"])
     }
 
+    func testPropertyMethodsForwardToBackendAndWritesUseLocks() async throws {
+        let backend = MockSvnBackend()
+        backend.propertiesResult = [
+            SvnProperty(target: "README.txt", name: "svn:eol-style", value: "native")
+        ]
+        backend.propertyValueResult = SvnProperty(target: "README.txt", name: "svn:eol-style", value: "native")
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let properties = try await service.properties(wc: wc, target: "README.txt")
+        let value = try await service.propertyValue(wc: wc, target: "README.txt", name: "svn:eol-style")
+        try await service.setProperty(wc: wc, target: "README.txt", name: "custom:reviewer", value: "杨超")
+        try await service.deleteProperty(wc: wc, target: "README.txt", name: "custom:reviewer")
+
+        XCTAssertEqual(properties, backend.propertiesResult)
+        XCTAssertEqual(value, backend.propertyValueResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["properties", "propertyValue", "setProperty", "deleteProperty"])
+    }
+
     func testCommitRejectsEmptyMessage() async {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -605,6 +624,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var blameResult: [BlameLine] = []
+    var propertiesResult: [SvnProperty] = []
+    var propertyValueResult: SvnProperty?
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var listResult: [RemoteEntry] = []
@@ -689,6 +710,24 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     func blame(wc: URL, target: String) async throws -> [BlameLine] {
         record("blame")
         return blameResult
+    }
+
+    func properties(wc: URL, target: String) async throws -> [SvnProperty] {
+        record("properties")
+        return propertiesResult
+    }
+
+    func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty? {
+        record("propertyValue")
+        return propertyValueResult
+    }
+
+    func setProperty(wc: URL, target: String, name: String, value: String) async throws {
+        record("setProperty")
+    }
+
+    func deleteProperty(wc: URL, target: String, name: String) async throws {
+        record("deleteProperty")
     }
 
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {

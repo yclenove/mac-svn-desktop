@@ -32,6 +32,14 @@ public actor SvnService {
         try await backend.blame(wc: wc, target: target)
     }
 
+    public func properties(wc: URL, target: String) async throws -> [SvnProperty] {
+        try await backend.properties(wc: wc, target: target)
+    }
+
+    public func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty? {
+        try await backend.propertyValue(wc: wc, target: target, name: name)
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
     }
@@ -196,6 +204,18 @@ public actor SvnService {
     public func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {
         try await withWriteLock(wc: wc, operation: "resolve") {
             try await backend.resolve(wc: wc, path: path, accept: accept)
+        }
+    }
+
+    public func setProperty(wc: URL, target: String, name: String, value: String) async throws {
+        try await withWriteLock(wc: wc, operation: "setProperty") {
+            try await backend.setProperty(wc: wc, target: target, name: name, value: value)
+        }
+    }
+
+    public func deleteProperty(wc: URL, target: String, name: String) async throws {
+        try await withWriteLock(wc: wc, operation: "deleteProperty") {
+            try await backend.deleteProperty(wc: wc, target: target, name: name)
         }
     }
 

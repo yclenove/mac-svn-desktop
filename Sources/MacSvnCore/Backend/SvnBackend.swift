@@ -14,6 +14,10 @@ public protocol SvnBackend: Sendable {
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
     func blame(wc: URL, target: String) async throws -> [BlameLine]
+    func properties(wc: URL, target: String) async throws -> [SvnProperty]
+    func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty?
+    func setProperty(wc: URL, target: String, name: String, value: String) async throws
+    func deleteProperty(wc: URL, target: String, name: String) async throws
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry]
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]

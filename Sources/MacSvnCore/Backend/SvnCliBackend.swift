@@ -114,6 +114,32 @@ public struct SvnCliBackend: SvnBackend {
         return try BlameXMLParser.parse(result.stdout)
     }
 
+    public func properties(wc: URL, target: String) async throws -> [SvnProperty] {
+        let result = try await run(SvnCommandBuilder.proplist(target: target), currentDirectory: wc.path, stdin: nil)
+        return try PropertyXMLParser.parse(result.stdout)
+    }
+
+    public func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty? {
+        let result = try await run(SvnCommandBuilder.propget(name: name, target: target), currentDirectory: wc.path, stdin: nil)
+        return try PropertyXMLParser.parse(result.stdout).first
+    }
+
+    public func setProperty(wc: URL, target: String, name: String, value: String) async throws {
+        _ = try await run(
+            SvnCommandBuilder.propset(name: name, value: value, target: target),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
+    public func deleteProperty(wc: URL, target: String, name: String) async throws {
+        _ = try await run(
+            SvnCommandBuilder.propdel(name: name, target: target),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         let command = SvnCommandBuilder.log(target: target, from: from, batch: batch, verbose: verbose)
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)

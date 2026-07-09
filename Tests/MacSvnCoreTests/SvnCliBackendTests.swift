@@ -64,6 +64,55 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testPropertyQueriesRunInWorkingCopyAndParseXml() async throws {
+        let xml = """
+        <properties><target path="README.txt"><property name="svn:eol-style">native</property></target></properties>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let properties = try await backend.properties(wc: wc, target: "README.txt")
+
+        XCTAssertEqual(properties, [
+            SvnProperty(target: "README.txt", name: "svn:eol-style", value: "native")
+        ])
+        XCTAssertEqual(runner.calls.single?.arguments, ["proplist", "--xml", "--verbose", "--non-interactive", "README.txt"])
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testPropertyValueReturnsFirstMatchingProperty() async throws {
+        let xml = """
+        <properties><target path="README.txt"><property name="svn:eol-style">native</property></target></properties>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let property = try await backend.propertyValue(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "README.txt",
+            name: "svn:eol-style"
+        )
+
+        XCTAssertEqual(property, SvnProperty(target: "README.txt", name: "svn:eol-style", value: "native"))
+        XCTAssertEqual(runner.calls.single?.arguments, ["propget", "--xml", "--non-interactive", "svn:eol-style", "README.txt"])
+    }
+
+    func testPropertyWritesRunInWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        try await backend.setProperty(wc: wc, target: "README.txt", name: "custom:reviewer", value: "杨超")
+        try await backend.deleteProperty(wc: wc, target: "README.txt", name: "custom:reviewer")
+
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["propset", "--encoding", "UTF-8", "--non-interactive", "custom:reviewer", "杨超", "README.txt"],
+            ["propdel", "--non-interactive", "custom:reviewer", "README.txt"]
+        ])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
+    }
+
     func testCommitPassesAuthStdinAndParsesRevision() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 42.\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

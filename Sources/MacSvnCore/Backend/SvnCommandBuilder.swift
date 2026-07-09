@@ -111,6 +111,25 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["blame", "--xml", "--non-interactive", target])
     }
 
+    public static func proplist(target: String) -> SvnCommand {
+        SvnCommand(arguments: ["proplist", "--xml", "--verbose", "--non-interactive", target])
+    }
+
+    public static func propget(name: String, target: String) -> SvnCommand {
+        SvnCommand(arguments: ["propget", "--xml", "--non-interactive", name, target])
+    }
+
+    public static func propset(name: String, value: String, target: String) -> SvnCommand {
+        SvnCommand(arguments: [
+            "propset", "--encoding", "UTF-8", "--non-interactive",
+            name, value, target
+        ])
+    }
+
+    public static func propdel(name: String, target: String) -> SvnCommand {
+        SvnCommand(arguments: ["propdel", "--non-interactive", name, target])
+    }
+
     public static func log(
         target: String,
         from: Revision,
