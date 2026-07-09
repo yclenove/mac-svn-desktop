@@ -276,6 +276,76 @@ final class CommitViewModelTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testLoadAndReuseRecentCommitMessages() async {
+        let historyProvider = FakeCommitMessageHistoryProvider(
+            recentMessagesResult: .success(["修复登录", "调整支付"])
+        )
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            commitMessageHistoryProvider: historyProvider
+        )
+
+        await viewModel.loadRecentMessages()
+        viewModel.reuseRecentMessage("调整支付")
+
+        XCTAssertEqual(viewModel.messageHistoryState, .loaded)
+        XCTAssertEqual(viewModel.recentMessages, ["修复登录", "调整支付"])
+        XCTAssertEqual(viewModel.message, "调整支付")
+    }
+
+    @MainActor
+    func testCommitSuccessRecordsMessageHistoryAndRefreshesRecentMessages() async {
+        let historyProvider = FakeCommitMessageHistoryProvider(
+            recentMessagesResult: .success(["修复：登录超时"])
+        )
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            commitMessageHistoryProvider: historyProvider
+        )
+        viewModel.message = " 修复：登录超时 "
+
+        await viewModel.commit(auth: nil)
+        let recorded = await historyProvider.recordedMessages()
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(42)))
+        XCTAssertEqual(recorded, [
+            CommitMessageHistoryRecord(wc: URL(fileURLWithPath: "/tmp/wc"), message: " 修复：登录超时 ")
+        ])
+        XCTAssertEqual(viewModel.recentMessages, ["修复：登录超时"])
+        XCTAssertEqual(viewModel.messageHistoryState, .loaded)
+    }
+
+    @MainActor
+    func testCommitHistoryFailureDoesNotOverrideCommittedState() async {
+        let historyProvider = FakeCommitMessageHistoryProvider(
+            recentMessagesResult: .failure(SvnError.parse(detail: "bad history")),
+            recordResult: .failure(SvnError.parse(detail: "disk full"))
+        )
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            commitMessageHistoryProvider: historyProvider
+        )
+        viewModel.message = "fix"
+
+        await viewModel.commit(auth: nil)
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(42)))
+        XCTAssertEqual(
+            viewModel.messageHistoryState,
+            .error(String(describing: SvnError.parse(detail: "disk full")))
+        )
+    }
+
     private func sampleStatuses() -> [FileStatus] {
         [
             FileStatus(path: "modified.swift", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
@@ -289,6 +359,49 @@ final class CommitViewModelTests: XCTestCase {
             FileStatus(path: "missing.swift", itemStatus: .missing, revision: Revision(1), isTreeConflict: false),
             FileStatus(path: "normal.swift", itemStatus: .normal, revision: Revision(1), isTreeConflict: false)
         ]
+    }
+}
+
+private struct CommitMessageHistoryRecord: Equatable, Sendable {
+    let wc: URL
+    let message: String
+}
+
+private actor FakeCommitMessageHistoryProvider: CommitMessageHistoryProviding {
+    private var recentMessagesResults: [Result<[String], Error>]
+    private let recordResult: Result<Void, Error>
+    private var records: [CommitMessageHistoryRecord] = []
+
+    init(
+        recentMessagesResult: Result<[String], Error> = .success([]),
+        recordResult: Result<Void, Error> = .success(())
+    ) {
+        self.recentMessagesResults = [recentMessagesResult]
+        self.recordResult = recordResult
+    }
+
+    init(
+        recentMessagesResults: [Result<[String], Error>],
+        recordResult: Result<Void, Error> = .success(())
+    ) {
+        self.recentMessagesResults = recentMessagesResults
+        self.recordResult = recordResult
+    }
+
+    func recordedMessages() -> [CommitMessageHistoryRecord] {
+        records
+    }
+
+    func recentMessages(workingCopy: URL) async throws -> [String] {
+        if recentMessagesResults.count > 1 {
+            return try recentMessagesResults.removeFirst().get()
+        }
+        return try (recentMessagesResults.first ?? .success([])).get()
+    }
+
+    func record(message: String, workingCopy: URL) async throws {
+        records.append(CommitMessageHistoryRecord(wc: workingCopy, message: message))
+        try recordResult.get()
     }
 }
 

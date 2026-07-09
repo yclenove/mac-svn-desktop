@@ -190,7 +190,7 @@ git commit -m "feat: add P2 commit message history store"
 - 修改：`Sources/MacSvnCore/ViewModels/CommitViewModel.swift`
 - 修改测试：`Tests/MacSvnCoreTests/CommitViewModelTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `CommitViewModelTests` 中追加测试：
 
@@ -311,7 +311,7 @@ private actor FakeCommitMessageHistoryProvider: CommitMessageHistoryProviding {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter CommitViewModelTests/testLoadAndReuseRecentCommitMessages
@@ -321,7 +321,7 @@ swift test --filter CommitViewModelTests/testCommitHistoryFailureDoesNotOverride
 
 预期：编译失败，提示 `commitMessageHistoryProvider` 参数、`messageHistoryState`、`recentMessages` 或方法不存在。
 
-- [ ] **步骤 3：实现 ViewModel 接入**
+- [x] **步骤 3：实现 ViewModel 接入**
 
 在 `CommitViewModel.swift` 中增加：
 
@@ -397,7 +397,7 @@ private func recordSuccessfulMessage(_ message: String) async {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter CommitMessageHistoryStoreTests
@@ -406,7 +406,7 @@ swift test --filter CommitViewModelTests
 
 预期：提交历史 store 和 CommitViewModel 目标测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/ViewModels/CommitViewModel.swift Tests/MacSvnCoreTests/CommitViewModelTests.swift docs/superpowers/plans/2026-07-10-p2-commit-message-history-core.md

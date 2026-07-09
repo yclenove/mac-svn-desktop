@@ -33,6 +33,13 @@ public enum AIPreCommitReviewViewState: Equatable, Sendable {
     case error(String)
 }
 
+public enum CommitMessageHistoryViewState: Equatable, Sendable {
+    case idle
+    case loading
+    case loaded
+    case error(String)
+}
+
 public enum CommitSelectionPolicy {
     public static func candidates(from statuses: [FileStatus]) -> [FileStatus] {
         statuses.filter { status in
@@ -64,13 +71,16 @@ public final class CommitViewModel {
     private let statusProvider: any StatusProviding
     private let aiCommitMessageGenerator: (any AICommitMessageGenerating)?
     private let aiPreCommitReviewer: (any AIPreCommitReviewing)?
+    private let commitMessageHistoryProvider: (any CommitMessageHistoryProviding)?
 
     public private(set) var state: CommitViewState = .idle
     public private(set) var aiCommitMessageState: AICommitMessageViewState = .idle
     public private(set) var aiPreCommitReviewState: AIPreCommitReviewViewState = .idle
+    public private(set) var messageHistoryState: CommitMessageHistoryViewState = .idle
     public private(set) var committedRevision: Revision?
     public private(set) var aiCommitMessageDraft: AICommitMessageDraft?
     public private(set) var aiPreCommitReviewResult: AIPreCommitReviewResult?
+    public private(set) var recentMessages: [String] = []
     public private(set) var refreshedStatuses: [FileStatus] = []
     public private(set) var guardIssues: [CommitGuardIssue] = []
     public let candidateStatuses: [FileStatus]
@@ -83,13 +93,15 @@ public final class CommitViewModel {
         commitProvider: any CommitProviding,
         statusProvider: any StatusProviding,
         aiCommitMessageGenerator: (any AICommitMessageGenerating)? = nil,
-        aiPreCommitReviewer: (any AIPreCommitReviewing)? = nil
+        aiPreCommitReviewer: (any AIPreCommitReviewing)? = nil,
+        commitMessageHistoryProvider: (any CommitMessageHistoryProviding)? = nil
     ) {
         self.workingCopy = workingCopy
         self.commitProvider = commitProvider
         self.statusProvider = statusProvider
         self.aiCommitMessageGenerator = aiCommitMessageGenerator
         self.aiPreCommitReviewer = aiPreCommitReviewer
+        self.commitMessageHistoryProvider = commitMessageHistoryProvider
         self.candidateStatuses = CommitSelectionPolicy.candidates(from: statuses)
         self.selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
     }
@@ -110,6 +122,28 @@ public final class CommitViewModel {
         } else {
             selectedPaths.remove(path)
         }
+    }
+
+    public func loadRecentMessages() async {
+        guard let commitMessageHistoryProvider else {
+            recentMessages = []
+            messageHistoryState = .loaded
+            return
+        }
+
+        messageHistoryState = .loading
+
+        do {
+            recentMessages = try await commitMessageHistoryProvider.recentMessages(workingCopy: workingCopy)
+            messageHistoryState = .loaded
+        } catch {
+            recentMessages = []
+            messageHistoryState = .error(String(describing: error))
+        }
+    }
+
+    public func reuseRecentMessage(_ recentMessage: String) {
+        message = recentMessage
     }
 
     public func generateAICommitMessage(
@@ -192,11 +226,26 @@ public final class CommitViewModel {
             guardIssues = []
             refreshedStatuses = try await statusProvider.status(wc: workingCopy)
             state = .committed(revision)
+            await recordSuccessfulMessage(message)
         } catch SvnServiceError.commitGuardWarnings(let issues) {
             guardIssues = issues
             state = .guardWarnings(issues)
         } catch {
             state = .error(String(describing: error))
+        }
+    }
+
+    private func recordSuccessfulMessage(_ message: String) async {
+        guard let commitMessageHistoryProvider else {
+            return
+        }
+
+        do {
+            try await commitMessageHistoryProvider.record(message: message, workingCopy: workingCopy)
+            recentMessages = try await commitMessageHistoryProvider.recentMessages(workingCopy: workingCopy)
+            messageHistoryState = .loaded
+        } catch {
+            messageHistoryState = .error(String(describing: error))
         }
     }
 }
