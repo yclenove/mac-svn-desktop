@@ -39,7 +39,14 @@ public struct AIBlameEvolutionExplainer: AIBlameEvolutionExplaining, Sendable {
         privacySettings: AIPrivacySettings
     ) async throws -> AIBlameEvolutionExplanation {
         let selectedLines = blameLines.filter { lineRange.contains($0.lineNumber) }
+        guard !selectedLines.isEmpty else {
+            throw AIBlameEvolutionError.emptyLineSelection
+        }
+
         let revisions = Self.uniqueRevisions(from: selectedLines)
+        guard !revisions.isEmpty else {
+            throw AIBlameEvolutionError.noRevisionEvidence
+        }
 
         let provider = try await defaultProvider()
         let evidence = try await collectEvidence(
@@ -48,6 +55,10 @@ public struct AIBlameEvolutionExplainer: AIBlameEvolutionExplaining, Sendable {
             selectedLines: selectedLines,
             revisions: revisions
         )
+        guard !evidence.isEmpty else {
+            throw AIBlameEvolutionError.emptyDiffChain
+        }
+
         let prompt = Self.prompt(target: target, lineRange: lineRange, evidence: evidence)
         let redactionResult: AIRedactionResult?
         let content: String
@@ -133,7 +144,15 @@ public struct AIBlameEvolutionExplainer: AIBlameEvolutionExplaining, Sendable {
 
     private func decodePayload(_ response: AILLMResponse) throws -> BlameEvolutionPayload {
         let trimmed = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        return try JSONDecoder().decode(BlameEvolutionPayload.self, from: Data(trimmed.utf8))
+        guard !trimmed.isEmpty else {
+            throw AIBlameEvolutionError.emptyModelResponse
+        }
+
+        do {
+            return try JSONDecoder().decode(BlameEvolutionPayload.self, from: Data(trimmed.utf8))
+        } catch {
+            throw AIBlameEvolutionError.invalidModelResponse(trimmed)
+        }
     }
 
     private func systemMessage() -> AILLMMessage {

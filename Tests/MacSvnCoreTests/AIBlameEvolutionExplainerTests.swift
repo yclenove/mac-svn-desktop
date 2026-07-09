@@ -104,6 +104,127 @@ final class AIBlameEvolutionExplainerTests: XCTestCase {
             LogCall(wc: wc, target: "Sources/Login.swift", from: Revision(1201), batch: 1, verbose: true)
         ])
     }
+
+    func testThrowsForMissingInputsEmptyDiffsAndInvalidModelResponse() async throws {
+        let provider = AIProvider(
+            name: "Local",
+            kind: .ollama,
+            baseURL: "http://localhost:11434",
+            model: "llama3",
+            apiKeyRef: nil,
+            maxTokens: 4096,
+            temperature: 0.1
+        )
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let selectedLine = BlameLine(lineNumber: 2, revision: Revision(10), author: "a", date: nil)
+        let noRevisionLine = BlameLine(lineNumber: 2, revision: nil, author: nil, date: nil)
+
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: []),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [:]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: []),
+            wc: wc,
+            lineRange: 2...2,
+            blameLines: [selectedLine],
+            expected: .missingDefaultProvider
+        )
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: [provider]),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [:]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: []),
+            wc: wc,
+            lineRange: 4...5,
+            blameLines: [selectedLine],
+            expected: .emptyLineSelection
+        )
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: [provider]),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [:]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: []),
+            wc: wc,
+            lineRange: 2...2,
+            blameLines: [noRevisionLine],
+            expected: .noRevisionEvidence
+        )
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: [provider]),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [
+                DiffCall(wc: wc, target: "Sources/Login.swift", r1: Revision(9), r2: Revision(10)): "   "
+            ]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: []),
+            wc: wc,
+            lineRange: 2...2,
+            blameLines: [selectedLine],
+            expected: .emptyDiffChain
+        )
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: [provider]),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [
+                DiffCall(wc: wc, target: "Sources/Login.swift", r1: Revision(9), r2: Revision(10)): "+ change"
+            ]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: [
+                AILLMResponse(content: "   ", promptTokens: nil, completionTokens: nil)
+            ]),
+            wc: wc,
+            lineRange: 2...2,
+            blameLines: [selectedLine],
+            expected: .emptyModelResponse
+        )
+        try await assertExplainThrows(
+            providerManager: FakeBlameEvolutionProviderManager(providers: [provider]),
+            diffProvider: FakeBlameEvolutionDiffProvider(diffs: [
+                DiffCall(wc: wc, target: "Sources/Login.swift", r1: Revision(9), r2: Revision(10)): "+ change"
+            ]),
+            logProvider: FakeBlameEvolutionLogProvider(entries: [:]),
+            llmClient: FakeBlameEvolutionLLMClient(responses: [
+                AILLMResponse(content: "not json", promptTokens: nil, completionTokens: nil)
+            ]),
+            wc: wc,
+            lineRange: 2...2,
+            blameLines: [selectedLine],
+            expected: .invalidModelResponse("not json")
+        )
+    }
+
+    private func assertExplainThrows(
+        providerManager: FakeBlameEvolutionProviderManager,
+        diffProvider: FakeBlameEvolutionDiffProvider,
+        logProvider: FakeBlameEvolutionLogProvider,
+        llmClient: FakeBlameEvolutionLLMClient,
+        wc: URL,
+        lineRange: ClosedRange<Int>,
+        blameLines: [BlameLine],
+        expected: AIBlameEvolutionError,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async throws {
+        let explainer = AIBlameEvolutionExplainer(
+            providerManager: providerManager,
+            diffProvider: diffProvider,
+            logProvider: logProvider,
+            llmClient: llmClient
+        )
+
+        do {
+            _ = try await explainer.explain(
+                wc: wc,
+                target: "Sources/Login.swift",
+                lineRange: lineRange,
+                blameLines: blameLines,
+                privacySettings: AIPrivacySettings()
+            )
+            XCTFail("Expected \(expected)", file: file, line: line)
+        } catch let error as AIBlameEvolutionError {
+            XCTAssertEqual(error, expected, file: file, line: line)
+        } catch {
+            XCTFail("Expected AIBlameEvolutionError, got \(error)", file: file, line: line)
+        }
+    }
 }
 
 private struct DiffCall: Hashable, Equatable, Sendable {

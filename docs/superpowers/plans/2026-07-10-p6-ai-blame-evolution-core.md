@@ -561,7 +561,7 @@ git commit -m "feat: add P6 AI blame evolution explainer core"
 - 修改：`Sources/MacSvnCore/Services/AIBlameEvolutionExplainer.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AIBlameEvolutionExplainerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIBlameEvolutionExplainerTests` 增加：
 
@@ -688,7 +688,7 @@ private func assertExplainThrows(
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIBlameEvolutionExplainerTests
@@ -696,7 +696,7 @@ swift test --filter AIBlameEvolutionExplainerTests
 
 预期：错误路径测试失败或编译失败。
 
-- [ ] **步骤 3：实现最少错误处理**
+- [x] **步骤 3：实现最少错误处理**
 
 实现要求：
 - provider 列表为空抛 `.missingDefaultProvider`；
@@ -706,7 +706,7 @@ swift test --filter AIBlameEvolutionExplainerTests
 - 空 LLM 响应抛 `.emptyModelResponse`；
 - 非 JSON 或 schema 不匹配抛 `.invalidModelResponse(trimmed)`。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIBlameEvolutionExplainerTests
@@ -714,7 +714,7 @@ swift test --filter AIBlameEvolutionExplainerTests
 
 预期：全部 `AIBlameEvolutionExplainerTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AIBlameEvolutionExplainer.swift Tests/MacSvnCoreTests/AIBlameEvolutionExplainerTests.swift docs/superpowers/plans/2026-07-10-p6-ai-blame-evolution-core.md
