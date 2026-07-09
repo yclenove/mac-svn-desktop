@@ -12,6 +12,19 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statuses, [])
     }
 
+    func testBlameReadsLineRevisionAuthorFromWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let lines = try await service.blame(wc: fixture.workingCopy, target: "README.txt")
+
+        XCTAssertFalse(lines.isEmpty)
+        XCTAssertEqual(lines.first?.lineNumber, 1)
+        XCTAssertNotNil(lines.first?.revision)
+        XCTAssertNotNil(lines.first?.author)
+    }
+
     func testCheckoutWithEmptyDepthCreatesWorkingCopyWithoutChildren() async throws {
         let fixture = try makeFixture()
 
