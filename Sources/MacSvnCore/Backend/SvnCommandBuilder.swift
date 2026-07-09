@@ -15,6 +15,12 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["status", "--xml", "--non-interactive"])
     }
 
+    public static func lockStatus(targets: [String]) -> SvnCommand {
+        SvnCommand(arguments: [
+            "status", "--xml", "--show-updates", "--non-interactive"
+        ] + targets)
+    }
+
     public static func commit(paths: [String], message: String, authArguments: [String] = []) -> SvnCommand {
         SvnCommand(arguments: [
             "commit", "--encoding", "UTF-8", "--non-interactive",
@@ -132,6 +138,32 @@ public enum SvnCommandBuilder {
 
     public static func propdel(name: String, target: String) -> SvnCommand {
         SvnCommand(arguments: ["propdel", "--non-interactive", name, target])
+    }
+
+    public static func lock(paths: [String], message: String?, force: Bool) -> SvnCommand {
+        var arguments = ["lock", "--encoding", "UTF-8", "--non-interactive"]
+
+        if force {
+            arguments.append("--force")
+        }
+
+        if let message, !message.isEmpty {
+            arguments += ["-m", message]
+        }
+
+        arguments += paths
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func unlock(paths: [String], force: Bool) -> SvnCommand {
+        var arguments = ["unlock", "--non-interactive"]
+
+        if force {
+            arguments.append("--force")
+        }
+
+        arguments += paths
+        return SvnCommand(arguments: arguments)
     }
 
     public static func log(

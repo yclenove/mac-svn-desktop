@@ -40,6 +40,10 @@ public actor SvnService {
         try await backend.propertyValue(wc: wc, target: target, name: name)
     }
 
+    public func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
+        try await backend.locks(wc: wc, targets: targets)
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
     }
@@ -216,6 +220,18 @@ public actor SvnService {
     public func deleteProperty(wc: URL, target: String, name: String) async throws {
         try await withWriteLock(wc: wc, operation: "deleteProperty") {
             try await backend.deleteProperty(wc: wc, target: target, name: name)
+        }
+    }
+
+    public func lock(wc: URL, paths: [String], message: String?, force: Bool) async throws {
+        try await withWriteLock(wc: wc, operation: "lock") {
+            try await backend.lock(wc: wc, paths: paths, message: message, force: force)
+        }
+    }
+
+    public func unlock(wc: URL, paths: [String], force: Bool) async throws {
+        try await withWriteLock(wc: wc, operation: "unlock") {
+            try await backend.unlock(wc: wc, paths: paths, force: force)
         }
     }
 

@@ -243,4 +243,23 @@ final class SvnCommandBuilderTests: XCTestCase {
             ["propdel", "--non-interactive", "svn:eol-style", "README.txt"]
         )
     }
+
+    func testLockCommandsUseNonInteractiveUtf8MessageForceAndTargets() {
+        XCTAssertEqual(
+            SvnCommandBuilder.lockStatus(targets: ["README.txt"]).arguments,
+            ["status", "--xml", "--show-updates", "--non-interactive", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.lock(paths: ["README.txt"], message: "锁定：编辑中", force: true).arguments,
+            ["lock", "--encoding", "UTF-8", "--non-interactive", "--force", "-m", "锁定：编辑中", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.lock(paths: ["README.txt"], message: nil, force: false).arguments,
+            ["lock", "--encoding", "UTF-8", "--non-interactive", "README.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.unlock(paths: ["README.txt"], force: true).arguments,
+            ["unlock", "--non-interactive", "--force", "README.txt"]
+        )
+    }
 }

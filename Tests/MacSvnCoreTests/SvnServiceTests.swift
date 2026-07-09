@@ -61,6 +61,30 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["properties", "propertyValue", "setProperty", "deleteProperty"])
     }
 
+    func testLockMethodsForwardToBackendAndWritesUseLocks() async throws {
+        let backend = MockSvnBackend()
+        backend.locksResult = [
+            SvnLock(
+                target: "README.txt",
+                token: "t",
+                owner: "u",
+                comment: nil,
+                created: nil,
+                isOwnedByWorkingCopy: true,
+                isRepositoryLocked: true
+            )
+        ]
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let locks = try await service.locks(wc: wc, targets: ["README.txt"])
+        try await service.lock(wc: wc, paths: ["README.txt"], message: "note", force: true)
+        try await service.unlock(wc: wc, paths: ["README.txt"], force: true)
+
+        XCTAssertEqual(locks, backend.locksResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["locks", "lock", "unlock"])
+    }
+
     func testCommitRejectsEmptyMessage() async {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -626,6 +650,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var blameResult: [BlameLine] = []
     var propertiesResult: [SvnProperty] = []
     var propertyValueResult: SvnProperty?
+    var locksResult: [SvnLock] = []
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var listResult: [RemoteEntry] = []
@@ -728,6 +753,19 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     func deleteProperty(wc: URL, target: String, name: String) async throws {
         record("deleteProperty")
+    }
+
+    func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
+        record("locks")
+        return locksResult
+    }
+
+    func lock(wc: URL, paths: [String], message: String?, force: Bool) async throws {
+        record("lock")
+    }
+
+    func unlock(wc: URL, paths: [String], force: Bool) async throws {
+        record("unlock")
     }
 
     func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {

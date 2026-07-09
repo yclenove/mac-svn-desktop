@@ -113,6 +113,36 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
     }
 
+    func testLockStatusRunsInWorkingCopyAndParsesXml() async throws {
+        let xml = """
+        <status><target path="."><entry path="README.txt"><wc-status item="normal" revision="1"/><repos-status item="none"><lock><token>t</token><owner>u</owner></lock></repos-status></entry></target></status>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let locks = try await backend.locks(wc: URL(fileURLWithPath: "/tmp/wc"), targets: ["README.txt"])
+
+        XCTAssertEqual(locks.map(\.target), ["README.txt"])
+        XCTAssertEqual(locks.first?.owner, "u")
+        XCTAssertEqual(runner.calls.single?.arguments, ["status", "--xml", "--show-updates", "--non-interactive", "README.txt"])
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testLockAndUnlockRunInWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        try await backend.lock(wc: wc, paths: ["README.txt"], message: "锁定：编辑中", force: true)
+        try await backend.unlock(wc: wc, paths: ["README.txt"], force: true)
+
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["lock", "--encoding", "UTF-8", "--non-interactive", "--force", "-m", "锁定：编辑中", "README.txt"],
+            ["unlock", "--non-interactive", "--force", "README.txt"]
+        ])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
+    }
+
     func testCommitPassesAuthStdinAndParsesRevision() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 42.\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

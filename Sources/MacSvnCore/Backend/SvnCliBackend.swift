@@ -140,6 +140,31 @@ public struct SvnCliBackend: SvnBackend {
         )
     }
 
+    public func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
+        let result = try await run(
+            SvnCommandBuilder.lockStatus(targets: targets),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+        return try LockStatusXMLParser.parse(result.stdout)
+    }
+
+    public func lock(wc: URL, paths: [String], message: String?, force: Bool) async throws {
+        _ = try await run(
+            SvnCommandBuilder.lock(paths: paths, message: message, force: force),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
+    public func unlock(wc: URL, paths: [String], force: Bool) async throws {
+        _ = try await run(
+            SvnCommandBuilder.unlock(paths: paths, force: force),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
         let command = SvnCommandBuilder.log(target: target, from: from, batch: batch, verbose: verbose)
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)
