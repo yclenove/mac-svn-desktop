@@ -457,7 +457,7 @@ swift test --filter "AICommitMessageGeneratorTests|CommitViewModelTests"
 
 预期：AI generator 与 CommitViewModel 测试全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/ViewModels/CommitViewModel.swift \
@@ -469,7 +469,7 @@ git commit -m "feat: connect P6 AI commit message generation to commit view mode
 
 ## 任务 3：全量验证与计划收尾
 
-- [ ] **步骤 1：运行 P6 AI 目标集合**
+- [x] **步骤 1：运行 P6 AI 目标集合**
 
 ```bash
 swift test --filter "AIDataRedactorTests|AIProviderStoreTests|AIProviderSettingsViewModelTests|AICommitMessageGeneratorTests|CommitViewModelTests"
@@ -477,7 +477,7 @@ swift test --filter "AIDataRedactorTests|AIProviderStoreTests|AIProviderSettings
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -486,7 +486,7 @@ git diff --check
 
 预期：全量测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add docs/superpowers/plans/2026-07-10-p6-ai-commit-message-core.md
