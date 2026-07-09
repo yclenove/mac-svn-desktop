@@ -155,6 +155,86 @@ public enum AICommitMessageError: Error, Equatable, Sendable {
     case emptyModelResponse
 }
 
+public enum AIPreCommitReviewSeverity: String, Codable, Equatable, Sendable {
+    case blockingSuggestion
+    case generalSuggestion
+    case tip
+}
+
+public enum AIPreCommitReviewCategory: String, Codable, Equatable, Sendable {
+    case correctness
+    case security
+    case maintainability
+    case testing
+    case style
+    case suspectedSecret
+}
+
+public struct AIPreCommitReviewFinding: Codable, Equatable, Sendable {
+    public let severity: AIPreCommitReviewSeverity
+    public let category: AIPreCommitReviewCategory
+    public let path: String?
+    public let line: Int?
+    public let message: String
+    public let rationale: String?
+
+    public init(
+        severity: AIPreCommitReviewSeverity,
+        category: AIPreCommitReviewCategory,
+        path: String?,
+        line: Int?,
+        message: String,
+        rationale: String?
+    ) {
+        self.severity = severity
+        self.category = category
+        self.path = path
+        self.line = line
+        self.message = message
+        self.rationale = rationale
+    }
+}
+
+public struct AIPreCommitReviewResult: Codable, Equatable, Sendable {
+    public let summary: String
+    public let findings: [AIPreCommitReviewFinding]
+    public let providerID: UUID
+    public let sourceFileCount: Int
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+    public let usedMapReduce: Bool
+
+    public init(
+        summary: String,
+        findings: [AIPreCommitReviewFinding],
+        providerID: UUID,
+        sourceFileCount: Int,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int,
+        usedMapReduce: Bool
+    ) {
+        self.summary = summary
+        self.findings = findings
+        self.providerID = providerID
+        self.sourceFileCount = sourceFileCount
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+        self.usedMapReduce = usedMapReduce
+    }
+
+    public var hasSuspectedSecretWarning: Bool {
+        findings.contains { $0.category == .suspectedSecret }
+    }
+}
+
+public enum AIPreCommitReviewError: Error, Equatable, Sendable {
+    case emptySelection
+    case missingDefaultProvider
+    case emptyDiff
+    case emptyModelResponse
+    case invalidModelResponse(String)
+}
+
 public struct AIRedactionMatch: Codable, Equatable, Sendable {
     public let ruleID: String
     public let matchCount: Int

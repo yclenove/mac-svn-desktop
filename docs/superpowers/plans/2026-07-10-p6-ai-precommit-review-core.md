@@ -30,7 +30,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIPreCommitReviewer.swift`
 - 测试：`Tests/MacSvnCoreTests/AIPreCommitReviewerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `Tests/MacSvnCoreTests/AIPreCommitReviewerTests.swift`：
 
@@ -251,7 +251,7 @@ final class AIPreCommitReviewerTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIPreCommitReviewerTests
@@ -259,7 +259,7 @@ swift test --filter AIPreCommitReviewerTests
 
 预期：编译失败，提示 `AIPreCommitReviewer` / `AIPreCommitReviewResult` / `AIPreCommitReviewError` 等类型未定义。
 
-- [ ] **步骤 3：实现最少模型与服务代码**
+- [x] **步骤 3：实现最少模型与服务代码**
 
 在 `AIModels.swift` 增加：
 
@@ -334,7 +334,7 @@ public protocol AIPreCommitReviewing: Sendable {
 - `redactionMatches` 非空时，追加一个 `category == .suspectedSecret`、`severity == .blockingSuggestion` 的 finding；
 - 合并 diff 超过 `maxPromptCharacters` 时先逐文件摘要，再对摘要做最终评审。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIPreCommitReviewerTests
