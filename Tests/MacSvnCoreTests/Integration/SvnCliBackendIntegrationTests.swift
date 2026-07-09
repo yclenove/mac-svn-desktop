@@ -85,6 +85,21 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertFalse(entries.first?.changedPaths.isEmpty ?? true)
     }
 
+    func testServiceListsBranchesAndTagsFromRepositoryRoot() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+
+        let branchList = try await service.branches(
+            repositoryRoot: fixture.repositoryURL,
+            layout: BranchLayout(),
+            auth: nil
+        )
+
+        XCTAssertEqual(branchList.trunk?.url, fixture.trunkURL)
+        XCTAssertEqual(branchList.branches.map(\.name), ["feature-one"])
+        XCTAssertEqual(branchList.tags.map(\.name), ["v1.0"])
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

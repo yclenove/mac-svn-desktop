@@ -335,6 +335,53 @@ public struct BranchLayout: Codable, Equatable, Sendable {
     }
 }
 
+public enum BranchReferenceKind: Equatable, Sendable {
+    case trunk
+    case branch
+    case tag
+}
+
+public struct BranchReference: Equatable, Sendable {
+    public let name: String
+    public let url: String
+    public let kind: BranchReferenceKind
+    public let revision: Revision?
+    public let author: String?
+    public let date: Date?
+
+    public init(
+        name: String,
+        url: String,
+        kind: BranchReferenceKind,
+        revision: Revision?,
+        author: String?,
+        date: Date?
+    ) {
+        self.name = name
+        self.url = url
+        self.kind = kind
+        self.revision = revision
+        self.author = author
+        self.date = date
+    }
+}
+
+public struct BranchList: Equatable, Sendable {
+    public var trunk: BranchReference?
+    public var branches: [BranchReference]
+    public var tags: [BranchReference]
+
+    public init(
+        trunk: BranchReference? = nil,
+        branches: [BranchReference] = [],
+        tags: [BranchReference] = []
+    ) {
+        self.trunk = trunk
+        self.branches = branches
+        self.tags = tags
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var svnPath: String?
     public var logBatchSize: Int

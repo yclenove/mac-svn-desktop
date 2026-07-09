@@ -32,15 +32,19 @@ class SvnIntegrationTestCase: XCTestCase {
         let branches = importRoot.appendingPathComponent("branches", isDirectory: true)
         let tags = importRoot.appendingPathComponent("tags", isDirectory: true)
         let sourceDirectory = trunk.appendingPathComponent("src", isDirectory: true)
+        let featureBranch = branches.appendingPathComponent("feature-one", isDirectory: true)
+        let releaseTag = tags.appendingPathComponent("v1.0", isDirectory: true)
         let workingCopy = root.appendingPathComponent("wc", isDirectory: true)
 
         temporaryRoots.append(root)
         try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: branches, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: tags, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: featureBranch, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: releaseTag, withIntermediateDirectories: true)
         try "hello\n".write(to: trunk.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
         try "print('seed')\n".write(to: sourceDirectory.appendingPathComponent("main.txt"), atomically: true, encoding: .utf8)
         try "中文内容\n".write(to: trunk.appendingPathComponent("中文文件.txt"), atomically: true, encoding: .utf8)
+        try "branch seed\n".write(to: featureBranch.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
+        try "tag seed\n".write(to: releaseTag.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
 
         try runTool(executable: tools.svnadmin, arguments: ["create", repository.path], currentDirectory: nil)
         try runTool(
