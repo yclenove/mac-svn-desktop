@@ -284,6 +284,56 @@ public enum AICommitMessageError: Error, Equatable, Sendable {
     case emptyModelResponse
 }
 
+public enum AIReleaseNotesTemplate: String, Codable, Equatable, Sendable {
+    case standardMarkdown
+    case companyTemplate
+}
+
+public struct AIReleaseNotesSection: Codable, Equatable, Sendable {
+    public let title: String
+    public let items: [String]
+
+    public init(title: String, items: [String]) {
+        self.title = title
+        self.items = items
+    }
+}
+
+public struct AIReleaseNotesDraft: Codable, Equatable, Sendable {
+    public let title: String
+    public let markdown: String
+    public let sections: [AIReleaseNotesSection]
+    public let providerID: UUID
+    public let entryCount: Int
+    public let redactionMatches: [AIRedactionMatch]
+    public let promptCount: Int
+
+    public init(
+        title: String,
+        markdown: String,
+        sections: [AIReleaseNotesSection],
+        providerID: UUID,
+        entryCount: Int,
+        redactionMatches: [AIRedactionMatch],
+        promptCount: Int
+    ) {
+        self.title = title
+        self.markdown = markdown
+        self.sections = sections
+        self.providerID = providerID
+        self.entryCount = entryCount
+        self.redactionMatches = redactionMatches
+        self.promptCount = promptCount
+    }
+}
+
+public enum AIReleaseNotesError: Error, Equatable, Sendable {
+    case emptyLogSelection
+    case missingDefaultProvider
+    case emptyModelResponse
+    case invalidModelResponse(String)
+}
+
 public enum AIPreCommitReviewSeverity: String, Codable, Equatable, Sendable {
     case blockingSuggestion
     case generalSuggestion

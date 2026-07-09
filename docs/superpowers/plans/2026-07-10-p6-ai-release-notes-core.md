@@ -28,7 +28,7 @@
 - 创建：`Sources/MacSvnCore/Services/AIReleaseNotesGenerator.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIReleaseNotesGeneratorTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AIReleaseNotesGeneratorTests` 增加：
 
@@ -107,7 +107,7 @@ func testGenerateReleaseNotesParsesJSONBuildsMarkdownAndRedactsSecrets() async t
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIReleaseNotesGeneratorTests
@@ -115,7 +115,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 
 预期：编译失败，提示 `AIReleaseNotesGenerator`、`AIReleaseNotesTemplate` 或 `AIReleaseNotesDraft` 不存在。
 
-- [ ] **步骤 3：实现最少模型与生成器代码**
+- [x] **步骤 3：实现最少模型与生成器代码**
 
 实现要求：
 - 空 entries 在任务 2 前可先返回空错误占位，任务 2 补完整错误；
@@ -126,7 +126,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 - 解析后渲染 Markdown：`# title`、`## section.title`、`- item`；
 - 返回 providerID、entryCount、redactionMatches、promptCount。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIReleaseNotesGeneratorTests
@@ -134,7 +134,7 @@ swift test --filter AIReleaseNotesGeneratorTests
 
 预期：主路径测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift Sources/MacSvnCore/Services/AIReleaseNotesGenerator.swift Tests/MacSvnCoreTests/AIReleaseNotesGeneratorTests.swift docs/superpowers/plans/2026-07-10-p6-ai-release-notes-core.md
