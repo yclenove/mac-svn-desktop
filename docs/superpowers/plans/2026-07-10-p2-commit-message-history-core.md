@@ -29,7 +29,7 @@
 - 创建：`Sources/MacSvnCore/Services/CommitMessageHistoryStore.swift`
 - 创建测试：`Tests/MacSvnCoreTests/CommitMessageHistoryStoreTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `CommitMessageHistoryStoreTests.swift`：
 
@@ -97,7 +97,7 @@ final class CommitMessageHistoryStoreTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter CommitMessageHistoryStoreTests
@@ -105,7 +105,7 @@ swift test --filter CommitMessageHistoryStoreTests
 
 预期：编译失败，提示 `CommitMessageHistoryStore` 或 `CommitMessageHistoryStoreError` 不存在。
 
-- [ ] **步骤 3：实现最少 Store**
+- [x] **步骤 3：实现最少 Store**
 
 创建 `CommitMessageHistoryStore.swift`：
 
@@ -167,7 +167,7 @@ public actor CommitMessageHistoryStore: CommitMessageHistoryProviding {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter CommitMessageHistoryStoreTests
@@ -175,7 +175,7 @@ swift test --filter CommitMessageHistoryStoreTests
 
 预期：Store 目标测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/CommitMessageHistoryStore.swift Tests/MacSvnCoreTests/CommitMessageHistoryStoreTests.swift docs/superpowers/plans/2026-07-10-p2-commit-message-history-core.md
