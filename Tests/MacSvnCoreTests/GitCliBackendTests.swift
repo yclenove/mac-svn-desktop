@@ -41,6 +41,41 @@ final class GitCliBackendTests: XCTestCase {
             XCTFail("Expected SvnError, got \(error)")
         }
     }
+
+    func testGitBackendRunsSvnCloneWithoutPasswordInArguments() async throws {
+        let runner = RecordingGitProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = GitCliBackend(gitExecutable: "/usr/bin/git", runner: runner)
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+
+        try await backend.svnClone(
+            sourceURL: "file:///repo",
+            destination: URL(fileURLWithPath: "/tmp/git-repo"),
+            authorsFile: URL(fileURLWithPath: "/tmp/authors.txt"),
+            layout: layout,
+            revisionRange: nil,
+            username: "u"
+        )
+
+        XCTAssertEqual(runner.calls.map(\.executable), ["/usr/bin/git"])
+        XCTAssertEqual(runner.calls.first?.arguments, [
+            "svn", "clone",
+            "--authors-file", "/tmp/authors.txt",
+            "--stdlayout",
+            "--username", "u",
+            "file:///repo",
+            "/tmp/git-repo"
+        ])
+        XCTAssertNil(runner.calls.first?.stdin)
+        XCTAssertNil(runner.calls.first?.currentDirectory)
+    }
 }
 
 private final class RecordingGitProcessRunner: ProcessRunning, @unchecked Sendable {

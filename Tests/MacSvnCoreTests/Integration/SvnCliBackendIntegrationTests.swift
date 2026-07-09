@@ -47,6 +47,52 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testHistoryGitSvnMigrationClonesFixtureRepositoryWithAuthorsMapping() async throws {
+        let fixture = try makeFixture()
+        let gitExecutable = try requireGitExecutable()
+        try await requireGitSvn(gitExecutable: gitExecutable)
+        let destination = fixture.root.appendingPathComponent("git-history", isDirectory: true)
+        let service = GitMigrationService(
+            svnExporter: SvnService(backend: fixture.backend),
+            gitBackend: GitCliBackend(gitExecutable: gitExecutable, runner: ProcessRunner(), timeout: 60)
+        )
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+
+        let report = try await service.historyMigrate(
+            sourceURL: fixture.repositoryURL,
+            destination: destination,
+            layout: layout,
+            authorMappings: [
+                GitMigrationAuthorMapping(
+                    svnUsername: NSUserName(),
+                    gitName: "MacSVN Test",
+                    gitEmail: "macsvn@example.invalid"
+                )
+            ]
+        )
+        let logResult = try await ProcessRunner().run(
+            executable: gitExecutable,
+            arguments: ["log", "--all", "-1", "--pretty=%an <%ae>"],
+            stdin: nil,
+            currentDirectory: destination.path,
+            timeout: 30
+        )
+
+        XCTAssertEqual(report.completedSteps, [.authorsFile, .gitSvnClone])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent(".git").path))
+        XCTAssertEqual(logResult.exitCode, 0)
+        XCTAssertEqual(
+            String(data: logResult.stdout, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+            "MacSVN Test <macsvn@example.invalid>"
+        )
+    }
+
     func testBlameReadsLineRevisionAuthorFromWorkingCopy() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)
@@ -667,6 +713,20 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         }
 
         return git
+    }
+
+    private func requireGitSvn(gitExecutable: String) async throws {
+        let result = try await ProcessRunner().run(
+            executable: gitExecutable,
+            arguments: ["svn", "--version"],
+            stdin: nil,
+            currentDirectory: nil,
+            timeout: 30
+        )
+
+        guard result.exitCode == 0 else {
+            throw XCTSkip("git svn is not available.")
+        }
     }
 
     private func makeLocalEditRemoteDeleteTreeConflict(

@@ -2,6 +2,7 @@ import Foundation
 
 public enum GitMigrationMode: Equatable, Sendable {
     case snapshot
+    case historyPreserving
 }
 
 public enum GitMigrationStep: Equatable, Sendable {
@@ -9,6 +10,8 @@ public enum GitMigrationStep: Equatable, Sendable {
     case gitInit
     case gitAdd
     case gitCommit
+    case authorsFile
+    case gitSvnClone
 }
 
 public struct GitMigrationToolStatus: Equatable, Sendable {
@@ -44,6 +47,9 @@ public struct GitMigrationReport: Equatable, Sendable {
     public let revision: Revision?
     public let commitMessage: String
     public let completedSteps: [GitMigrationStep]
+    public let authorsFilePath: String?
+    public let layout: GitMigrationRepositoryLayout?
+    public let revisionRange: RevisionRange?
 
     public init(
         mode: GitMigrationMode,
@@ -51,7 +57,10 @@ public struct GitMigrationReport: Equatable, Sendable {
         destinationPath: String,
         revision: Revision?,
         commitMessage: String,
-        completedSteps: [GitMigrationStep]
+        completedSteps: [GitMigrationStep],
+        authorsFilePath: String? = nil,
+        layout: GitMigrationRepositoryLayout? = nil,
+        revisionRange: RevisionRange? = nil
     ) {
         self.mode = mode
         self.sourceURL = sourceURL
@@ -59,6 +68,9 @@ public struct GitMigrationReport: Equatable, Sendable {
         self.revision = revision
         self.commitMessage = commitMessage
         self.completedSteps = completedSteps
+        self.authorsFilePath = authorsFilePath
+        self.layout = layout
+        self.revisionRange = revisionRange
     }
 }
 

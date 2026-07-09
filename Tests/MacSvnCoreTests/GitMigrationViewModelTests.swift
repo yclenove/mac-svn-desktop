@@ -78,6 +78,77 @@ final class GitMigrationViewModelTests: XCTestCase {
         let calls = await provider.recordedCalls()
         XCTAssertTrue(calls.isEmpty)
     }
+
+    @MainActor
+    func testHistoryMigrationStoresCompletedReportAndPassesInputs() async {
+        let destination = URL(fileURLWithPath: "/tmp/history")
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+        let mappings = [
+            GitMigrationAuthorMapping(svnUsername: "yangchao", gitName: "杨超", gitEmail: "yangchao@example.com")
+        ]
+        let report = GitMigrationReport(
+            mode: .historyPreserving,
+            sourceURL: "file:///repo",
+            destinationPath: destination.path,
+            revision: nil,
+            commitMessage: "",
+            completedSteps: [.authorsFile, .gitSvnClone],
+            authorsFilePath: "/tmp/history-authors.txt",
+            layout: layout,
+            revisionRange: nil
+        )
+        let provider = FakeGitMigrationProvider(result: .success(report))
+        let viewModel = GitMigrationViewModel(provider: provider)
+
+        await viewModel.historyMigrate(
+            sourceURL: "file:///repo",
+            destination: destination,
+            layout: layout,
+            authorMappings: mappings,
+            revisionRange: nil,
+            auth: nil
+        )
+        let calls = await provider.recordedHistoryCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(report))
+        XCTAssertEqual(viewModel.report, report)
+        XCTAssertEqual(calls.first?.sourceURL, "file:///repo")
+        XCTAssertEqual(calls.first?.destination, destination)
+        XCTAssertEqual(calls.first?.layout, layout)
+        XCTAssertEqual(calls.first?.authorMappings, mappings)
+    }
+
+    @MainActor
+    func testHistoryMigrationRejectsEmptySourceBeforeProviderCall() async {
+        let provider = FakeGitMigrationProvider(result: .failure(SvnError.other(code: nil, stderr: "unexpected")))
+        let viewModel = GitMigrationViewModel(provider: provider)
+        let layout = GitMigrationRepositoryLayout(
+            kind: .standard,
+            trunkPath: "trunk",
+            branchesPath: "branches",
+            tagsPath: "tags",
+            confidence: 1
+        )
+
+        await viewModel.historyMigrate(
+            sourceURL: " ",
+            destination: URL(fileURLWithPath: "/tmp/history"),
+            layout: layout,
+            authorMappings: [],
+            revisionRange: nil,
+            auth: nil
+        )
+
+        XCTAssertEqual(viewModel.state, .error(String(describing: GitMigrationError.emptySourceURL)))
+        let calls = await provider.recordedHistoryCalls()
+        XCTAssertTrue(calls.isEmpty)
+    }
 }
 
 private struct GitMigrationCall: Equatable, Sendable {
@@ -88,9 +159,19 @@ private struct GitMigrationCall: Equatable, Sendable {
     let auth: Credential?
 }
 
+private struct GitMigrationHistoryCall: Equatable, Sendable {
+    let sourceURL: String
+    let destination: URL
+    let layout: GitMigrationRepositoryLayout
+    let authorMappings: [GitMigrationAuthorMapping]
+    let revisionRange: RevisionRange?
+    let auth: Credential?
+}
+
 private actor FakeGitMigrationProvider: GitMigrationProviding {
     private let result: Result<GitMigrationReport, Error>
     private var calls: [GitMigrationCall] = []
+    private var historyCalls: [GitMigrationHistoryCall] = []
 
     init(result: Result<GitMigrationReport, Error>) {
         self.result = result
@@ -98,6 +179,10 @@ private actor FakeGitMigrationProvider: GitMigrationProviding {
 
     func recordedCalls() -> [GitMigrationCall] {
         calls
+    }
+
+    func recordedHistoryCalls() -> [GitMigrationHistoryCall] {
+        historyCalls
     }
 
     func snapshotMigrate(
@@ -112,6 +197,25 @@ private actor FakeGitMigrationProvider: GitMigrationProviding {
             destination: destination,
             revision: revision,
             commitMessage: commitMessage,
+            auth: auth
+        ))
+        return try result.get()
+    }
+
+    func historyMigrate(
+        sourceURL: String,
+        destination: URL,
+        layout: GitMigrationRepositoryLayout,
+        authorMappings: [GitMigrationAuthorMapping],
+        revisionRange: RevisionRange?,
+        auth: Credential?
+    ) async throws -> GitMigrationReport {
+        historyCalls.append(GitMigrationHistoryCall(
+            sourceURL: sourceURL,
+            destination: destination,
+            layout: layout,
+            authorMappings: authorMappings,
+            revisionRange: revisionRange,
             auth: auth
         ))
         return try result.get()

@@ -23,12 +23,32 @@ public struct GitCliBackend: GitBackend {
         try await run(GitCommandBuilder.commit(message: message), repository: repository)
     }
 
-    private func run(_ command: GitCommand, repository: URL) async throws {
+    public func svnClone(
+        sourceURL: String,
+        destination: URL,
+        authorsFile: URL,
+        layout: GitMigrationRepositoryLayout,
+        revisionRange: RevisionRange?,
+        username: String?
+    ) async throws {
+        let command = GitCommandBuilder.svnClone(
+            sourceURL: sourceURL,
+            destination: destination,
+            authorsFile: authorsFile,
+            layout: layout,
+            revisionRange: revisionRange,
+            username: username
+        )
+
+        try await run(command, repository: nil)
+    }
+
+    private func run(_ command: GitCommand, repository: URL?) async throws {
         let result = try await runner.run(
             executable: gitExecutable,
             arguments: command.arguments,
             stdin: nil,
-            currentDirectory: repository.path,
+            currentDirectory: repository?.path,
             timeout: timeout
         )
 

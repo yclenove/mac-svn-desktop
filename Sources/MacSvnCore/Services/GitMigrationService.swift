@@ -7,15 +7,18 @@ public protocol GitMigrationSvnExporting: Sendable {
 public actor GitMigrationService {
     private let svnExporter: any GitMigrationSvnExporting
     private let gitBackend: any GitBackend
+    private let authorMapper: GitMigrationAuthorMapper
     private let fileManager: FileManager
 
     public init(
         svnExporter: any GitMigrationSvnExporting,
         gitBackend: any GitBackend,
+        authorMapper: GitMigrationAuthorMapper = GitMigrationAuthorMapper(),
         fileManager: FileManager = .default
     ) {
         self.svnExporter = svnExporter
         self.gitBackend = gitBackend
+        self.authorMapper = authorMapper
         self.fileManager = fileManager
     }
 
@@ -53,6 +56,52 @@ public actor GitMigrationService {
             revision: revision,
             commitMessage: commitMessage,
             completedSteps: [.svnExport, .gitInit, .gitAdd, .gitCommit]
+        )
+    }
+
+    public func historyMigrate(
+        sourceURL: String,
+        destination: URL,
+        layout: GitMigrationRepositoryLayout,
+        authorMappings: [GitMigrationAuthorMapping],
+        revisionRange: RevisionRange? = nil,
+        auth: Credential? = nil
+    ) async throws -> GitMigrationReport {
+        let trimmedSourceURL = sourceURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedSourceURL.isEmpty else {
+            throw GitMigrationError.emptySourceURL
+        }
+
+        let authorsFile = destination
+            .deletingLastPathComponent()
+            .appendingPathComponent("\(destination.lastPathComponent)-authors.txt")
+
+        try authorMapper.validateComplete(authorMappings)
+        try validateDestinationIsEmpty(destination)
+        try fileManager.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try authorMapper.exportAuthorsFile(authorMappings, to: authorsFile)
+        try await gitBackend.svnClone(
+            sourceURL: trimmedSourceURL,
+            destination: destination,
+            authorsFile: authorsFile,
+            layout: layout,
+            revisionRange: revisionRange,
+            username: auth?.username
+        )
+
+        return GitMigrationReport(
+            mode: .historyPreserving,
+            sourceURL: trimmedSourceURL,
+            destinationPath: destination.path,
+            revision: nil,
+            commitMessage: "",
+            completedSteps: [.authorsFile, .gitSvnClone],
+            authorsFilePath: authorsFile.path,
+            layout: layout,
+            revisionRange: revisionRange
         )
     }
 
