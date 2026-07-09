@@ -726,7 +726,7 @@ git commit -m "test: cover P6 AI blame evolution errors"
 
 ## 任务 3：目标验证与计划收尾
 
-- [ ] **步骤 1：运行 P6 Blame Evolution 目标集合**
+- [x] **步骤 1：运行 P6 Blame Evolution 目标集合**
 
 ```bash
 swift test --filter "AIBlameEvolutionExplainerTests|BlameXMLParserTests|BlameViewModelTests|DiffViewModelTests|LogViewModelTests"
@@ -734,7 +734,7 @@ swift test --filter "AIBlameEvolutionExplainerTests|BlameXMLParserTests|BlameVie
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -743,7 +743,7 @@ git diff --check
 
 预期：全量测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add docs/superpowers/plans/2026-07-10-p6-ai-blame-evolution-core.md
