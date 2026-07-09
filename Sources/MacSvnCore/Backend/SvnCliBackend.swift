@@ -64,8 +64,23 @@ public struct SvnCliBackend: SvnBackend {
         return try LogXMLParser.parse(result.stdout)
     }
 
-    public func checkout(url: String, to destination: URL) async throws {
-        _ = try await run(SvnCommandBuilder.checkout(url: url, to: destination.path), currentDirectory: nil, stdin: nil)
+    public func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth = .infinity,
+        auth: Credential? = nil
+    ) async throws {
+        let authArguments = try AuthArguments.build(credential: auth)
+        _ = try await run(
+            SvnCommandBuilder.checkout(
+                url: url,
+                to: destination.path,
+                depth: depth,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
     }
 
     public func info(wc: URL, target: String) async throws -> SvnInfo {

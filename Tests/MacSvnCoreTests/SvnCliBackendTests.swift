@@ -84,6 +84,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testCheckoutPassesDepthAuthStdinAndRunsOutsideWorkingCopy() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.checkout(
+            url: "file:///repo/trunk",
+            to: URL(fileURLWithPath: "/tmp/wc"),
+            depth: .empty,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, nil)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "checkout", "--non-interactive",
+            "--depth", "empty",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "/tmp/wc"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testNonZeroExitMapsSvnError() async {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E170001: auth failed", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

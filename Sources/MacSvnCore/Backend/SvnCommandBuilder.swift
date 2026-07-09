@@ -73,8 +73,16 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
-    public static func checkout(url: String, to destination: String) -> SvnCommand {
-        SvnCommand(arguments: ["checkout", "--non-interactive", url, destination])
+    public static func checkout(
+        url: String,
+        to destination: String,
+        depth: SvnDepth = .infinity,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "checkout", "--non-interactive",
+            "--depth", depth.rawValue
+        ] + authArguments + [url, destination])
     }
 
     public static func info(target: String) -> SvnCommand {

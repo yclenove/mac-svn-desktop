@@ -106,6 +106,22 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.updateCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testCheckoutPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.checkoutErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let destination = URL(fileURLWithPath: "/tmp/wc")
+
+        try await service.checkout(url: "file:///repo/trunk", to: destination, depth: .files, auth: nil)
+        let requestedWorkingCopies = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(requestedWorkingCopies, [destination])
+        XCTAssertEqual(backend.calls.map(\.name), ["checkout", "checkout"])
+        XCTAssertEqual(backend.checkoutCredentials, [nil, Credential(username: "u", password: "p")])
+        XCTAssertEqual(backend.checkoutDepths, [.files, .files])
+    }
+
     func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -227,6 +243,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCalls: [Call] = []
     private var recordedUpdateCredentials: [Credential?] = []
     private var recordedCommitCredentials: [Credential?] = []
+    private var recordedCheckoutCredentials: [Credential?] = []
+    private var recordedCheckoutDepths: [SvnDepth] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -252,6 +270,22 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCommitCredentials
     }
 
+    var checkoutCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCheckoutCredentials
+    }
+
+    var checkoutDepths: [SvnDepth] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCheckoutDepths
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
@@ -260,6 +294,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
     var updateErrors: [SvnError] = []
+    var checkoutErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -321,8 +356,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return logResult
     }
 
-    func checkout(url: String, to destination: URL) async throws {
-        record("checkout")
+    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
+        let error = recordCheckout(depth: depth, auth: auth)
+        if let error {
+            throw error
+        }
     }
 
     func info(wc: URL, target: String) async throws -> SvnInfo {
@@ -344,6 +382,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "commit"))
         recordedCommitCredentials.append(auth)
         let error = commitErrors.isEmpty ? nil : commitErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordCheckout(depth: SvnDepth, auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "checkout"))
+        recordedCheckoutDepths.append(depth)
+        recordedCheckoutCredentials.append(auth)
+        let error = checkoutErrors.isEmpty ? nil : checkoutErrors.removeFirst()
         callsLock.unlock()
         return error
     }

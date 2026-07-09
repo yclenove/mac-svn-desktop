@@ -43,6 +43,19 @@ public actor SvnService {
         }
     }
 
+    public func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth = .infinity,
+        auth: Credential? = nil
+    ) async throws {
+        try await withWriteLock(wc: destination, operation: "checkout") {
+            try await retryingAuthentication(wc: destination, initialAuth: auth) { auth in
+                try await backend.checkout(url: url, to: destination, depth: depth, auth: auth)
+            }
+        }
+    }
+
     public func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SvnServiceError.emptyCommitMessage

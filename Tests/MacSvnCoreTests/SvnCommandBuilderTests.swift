@@ -73,9 +73,20 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])
     }
 
-    func testCheckoutUsesNonInteractiveUrlAndDestination() {
-        let command = SvnCommandBuilder.checkout(url: "file:///repo/trunk", to: "/tmp/wc")
-        XCTAssertEqual(command.arguments, ["checkout", "--non-interactive", "file:///repo/trunk", "/tmp/wc"])
+    func testCheckoutUsesDepthAuthenticationUrlAndDestination() {
+        let command = SvnCommandBuilder.checkout(
+            url: "file:///repo/trunk",
+            to: "/tmp/wc",
+            depth: .files,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "checkout", "--non-interactive",
+            "--depth", "files",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk", "/tmp/wc"
+        ])
     }
 
     func testInfoUsesXmlAndNonInteractive() {

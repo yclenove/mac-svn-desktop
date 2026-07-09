@@ -72,6 +72,13 @@ public enum ItemStatus: String, Equatable, Hashable, Sendable {
     case none
 }
 
+public enum SvnDepth: String, Codable, Equatable, Sendable {
+    case empty
+    case files
+    case immediates
+    case infinity
+}
+
 public struct FileStatus: Equatable, Sendable {
     public let path: String
     public let itemStatus: ItemStatus

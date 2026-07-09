@@ -12,6 +12,22 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statuses, [])
     }
 
+    func testCheckoutWithEmptyDepthCreatesWorkingCopyWithoutChildren() async throws {
+        let fixture = try makeFixture()
+
+        try await fixture.backend.checkout(
+            url: fixture.trunkURL,
+            to: fixture.workingCopy,
+            depth: .empty,
+            auth: nil
+        )
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+
+        XCTAssertEqual(statuses, [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 
