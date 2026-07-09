@@ -277,7 +277,7 @@ git commit -m "feat: add P6 AI SVN write confirmation gate"
 - 修改：`Sources/MacSvnCore/Services/AISVNToolRegistry.swift`
 - 修改测试：`Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AISVNToolRegistryTests` 增加：
 
@@ -305,7 +305,7 @@ func testUnknownToolIsRejectedAndAuditedAsForbidden() async throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -313,14 +313,14 @@ swift test --filter AISVNToolRegistryTests
 
 预期：测试失败，未知工具未被审计或 `availableToolNames` 不存在。
 
-- [ ] **步骤 3：实现最少错误路径**
+- [x] **步骤 3：实现最少错误路径**
 
 实现要求：
 - 未知 tool name 抛 `.forbiddenTool(name)`；
 - 失败时写入 `AISVNToolAuditRecord(outcome: .failed, summary: String(describing: error))`；
 - `availableToolNames()` 只返回 `AISVNToolName.allCases.map(\.rawValue)`，不包含 shell 或文件系统直接写工具。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -328,7 +328,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：全部 `AISVNToolRegistryTests` PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AISVNToolRegistry.swift Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift docs/superpowers/plans/2026-07-10-p6-ai-svn-agent-tool-registry-core.md

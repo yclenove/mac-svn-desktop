@@ -76,6 +76,28 @@ final class AISVNToolRegistryTests: XCTestCase {
         let records = await audit.records(sessionID: "session-2")
         XCTAssertEqual(records.map(\.outcome), [.confirmationRequired, .confirmationRequired])
     }
+
+    func testUnknownToolIsRejectedAndAuditedAsForbidden() async throws {
+        let audit = InMemoryAIToolAuditStore()
+        let registry = AISVNToolRegistry(service: FakeAISVNToolService(), auditStore: audit)
+
+        do {
+            _ = try await registry.handle(
+                AISVNToolCall(name: "shell_exec", arguments: ["command": "rm -rf /"]),
+                sessionID: "session-3"
+            )
+            XCTFail("Expected forbidden tool")
+        } catch let error as AISVNToolError {
+            XCTAssertEqual(error, .forbiddenTool("shell_exec"))
+        } catch {
+            XCTFail("Expected AISVNToolError, got \(error)")
+        }
+
+        let records = await audit.records(sessionID: "session-3")
+        XCTAssertEqual(records.map(\.toolName), ["shell_exec"])
+        XCTAssertEqual(records.map(\.outcome), [.failed])
+        XCTAssertFalse(registry.availableToolNames().contains("shell_exec"))
+    }
 }
 
 private actor FakeAISVNToolService: AISVNToolServicing {

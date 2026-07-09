@@ -37,32 +37,55 @@ public struct AISVNToolRegistry: Sendable {
         self.auditStore = auditStore
     }
 
+    public func availableToolNames() -> [String] {
+        AISVNToolName.allCases.map(\.rawValue)
+    }
+
     public func handle(_ call: AISVNToolCall, sessionID: String) async throws -> AISVNToolDecision {
         guard let toolName = AISVNToolName(rawValue: call.name) else {
-            throw AISVNToolError.forbiddenTool(call.name)
+            let error = AISVNToolError.forbiddenTool(call.name)
+            await audit(
+                call: call,
+                sessionID: sessionID,
+                risk: nil,
+                outcome: .failed,
+                summary: String(describing: error)
+            )
+            throw error
         }
 
-        switch toolName.risk {
-        case .readOnly:
-            let result = try await executeReadOnly(toolName, arguments: call.arguments)
+        do {
+            switch toolName.risk {
+            case .readOnly:
+                let result = try await executeReadOnly(toolName, arguments: call.arguments)
+                await audit(
+                    call: call,
+                    sessionID: sessionID,
+                    risk: toolName.risk,
+                    outcome: .completed,
+                    summary: result.content
+                )
+                return .completed(result)
+            case .lowRiskWrite, .highRiskWrite:
+                let confirmation = try makeConfirmation(toolName, arguments: call.arguments)
+                await audit(
+                    call: call,
+                    sessionID: sessionID,
+                    risk: toolName.risk,
+                    outcome: .confirmationRequired,
+                    summary: confirmation.commandPreview
+                )
+                return .confirmationRequired(confirmation)
+            }
+        } catch {
             await audit(
                 call: call,
                 sessionID: sessionID,
                 risk: toolName.risk,
-                outcome: .completed,
-                summary: result.content
+                outcome: .failed,
+                summary: String(describing: error)
             )
-            return .completed(result)
-        case .lowRiskWrite, .highRiskWrite:
-            let confirmation = try makeConfirmation(toolName, arguments: call.arguments)
-            await audit(
-                call: call,
-                sessionID: sessionID,
-                risk: toolName.risk,
-                outcome: .confirmationRequired,
-                summary: confirmation.commandPreview
-            )
-            return .confirmationRequired(confirmation)
+            throw error
         }
     }
 
