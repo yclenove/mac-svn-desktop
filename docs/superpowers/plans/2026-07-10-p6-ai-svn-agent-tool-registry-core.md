@@ -27,7 +27,7 @@
 - 修改：`Sources/MacSvnCore/Models/AIModels.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `AISVNToolRegistryTests` 增加：
 
@@ -54,7 +54,7 @@ func testToolNamesClassifyReadOnlyLowRiskAndHighRiskTools() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -62,7 +62,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：编译失败，提示 `AISVNToolName` 或 `AISVNToolRisk` 不存在。
 
-- [ ] **步骤 3：实现最少模型代码**
+- [x] **步骤 3：实现最少模型代码**
 
 在 `AIModels.swift` 增加：
 
@@ -104,7 +104,7 @@ public enum AISVNToolName: String, Codable, CaseIterable, Equatable, Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AISVNToolRegistryTests
@@ -112,7 +112,7 @@ swift test --filter AISVNToolRegistryTests
 
 预期：工具分级测试 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift docs/superpowers/plans/2026-07-10-p6-ai-svn-agent-tool-registry-core.md

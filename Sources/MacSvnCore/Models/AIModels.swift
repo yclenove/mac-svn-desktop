@@ -117,6 +117,42 @@ public struct AILLMResponse: Codable, Equatable, Sendable {
     }
 }
 
+public enum AISVNToolRisk: String, Codable, Equatable, Sendable {
+    case readOnly
+    case lowRiskWrite
+    case highRiskWrite
+}
+
+public enum AISVNToolName: String, Codable, CaseIterable, Equatable, Sendable {
+    case svnStatus = "svn_status"
+    case svnLog = "svn_log"
+    case svnDiff = "svn_diff"
+    case svnInfo = "svn_info"
+    case svnList = "svn_list"
+    case svnBlame = "svn_blame"
+    case svnCat = "svn_cat"
+    case svnUpdate = "svn_update"
+    case svnAdd = "svn_add"
+    case svnCleanup = "svn_cleanup"
+    case svnCommit = "svn_commit"
+    case svnRevert = "svn_revert"
+    case svnMerge = "svn_merge"
+    case svnSwitch = "svn_switch"
+    case svnDelete = "svn_delete"
+    case svnCopy = "svn_copy"
+
+    public var risk: AISVNToolRisk {
+        switch self {
+        case .svnStatus, .svnLog, .svnDiff, .svnInfo, .svnList, .svnBlame, .svnCat:
+            return .readOnly
+        case .svnUpdate, .svnAdd, .svnCleanup:
+            return .lowRiskWrite
+        case .svnCommit, .svnRevert, .svnMerge, .svnSwitch, .svnDelete, .svnCopy:
+            return .highRiskWrite
+        }
+    }
+}
+
 public enum AICommitMessageFormat: String, Codable, Equatable, Sendable {
     case oneLineChinese
     case conventionalChinese
