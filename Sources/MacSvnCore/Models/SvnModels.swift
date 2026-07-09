@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SvnVersion: Equatable, Sendable {
+public struct SvnVersion: Equatable, Comparable, Sendable {
     public let major: Int
     public let minor: Int
     public let patch: Int
@@ -25,6 +25,18 @@ public struct SvnVersion: Equatable, Sendable {
         }
 
         return SvnVersion(major: major, minor: minor, patch: patch)
+    }
+
+    public static func < (lhs: SvnVersion, rhs: SvnVersion) -> Bool {
+        if lhs.major != rhs.major {
+            return lhs.major < rhs.major
+        }
+
+        if lhs.minor != rhs.minor {
+            return lhs.minor < rhs.minor
+        }
+
+        return lhs.patch < rhs.patch
     }
 }
 
@@ -222,4 +234,51 @@ public struct SvnInfo: Equatable, Sendable {
         self.revision = revision
         self.kind = kind
     }
+}
+
+public struct BranchLayout: Codable, Equatable, Sendable {
+    public var trunk: String
+    public var branches: String
+    public var tags: String
+
+    public init(trunk: String = "trunk", branches: String = "branches", tags: String = "tags") {
+        self.trunk = trunk
+        self.branches = branches
+        self.tags = tags
+    }
+}
+
+public struct AppSettings: Codable, Equatable, Sendable {
+    public var svnPath: String?
+    public var logBatchSize: Int
+    public var branchLayout: BranchLayout
+    public var processTimeout: TimeInterval
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120
+    ) {
+        self.svnPath = svnPath
+        self.logBatchSize = logBatchSize
+        self.branchLayout = branchLayout
+        self.processTimeout = processTimeout
+    }
+}
+
+public struct SettingsFile: Codable, Equatable, Sendable {
+    public var version: Int
+    public var settings: AppSettings
+
+    public init(version: Int = 1, settings: AppSettings = AppSettings()) {
+        self.version = version
+        self.settings = settings
+    }
+}
+
+public enum SvnEnvironmentStatus: Equatable, Sendable {
+    case available(path: String, version: SvnVersion)
+    case unsupportedVersion(path: String, version: SvnVersion, minimum: SvnVersion)
+    case missing(checkedPaths: [String])
 }
