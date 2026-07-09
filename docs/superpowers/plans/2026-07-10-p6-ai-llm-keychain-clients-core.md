@@ -471,7 +471,7 @@ git commit -m "feat: add P6 AI HTTP LLM client"
 - 创建：`Sources/MacSvnCore/Services/AIProviderConnectivityTester.swift`
 - 创建测试：`Tests/MacSvnCoreTests/AIProviderConnectivityTesterTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `AIProviderConnectivityTesterTests.swift`：
 
@@ -564,7 +564,7 @@ private actor FakePingLLM: LLMChatting {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter AIProviderConnectivityTesterTests
@@ -572,7 +572,7 @@ swift test --filter AIProviderConnectivityTesterTests
 
 预期：编译失败，提示 `AIProviderConnectivityTester` 不存在。
 
-- [ ] **步骤 3：实现最少连通性测试器**
+- [x] **步骤 3：实现最少连通性测试器**
 
 创建 `AIProviderConnectivityTester.swift`：
 
@@ -626,7 +626,7 @@ public struct AIProviderConnectivityTester: AIProviderConnectivityTesting, Senda
 
 测试中的 `latencyMeasurer` 使用完整形式：`{ operation in (try await operation(), 42) }`，保证 ping 只发一次。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter AIProviderConnectivityTesterTests
@@ -634,7 +634,7 @@ swift test --filter AIProviderConnectivityTesterTests
 
 预期：`AIProviderConnectivityTesterTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Services/AIProviderConnectivityTester.swift Tests/MacSvnCoreTests/AIProviderConnectivityTesterTests.swift docs/superpowers/plans/2026-07-10-p6-ai-llm-keychain-clients-core.md
