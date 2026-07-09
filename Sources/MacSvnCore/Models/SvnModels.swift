@@ -124,6 +124,116 @@ public struct UpdateSummary: Equatable, Sendable {
     }
 }
 
+public struct RevisionRange: Equatable, Sendable, CustomStringConvertible {
+    public let start: Revision
+    public let end: Revision
+
+    public init(start: Revision, end: Revision) {
+        self.start = start
+        self.end = end
+    }
+
+    public var description: String {
+        "\(start):\(end)"
+    }
+}
+
+public enum MergeAction: Equatable, Sendable {
+    case added
+    case updated
+    case deleted
+    case conflicted
+    case merged
+    case existed
+    case replaced
+    case unknown(Character)
+
+    public init(rawStatus: Character) {
+        switch rawStatus {
+        case "A":
+            self = .added
+        case "U":
+            self = .updated
+        case "D":
+            self = .deleted
+        case "C":
+            self = .conflicted
+        case "G":
+            self = .merged
+        case "E":
+            self = .existed
+        case "R":
+            self = .replaced
+        default:
+            self = .unknown(rawStatus)
+        }
+    }
+}
+
+public struct MergeAffectedPath: Equatable, Sendable {
+    public let action: MergeAction
+    public let path: String
+
+    public init(action: MergeAction, path: String) {
+        self.action = action
+        self.path = path
+    }
+}
+
+public struct MergeSummary: Equatable, Sendable {
+    public var added: Int
+    public var updated: Int
+    public var deleted: Int
+    public var conflicted: Int
+    public var merged: Int
+    public var existed: Int
+    public var replaced: Int
+    public var affectedPaths: [MergeAffectedPath]
+
+    public init(
+        added: Int = 0,
+        updated: Int = 0,
+        deleted: Int = 0,
+        conflicted: Int = 0,
+        merged: Int = 0,
+        existed: Int = 0,
+        replaced: Int = 0,
+        affectedPaths: [MergeAffectedPath] = []
+    ) {
+        self.added = added
+        self.updated = updated
+        self.deleted = deleted
+        self.conflicted = conflicted
+        self.merged = merged
+        self.existed = existed
+        self.replaced = replaced
+        self.affectedPaths = affectedPaths
+    }
+
+    public mutating func record(action: MergeAction, path: String) {
+        affectedPaths.append(MergeAffectedPath(action: action, path: path))
+
+        switch action {
+        case .added:
+            added += 1
+        case .updated:
+            updated += 1
+        case .deleted:
+            deleted += 1
+        case .conflicted:
+            conflicted += 1
+        case .merged:
+            merged += 1
+        case .existed:
+            existed += 1
+        case .replaced:
+            replaced += 1
+        case .unknown:
+            break
+        }
+    }
+}
+
 public struct Credential: Equatable, Sendable {
     public let username: String
     public let password: String

@@ -143,6 +143,54 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(info.url, branchURL)
     }
 
+    func testServicePreviewAndMergeBranchChangesIntoTrunk() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/merge-source"
+
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "create merge branch",
+            auth: nil
+        )
+        try await fixture.backend.checkout(url: branchURL, to: fixture.workingCopy)
+        try "branch change\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        _ = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "branch change",
+            auth: nil
+        )
+        _ = try await service.switchTo(wc: fixture.workingCopy, url: fixture.trunkURL, auth: nil)
+
+        let preview = try await service.merge(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            range: nil,
+            dryRun: true,
+            auth: nil
+        )
+        let summary = try await service.merge(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            range: nil,
+            dryRun: false,
+            auth: nil
+        )
+
+        XCTAssertTrue(preview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(summary.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("README.txt"), encoding: .utf8),
+            "branch change\n"
+        )
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

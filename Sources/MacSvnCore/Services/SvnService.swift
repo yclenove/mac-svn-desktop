@@ -102,6 +102,21 @@ public actor SvnService {
         }
     }
 
+    public func merge(
+        wc: URL,
+        source: String,
+        range: RevisionRange? = nil,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        try await withWriteLock(wc: wc, operation: "merge") {
+            let credentialScope = URL(string: source) ?? URL(fileURLWithPath: source)
+            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.merge(wc: wc, source: source, range: range, dryRun: dryRun, auth: auth)
+            }
+        }
+    }
+
     public func checkout(
         url: String,
         to destination: URL,

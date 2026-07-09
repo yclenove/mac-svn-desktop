@@ -49,6 +49,28 @@ public enum SvnCommandBuilder {
         ] + authArguments + [url])
     }
 
+    public static func merge(
+        source: String,
+        range: RevisionRange? = nil,
+        dryRun: Bool = false,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["merge", "--accept", "postpone", "--non-interactive"]
+
+        if dryRun {
+            arguments.append("--dry-run")
+        }
+
+        arguments += authArguments
+
+        if let range {
+            arguments += ["-r", range.description]
+        }
+
+        arguments.append(source)
+        return SvnCommand(arguments: arguments)
+    }
+
     public static func add(paths: [String]) -> SvnCommand {
         SvnCommand(arguments: ["add", "--non-interactive"] + paths)
     }

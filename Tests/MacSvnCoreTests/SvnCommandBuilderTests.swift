@@ -65,6 +65,22 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testMergeUsesPostponeDryRunRangeAuthAndSource() {
+        let command = SvnCommandBuilder.merge(
+            source: "file:///repo/branches/feature-one",
+            range: RevisionRange(start: Revision(2), end: Revision(5)),
+            dryRun: true,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "--username", "u", "--password-from-stdin",
+            "-r", "2:5",
+            "file:///repo/branches/feature-one"
+        ])
+    }
+
     func testAddUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.add(paths: ["a.txt", "dir/b.txt"])
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])

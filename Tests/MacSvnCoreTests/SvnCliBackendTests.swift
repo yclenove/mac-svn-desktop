@@ -112,6 +112,34 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testMergePassesAuthStdinRunsInWorkingCopyAndParsesSummary() async throws {
+        let output = "U    README.txt\n"
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(output.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let summary = try await backend.merge(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "file:///repo/branches/feature-one",
+            range: RevisionRange(start: Revision(2), end: Revision(5)),
+            dryRun: true,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(summary.updated, 1)
+        XCTAssertEqual(summary.affectedPaths, [
+            MergeAffectedPath(action: .updated, path: "README.txt")
+        ])
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "--username", "u", "--password-from-stdin",
+            "-r", "2:5",
+            "file:///repo/branches/feature-one"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testCheckoutPassesDepthAuthStdinAndRunsOutsideWorkingCopy() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

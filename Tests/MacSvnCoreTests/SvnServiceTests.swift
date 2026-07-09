@@ -228,6 +228,30 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.switchCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testMergePromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.mergeErrors = [.authentication]
+        backend.mergeResult = MergeSummary(updated: 1, affectedPaths: [
+            MergeAffectedPath(action: .updated, path: "README.txt")
+        ])
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let summary = try await service.merge(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "file:///repo/branches/feature-one",
+            range: nil,
+            dryRun: true,
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(summary.updated, 1)
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/branches/feature-one")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["merge", "merge"])
+        XCTAssertEqual(backend.mergeCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.listErrors = [.authentication]
@@ -427,6 +451,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedRemoteLogCredentials: [Credential?] = []
     private var recordedCopyCredentials: [Credential?] = []
     private var recordedSwitchCredentials: [Credential?] = []
+    private var recordedMergeCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -532,6 +557,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedSwitchCredentials
     }
 
+    var mergeCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedMergeCredentials
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
@@ -541,6 +574,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var remoteLogResult: [LogEntry] = []
     var copyResult = Revision(1)
     var switchResult = UpdateSummary()
+    var mergeResult = MergeSummary()
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
@@ -551,6 +585,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var remoteLogErrors: [SvnError] = []
     var copyErrors: [SvnError] = []
     var switchErrors: [SvnError] = []
+    var mergeErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -665,6 +700,20 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return switchResult
     }
 
+    func merge(
+        wc: URL,
+        source: String,
+        range: RevisionRange?,
+        dryRun: Bool,
+        auth: Credential?
+    ) async throws -> MergeSummary {
+        let error = recordMerge(auth: auth)
+        if let error {
+            throw error
+        }
+        return mergeResult
+    }
+
     func info(wc: URL, target: String) async throws -> SvnInfo {
         record("info")
         return infoResult
@@ -742,6 +791,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: "switch"))
         recordedSwitchCredentials.append(auth)
         let error = switchErrors.isEmpty ? nil : switchErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordMerge(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "merge"))
+        recordedMergeCredentials.append(auth)
+        let error = mergeErrors.isEmpty ? nil : mergeErrors.removeFirst()
         callsLock.unlock()
         return error
     }
