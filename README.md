@@ -2,7 +2,7 @@
 
 面向 macOS 的开源 Subversion（SVN）桌面客户端，目标对标商业客户端（Versions / Cornerstone）：工作副本管理、提交/更新、差异对比、日志、分支/标签、**内置三路合并**、**仓库浏览器**、blame 与锁定。
 
-> 当前阶段：**规格已定稿，待进入实现计划**（设计文档见 [docs/specs](docs/specs/2026-07-08-mac-svn-desktop-design.md)）
+> 当前阶段：**文档体系已完成，待进入 P1 开发**（需求/概设/详设/测试计划见 [docs 文档索引](docs/README.md)）
 
 ## 为什么做
 
