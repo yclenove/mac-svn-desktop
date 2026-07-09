@@ -1,0 +1,67 @@
+import Foundation
+import XCTest
+@testable import MacSvnCore
+
+final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testCheckoutThenStatusIsClean() async throws {
+        let fixture = try makeFixture()
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+
+        XCTAssertEqual(statuses, [])
+    }
+
+    func testStatusSeesModifiedAddedAndDeletedFiles() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        try "changed\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "new\n".write(
+            to: fixture.workingCopy.appendingPathComponent("new.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try await fixture.backend.add(wc: fixture.workingCopy, paths: ["new.txt"])
+        try await fixture.backend.delete(wc: fixture.workingCopy, paths: ["src/main.txt"])
+
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        let statusesByPath = Dictionary(uniqueKeysWithValues: statuses.map { ($0.path, $0.itemStatus) })
+
+        XCTAssertEqual(statusesByPath["README.txt"], .modified)
+        XCTAssertEqual(statusesByPath["new.txt"], .added)
+        XCTAssertEqual(statusesByPath["src/main.txt"], .deleted)
+    }
+
+    func testCommitWithChineseMessageIsReadBackFromLog() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try "修复内容\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let message = "修复：登录超时问题 🚀"
+        let revision = try await fixture.backend.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: message,
+            auth: nil
+        )
+        let entries = try await fixture.backend.log(
+            wc: fixture.workingCopy,
+            target: ".",
+            from: revision,
+            batch: 1,
+            verbose: true
+        )
+
+        XCTAssertEqual(entries.first?.revision, revision)
+        XCTAssertEqual(entries.first?.message, message)
+    }
+}

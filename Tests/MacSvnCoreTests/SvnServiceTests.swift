@@ -223,6 +223,10 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("log")
         return logResult
     }
+
+    func checkout(url: String, to destination: URL) async throws {
+        record("checkout")
+    }
 }
 
 private actor AsyncGate {

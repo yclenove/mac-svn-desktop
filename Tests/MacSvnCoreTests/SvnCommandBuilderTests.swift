@@ -57,4 +57,9 @@ final class SvnCommandBuilderTests: XCTestCase {
         let command = SvnCommandBuilder.log(target: "trunk", from: Revision(20), batch: 100, verbose: true)
         XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])
     }
+
+    func testCheckoutUsesNonInteractiveUrlAndDestination() {
+        let command = SvnCommandBuilder.checkout(url: "file:///repo/trunk", to: "/tmp/wc")
+        XCTAssertEqual(command.arguments, ["checkout", "--non-interactive", "file:///repo/trunk", "/tmp/wc"])
+    }
 }

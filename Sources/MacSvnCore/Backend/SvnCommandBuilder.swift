@@ -71,4 +71,8 @@ public enum SvnCommandBuilder {
         arguments += ["--non-interactive", "-r", "\(from):0", "-l", String(batch), target]
         return SvnCommand(arguments: arguments)
     }
+
+    public static func checkout(url: String, to destination: String) -> SvnCommand {
+        SvnCommand(arguments: ["checkout", "--non-interactive", url, destination])
+    }
 }
