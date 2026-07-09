@@ -141,6 +141,71 @@ final class RepoBrowserViewModelTests: XCTestCase {
             .error(String(describing: SvnError.network(detail: "offline")))
         )
     }
+
+    @MainActor
+    func testLoadBookmarksStoresBookmarkList() async {
+        let bookmark = repoBookmark(name: "Main", url: "file:///repo", username: "u")
+        let provider = FakeRepoBrowserProvider(listResult: .success([]), catResult: .success(Data()))
+        let manager = FakeRepoBookmarkManager(bookmarks: [bookmark])
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            bookmarkManager: manager
+        )
+
+        await viewModel.loadBookmarks()
+
+        XCTAssertEqual(viewModel.bookmarks, [bookmark])
+        XCTAssertEqual(viewModel.bookmarkState, .loaded)
+    }
+
+    @MainActor
+    func testAddAndRemoveBookmarkRefreshesViewModelState() async {
+        let bookmark = repoBookmark(name: "Main", url: "file:///repo", username: nil)
+        let provider = FakeRepoBrowserProvider(listResult: .success([]), catResult: .success(Data()))
+        let manager = FakeRepoBookmarkManager(bookmarks: [], addResult: bookmark)
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            bookmarkManager: manager
+        )
+
+        await viewModel.addBookmark(url: "file:///repo", name: "Main", username: nil)
+        await viewModel.removeBookmark(id: bookmark.id)
+        let addCalls = await manager.recordedAddCalls()
+        let removeCalls = await manager.recordedRemoveCalls()
+
+        XCTAssertEqual(addCalls, [RepoBookmarkAddCall(url: "file:///repo", name: "Main", username: nil)])
+        XCTAssertEqual(removeCalls, [bookmark.id])
+        XCTAssertEqual(viewModel.bookmarks, [])
+        XCTAssertEqual(viewModel.bookmarkState, .loaded)
+    }
+
+    @MainActor
+    func testBookmarkFailureStoresError() async {
+        let provider = FakeRepoBrowserProvider(listResult: .success([]), catResult: .success(Data()))
+        let manager = FakeRepoBookmarkManager(bookmarks: [], loadError: RepoBookmarkStoreError.emptyURL)
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            bookmarkManager: manager
+        )
+
+        await viewModel.loadBookmarks()
+
+        XCTAssertEqual(viewModel.bookmarkState, .error(String(describing: RepoBookmarkStoreError.emptyURL)))
+    }
+
+    private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {
+        RepoBookmark(
+            id: UUID(),
+            name: name,
+            url: url,
+            username: username,
+            addedAt: Date(timeIntervalSince1970: 1),
+            lastOpenedAt: Date(timeIntervalSince1970: 1)
+        )
+    }
 }
 
 private struct RepoListCall: Equatable, Sendable {
@@ -154,6 +219,12 @@ private struct RepoCatCall: Equatable, Sendable {
     let revision: Revision?
     let sizeLimit: Int
     let auth: Credential?
+}
+
+private struct RepoBookmarkAddCall: Equatable, Sendable {
+    let url: String
+    let name: String?
+    let username: String?
 }
 
 private actor FakeRepoListProvider: RepoListProviding {
@@ -201,5 +272,53 @@ private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data {
         catCalls.append(RepoCatCall(url: url, revision: revision, sizeLimit: sizeLimit, auth: auth))
         return try catResult.get()
+    }
+}
+
+private actor FakeRepoBookmarkManager: RepoBookmarkManaging {
+    private var storedBookmarks: [RepoBookmark]
+    private let addResult: RepoBookmark?
+    private let loadError: Error?
+    private var addCalls: [RepoBookmarkAddCall] = []
+    private var removeCalls: [UUID] = []
+
+    init(bookmarks: [RepoBookmark], addResult: RepoBookmark? = nil, loadError: Error? = nil) {
+        self.storedBookmarks = bookmarks
+        self.addResult = addResult
+        self.loadError = loadError
+    }
+
+    func recordedAddCalls() -> [RepoBookmarkAddCall] {
+        addCalls
+    }
+
+    func recordedRemoveCalls() -> [UUID] {
+        removeCalls
+    }
+
+    func loadBookmarks() async throws -> [RepoBookmark] {
+        if let loadError {
+            throw loadError
+        }
+        return storedBookmarks
+    }
+
+    func addBookmark(url: String, name: String?, username: String?) async throws -> RepoBookmark {
+        addCalls.append(RepoBookmarkAddCall(url: url, name: name, username: username))
+        let bookmark = addResult ?? RepoBookmark(
+            id: UUID(),
+            name: name ?? url,
+            url: url,
+            username: username,
+            addedAt: Date(timeIntervalSince1970: 1),
+            lastOpenedAt: Date(timeIntervalSince1970: 1)
+        )
+        storedBookmarks.append(bookmark)
+        return bookmark
+    }
+
+    func removeBookmark(id: UUID) async throws {
+        removeCalls.append(id)
+        storedBookmarks.removeAll { $0.id == id }
     }
 }

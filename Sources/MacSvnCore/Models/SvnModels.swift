@@ -272,6 +272,41 @@ public struct WorkspaceListFile: Codable, Equatable, Sendable {
     }
 }
 
+public struct RepoBookmark: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var url: String
+    public var username: String?
+    public var addedAt: Date
+    public var lastOpenedAt: Date
+
+    public init(
+        id: UUID,
+        name: String,
+        url: String,
+        username: String?,
+        addedAt: Date,
+        lastOpenedAt: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.url = url
+        self.username = username
+        self.addedAt = addedAt
+        self.lastOpenedAt = lastOpenedAt
+    }
+}
+
+public struct RepoBookmarkListFile: Codable, Equatable, Sendable {
+    public var version: Int
+    public var bookmarks: [RepoBookmark]
+
+    public init(version: Int = 1, bookmarks: [RepoBookmark] = []) {
+        self.version = version
+        self.bookmarks = bookmarks
+    }
+}
+
 public struct SvnInfo: Equatable, Sendable {
     public let path: String
     public let url: String
