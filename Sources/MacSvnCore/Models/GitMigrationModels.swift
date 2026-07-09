@@ -178,6 +178,42 @@ public struct GitMigrationRevisionReconciliationReport: Equatable, Sendable {
     }
 }
 
+public struct GitMigrationLargeFileFinding: Equatable, Sendable {
+    public let path: String
+    public let sizeBytes: Int
+    public let thresholdBytes: Int
+
+    public init(path: String, sizeBytes: Int, thresholdBytes: Int) {
+        self.path = path
+        self.sizeBytes = sizeBytes
+        self.thresholdBytes = thresholdBytes
+    }
+}
+
+public struct GitMigrationCleanupPlan: Equatable, Sendable {
+    public let largeFiles: [GitMigrationLargeFileFinding]
+    public let excludedPaths: [String]
+    public let gitIgnoreContents: String
+
+    public init(
+        largeFiles: [GitMigrationLargeFileFinding],
+        excludedPaths: [String],
+        gitIgnoreContents: String
+    ) {
+        self.largeFiles = largeFiles
+        self.excludedPaths = excludedPaths
+        self.gitIgnoreContents = gitIgnoreContents
+    }
+
+    public var hasLargeFileWarnings: Bool {
+        !largeFiles.isEmpty
+    }
+}
+
+public enum GitMigrationCleanupError: Error, Equatable, Sendable {
+    case invalidLargeFileThreshold(Int)
+}
+
 public struct GitMigrationAuthorMapping: Equatable, Sendable {
     public let svnUsername: String
     public var gitName: String

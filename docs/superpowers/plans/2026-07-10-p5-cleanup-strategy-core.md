@@ -26,7 +26,7 @@
 - 创建：`Sources/MacSvnCore/Services/GitMigrationCleanupPlanner.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationCleanupPlannerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `GitMigrationCleanupPlannerTests` 并加入：
 
@@ -58,7 +58,7 @@ func testPlanFlagsLargeFilesAndNormalizesExcludedPaths() throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -68,7 +68,7 @@ swift test --filter GitMigrationCleanupPlannerTests/testPlanFlagsLargeFilesAndNo
 
 预期：编译失败，提示 `GitMigrationCleanupPlanner` / `GitMigrationLargeFileFinding` 未定义。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 在模型中增加：
 
@@ -100,7 +100,7 @@ public enum GitMigrationCleanupError: Error, Equatable, Sendable {
 - 大文件按 path 字典序稳定排序；
 - `gitIgnoreContents` 先返回空字符串，后续任务扩展。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -110,7 +110,7 @@ public enum GitMigrationCleanupError: Error, Equatable, Sendable {
 - 修改：`Sources/MacSvnCore/Services/GitMigrationCleanupPlanner.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationCleanupPlannerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在同一测试文件增加：
 
@@ -131,7 +131,7 @@ func testPlanConvertsSvnIgnorePropertiesToGitIgnoreContents() throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -141,7 +141,7 @@ swift test --filter GitMigrationCleanupPlannerTests/testPlanConvertsSvnIgnorePro
 
 预期：测试失败，`gitIgnoreContents` 为空。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 扩展 planner：
 
@@ -152,7 +152,7 @@ swift test --filter GitMigrationCleanupPlannerTests/testPlanConvertsSvnIgnorePro
 - 规则去重，保留首次出现顺序；
 - 非空结果以换行结尾。
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 运行同上目标测试，预期 PASS。
 
@@ -162,7 +162,7 @@ swift test --filter GitMigrationCleanupPlannerTests/testPlanConvertsSvnIgnorePro
 - 修改：`Sources/MacSvnCore/Services/GitMigrationCleanupPlanner.swift`
 - 测试：`Tests/MacSvnCoreTests/GitMigrationCleanupPlannerTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```swift
 func testPlanRejectsNonPositiveLargeFileThreshold() {
@@ -174,7 +174,7 @@ func testPlanRejectsNonPositiveLargeFileThreshold() {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -184,7 +184,7 @@ swift test --filter GitMigrationCleanupPlannerTests/testPlanRejectsNonPositiveLa
 
 预期：测试失败或编译失败，因为 planner 尚未校验阈值。
 
-- [ ] **步骤 3：实现最少代码**
+- [x] **步骤 3：实现最少代码**
 
 在 `plan(...)` 开头增加：
 
@@ -194,7 +194,7 @@ guard largeFileThresholdBytes > 0 else {
 }
 ```
 
-- [ ] **步骤 4：运行目标集合**
+- [x] **步骤 4：运行目标集合**
 
 运行：
 
@@ -206,7 +206,7 @@ swift test --filter GitMigrationCleanupPlannerTests
 
 ## 任务 4：全量验证与提交
 
-- [ ] **步骤 1：运行 P5 目标集合**
+- [x] **步骤 1：运行 P5 目标集合**
 
 ```bash
 swift test --filter "GitMigrationCleanupPlannerTests|GitMigrationSourceAnalyzerTests|GitMigrationServiceTests|GitMigrationViewModelTests"
@@ -214,7 +214,7 @@ swift test --filter "GitMigrationCleanupPlannerTests|GitMigrationSourceAnalyzerT
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -223,7 +223,7 @@ git diff --check
 
 预期：测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/GitMigrationModels.swift \
