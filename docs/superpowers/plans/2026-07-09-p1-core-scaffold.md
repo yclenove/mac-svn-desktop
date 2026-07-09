@@ -12,23 +12,23 @@
 
 ## 文件结构
 
-- 创建：`Package.swift`  
+- 创建：`Package.swift`
   定义 `MacSvnCore` library target 和 `MacSvnCoreTests` test target，macOS 14 起步。
-- 创建：`Sources/MacSvnCore/Models/SvnModels.swift`  
+- 创建：`Sources/MacSvnCore/Models/SvnModels.swift`
   定义 `SvnVersion`、`Revision`、`ItemStatus`、`FileStatus`、`UpdateSummary`、`Credential` 等 P1 底层模型。
-- 创建：`Sources/MacSvnCore/Errors/SvnError.swift`  
+- 创建：`Sources/MacSvnCore/Errors/SvnError.swift`
   定义 `SvnError` 枚举并保持 `Equatable`，方便测试错误分类。
-- 创建：`Sources/MacSvnCore/Errors/SvnErrorMapper.swift`  
+- 创建：`Sources/MacSvnCore/Errors/SvnErrorMapper.swift`
   从 `svn: E<num>` stderr 映射认证、out-of-date、WC locked、network、other 等错误。
-- 创建：`Sources/MacSvnCore/Backend/AuthArguments.swift`  
+- 创建：`Sources/MacSvnCore/Backend/AuthArguments.swift`
   认证参数唯一入口，生成 `--username` 与 `--password-from-stdin`，密码只进 stdin data。
-- 创建：`Sources/MacSvnCore/Backend/SvnCommandBuilder.swift`  
+- 创建：`Sources/MacSvnCore/Backend/SvnCommandBuilder.swift`
   先实现 P1 commit/update/status 的参数构造，统一追加 `--non-interactive`、`--xml`、`--encoding UTF-8`、`--accept postpone`。
-- 创建：`Sources/MacSvnCore/Parsers/CommitOutputParser.swift`  
+- 创建：`Sources/MacSvnCore/Parsers/CommitOutputParser.swift`
   解析 `Committed revision N.`。
-- 创建：`Sources/MacSvnCore/Parsers/UpdateOutputParser.swift`  
+- 创建：`Sources/MacSvnCore/Parsers/UpdateOutputParser.swift`
   容错解析 update 文本输出，统计 A/U/D/C/G/E/R 和目标 revision。
-- 创建：`Sources/MacSvnCore/Parsers/StatusXMLParser.swift`  
+- 创建：`Sources/MacSvnCore/Parsers/StatusXMLParser.swift`
   使用 `XMLParser` 解析 `svn status --xml`，支持中文路径、unversioned/modified/added/deleted/missing/conflicted/ignored/external/replaced/normal 和 `tree-conflicted`。
 - 创建：`Tests/MacSvnCoreTests/SvnErrorMapperTests.swift`
 - 创建：`Tests/MacSvnCoreTests/AuthArgumentsTests.swift`
@@ -105,7 +105,7 @@ final class AuthArgumentsTests: XCTestCase {
 
 - [ ] **步骤 3：运行测试验证失败**
 
-运行：`swift test --filter SvnErrorMapperTests --filter AuthArgumentsTests`  
+运行：`swift test --filter SvnErrorMapperTests --filter AuthArgumentsTests`
 预期：FAIL 或编译失败，提示 `no such module 'MacSvnCore'` 或类型未定义。
 
 - [ ] **步骤 4：编写最少实现代码**
@@ -114,7 +114,7 @@ final class AuthArgumentsTests: XCTestCase {
 
 - [ ] **步骤 5：运行测试验证通过**
 
-运行：`swift test --filter SvnErrorMapperTests && swift test --filter AuthArgumentsTests`  
+运行：`swift test --filter SvnErrorMapperTests && swift test --filter AuthArgumentsTests`
 预期：两个测试类全部 PASS。
 
 - [ ] **步骤 6：Commit**
@@ -162,7 +162,7 @@ final class SvnCommandBuilderTests: XCTestCase {
 
 - [ ] **步骤 2：运行测试验证失败**
 
-运行：`swift test --filter SvnCommandBuilderTests`  
+运行：`swift test --filter SvnCommandBuilderTests`
 预期：FAIL 或编译失败，提示 `SvnCommandBuilder` 未定义。
 
 - [ ] **步骤 3：编写最少实现代码**
@@ -171,7 +171,7 @@ final class SvnCommandBuilderTests: XCTestCase {
 
 - [ ] **步骤 4：运行测试验证通过**
 
-运行：`swift test --filter SvnCommandBuilderTests`  
+运行：`swift test --filter SvnCommandBuilderTests`
 预期：PASS。
 
 - [ ] **步骤 5：Commit**
@@ -253,7 +253,7 @@ final class UpdateOutputParserTests: XCTestCase {
 
 - [ ] **步骤 3：运行测试验证失败**
 
-运行：`swift test --filter CommitOutputParserTests && swift test --filter UpdateOutputParserTests`  
+运行：`swift test --filter CommitOutputParserTests && swift test --filter UpdateOutputParserTests`
 预期：FAIL 或编译失败，提示 parser 类型未定义。
 
 - [ ] **步骤 4：编写最少实现代码**
@@ -262,7 +262,7 @@ final class UpdateOutputParserTests: XCTestCase {
 
 - [ ] **步骤 5：运行测试验证通过**
 
-运行：`swift test --filter CommitOutputParserTests && swift test --filter UpdateOutputParserTests`  
+运行：`swift test --filter CommitOutputParserTests && swift test --filter UpdateOutputParserTests`
 预期：PASS。
 
 - [ ] **步骤 6：Commit**
@@ -335,7 +335,7 @@ final class StatusXMLParserTests: XCTestCase {
 
 - [ ] **步骤 2：运行测试验证失败**
 
-运行：`swift test --filter StatusXMLParserTests`  
+运行：`swift test --filter StatusXMLParserTests`
 预期：FAIL 或编译失败，提示 `StatusXMLParser` 未定义。
 
 - [ ] **步骤 3：编写最少实现代码**
@@ -344,12 +344,12 @@ final class StatusXMLParserTests: XCTestCase {
 
 - [ ] **步骤 4：运行测试验证通过**
 
-运行：`swift test --filter StatusXMLParserTests`  
+运行：`swift test --filter StatusXMLParserTests`
 预期：PASS。
 
 - [ ] **步骤 5：运行全部核心测试**
 
-运行：`swift test`  
+运行：`swift test`
 预期：所有测试 PASS，无编译警告。
 
 - [ ] **步骤 6：Commit**
