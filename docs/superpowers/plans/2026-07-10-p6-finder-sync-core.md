@@ -353,7 +353,7 @@ git commit -m "test: cover P6 finder sync menu actions"
 **文件：**
 - 修改：`docs/superpowers/plans/2026-07-10-p6-finder-sync-core.md`
 
-- [ ] **步骤 1：运行 FR-EX-05 目标集合**
+- [x] **步骤 1：运行 FR-EX-05 目标集合**
 
 ```bash
 swift test --filter FinderSyncPresentationBuilderTests
@@ -361,7 +361,7 @@ swift test --filter FinderSyncPresentationBuilderTests
 
 预期：目标集合 PASS。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -369,7 +369,7 @@ swift test
 
 预期：全部 XCTest PASS。
 
-- [ ] **步骤 3：运行空白检查**
+- [x] **步骤 3：运行空白检查**
 
 ```bash
 git diff --check
@@ -377,7 +377,7 @@ git diff --check
 
 预期：无输出、退出码 0。
 
-- [ ] **步骤 4：更新计划勾选并提交验证记录**
+- [x] **步骤 4：更新计划勾选并提交验证记录**
 
 将本计划完成步骤勾选为 `[x]`，提交：
 
