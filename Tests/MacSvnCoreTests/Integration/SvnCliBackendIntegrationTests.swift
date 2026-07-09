@@ -70,6 +70,21 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(String(data: data, encoding: .utf8), "中文内容\n")
     }
 
+    func testRemoteLogReadsTrunkHistoryWithoutCheckout() async throws {
+        let fixture = try makeFixture()
+
+        let entries = try await fixture.backend.remoteLog(
+            url: fixture.trunkURL,
+            from: Revision(1),
+            batch: 10,
+            verbose: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(entries.first?.revision, Revision(1))
+        XCTAssertFalse(entries.first?.changedPaths.isEmpty ?? true)
+    }
+
     func testInfoReadsWorkingCopyUrlAndRevision() async throws {
         let fixture = try makeFixture()
 

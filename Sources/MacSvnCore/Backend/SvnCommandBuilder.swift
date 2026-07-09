@@ -73,12 +73,20 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
-    public static func log(target: String, from: Revision, batch: Int, verbose: Bool) -> SvnCommand {
+    public static func log(
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        authArguments: [String] = []
+    ) -> SvnCommand {
         var arguments = ["log", "--xml"]
         if verbose {
             arguments.append("-v")
         }
-        arguments += ["--non-interactive", "-r", "\(from):0", "-l", String(batch), target]
+        arguments += ["--non-interactive", "-r", "\(from):0", "-l", String(batch)]
+        arguments += authArguments
+        arguments.append(target)
         return SvnCommand(arguments: arguments)
     }
 

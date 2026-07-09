@@ -133,6 +133,35 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
     }
 
+    func testRemoteLogPassesAuthStdinRunsWithoutWorkingCopyAndParsesEntries() async throws {
+        let xml = """
+        <log><logentry revision="7"><author>a</author><msg>remote msg</msg></logentry></log>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let entries = try await backend.remoteLog(
+            url: "file:///repo/trunk",
+            from: Revision(7),
+            batch: 10,
+            verbose: true,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(entries.map(\.revision), [Revision(7)])
+        XCTAssertEqual(entries.first?.message, "remote msg")
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertEqual(runner.calls.single?.currentDirectory, nil)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "log", "--xml", "-v", "--non-interactive",
+            "-r", "7:0",
+            "-l", "10",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
     func testCatPassesRevisionAuthStdinAndReturnsData() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("hello\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)

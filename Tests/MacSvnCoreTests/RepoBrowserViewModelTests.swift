@@ -196,6 +196,85 @@ final class RepoBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.bookmarkState, .error(String(describing: RepoBookmarkStoreError.emptyURL)))
     }
 
+    @MainActor
+    func testLoadLogStoresEntriesAndUsesRemoteEntryUrl() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            logResults: [.success([logEntry(Revision(7)), logEntry(Revision(6))])]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            logProvider: provider,
+            logBatchSize: 2
+        )
+        let entry = RemoteEntry(
+            name: "README.txt",
+            path: "README.txt",
+            kind: .file,
+            size: 10,
+            revision: Revision(7),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.loadLog(entry: entry, baseURL: "file:///repo/trunk", from: Revision(7))
+        let calls = await provider.recordedLogCalls()
+
+        XCTAssertEqual(viewModel.logState(for: "file:///repo/trunk/README.txt"), .loaded)
+        XCTAssertEqual(viewModel.logEntries(for: "file:///repo/trunk/README.txt").map(\.revision), [Revision(7), Revision(6)])
+        XCTAssertTrue(viewModel.hasMoreLog(for: "file:///repo/trunk/README.txt"))
+        XCTAssertEqual(calls, [
+            RepoLogCall(url: "file:///repo/trunk/README.txt", from: Revision(7), batch: 2, verbose: true, auth: nil)
+        ])
+    }
+
+    @MainActor
+    func testLoadMoreLogStartsBeforeLowestLoadedRevisionAndStopsOnShortPage() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            logResults: [
+                .success([logEntry(Revision(10)), logEntry(Revision(9))]),
+                .success([logEntry(Revision(8))])
+            ]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            logProvider: provider,
+            logBatchSize: 2
+        )
+        let entry = RemoteEntry(name: "src", path: "src", kind: .directory, size: nil, revision: nil, author: nil, date: nil)
+
+        await viewModel.loadLog(entry: entry, baseURL: "file:///repo/trunk", from: Revision(10))
+        await viewModel.loadMoreLog(entry: entry, baseURL: "file:///repo/trunk")
+        let url = "file:///repo/trunk/src"
+
+        XCTAssertEqual(viewModel.logEntries(for: url).map(\.revision), [Revision(10), Revision(9), Revision(8)])
+        XCTAssertFalse(viewModel.hasMoreLog(for: url))
+    }
+
+    @MainActor
+    func testLoadLogFailureStoresErrorAndClearsEntries() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            logResults: [.failure(SvnError.network(detail: "offline"))]
+        )
+        let viewModel = RepoBrowserViewModel(listProvider: provider, previewProvider: provider, logProvider: provider)
+        let entry = RemoteEntry(name: "src", path: "src", kind: .directory, size: nil, revision: nil, author: nil, date: nil)
+
+        await viewModel.loadLog(entry: entry, baseURL: "file:///repo/trunk", from: Revision(10))
+
+        XCTAssertEqual(
+            viewModel.logState(for: "file:///repo/trunk/src"),
+            .error(String(describing: SvnError.network(detail: "offline")))
+        )
+        XCTAssertEqual(viewModel.logEntries(for: "file:///repo/trunk/src"), [])
+    }
+
     private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {
         RepoBookmark(
             id: UUID(),
@@ -205,6 +284,10 @@ final class RepoBrowserViewModelTests: XCTestCase {
             addedAt: Date(timeIntervalSince1970: 1),
             lastOpenedAt: Date(timeIntervalSince1970: 1)
         )
+    }
+
+    private func logEntry(_ revision: Revision) -> LogEntry {
+        LogEntry(revision: revision, author: "a", date: nil, message: "m\(revision.value)", changedPaths: [])
     }
 }
 
@@ -227,6 +310,14 @@ private struct RepoBookmarkAddCall: Equatable, Sendable {
     let username: String?
 }
 
+private struct RepoLogCall: Equatable, Sendable {
+    let url: String
+    let from: Revision
+    let batch: Int
+    let verbose: Bool
+    let auth: Credential?
+}
+
 private actor FakeRepoListProvider: RepoListProviding {
     private let result: Result<[RemoteEntry], Error>
     private var calls: [RepoListCall] = []
@@ -245,15 +336,22 @@ private actor FakeRepoListProvider: RepoListProviding {
     }
 }
 
-private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding {
+private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding, RepoLogProviding {
     private let listResult: Result<[RemoteEntry], Error>
     private let catResult: Result<Data, Error>
+    private var logResults: [Result<[LogEntry], Error>]
     private var listCalls: [RepoListCall] = []
     private var catCalls: [RepoCatCall] = []
+    private var logCalls: [RepoLogCall] = []
 
-    init(listResult: Result<[RemoteEntry], Error>, catResult: Result<Data, Error>) {
+    init(
+        listResult: Result<[RemoteEntry], Error>,
+        catResult: Result<Data, Error>,
+        logResults: [Result<[LogEntry], Error>] = []
+    ) {
         self.listResult = listResult
         self.catResult = catResult
+        self.logResults = logResults
     }
 
     func recordedListCalls() -> [RepoListCall] {
@@ -264,6 +362,10 @@ private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding {
         catCalls
     }
 
+    func recordedLogCalls() -> [RepoLogCall] {
+        logCalls
+    }
+
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         listCalls.append(RepoListCall(url: url, depth: depth, auth: auth))
         return try listResult.get()
@@ -272,6 +374,14 @@ private actor FakeRepoBrowserProvider: RepoListProviding, RepoPreviewProviding {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data {
         catCalls.append(RepoCatCall(url: url, revision: revision, sizeLimit: sizeLimit, auth: auth))
         return try catResult.get()
+    }
+
+    func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry] {
+        logCalls.append(RepoLogCall(url: url, from: from, batch: batch, verbose: verbose, auth: auth))
+        guard !logResults.isEmpty else {
+            return []
+        }
+        return try logResults.removeFirst().get()
     }
 }
 

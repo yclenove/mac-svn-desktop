@@ -82,6 +82,24 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])
     }
 
+    func testLogCanIncludeAuthenticationArgumentsBeforeTarget() {
+        let command = SvnCommandBuilder.log(
+            target: "file:///repo/trunk",
+            from: Revision(20),
+            batch: 50,
+            verbose: true,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "log", "--xml", "-v", "--non-interactive",
+            "-r", "20:0",
+            "-l", "50",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+    }
+
     func testListUsesXmlDepthAuthAndUrl() {
         let command = SvnCommandBuilder.list(
             url: "file:///repo/trunk",

@@ -75,6 +75,25 @@ public struct SvnCliBackend: SvnBackend {
         return try LogXMLParser.parse(result.stdout)
     }
 
+    public func remoteLog(
+        url: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        auth: Credential? = nil
+    ) async throws -> [LogEntry] {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.log(
+            target: normalizedRemoteURL(url),
+            from: from,
+            batch: batch,
+            verbose: verbose,
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: nil, stdin: authArguments.stdin)
+        return try LogXMLParser.parse(result.stdout)
+    }
+
     public func list(
         url: String,
         depth: SvnDepth,

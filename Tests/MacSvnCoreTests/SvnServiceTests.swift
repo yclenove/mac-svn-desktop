@@ -167,6 +167,30 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.catSizeLimits, [5, 5])
     }
 
+    func testRemoteLogPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
+        let backend = MockSvnBackend()
+        backend.remoteLogErrors = [.authentication]
+        backend.remoteLogResult = [
+            LogEntry(revision: Revision(7), author: "a", date: nil, message: "m", changedPaths: [])
+        ]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let entries = try await service.remoteLog(
+            url: "file:///repo/trunk",
+            from: Revision(7),
+            batch: 10,
+            verbose: true,
+            auth: nil
+        )
+        let requestedScopes = await provider.recordedWorkingCopies()
+
+        XCTAssertEqual(entries.map(\.revision), [Revision(7)])
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk")!])
+        XCTAssertEqual(backend.calls.map(\.name), ["remoteLog", "remoteLog"])
+        XCTAssertEqual(backend.remoteLogCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testCommitPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -295,6 +319,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedListDepths: [SvnDepth] = []
     private var recordedCatCredentials: [Credential?] = []
     private var recordedCatSizeLimits: [Int] = []
+    private var recordedRemoteLogCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -376,12 +401,21 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedCatSizeLimits
     }
 
+    var remoteLogCredentials: [Credential?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedRemoteLogCredentials
+    }
+
     var statusResult: [FileStatus] = []
     var diffResult = ""
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
     var listResult: [RemoteEntry] = []
     var catResult = Data()
+    var remoteLogResult: [LogEntry] = []
     var commitResult = Revision(1)
     var commitErrors: [SvnError] = []
     var updateResult = UpdateSummary()
@@ -389,6 +423,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var checkoutErrors: [SvnError] = []
     var listErrors: [SvnError] = []
     var catErrors: [SvnError] = []
+    var remoteLogErrors: [SvnError] = []
     var onUpdate: ((URL) async -> Void)?
 
     private func record(_ name: String) {
@@ -472,6 +507,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return catResult
     }
 
+    func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry] {
+        let error = recordRemoteLog(auth: auth)
+        if let error {
+            throw error
+        }
+        return remoteLogResult
+    }
+
     func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
         let error = recordCheckout(depth: depth, auth: auth)
         if let error {
@@ -529,6 +572,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCatSizeLimits.append(sizeLimit)
         recordedCatCredentials.append(auth)
         let error = catErrors.isEmpty ? nil : catErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordRemoteLog(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "remoteLog"))
+        recordedRemoteLogCredentials.append(auth)
+        let error = remoteLogErrors.isEmpty ? nil : remoteLogErrors.removeFirst()
         callsLock.unlock()
         return error
     }

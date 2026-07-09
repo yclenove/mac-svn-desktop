@@ -9,6 +9,10 @@ public protocol RepoPreviewProviding: Sendable {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
 }
 
+public protocol RepoLogProviding: Sendable {
+    func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
+}
+
 public enum RepoBrowserState: Equatable, Sendable {
     case idle
     case loading
@@ -32,6 +36,14 @@ public enum RepoBookmarkState: Equatable, Sendable {
     case error(String)
 }
 
+public enum RepoLogState: Equatable, Sendable {
+    case idle
+    case loading
+    case loadingMore
+    case loaded
+    case error(String)
+}
+
 @MainActor
 @Observable
 public final class RepoBrowserViewModel {
@@ -39,22 +51,32 @@ public final class RepoBrowserViewModel {
 
     private let listProvider: any RepoListProviding
     private let previewProvider: (any RepoPreviewProviding)?
+    private let logProvider: (any RepoLogProviding)?
     private let bookmarkManager: (any RepoBookmarkManaging)?
+    private let logBatchSize: Int
 
     private var statesByURL: [String: RepoBrowserState] = [:]
     private var childrenByURL: [String: [RemoteEntry]] = [:]
     private var previewStatesByURL: [String: RepoPreviewState] = [:]
+    private var logStatesByURL: [String: RepoLogState] = [:]
+    private var logEntriesByURL: [String: [LogEntry]] = [:]
+    private var nextLogRevisionByURL: [String: Revision] = [:]
+    private var hasMoreLogByURL: [String: Bool] = [:]
     public private(set) var bookmarks: [RepoBookmark] = []
     public private(set) var bookmarkState: RepoBookmarkState = .idle
 
     public init(
         listProvider: any RepoListProviding,
         previewProvider: (any RepoPreviewProviding)? = nil,
-        bookmarkManager: (any RepoBookmarkManaging)? = nil
+        bookmarkManager: (any RepoBookmarkManaging)? = nil,
+        logProvider: (any RepoLogProviding)? = nil,
+        logBatchSize: Int = 100
     ) {
         self.listProvider = listProvider
         self.previewProvider = previewProvider ?? (listProvider as? any RepoPreviewProviding)
+        self.logProvider = logProvider ?? (listProvider as? any RepoLogProviding)
         self.bookmarkManager = bookmarkManager
+        self.logBatchSize = max(1, logBatchSize)
     }
 
     public func state(for url: String) -> RepoBrowserState {
@@ -67,6 +89,18 @@ public final class RepoBrowserViewModel {
 
     public func previewState(for url: String) -> RepoPreviewState {
         previewStatesByURL[url, default: .idle]
+    }
+
+    public func logState(for url: String) -> RepoLogState {
+        logStatesByURL[url, default: .idle]
+    }
+
+    public func logEntries(for url: String) -> [LogEntry] {
+        logEntriesByURL[url, default: []]
+    }
+
+    public func hasMoreLog(for url: String) -> Bool {
+        hasMoreLogByURL[url, default: false]
     }
 
     public func loadChildren(of url: String, auth: Credential? = nil) async {
@@ -121,6 +155,71 @@ public final class RepoBrowserViewModel {
             previewStatesByURL[url] = .unsupported("binary")
         } catch {
             previewStatesByURL[url] = .error(String(describing: error))
+        }
+    }
+
+    public func loadLog(entry: RemoteEntry, baseURL: String, from revision: Revision, auth: Credential? = nil) async {
+        let url = remoteURL(baseURL: baseURL, entryPath: entry.path)
+
+        guard let logProvider else {
+            logStatesByURL[url] = .error("logUnavailable")
+            return
+        }
+
+        logStatesByURL[url] = .loading
+        logEntriesByURL[url] = []
+        nextLogRevisionByURL[url] = nil
+        hasMoreLogByURL[url] = false
+
+        do {
+            let entries = try await logProvider.remoteLog(
+                url: url,
+                from: revision,
+                batch: logBatchSize,
+                verbose: true,
+                auth: auth
+            )
+            logEntriesByURL[url] = entries
+            updateLogPagination(for: url, loadedEntries: entries)
+            logStatesByURL[url] = .loaded
+        } catch {
+            logEntriesByURL[url] = []
+            nextLogRevisionByURL[url] = nil
+            hasMoreLogByURL[url] = false
+            logStatesByURL[url] = .error(String(describing: error))
+        }
+    }
+
+    public func loadMoreLog(entry: RemoteEntry, baseURL: String, auth: Credential? = nil) async {
+        let url = remoteURL(baseURL: baseURL, entryPath: entry.path)
+
+        guard hasMoreLogByURL[url, default: false],
+              let nextRevision = nextLogRevisionByURL[url],
+              !isLoadingLog(url: url)
+        else {
+            return
+        }
+
+        guard let logProvider else {
+            logStatesByURL[url] = .error("logUnavailable")
+            return
+        }
+
+        logStatesByURL[url] = .loadingMore
+
+        do {
+            let entries = try await logProvider.remoteLog(
+                url: url,
+                from: nextRevision,
+                batch: logBatchSize,
+                verbose: true,
+                auth: auth
+            )
+            logEntriesByURL[url, default: []] += entries
+            updateLogPagination(for: url, loadedEntries: entries)
+            logStatesByURL[url] = .loaded
+        } catch {
+            logStatesByURL[url] = .error(String(describing: error))
         }
     }
 
@@ -182,7 +281,27 @@ public final class RepoBrowserViewModel {
 
         return baseURL + "/" + entryPath
     }
+
+    private func isLoadingLog(url: String) -> Bool {
+        let state = logStatesByURL[url, default: .idle]
+        return state == .loading || state == .loadingMore
+    }
+
+    private func updateLogPagination(for url: String, loadedEntries: [LogEntry]) {
+        guard loadedEntries.count == logBatchSize,
+              let lowestRevision = loadedEntries.map(\.revision.value).min(),
+              lowestRevision > 0
+        else {
+            hasMoreLogByURL[url] = false
+            nextLogRevisionByURL[url] = nil
+            return
+        }
+
+        hasMoreLogByURL[url] = true
+        nextLogRevisionByURL[url] = Revision(lowestRevision - 1)
+    }
 }
 
 extension SvnService: RepoListProviding {}
 extension SvnService: RepoPreviewProviding {}
+extension SvnService: RepoLogProviding {}
