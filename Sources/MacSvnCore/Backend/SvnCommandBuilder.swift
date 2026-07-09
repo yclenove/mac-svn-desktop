@@ -15,11 +15,11 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["status", "--xml", "--non-interactive"])
     }
 
-    public static func commit(paths: [String], message: String) -> SvnCommand {
+    public static func commit(paths: [String], message: String, authArguments: [String] = []) -> SvnCommand {
         SvnCommand(arguments: [
             "commit", "--encoding", "UTF-8", "--non-interactive",
             "-m", message
-        ] + paths)
+        ] + authArguments + paths)
     }
 
     public static func update(paths: [String] = [], revision: Revision? = nil) -> SvnCommand {

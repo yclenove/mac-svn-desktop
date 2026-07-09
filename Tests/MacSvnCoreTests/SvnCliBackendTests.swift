@@ -1,0 +1,104 @@
+import Foundation
+import XCTest
+@testable import MacSvnCore
+
+final class SvnCliBackendTests: XCTestCase {
+    func testVersionRunsQuietVersionAndParsesOutput() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("1.14.5\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let version = try await backend.version()
+
+        XCTAssertEqual(version, SvnVersion(major: 1, minor: 14, patch: 5))
+        XCTAssertEqual(runner.calls.single?.arguments, ["--version", "--quiet"])
+    }
+
+    func testStatusRunsInWorkingCopyAndParsesXml() async throws {
+        let xml = """
+        <status><target path="."><entry path="a.txt"><wc-status item="modified" revision="3"/></entry></target></status>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let statuses = try await backend.status(wc: wc)
+
+        XCTAssertEqual(statuses, [FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(3), isTreeConflict: false)])
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testCommitPassesAuthStdinAndParsesRevision() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 42.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let revision = try await backend.commit(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["a.txt"],
+            message: "修复：登录超时",
+            auth: Credential(username: "u", password: "p")
+        )
+
+        XCTAssertEqual(revision, Revision(42))
+        XCTAssertEqual(runner.calls.single?.stdin, Data("p\n".utf8))
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "commit", "--encoding", "UTF-8", "--non-interactive",
+            "-m", "修复：登录超时",
+            "--username", "u", "--password-from-stdin",
+            "a.txt"
+        ])
+    }
+
+    func testNonZeroExitMapsSvnError() async {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E170001: auth failed", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        do {
+            _ = try await backend.version()
+            XCTFail("Expected authentication error")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .authentication)
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+    }
+}
+
+private final class RecordingProcessRunner: ProcessRunning, @unchecked Sendable {
+    struct Call: Equatable {
+        let executable: String
+        let arguments: [String]
+        let stdin: Data?
+        let currentDirectory: String?
+        let timeout: TimeInterval
+    }
+
+    private(set) var calls: [Call] = []
+    let result: ProcessResult
+
+    init(result: ProcessResult) {
+        self.result = result
+    }
+
+    func run(
+        executable: String,
+        arguments: [String],
+        stdin: Data?,
+        currentDirectory: String?,
+        timeout: TimeInterval
+    ) async throws -> ProcessResult {
+        calls.append(Call(
+            executable: executable,
+            arguments: arguments,
+            stdin: stdin,
+            currentDirectory: currentDirectory,
+            timeout: timeout
+        ))
+        return result
+    }
+}
+
+private extension Array {
+    var single: Element? {
+        count == 1 ? first : nil
+    }
+}
