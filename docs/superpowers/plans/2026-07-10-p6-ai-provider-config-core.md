@@ -335,7 +335,7 @@ swift test --filter "AIProviderStoreTests|AIProviderSettingsViewModelTests"
 
 ## 任务 3：全量验证与提交
 
-- [ ] **步骤 1：运行 P6 AI 目标集合**
+- [x] **步骤 1：运行 P6 AI 目标集合**
 
 ```bash
 swift test --filter "AIDataRedactorTests|AIProviderStoreTests|AIProviderSettingsViewModelTests"
@@ -343,7 +343,7 @@ swift test --filter "AIDataRedactorTests|AIProviderStoreTests|AIProviderSettings
 
 预期：0 failures。
 
-- [ ] **步骤 2：运行全量验证**
+- [x] **步骤 2：运行全量验证**
 
 ```bash
 swift test
@@ -352,7 +352,7 @@ git diff --check
 
 预期：全量测试 0 failures，空白检查无输出。
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add Sources/MacSvnCore/Models/AIModels.swift \
