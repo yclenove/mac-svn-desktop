@@ -19,6 +19,10 @@ public protocol SvnBackend: Sendable {
     func cleanup(wc: URL) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    /// 双路径 Diff（`--old` / `--new`）
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String
+    /// 显式对比 BASE
+    func diffAgainstBase(wc: URL, target: String) async throws -> String
     func applyPatch(wc: URL, patchFile: URL) async throws
     func blame(wc: URL, target: String) async throws -> [BlameLine]
     func properties(wc: URL, target: String) async throws -> [SvnProperty]

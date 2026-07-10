@@ -84,7 +84,7 @@
 | 2 | Update | 先 `info` 取统一 rev 再 `update`（多选同仓） | 进度、冲突入口 | ✅ | T1 |
 | 3 | Update to revision | `update [-r][-depth][--ignore-externals]` | rev、depth、omit externals | 🟡 | T2 |
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
-| 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | 🟡 | T1 |
+| 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | ✅ | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | 🟡 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |

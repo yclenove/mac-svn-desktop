@@ -11,11 +11,14 @@ public struct MacSvnDiffView: View {
 
     @State private var paths: [String] = []
     @State private var selectedPath: String?
+    @State private var comparePath = ""
     @State private var viewModel: DiffViewModel?
     @State private var errorText: String?
+    @State private var statusText: String?
     @State private var mode: DiffMode = .unified
     @State private var r1Text = ""
     @State private var r2Text = ""
+    @State private var externalDiffTool: ExternalDiffToolConfiguration?
 
     private enum DiffMode: String, CaseIterable, Identifiable {
         case unified = "Unified"
@@ -60,16 +63,46 @@ public struct MacSvnDiffView: View {
                     Button("按 revision 加载") {
                         Task { await reloadSelected() }
                     }
+                    Button("对比 BASE") {
+                        Task { await loadAgainstBase() }
+                    }
+                    TextField("对比文件", text: $comparePath)
+                        .frame(width: 120)
+                        .textFieldStyle(.roundedBorder)
+                        .help("填写第二路径后点「双文件 Diff」")
+                    Button("双文件 Diff") {
+                        Task { await loadTwoFiles() }
+                    }
+                    .disabled(selectedPath == nil || comparePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("外置查看器") {
+                        Task { await openExternal() }
+                    }
+                    .disabled(selectedPath == nil || externalDiffTool == nil)
                     Button("刷新文件列表") {
                         Task { await reloadPaths() }
                     }
                 } else {
+                    Button("对比 BASE") {
+                        Task { await loadAgainstBase() }
+                    }
+                    .disabled(selectedPath == nil)
+                    Button("外置") {
+                        Task { await openExternal() }
+                    }
+                    .disabled(selectedPath == nil || externalDiffTool == nil)
                     Button("刷新") {
                         Task { await reloadSelected() }
                     }
                 }
             }
             .padding(embedded ? 12 : 24)
+
+            if let statusText {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, embedded ? 12 : 24)
+            }
 
             if let errorText {
                 Text(errorText)
@@ -112,6 +145,7 @@ public struct MacSvnDiffView: View {
             }
         }
         .task {
+            await refreshExternalTool()
             if embedded {
                 await ensureViewModel()
                 await consumeNavigatorIntent()
@@ -149,9 +183,24 @@ public struct MacSvnDiffView: View {
             return
         }
         if viewModel == nil {
-            let wc = URL(fileURLWithPath: record.localPath)
-            viewModel = DiffViewModel(workingCopy: wc, diffProvider: session.svnService)
+            viewModel = makeDiffViewModel(wc: URL(fileURLWithPath: record.localPath))
         }
+    }
+
+    private func makeDiffViewModel(wc: URL) -> DiffViewModel {
+        DiffViewModel(
+            workingCopy: wc,
+            diffProvider: session.svnService,
+            externalDiffOpener: ExternalDiffService(
+                contentProvider: session.svnService,
+                runner: ProcessRunner()
+            )
+        )
+    }
+
+    private func refreshExternalTool() async {
+        let settings = await session.settingsStore.settings()
+        externalDiffTool = settings.externalDiffTool
     }
 
     @ViewBuilder
@@ -231,11 +280,9 @@ public struct MacSvnDiffView: View {
         do {
             let statuses = try await session.svnService.status(wc: wc)
             paths = statuses.map(\.path).sorted()
-            viewModel = DiffViewModel(
-                workingCopy: wc,
-                diffProvider: session.svnService
-            )
+            viewModel = makeDiffViewModel(wc: wc)
             errorText = nil
+            await refreshExternalTool()
             if let selectedPath, paths.contains(selectedPath) {
                 await loadDiff(path: selectedPath)
             } else {
@@ -258,7 +305,46 @@ public struct MacSvnDiffView: View {
         guard let viewModel else { return }
         let r1 = Int(r1Text).map { Revision($0) }
         let r2 = Int(r2Text).map { Revision($0) }
+        // 未填 revision 时默认 WC vs BASE
         await viewModel.load(target: path, r1: r1, r2: r2)
+        statusText = (r1 == nil && r2 == nil) ? "对比 BASE（工作副本）" : "对比 r\(r1Text)–r\(r2Text)"
+    }
+
+    private func loadAgainstBase() async {
+        guard let viewModel, let selectedPath else { return }
+        r1Text = ""
+        r2Text = ""
+        await viewModel.loadAgainstBase(target: selectedPath)
+        statusText = "对比 BASE"
+    }
+
+    private func loadTwoFiles() async {
+        guard let viewModel, let selectedPath else { return }
+        let other = comparePath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !other.isEmpty else { return }
+        await viewModel.loadBetweenPaths(oldPath: selectedPath, newPath: other)
+        statusText = "双文件：\(selectedPath) ↔ \(other)"
+    }
+
+    private func openExternal() async {
+        guard let viewModel, let selectedPath else { return }
+        await refreshExternalTool()
+        guard let tool = externalDiffTool else {
+            errorText = "请先在设置中配置外置 Diff 工具"
+            return
+        }
+        let r1 = Int(r1Text).map { Revision($0) }
+        let r2 = Int(r2Text).map { Revision($0) }
+        await viewModel.openExternalDiff(target: selectedPath, tool: tool, r1: r1, r2: r2)
+        switch viewModel.externalDiffState {
+        case .opened:
+            statusText = "已打开外置 Diff（\(tool.name)）"
+            errorText = nil
+        case .error(let message):
+            errorText = "外置 Diff 失败：\(message)"
+        default:
+            break
+        }
     }
 
     private func consumeNavigatorIntent() async {

@@ -1145,6 +1145,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return diffResult
     }
 
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        record("diffBetweenPaths")
+        return diffResult
+    }
+
+    func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        record("diffAgainstBase")
+        return diffResult
+    }
+
     func blame(wc: URL, target: String) async throws -> [BlameLine] {
         record("blame")
         return blameResult

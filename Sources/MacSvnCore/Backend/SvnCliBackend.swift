@@ -218,6 +218,24 @@ public struct SvnCliBackend: SvnBackend {
         return String(decoding: result.stdout, as: UTF8.self)
     }
 
+    public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        let result = try await run(
+            SvnCommandBuilder.diffBetweenPaths(oldPath: oldPath, newPath: newPath),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+        return String(decoding: result.stdout, as: UTF8.self)
+    }
+
+    public func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        let result = try await run(
+            SvnCommandBuilder.diffAgainstBase(target: target),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+        return String(decoding: result.stdout, as: UTF8.self)
+    }
+
     public func applyPatch(wc: URL, patchFile: URL) async throws {
         _ = try await run(
             SvnCommandBuilder.patch(patchFile: patchFile.path),

@@ -128,7 +128,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T1.3** CFM：Repair Move / Repair Copy（#45）
 - [x] **T1.4** Commit 对话框级：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4 + §4.1）
 - [x] **T1.5** Update：同仓多路径统一 revision（#2 + §4.3）
-- [ ] **T1.6** Diff：BASE、双文件、外置查看器入口（#5）
+- [x] **T1.6** Diff：BASE、双文件、外置查看器入口（#5）
 - [ ] **T1.7** Add / Delete / Revert（勾选列表）/ Cleanup（#14,17,18,29）
 - [ ] **T1.8** Rename（#13）
 - [ ] **T1.9** Ignore 文件/通配（#32）

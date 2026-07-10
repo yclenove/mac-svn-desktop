@@ -161,6 +161,19 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "1:3", "a.txt"])
     }
 
+    func testDiffAgainstBaseUsesExplicitBaseRevision() {
+        let command = SvnCommandBuilder.diffAgainstBase(target: "a.txt")
+        XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "BASE", "a.txt"])
+    }
+
+    func testDiffBetweenPathsUsesOldAndNew() {
+        let command = SvnCommandBuilder.diffBetweenPaths(oldPath: "a.txt", newPath: "b.txt")
+        XCTAssertEqual(
+            command.arguments,
+            ["diff", "--non-interactive", "--old", "a.txt", "--new", "b.txt"]
+        )
+    }
+
     func testPatchUsesNonInteractiveAndPatchFile() {
         let command = SvnCommandBuilder.patch(patchFile: "/tmp/shelf.patch")
         XCTAssertEqual(command.arguments, ["patch", "--non-interactive", "/tmp/shelf.patch"])

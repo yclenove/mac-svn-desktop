@@ -140,9 +140,26 @@ public enum SvnCommandBuilder {
         var arguments = ["diff", "--non-interactive"]
         if let r1, let r2 {
             arguments += ["-r", "\(r1):\(r2)"]
+        } else if let r1 {
+            // 单端修订（含显式 BASE 语义由调用方传 Revision 或走默认 WC vs BASE）
+            arguments += ["-r", r1.description]
         }
         arguments.append(target)
         return SvnCommand(arguments: arguments)
+    }
+
+    /// 双任意文件 Diff（对齐小乌龟「比较两个文件」：`svn diff --old --new`）
+    public static func diffBetweenPaths(oldPath: String, newPath: String) -> SvnCommand {
+        SvnCommand(arguments: [
+            "diff", "--non-interactive",
+            "--old", oldPath,
+            "--new", newPath
+        ])
+    }
+
+    /// 工作副本相对 BASE 的 Diff（显式 `-r BASE`，与无 -r 默认行为一致，便于 UI「对比 BASE」）
+    public static func diffAgainstBase(target: String) -> SvnCommand {
+        SvnCommand(arguments: ["diff", "--non-interactive", "-r", "BASE", target])
     }
 
     public static func patch(patchFile: String) -> SvnCommand {

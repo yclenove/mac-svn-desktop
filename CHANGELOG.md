@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.6：Diff 显式对比 BASE、双文件 `--old/--new`、外置查看器入口接线（设置中的 ExternalDiffTool）
+- Affected: SvnCommandBuilder/Backend/Cli/Service, DiffViewModel, MacSvnDiffView, Tests/*, docs/*
+- Impact: inventory #5 ✅；EOL/空白过滤仍为进阶项
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.5：多路径 Update 先 `info -r HEAD` 钉住统一 revision 再 update；CFM 多选走选中路径更新
 - Affected: UpdateRevisionPolicy.swift, SvnCommandBuilder/Backend/Cli, SvnService, MacSvnChangesView, Tests/*, docs/*
 - Impact: inventory #2 ✅；防 mixed-rev；Auto-close 仍待设置页

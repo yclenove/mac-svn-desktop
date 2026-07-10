@@ -3,6 +3,19 @@ import Observation
 
 public protocol DiffProviding: Sendable {
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String
+    func diffAgainstBase(wc: URL, target: String) async throws -> String
+}
+
+extension DiffProviding {
+    /// 默认回退：未实现双路径时抛错（生产路径由 `SvnService` 覆盖）
+    public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        throw SvnError.other(code: nil, stderr: "diffBetweenPathsUnavailable")
+    }
+
+    public func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        try await diff(wc: wc, target: target, r1: nil, r2: nil)
+    }
 }
 
 public struct BinaryFileDetails: Equatable, Sendable {
@@ -148,29 +161,37 @@ public final class DiffViewModel {
 
         do {
             let rawDiff = try await diffProvider.diff(wc: workingCopy, target: target, r1: r1, r2: r2)
-            diffText = rawDiff
-
-            if Self.isBinaryUnsupportedDiff(rawDiff) {
-                lines = []
-                sideBySideRows = []
-                state = .binaryUnsupported(binaryDetails(for: target))
-                return
-            }
-
-            // 大 Diff 跳过逐行解析，避免 UI 侧构建海量子视图（见 DiffPerformanceLimits）
-            if DiffPerformanceLimits.shouldParseLineStructures(diffCharacterCount: rawDiff.count) {
-                lines = Self.parseLines(rawDiff)
-                sideBySideRows = Self.parseSideBySideRows(rawDiff)
-            } else {
-                lines = []
-                sideBySideRows = []
-            }
-            state = .loaded
+            applyLoadedDiff(rawDiff, target: target)
         } catch {
-            diffText = ""
-            lines = []
-            sideBySideRows = []
-            state = .error(String(describing: error))
+            failLoad(error)
+        }
+    }
+
+    /// 显式对比 BASE（`svn diff -r BASE`）
+    public func loadAgainstBase(target: String) async {
+        state = .loading
+
+        do {
+            let rawDiff = try await diffProvider.diffAgainstBase(wc: workingCopy, target: target)
+            applyLoadedDiff(rawDiff, target: target)
+        } catch {
+            failLoad(error)
+        }
+    }
+
+    /// 双任意文件 Diff（`svn diff --old --new`）
+    public func loadBetweenPaths(oldPath: String, newPath: String) async {
+        state = .loading
+
+        do {
+            let rawDiff = try await diffProvider.diffBetweenPaths(
+                wc: workingCopy,
+                oldPath: oldPath,
+                newPath: newPath
+            )
+            applyLoadedDiff(rawDiff, target: newPath)
+        } catch {
+            failLoad(error)
         }
     }
 
@@ -208,6 +229,33 @@ public final class DiffViewModel {
         } catch {
             externalDiffState = .error(String(describing: error))
         }
+    }
+
+    private func applyLoadedDiff(_ rawDiff: String, target: String) {
+        diffText = rawDiff
+
+        if Self.isBinaryUnsupportedDiff(rawDiff) {
+            lines = []
+            sideBySideRows = []
+            state = .binaryUnsupported(binaryDetails(for: target))
+            return
+        }
+
+        if DiffPerformanceLimits.shouldParseLineStructures(diffCharacterCount: rawDiff.count) {
+            lines = Self.parseLines(rawDiff)
+            sideBySideRows = Self.parseSideBySideRows(rawDiff)
+        } else {
+            lines = []
+            sideBySideRows = []
+        }
+        state = .loaded
+    }
+
+    private func failLoad(_ error: Error) {
+        diffText = ""
+        lines = []
+        sideBySideRows = []
+        state = .error(String(describing: error))
     }
 
     nonisolated public static func parseLines(_ diff: String) -> [UnifiedDiffLine] {

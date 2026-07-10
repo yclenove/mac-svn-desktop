@@ -40,6 +40,14 @@ public actor SvnService {
         try await backend.diff(wc: wc, target: target, r1: r1, r2: r2)
     }
 
+    public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        try await backend.diffBetweenPaths(wc: wc, oldPath: oldPath, newPath: newPath)
+    }
+
+    public func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        try await backend.diffAgainstBase(wc: wc, target: target)
+    }
+
     public func blame(wc: URL, target: String) async throws -> [BlameLine] {
         try await backend.blame(wc: wc, target: target)
     }
