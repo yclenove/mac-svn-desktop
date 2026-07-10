@@ -1,0 +1,842 @@
+{
+  "generated_at": "2026-07-10T12:25:12Z",
+  "total": 114,
+  "done": 0,
+  "partial": 52,
+  "missing": 62,
+  "coverage": 0.0,
+  "coverage_percent": 0.0,
+  "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
+  "by_section": {
+    "domain": {
+      "total": 28,
+      "done": 0,
+      "partial": 21,
+      "missing": 7
+    },
+    "command": {
+      "total": 46,
+      "done": 0,
+      "partial": 23,
+      "missing": 23
+    },
+    "log": {
+      "total": 20,
+      "done": 0,
+      "partial": 3,
+      "missing": 17
+    },
+    "settings": {
+      "total": 13,
+      "done": 0,
+      "partial": 4,
+      "missing": 9
+    },
+    "overlay": {
+      "total": 7,
+      "done": 0,
+      "partial": 1,
+      "missing": 6
+    }
+  },
+  "items": [
+    {
+      "key": "D01",
+      "section": "domain",
+      "title": "Icon Overlays / WC Status",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D02",
+      "section": "domain",
+      "title": "Context Menus / Drag-Drop",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D03",
+      "section": "domain",
+      "title": "Authentication",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D04",
+      "section": "domain",
+      "title": "Import / Import in Place",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D05",
+      "section": "domain",
+      "title": "Checkout",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D06",
+      "section": "domain",
+      "title": "Commit",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D07",
+      "section": "domain",
+      "title": "Update",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D08",
+      "section": "domain",
+      "title": "Conflicts",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D09",
+      "section": "domain",
+      "title": "Check for Modifications",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D10",
+      "section": "domain",
+      "title": "Diff",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D11",
+      "section": "domain",
+      "title": "Change Lists",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D12",
+      "section": "domain",
+      "title": "Shelving",
+      "raw_status": "🟡 本地≠官方",
+      "status": "partial"
+    },
+    {
+      "key": "D13",
+      "section": "domain",
+      "title": "Show Log",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D14",
+      "section": "domain",
+      "title": "Add / Ignore",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D15",
+      "section": "domain",
+      "title": "Copy/Move/Rename/Delete",
+      "raw_status": "❌/🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D16",
+      "section": "domain",
+      "title": "Revert / Cleanup",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D17",
+      "section": "domain",
+      "title": "Properties",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D18",
+      "section": "domain",
+      "title": "Externals",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D19",
+      "section": "domain",
+      "title": "Branch/Tag / Switch",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D20",
+      "section": "domain",
+      "title": "Merge",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D21",
+      "section": "domain",
+      "title": "Locking",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D22",
+      "section": "domain",
+      "title": "Patch",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D23",
+      "section": "domain",
+      "title": "Blame",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D24",
+      "section": "domain",
+      "title": "Repo Browser",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "D25",
+      "section": "domain",
+      "title": "Revision Graph",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D26",
+      "section": "domain",
+      "title": "Export / Unversion / Relocate",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D27",
+      "section": "domain",
+      "title": "Bugtraq / Repo Viewer 集成",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "D28",
+      "section": "domain",
+      "title": "Settings 全页",
+      "raw_status": "❌/弱",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.01",
+      "section": "command",
+      "title": "Checkout",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.02",
+      "section": "command",
+      "title": "Update",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.03",
+      "section": "command",
+      "title": "Update to revision",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.04",
+      "section": "command",
+      "title": "Commit",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.05",
+      "section": "command",
+      "title": "Diff",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.06",
+      "section": "command",
+      "title": "Diff with URL",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.07",
+      "section": "command",
+      "title": "Show Log",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.08",
+      "section": "command",
+      "title": "Check for Modifications",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.09",
+      "section": "command",
+      "title": "Revision Graph",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.10",
+      "section": "command",
+      "title": "Repo Browser",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.11",
+      "section": "command",
+      "title": "Edit Conflicts",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.12",
+      "section": "command",
+      "title": "Resolved",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.13",
+      "section": "command",
+      "title": "Rename",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.14",
+      "section": "command",
+      "title": "Delete",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.15",
+      "section": "command",
+      "title": "Delete (keep local)",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.16",
+      "section": "command",
+      "title": "Delete unversioned",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.17",
+      "section": "command",
+      "title": "Revert",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.18",
+      "section": "command",
+      "title": "Cleanup",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.19",
+      "section": "command",
+      "title": "Get Lock",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.20",
+      "section": "command",
+      "title": "Release Lock",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.21",
+      "section": "command",
+      "title": "Break lock",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.22",
+      "section": "command",
+      "title": "Branch/Tag",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.23",
+      "section": "command",
+      "title": "Switch",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.24",
+      "section": "command",
+      "title": "Merge",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.25",
+      "section": "command",
+      "title": "Merge reintegrate",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.26",
+      "section": "command",
+      "title": "Export",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.27",
+      "section": "command",
+      "title": "Relocate",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.28",
+      "section": "command",
+      "title": "Create Repository Here",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.29",
+      "section": "command",
+      "title": "Add",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.30",
+      "section": "command",
+      "title": "Import",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.31",
+      "section": "command",
+      "title": "Blame",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.32",
+      "section": "command",
+      "title": "Add to Ignore List",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.33",
+      "section": "command",
+      "title": "Create Patch",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.34",
+      "section": "command",
+      "title": "Apply Patch",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.35",
+      "section": "command",
+      "title": "Properties",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.36",
+      "section": "command",
+      "title": "Copy / Move",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.37",
+      "section": "command",
+      "title": "Shelve / Unshelve",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "cmd.38",
+      "section": "command",
+      "title": "Change Lists",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.39",
+      "section": "command",
+      "title": "Externals",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.40",
+      "section": "command",
+      "title": "Compare revisions / Blame differences",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.41",
+      "section": "command",
+      "title": "Save revision / Open / Open with",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.42",
+      "section": "command",
+      "title": "Merge revision to…",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.43",
+      "section": "command",
+      "title": "Import in Place",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.44",
+      "section": "command",
+      "title": "Remove from version control",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.45",
+      "section": "command",
+      "title": "Repair Move / Repair Copy",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "cmd.46",
+      "section": "command",
+      "title": "Filename case conflict repair",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L01",
+      "section": "log",
+      "title": "Compare with working copy",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L02",
+      "section": "log",
+      "title": "Compare with previous revision",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L03",
+      "section": "log",
+      "title": "Compare and blame with BASE/previous",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L04",
+      "section": "log",
+      "title": "Show changes as unified diff",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L05",
+      "section": "log",
+      "title": "Save revision to…",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L06",
+      "section": "log",
+      "title": "Open / Open with…",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L07",
+      "section": "log",
+      "title": "Blame…",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "L08",
+      "section": "log",
+      "title": "Browse repository",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L09",
+      "section": "log",
+      "title": "Create branch/tag from revision",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L10",
+      "section": "log",
+      "title": "Update item to revision",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L11",
+      "section": "log",
+      "title": "Revert to this revision",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L12",
+      "section": "log",
+      "title": "Revert changes from this revision",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L13",
+      "section": "log",
+      "title": "Merge revision to…",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L14",
+      "section": "log",
+      "title": "Checkout… / Export…",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L15",
+      "section": "log",
+      "title": "Edit author / log message",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L16",
+      "section": "log",
+      "title": "Show revision properties",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L17",
+      "section": "log",
+      "title": "Copy to clipboard",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L18",
+      "section": "log",
+      "title": "Filter / Statistics / Offline cache",
+      "raw_status": "❌/弱",
+      "status": "partial"
+    },
+    {
+      "key": "L19",
+      "section": "log",
+      "title": "Actions 列图标",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "L20",
+      "section": "log",
+      "title": "stop-on-copy、Next 100、Show All",
+      "raw_status": "🟡",
+      "status": "partial"
+    },
+    {
+      "key": "S01",
+      "section": "settings",
+      "title": "General",
+      "raw_status": "弱",
+      "status": "partial"
+    },
+    {
+      "key": "S02",
+      "section": "settings",
+      "title": "Context Menu",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S03",
+      "section": "settings",
+      "title": "Dialogs 1",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S04",
+      "section": "settings",
+      "title": "Dialogs 2",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S05",
+      "section": "settings",
+      "title": "Dialogs 3",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S06",
+      "section": "settings",
+      "title": "Colours",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S07",
+      "section": "settings",
+      "title": "Revision Graph",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S08",
+      "section": "settings",
+      "title": "Icon Overlays",
+      "raw_status": "弱",
+      "status": "partial"
+    },
+    {
+      "key": "S09",
+      "section": "settings",
+      "title": "Network",
+      "raw_status": "弱",
+      "status": "partial"
+    },
+    {
+      "key": "S10",
+      "section": "settings",
+      "title": "External Programs",
+      "raw_status": "弱",
+      "status": "partial"
+    },
+    {
+      "key": "S11",
+      "section": "settings",
+      "title": "Saved Data / Hook Scripts",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S12",
+      "section": "settings",
+      "title": "Bugtraq / Issue tracker",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "S13",
+      "section": "settings",
+      "title": "Log Cache",
+      "raw_status": "❌",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.01",
+      "section": "overlay",
+      "title": "Normal / Modified / Conflicted / Added",
+      "raw_status": "部分",
+      "status": "partial"
+    },
+    {
+      "key": "overlay.02",
+      "section": "overlay",
+      "title": "Deleted / Missing / Replaced",
+      "raw_status": "缺口",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.03",
+      "section": "overlay",
+      "title": "Locked / needs-lock(readonly)",
+      "raw_status": "缺口",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.04",
+      "section": "overlay",
+      "title": "Ignored / Unversioned（可选显示）",
+      "raw_status": "缺口",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.05",
+      "section": "overlay",
+      "title": "Depth shallow / Nested WC / Externals / Switched",
+      "raw_status": "缺口",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.06",
+      "section": "overlay",
+      "title": "仅 mergeinfo 属性变更",
+      "raw_status": "缺口",
+      "status": "missing"
+    },
+    {
+      "key": "overlay.07",
+      "section": "overlay",
+      "title": "Status Cache 三模式 + 包含排除路径",
+      "raw_status": "缺口",
+      "status": "missing"
+    }
+  ]
+}

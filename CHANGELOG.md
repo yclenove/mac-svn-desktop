@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.5：新增 `scripts/parity-coverage.py` 解析 inventory 状态列，输出 `docs/acceptance/parity-coverage.json`（✅/总数）；含 fixture 单测
+- Affected: scripts/parity-coverage.py, scripts/tests/test_parity_coverage.py, docs/acceptance/parity-coverage.json, docs/README.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: 当前基线 0/114（0%）；后续每波更新 inventory 后重跑脚本即可跟踪 PERFECT
+
+## 2026-07-10
+
 - Summary: 修复 Bugbot 指出的工作区接线问题：种子路径同步选中、提交说明预填、嵌入 Commit 去 HSplitView、CFM 不再误写 Diff 路径、嵌入 Diff 隐藏无效模式切换、pendingDiffPath 由工作区独占消费
 - Affected: MacSvnChangesView/CommitView/DiffView/WorkingCopyWorkspaceView/FeatureHostView, MacSvnAppNavigator, Tests/MacSvnAppTests/*
 - Impact: 深链/⌘K/CLI 与同屏 Diff/提交预填一致；降低 AttributeGraph 风险
