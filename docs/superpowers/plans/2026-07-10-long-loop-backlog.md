@@ -69,9 +69,9 @@
 
 ### Wave F — P5 Git 迁移 + 菜单栏 + 深链
 
-- [ ] **F1** Git 迁移向导 UI（源分析→authors→清理→执行→推送/同步）
-- [ ] **F2** 菜单栏常驻：状态角标 + 远端提交通知（`MenuBarStatusSnapshotter`）
-- [ ] **F3** `macsvn://` 深链与 CLI 伴生入口接到 App
+- [x] **F1** Git 迁移向导 UI（源分析→authors→清理→执行→推送/同步）
+- [x] **F2** 菜单栏常驻：状态角标 + 远端提交通知（`MenuBarStatusSnapshotter`）
+- [x] **F3** `macsvn://` 深链与 CLI 伴生入口接到 App
 
 ### Wave G — P6 AI + 生态
 
@@ -99,3 +99,4 @@
 | 2026-07-10 12:23 | C1/C2/C3/C4 | 7d1240b | `swift test --filter MacSvnApp` 6 passed |
 | 2026-07-10 12:25 | D1/D2/D3 | 14f43a8 | `swift test --filter MacSvnApp` 6 passed |
 | 2026-07-10 12:26 | E1–E5 | （本轮提交） | `swift test --filter MacSvnApp|SettingsStore` 9 passed |
+| 2026-07-10 12:36 | F1/F2/F3 | （本轮提交） | `swift test --filter MacSvnApp` 10 passed |

@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 长程 Loop 完成 Wave F：Git 迁移五步向导 UI、MenuBarExtra 状态角标与远端提交通知、`macsvn://` 深链与 CLI 伴生入口（`MacSvnAppNavigator`）
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift, Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: 自动化分区仅剩团队动态/AI 助手占位；下一波 G（AI + 生态扩展）
+
+## 2026-07-10
+
 - Summary: 长程 Loop 完成 Wave A–E（P1–P4 UI 接线）：日常流、仓库/分支、冲突三路合并、Blame/属性/锁定/搁置、提交守护硬阻断设置；8 分钟心跳 loop 已武装，下一波为 F（Git 迁移/菜单栏/深链）
 - Affected: Sources/MacSvnApp/**, Sources/MacSvnCore/Models/SvnModels.swift, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
 - Impact: 侧边栏除 Git 迁移/团队/AI 外均已接真实页；剩余 F/G/H

@@ -3,17 +3,18 @@ import MacSvnCore
 
 public struct MacSvnRootView: View {
     @ObservedObject private var session: MacSvnAppSession
+    @ObservedObject private var navigator: MacSvnAppNavigator
     @StateObject private var workspaceController: MacSvnWorkspaceController
     private let sidebarModel: MacSvnSidebarModel
-    @State private var selection: MacSvnAppRoute?
 
     public init(
         session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator,
         sidebarModel: MacSvnSidebarModel = MacSvnSidebarModel()
     ) {
         self.session = session
+        self.navigator = navigator
         self.sidebarModel = sidebarModel
-        _selection = State(initialValue: sidebarModel.defaultSelection)
         _workspaceController = StateObject(
             wrappedValue: MacSvnWorkspaceController(
                 workspaceStore: session.workspaceStore,
@@ -24,7 +25,10 @@ public struct MacSvnRootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(selection: $selection) {
+            List(selection: Binding(
+                get: { navigator.selectedRoute },
+                set: { navigator.selectedRoute = $0 ?? sidebarModel.defaultSelection }
+            )) {
                 ForEach(sidebarModel.sections) { sidebarSection in
                     Section(sidebarSection.section.title) {
                         ForEach(sidebarSection.routes) { route in
@@ -36,12 +40,33 @@ public struct MacSvnRootView: View {
             }
             .navigationTitle("MacSVN")
         } detail: {
-            MacSvnFeatureHostView(
-                route: selection ?? sidebarModel.defaultSelection,
-                session: session,
-                workspaceController: workspaceController
-            )
+            VStack(alignment: .leading, spacing: 0) {
+                if let message = navigator.lastAutomationMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                }
+                MacSvnFeatureHostView(
+                    route: navigator.selectedRoute,
+                    session: session,
+                    workspaceController: workspaceController
+                )
+            }
         }
+        .task {
+            await workspaceController.reload()
+            await consumePendingOpenIfNeeded()
+        }
+        .onChange(of: navigator.pendingOpenPath) { _, _ in
+            Task { await consumePendingOpenIfNeeded() }
+        }
+    }
+
+    private func consumePendingOpenIfNeeded() async {
+        guard let path = navigator.consumePendingOpenPath() else { return }
+        await workspaceController.openLocalPath(path)
     }
 }
 

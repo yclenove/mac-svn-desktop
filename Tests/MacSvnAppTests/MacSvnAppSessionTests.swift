@@ -20,6 +20,14 @@ final class MacSvnAppSessionTests: XCTestCase {
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("settings.json").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("workspaces.json").path))
+
+        // Wave F：Git 迁移 / 菜单栏依赖应在 bootstrap 中可用
+        _ = await session.gitMigrationService
+        _ = await session.gitMigrationSourceAnalyzer
+        _ = await session.gitMigrationSyncService
+        _ = await session.menuBarStatusSnapshotter
+        let pollMinutes = await session.menuBarPollIntervalMinutes
+        XCTAssertGreaterThanOrEqual(pollMinutes, 1)
     }
 
     func testBootstrapUsesConfiguredSvnPathWhenAvailable() async throws {

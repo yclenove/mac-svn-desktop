@@ -46,6 +46,8 @@ public struct MacSvnFeatureHostView: View {
             MacSvnLocksView(workspaceController: workspaceController, session: session)
         case .shelve:
             MacSvnShelveView(workspaceController: workspaceController, session: session)
+        case .gitMigration:
+            MacSvnGitMigrationView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
         default:

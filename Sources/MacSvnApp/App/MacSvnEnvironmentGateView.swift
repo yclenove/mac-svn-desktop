@@ -4,12 +4,14 @@ import MacSvnCore
 /// 启动门禁：检测本机 svn 可用性；不满足时展示安装/配置引导。
 public struct MacSvnEnvironmentGateView: View {
     @ObservedObject private var session: MacSvnAppSession
+    @ObservedObject private var navigator: MacSvnAppNavigator
     @State private var status: SvnEnvironmentStatus?
     @State private var isChecking = true
     @State private var customPath: String = ""
 
-    public init(session: MacSvnAppSession) {
+    public init(session: MacSvnAppSession, navigator: MacSvnAppNavigator) {
         self.session = session
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -18,7 +20,7 @@ public struct MacSvnEnvironmentGateView: View {
                 ProgressView("正在检测 Subversion…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if case .available = status {
-                MacSvnRootView(session: session)
+                MacSvnRootView(session: session, navigator: navigator)
             } else {
                 gateContent
             }

@@ -20,6 +20,11 @@ public final class MacSvnAppSession: ObservableObject {
     public let svnService: SvnService
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
+    public let gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer
+    public let gitMigrationService: GitMigrationService
+    public let gitMigrationSyncService: GitMigrationSyncService
+    public let menuBarStatusSnapshotter: MenuBarStatusSnapshotter
+    public let menuBarPollIntervalMinutes: Int
 
     public init(
         supportDirectory: URL,
@@ -32,7 +37,12 @@ public final class MacSvnAppSession: ObservableObject {
         shelveService: ShelveService,
         svnService: SvnService,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
-        svnExecutablePath: String
+        svnExecutablePath: String,
+        gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer,
+        gitMigrationService: GitMigrationService,
+        gitMigrationSyncService: GitMigrationSyncService,
+        menuBarStatusSnapshotter: MenuBarStatusSnapshotter,
+        menuBarPollIntervalMinutes: Int = 10
     ) {
         self.supportDirectory = supportDirectory
         self.settingsStore = settingsStore
@@ -45,6 +55,11 @@ public final class MacSvnAppSession: ObservableObject {
         self.svnService = svnService
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
+        self.gitMigrationSourceAnalyzer = gitMigrationSourceAnalyzer
+        self.gitMigrationService = gitMigrationService
+        self.gitMigrationSyncService = gitMigrationSyncService
+        self.menuBarStatusSnapshotter = menuBarStatusSnapshotter
+        self.menuBarPollIntervalMinutes = menuBarPollIntervalMinutes
     }
 
     /// 从 support 目录引导会话：加载设置、创建后端与服务、确保持久化文件存在。
@@ -103,6 +118,37 @@ public final class MacSvnAppSession: ObservableObject {
             svn: svnService
         )
 
+        let processRunner = ProcessRunner()
+        let gitEnvironmentChecker = GitMigrationEnvironmentChecker(
+            runner: processRunner,
+            timeout: settings.processTimeout
+        )
+        let gitMigrationSourceAnalyzer = GitMigrationSourceAnalyzer(
+            environmentChecker: gitEnvironmentChecker,
+            listProvider: svnService,
+            logProvider: svnService
+        )
+        let gitBackend = GitCliBackend(
+            runner: processRunner,
+            timeout: settings.processTimeout
+        )
+        let gitMigrationService = GitMigrationService(
+            svnExporter: svnService,
+            gitBackend: gitBackend
+        )
+        let gitMigrationSyncService = GitMigrationSyncService(
+            store: GitMigrationSyncStore(
+                fileURL: directory.appendingPathComponent("git-migrations.json")
+            ),
+            gitBackend: gitBackend
+        )
+        let menuBarConfiguration = MenuBarMonitorConfiguration()
+        let menuBarStatusSnapshotter = MenuBarStatusSnapshotter(
+            statusProvider: svnService,
+            remoteLogProvider: svnService,
+            configuration: menuBarConfiguration
+        )
+
         return MacSvnAppSession(
             supportDirectory: directory,
             settingsStore: settingsStore,
@@ -113,7 +159,12 @@ public final class MacSvnAppSession: ObservableObject {
             conflictService: conflictService,
             shelveService: shelveService,
             svnService: svnService,
-            svnExecutablePath: svnPath
+            svnExecutablePath: svnPath,
+            gitMigrationSourceAnalyzer: gitMigrationSourceAnalyzer,
+            gitMigrationService: gitMigrationService,
+            gitMigrationSyncService: gitMigrationSyncService,
+            menuBarStatusSnapshotter: menuBarStatusSnapshotter,
+            menuBarPollIntervalMinutes: menuBarConfiguration.pollIntervalMinutes
         )
     }
 

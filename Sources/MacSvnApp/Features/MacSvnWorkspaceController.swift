@@ -77,4 +77,18 @@ public final class MacSvnWorkspaceController: ObservableObject {
             errorMessage = "移除失败：\(error.localizedDescription)"
         }
     }
+
+    /// 深链 / CLI 打开本地路径：已登记则选中，否则尝试添加为工作副本。
+    public func openLocalPath(_ path: String) async {
+        let normalized = (path as NSString).standardizingPath
+        if let existing = records.first(where: {
+            ($0.localPath as NSString).standardizingPath == normalized
+        }) {
+            selectedID = existing.id
+            errorMessage = nil
+            return
+        }
+
+        await addWorkingCopy(at: URL(fileURLWithPath: normalized, isDirectory: true))
+    }
 }
