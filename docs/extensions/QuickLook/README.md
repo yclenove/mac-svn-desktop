@@ -22,7 +22,7 @@ SwiftPM 无法直接产出 `.appex`。本目录提供：
 
 ## Xcode 集成步骤
 
-1. 包装工程中新增 macOS → Quick Look Preview Extension；
+1. 用 Xcode 打开仓库根目录 `MacSVN.xcodeproj`，新增 macOS → Quick Look Preview Extension；
 2. 加入本目录骨架源文件；
 3. Info.plist 声明支持的 UTI（`public.plain-text`、`public.source-code` 等）；
 4. 安装后 `qlmanage -r` 刷新缓存。

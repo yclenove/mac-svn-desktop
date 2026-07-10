@@ -136,7 +136,7 @@
 
 ### Wave V — 系统扩展与发布
 
-- [ ] **V1** Xcode 包装工程（或等价）可构建 `.app`，嵌入 SwiftPM 产物
+- [x] **V1** Xcode 包装工程（或等价）可构建 `.app`，嵌入 SwiftPM 产物
 - [ ] **V2** Finder Sync `.appex` 可安装：角标 + 右键深链（FR-EX-05）；更新 `docs/extensions/FinderSync/`
 - [ ] **V3** Quick Look `.appex` 可安装：空格预览 Diff（FR-EX-08）；更新 `docs/extensions/QuickLook/`
 - [ ] **V4** 签名 / 公证流程文档 + 脚本骨架（P4 验收）；干净机冒烟步骤写入验收清单
@@ -162,6 +162,7 @@
 | 2026-07-10 14:32 | U6 | 333206b | ⌘K 无匹配 handoff query→AI Chat 自动发送 |
 | 2026-07-10 14:40 | U7 | a3e1ef4 | FSEvents + debounce 刷新；测试禁用通知权限；DispatchQueue 挂流 |
 | 2026-07-10 14:46 | U8 | e3b82c9 | 日历热力图 Builder+UI；锚定今天；周标签跟随 firstWeekday |
+| 2026-07-10 14:54 | V1 | （本轮） | MacSVN.xcodeproj + build-macos-app.sh；两条路径 verify 通过 |
 
 ## 阻塞日志
 

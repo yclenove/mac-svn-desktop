@@ -23,6 +23,10 @@ xcuserdata/
 Packages/
 Package.resolved
 
+# Packaged app output
+dist/
+build/
+
 # CocoaPods
 Pods/
 

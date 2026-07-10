@@ -66,6 +66,13 @@ cd mac-svn-desktop
 swift run MacSvnDesktopApp
 ```
 
+打包为可双击 `.app`（Xcode 包装工程或 SwiftPM 脚本，见 [docs/packaging](docs/packaging/README.md)）：
+
+```bash
+./scripts/build-macos-app.sh          # → dist/MacSVN.app
+# 或 open MacSVN.xcodeproj → scheme MacSVN
+```
+
 测试：
 
 ```bash

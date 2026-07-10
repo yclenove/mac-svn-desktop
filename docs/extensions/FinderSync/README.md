@@ -29,7 +29,7 @@ SwiftPM 可执行应用无法直接打包 App Extension。本目录提供：
 
 ## Xcode 集成步骤（验收用）
 
-1. 用 Xcode 打开/生成包装工程，嵌入 `MacSvnDesktopApp`；
+1. 用 Xcode 打开仓库根目录 `MacSVN.xcodeproj`（已嵌入本地 SwiftPM，Target `MacSVN`）；
 2. File → New → Target → macOS → Finder Sync Extension，Bundle ID 如 `com.yclenove.MacSVN.FinderSync`；
 3. 将本目录 `MacSvnFinderSync.swift` 加入扩展 target；
 4. 启用 App Groups（可选）共享 WC 列表；
