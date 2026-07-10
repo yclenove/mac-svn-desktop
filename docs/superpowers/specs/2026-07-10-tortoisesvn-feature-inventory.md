@@ -57,7 +57,7 @@
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
-| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14(除L03/L13) ✅；统计/离线/L15+ 仍开 | T2/T3 |
+| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2 | T1/T2 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
@@ -86,7 +86,7 @@
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | ✅ | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
-| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14(除L03/L13)；L15+ 仍开 | T2 |
+| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
@@ -212,7 +212,7 @@
 | L14 | Checkout… / Export… | 从日志检出/导出 | ✅ | T2 |
 | L15 | Edit author / log message | 改修订属性（需仓库钩子允许） | ❌ | T3 |
 | L16 | Show revision properties | 修订属性 | ❌ | T3 |
-| L17 | Copy to clipboard | 复制日志摘要 | ❌ | T2 |
+| L17 | Copy to clipboard | 复制日志摘要 | ✅ | T2 |
 | L18 | Filter / Statistics / Offline cache | 过滤、统计、离线 | 🟡 作者/说明/路径过滤 ✅；统计/离线 T3 | T2/T3 |
 | L19 | Actions 列图标 | M/A/D/R/Moved/Merged 等 | ✅ MADR 汇总；Moved/Merged 图标进阶仍开 | T2 |
 | L20 | stop-on-copy、Next 100、Show All | 拉取策略 | ✅ | T2 |

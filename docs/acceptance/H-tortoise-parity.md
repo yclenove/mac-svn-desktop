@@ -55,7 +55,8 @@
 - [x] Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20；统计/离线仍属 T3）
 - [x] 日志右键 L01–L08（除 L03→T3；L09–L12、L14、L17 见后续）
 - [x] 日志右键 L09–L12、L14
-- [ ] 日志右键 L17（Copy clipboard；L15–L16→T3）
+- [x] 日志右键 L17（Copy clipboard）
+- [ ] Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
 - [ ] Edit Conflicts + Resolved（#11,#12）
 - [ ] Lock / Unlock / Break lock（#19–21）
 - [ ] Branch-Tag / Switch / Merge+dry-run（#22–24）

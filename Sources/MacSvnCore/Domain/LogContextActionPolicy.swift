@@ -92,6 +92,11 @@ public enum LogContextActionPolicy: Sendable {
         .logCheckoutOrExport,
     ]
 
+    /// T2.5 剪贴板（L17）。
+    public static let t2ClipboardActionIDs: [SvnCommandID] = [
+        .logCopyToClipboard,
+    ]
+
     /// 兼容旧名。
     public static var t2ActionIDs: [SvnCommandID] { t2FileActionIDs }
 

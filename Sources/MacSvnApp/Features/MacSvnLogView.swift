@@ -200,6 +200,8 @@ public struct MacSvnLogView: View {
                                 }
                                 Divider()
                                 logRevisionContextMenu(path: entry.changedPaths.first?.path ?? "", revision: entry.revision)
+                                Divider()
+                                logClipboardContextMenu(entry: entry)
                             }
                         }
                     }
@@ -224,89 +226,8 @@ public struct MacSvnLogView: View {
         if let selectedRevision,
            let entry = entries.first(where: { $0.revision.value == selectedRevision }) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("r\(entry.revision.value)")
-                            .font(.title2.monospaced().weight(.semibold))
-                        let actions = LogActionsSummary.symbols(for: entry.changedPaths)
-                        if !actions.isEmpty {
-                            Text(actions)
-                                .font(.title3.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text(entry.date?.formatted() ?? "")
-                            .foregroundStyle(.secondary)
-                    }
-                    LabeledContent("作者", value: entry.author.isEmpty ? "unknown" : entry.author)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("提交说明")
-                            .font(.headline)
-                        Text(entry.message.isEmpty ? "（无说明）" : entry.message)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
-                            .background(Color.secondary.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("变更路径（\(entry.changedPaths.count)）")
-                            .font(.headline)
-                        if entry.changedPaths.isEmpty {
-                            Text("此批次未带路径明细（可刷新或加载 verbose 日志）")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(Array(entry.changedPaths.enumerated()), id: \.offset) { _, change in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text(change.action.rawValue)
-                                        .font(.caption.monospaced())
-                                        .frame(width: 16, alignment: .leading)
-                                        .foregroundStyle(.secondary)
-                                    Text(change.path)
-                                        .font(.system(.body, design: .monospaced))
-                                        .textSelection(.enabled)
-                                    Spacer()
-                                    Button("Diff") {
-                                        Task {
-                                            await performLogAction(
-                                                .logCompareWithPrevious,
-                                                changedPath: change.path,
-                                                revision: entry.revision
-                                            )
-                                        }
-                                    }
-                                    .buttonStyle(.borderless)
-                                }
-                                .padding(.vertical, 2)
-                                .contextMenu {
-                                    logPathContextMenu(path: change.path, revision: entry.revision)
-                                    Divider()
-                                    logRevisionContextMenu(path: change.path, revision: entry.revision)
-                                }
-                            }
-                        }
-                    }
-
-                    HStack {
-                        Button("在变更区查看 Diff") {
-                            guard let first = entry.changedPaths.first?.path else { return }
-                            Task {
-                                await performLogAction(
-                                    .logCompareWithPrevious,
-                                    changedPath: first,
-                                    revision: entry.revision
-                                )
-                            }
-                        }
-                        .disabled(entry.changedPaths.isEmpty)
-                        Button("更新到此版本") {
-                            Task { await updateTo(entry.revision) }
-                        }
-                    }
-                }
-                .padding(20)
+                detailContent(entry: entry)
+                    .padding(20)
             }
         } else {
             ContentUnavailableView(
@@ -314,6 +235,119 @@ public struct MacSvnLogView: View {
                 systemImage: "clock.arrow.circlepath",
                 description: Text("在左侧点击某次提交，查看说明与变更文件详情")
             )
+        }
+    }
+
+    @ViewBuilder
+    private func detailContent(entry: LogEntry) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            detailHeader(entry: entry)
+            LabeledContent("作者", value: entry.author.isEmpty ? "unknown" : entry.author)
+            detailMessage(entry: entry)
+            detailChangedPaths(entry: entry)
+            detailActions(entry: entry)
+        }
+    }
+
+    @ViewBuilder
+    private func detailHeader(entry: LogEntry) -> some View {
+        HStack {
+            Text("r\(entry.revision.value)")
+                .font(.title2.monospaced().weight(.semibold))
+            let actions = LogActionsSummary.symbols(for: entry.changedPaths)
+            if !actions.isEmpty {
+                Text(actions)
+                    .font(.title3.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(entry.date?.formatted() ?? "")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func detailMessage(entry: LogEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("提交说明")
+                .font(.headline)
+            Text(entry.message.isEmpty ? "（无说明）" : entry.message)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(Color.secondary.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    @ViewBuilder
+    private func detailChangedPaths(entry: LogEntry) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("变更路径（\(entry.changedPaths.count)）")
+                .font(.headline)
+            if entry.changedPaths.isEmpty {
+                Text("此批次未带路径明细（可刷新或加载 verbose 日志）")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(entry.changedPaths.enumerated()), id: \.offset) { _, change in
+                    changedPathRow(change: change, entry: entry)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func changedPathRow(change: ChangedPath, entry: LogEntry) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(change.action.rawValue)
+                .font(.caption.monospaced())
+                .frame(width: 16, alignment: .leading)
+                .foregroundStyle(.secondary)
+            Text(change.path)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+            Spacer()
+            Button("Diff") {
+                Task {
+                    await performLogAction(
+                        .logCompareWithPrevious,
+                        changedPath: change.path,
+                        revision: entry.revision
+                    )
+                }
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, 2)
+        .contextMenu {
+            logPathContextMenu(path: change.path, revision: entry.revision)
+            Divider()
+            logRevisionContextMenu(path: change.path, revision: entry.revision)
+            Divider()
+            logClipboardContextMenu(entry: entry)
+        }
+    }
+
+    @ViewBuilder
+    private func detailActions(entry: LogEntry) -> some View {
+        HStack {
+            Button("在变更区查看 Diff") {
+                guard let first = entry.changedPaths.first?.path else { return }
+                Task {
+                    await performLogAction(
+                        .logCompareWithPrevious,
+                        changedPath: first,
+                        revision: entry.revision
+                    )
+                }
+            }
+            .disabled(entry.changedPaths.isEmpty)
+            Button("更新到此版本") {
+                Task { await updateTo(entry.revision) }
+            }
+            Button("复制摘要") {
+                copyLogEntryToClipboard(entry)
+            }
         }
     }
 
@@ -333,6 +367,23 @@ public struct MacSvnLogView: View {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
+    }
+
+    @ViewBuilder
+    private func logClipboardContextMenu(entry: LogEntry) -> some View {
+        ForEach(LogContextActionPolicy.t2ClipboardActionIDs, id: \.rawValue) { command in
+            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+                copyLogEntryToClipboard(entry)
+            }
+        }
+    }
+
+    private func copyLogEntryToClipboard(_ entry: LogEntry) {
+        let text = LogClipboardSummary.text(for: entry)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        statusText = "已复制 r\(entry.revision.value) 摘要到剪贴板"
+        navigator.lastAutomationMessage = statusText
     }
 
     private var branchSheet: some View {

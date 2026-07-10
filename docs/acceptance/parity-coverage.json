@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T15:38:25Z",
+  "generated_at": "2026-07-10T15:47:41Z",
   "total": 114,
-  "done": 37,
+  "done": 38,
   "partial": 30,
-  "missing": 47,
-  "coverage": 0.324561,
-  "coverage_percent": 32.46,
+  "missing": 46,
+  "coverage": 0.333333,
+  "coverage_percent": 33.33,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -22,9 +22,9 @@
     },
     "log": {
       "total": 20,
-      "done": 14,
+      "done": 15,
       "partial": 1,
-      "missing": 5
+      "missing": 4
     },
     "settings": {
       "total": 13,
@@ -282,7 +282,7 @@
       "key": "cmd.07",
       "section": "command",
       "title": "Show Log",
-      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L08(除L03)；L09+ 仍开",
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L12+L14(除L03/L13)；L15+ 仍开",
       "status": "done"
     },
     {
@@ -674,8 +674,8 @@
       "key": "L17",
       "section": "log",
       "title": "Copy to clipboard",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "L18",

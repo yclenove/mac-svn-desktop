@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.5：Show Log 复制修订摘要到剪贴板（L17）
+- Affected: LogClipboardSummary, MacSvnLogView, Tests/*, docs/*
+- Impact: inventory L17 ✅；L15–L16 仍属 T3.10；下一 T2.6
+
+## 2026-07-10
+
 - Summary: T2.4 审计修复：peg URL 仅剥离末尾 `@rev`；L11 要求 HEAD>目标；L10 更新增加确认
 - Affected: LogContextActionPolicy, MacSvnLogView, Tests/*, CHANGELOG.md
 - Impact: 修复 svn+ssh user@host 误截断与 HEAD==目标时错误合并
