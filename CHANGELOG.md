@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-11
+
+- Summary: Cursor→Codex 交接：新增 Tortoise 完美对标长程 Loop 说明书；暂停于 T2.7 完成后、T2.8 未开工
+- Affected: docs/superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md, CHANGELOG.md, perfect-loop 指针
+- Impact: Codex 可按文档从 T2.8 续跑至 PERFECT；覆盖率基线 45/114
+
 ## 2026-07-10
 
 - Summary: Tortoise 完美 Loop T2.7：Get Lock / Release Lock / Break lock（#19–#21）— 确认门控、CFM/⌘K 深链、锁定页打磨
