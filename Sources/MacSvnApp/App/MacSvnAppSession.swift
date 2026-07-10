@@ -33,6 +33,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let aiPreCommitReviewer: AIPreCommitReviewer
     public let aiConflictAssistant: AIConflictAssistant
     public let aiAuthorMappingInferrer: AIAuthorMappingInferrer
+    public let aiReleaseNotesGenerator: AIReleaseNotesGenerator
     public let aiToolRegistry: AISVNToolRegistry
     public let aiToolAuditStore: AIToolAuditStore
 
@@ -61,6 +62,7 @@ public final class MacSvnAppSession: ObservableObject {
         aiPreCommitReviewer: AIPreCommitReviewer,
         aiConflictAssistant: AIConflictAssistant,
         aiAuthorMappingInferrer: AIAuthorMappingInferrer,
+        aiReleaseNotesGenerator: AIReleaseNotesGenerator,
         aiToolRegistry: AISVNToolRegistry,
         aiToolAuditStore: AIToolAuditStore
     ) {
@@ -88,6 +90,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.aiPreCommitReviewer = aiPreCommitReviewer
         self.aiConflictAssistant = aiConflictAssistant
         self.aiAuthorMappingInferrer = aiAuthorMappingInferrer
+        self.aiReleaseNotesGenerator = aiReleaseNotesGenerator
         self.aiToolRegistry = aiToolRegistry
         self.aiToolAuditStore = aiToolAuditStore
     }
@@ -209,6 +212,10 @@ public final class MacSvnAppSession: ObservableObject {
             providerManager: aiProviderStore,
             llmClient: llmClient
         )
+        let aiReleaseNotesGenerator = AIReleaseNotesGenerator(
+            providerManager: aiProviderStore,
+            llmClient: llmClient
+        )
         let aiToolAuditStore = AIToolAuditStore(
             fileURL: directory.appendingPathComponent("ai-tool-audit.json")
         )
@@ -241,6 +248,7 @@ public final class MacSvnAppSession: ObservableObject {
             aiPreCommitReviewer: aiPreCommitReviewer,
             aiConflictAssistant: aiConflictAssistant,
             aiAuthorMappingInferrer: aiAuthorMappingInferrer,
+            aiReleaseNotesGenerator: aiReleaseNotesGenerator,
             aiToolRegistry: aiToolRegistry,
             aiToolAuditStore: aiToolAuditStore
         )

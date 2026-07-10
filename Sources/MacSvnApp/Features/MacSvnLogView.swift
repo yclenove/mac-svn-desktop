@@ -29,6 +29,14 @@ public struct MacSvnLogView: View {
                 Text("日志")
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
+                Button("AI Release Notes") {
+                    guard let viewModel else { return }
+                    let entries = filteredEntries(viewModel.entries)
+                    navigator.pendingReleaseNotesEntries = entries
+                    navigator.selectedRoute = .releaseNotes
+                    navigator.lastAutomationMessage = "从日志带入 \(entries.count) 条生成 Release Notes"
+                }
+                .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
                 Button("刷新") { Task { await reload() } }
                 Button("加载更多") {
                     Task { await viewModel?.loadMore() }

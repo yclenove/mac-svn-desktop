@@ -23,6 +23,7 @@ final class MacSvnAppRouteTests: XCTestCase {
             .gitMigration,
             .teamActivity,
             .aiAssistant,
+            .releaseNotes,
             .settings
         ])
         XCTAssertEqual(routes.map(\.title), [
@@ -41,6 +42,7 @@ final class MacSvnAppRouteTests: XCTestCase {
             "Git 迁移",
             "团队动态",
             "AI 助手",
+            "Release Notes",
             "设置"
         ])
     }
@@ -61,7 +63,7 @@ final class MacSvnAppRouteTests: XCTestCase {
         XCTAssertEqual(model.sections[1].routes, [.repositoryBrowser, .branches])
         XCTAssertEqual(model.sections[2].routes, [.merge])
         XCTAssertEqual(model.sections[3].routes, [.blame, .properties, .locks, .shelve])
-        XCTAssertEqual(model.sections[4].routes, [.gitMigration, .teamActivity, .aiAssistant])
+        XCTAssertEqual(model.sections[4].routes, [.gitMigration, .teamActivity, .aiAssistant, .releaseNotes])
         XCTAssertEqual(model.sections[5].routes, [.settings])
     }
 
@@ -70,7 +72,7 @@ final class MacSvnAppRouteTests: XCTestCase {
         XCTAssertEqual(MacSvnAppRoute.repositoryBrowser.commandID, "repository-browser")
         XCTAssertEqual(MacSvnAppRoute.gitMigration.commandID, "git-migration")
         XCTAssertEqual(MacSvnAppRoute.aiAssistant.commandID, "ai-assistant")
-
+        XCTAssertEqual(MacSvnAppRoute.releaseNotes.commandID, "release-notes")
         for route in MacSvnAppRoute.allCases {
             XCTAssertFalse(route.systemImage.isEmpty, "\(route) should have an SF Symbol name")
             XCTAssertFalse(route.subtitle.isEmpty, "\(route) should have a placeholder subtitle")

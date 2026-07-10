@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop U3：新增 AI Release Notes 页与侧边栏路由；日志页可带入过滤结果；one-shot 唤醒已验证可续跑
+- Affected: Sources/MacSvnCore/ViewModels/AIReleaseNotesViewModel.swift, Sources/MacSvnApp/Features/MacSvnReleaseNotesView.swift, MacSvnAppRoute.swift, MacSvnAppSession.swift, MacSvnLogView.swift, Tests/**
+- Impact: FR-AI-05 可验收；下一未勾项 U4 Blame 演化解释
+
+## 2026-07-10
+
 - Summary: 修复长程 Loop「续不上」根因：废弃无限 while 心跳，改为每轮结束 one-shot sleep+WAKE 并重新挂 notify；协议写入 SRS backlog
 - Affected: docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
 - Impact: 终端刷 WAKE 但代理空闲的问题有明确修复路径；下一功能项仍为 U3

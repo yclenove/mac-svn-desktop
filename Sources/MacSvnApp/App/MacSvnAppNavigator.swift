@@ -9,6 +9,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingCommitMessage: String?
     @Published public var pendingDiffPath: String?
     @Published public var pendingDiffRevision: Revision?
+    /// 从日志页带入 Release Notes 页的候选条目。
+    @Published public var pendingReleaseNotesEntries: [LogEntry]?
     @Published public var lastAutomationMessage: String?
 
     public init(selectedRoute: MacSvnAppRoute = .workspace) {
