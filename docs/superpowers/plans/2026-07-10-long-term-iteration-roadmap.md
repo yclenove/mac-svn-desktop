@@ -60,7 +60,7 @@
 - [ ] Checkout / Update to revision（depth、ignore-externals）
 - [ ] Show Log 完整：过滤、stop-on-copy、文件列表动作（Diff/Blame/另存/打开）
 - [x] Edit Conflicts + Resolved 打磨
-- [ ] Lock / Unlock / Break lock
+- [x] Lock / Unlock / Break lock
 - [ ] Branch-Tag / Switch / Merge（含 dry-run）
 - [ ] Export / Import / Relocate
 - [ ] Create Patch / Apply Patch

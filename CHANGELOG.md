@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.7：Get Lock / Release Lock / Break lock（#19–#21）— 确认门控、CFM/⌘K 深链、锁定页打磨
+- Affected: LockActionPolicy, LockViewModel, MacSvnLocksView, MacSvnAppNavigator, MacSvnChangesView, Tests/*, docs/*
+- Impact: inventory #19–#21、D21 ✅；needs-lock 提升仍属 T4；下一 T2.8
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T2.6：Edit Conflicts + Resolved（#11,#12）— CFM 入口、冲突工作区类型过滤/勾选批量 Resolved、树冲突排除
 - Affected: ConflictResolveBatchPolicy, ConflictListViewModel, ConflictService, MacSvnConflictWorkspaceView, MacSvnChangesView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: inventory #11/#12、D08 ✅；下一 T2.7 Lock/Unlock/Break lock

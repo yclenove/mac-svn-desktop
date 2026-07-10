@@ -10,6 +10,10 @@ public protocol LockProviding: Sendable {
 public enum LockOperation: Equatable, Sendable {
     case lock
     case unlock
+    /// 夺锁：`svn lock --force`
+    case stealLock
+    /// 打断锁：`svn unlock --force`（#21）
+    case breakLock
 }
 
 public enum LockViewState: Equatable, Sendable {
@@ -43,54 +47,105 @@ public final class LockViewModel {
         await refreshLocks(targets: targets)
     }
 
+    /// 获取锁（#19）。`force` 为夺锁时需 `confirmed`。
     public func lock(
         paths: [String],
         message: String?,
         force: Bool,
         confirmed: Bool = true
     ) async {
-        guard validate(paths: paths) else {
+        let normalized = LockActionPolicy.pathsEligibleForGetLock(selected: paths)
+        guard validate(paths: normalized) else {
             return
         }
 
-        guard !force || confirmed else {
-            state = .confirmationRequired(.lock, paths)
+        if force && !confirmed {
+            state = .confirmationRequired(.stealLock, normalized)
             return
         }
 
         state = .locking
 
         do {
-            try await provider.lock(wc: workingCopy, paths: paths, message: message, force: force)
-            lastTargets = paths
-            await refreshLocks(targets: paths)
+            try await provider.lock(wc: workingCopy, paths: normalized, message: message, force: force)
+            lastTargets = normalized
+            await refreshLocks(targets: normalized)
         } catch {
             state = .error(String(describing: error))
         }
     }
 
+    /// 释放锁（#20）。
     public func unlock(
         paths: [String],
-        force: Bool,
+        force: Bool = false,
         confirmed: Bool = true
     ) async {
-        guard validate(paths: paths) else {
+        let normalized = LockActionPolicy.pathsEligibleForRelease(selected: paths, locks: locks)
+        guard validate(paths: normalized) else {
             return
         }
 
-        guard !force || confirmed else {
-            state = .confirmationRequired(.unlock, paths)
+        // 非 break 的 unlock 不强制确认；force 路径请走 breakLock
+        if force {
+            await breakLock(paths: normalized, confirmed: confirmed)
             return
         }
 
         state = .unlocking
 
         do {
-            try await provider.unlock(wc: workingCopy, paths: paths, force: force)
-            lastTargets = paths
-            await refreshLocks(targets: paths)
+            try await provider.unlock(wc: workingCopy, paths: normalized, force: false)
+            lastTargets = normalized
+            await refreshLocks(targets: normalized)
         } catch {
             state = .error(String(describing: error))
+        }
+    }
+
+    /// 打断锁（#21）：`svn unlock --force`，必须确认。
+    public func breakLock(paths: [String], confirmed: Bool = false) async {
+        let normalized = LockActionPolicy.pathsEligibleForBreak(selected: paths, locks: locks)
+        guard validate(paths: normalized) else {
+            return
+        }
+
+        guard confirmed else {
+            state = .confirmationRequired(.breakLock, normalized)
+            return
+        }
+
+        state = .unlocking
+
+        do {
+            try await provider.unlock(wc: workingCopy, paths: normalized, force: true)
+            lastTargets = normalized
+            await refreshLocks(targets: normalized)
+        } catch {
+            state = .error(String(describing: error))
+        }
+    }
+
+    /// 确认门控后继续执行。
+    public func confirmPending(message: String? = nil) async {
+        guard case .confirmationRequired(let operation, let paths) = state else {
+            return
+        }
+        switch operation {
+        case .lock:
+            await lock(paths: paths, message: message, force: false, confirmed: true)
+        case .stealLock:
+            await lock(paths: paths, message: message, force: true, confirmed: true)
+        case .unlock:
+            await unlock(paths: paths, force: false, confirmed: true)
+        case .breakLock:
+            await breakLock(paths: paths, confirmed: true)
+        }
+    }
+
+    public func cancelConfirmation() {
+        if case .confirmationRequired = state {
+            state = locks.isEmpty ? .idle : .loaded
         }
     }
 

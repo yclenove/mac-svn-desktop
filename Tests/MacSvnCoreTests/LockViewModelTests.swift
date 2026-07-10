@@ -46,9 +46,38 @@ final class LockViewModelTests: XCTestCase {
 
         await viewModel.lock(paths: ["README.txt"], message: nil, force: true, confirmed: false)
 
-        XCTAssertEqual(viewModel.state, .confirmationRequired(.lock, ["README.txt"]))
+        XCTAssertEqual(viewModel.state, .confirmationRequired(.stealLock, ["README.txt"]))
         let calls = await provider.recordedCalls()
         XCTAssertEqual(calls, [])
+    }
+
+    @MainActor
+    func testBreakLockRequiresConfirmationThenUnlocksWithForce() async {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let provider = FakeLockProvider(results: [
+            .success([
+                SvnLock(
+                    target: "other.txt",
+                    token: "t",
+                    owner: "alice",
+                    comment: nil,
+                    created: nil,
+                    isOwnedByWorkingCopy: false,
+                    isRepositoryLocked: true
+                )
+            ]),
+            .success([])
+        ])
+        let viewModel = LockViewModel(workingCopy: wc, provider: provider)
+        await viewModel.load(targets: ["other.txt"])
+
+        await viewModel.breakLock(paths: ["other.txt"], confirmed: false)
+        XCTAssertEqual(viewModel.state, .confirmationRequired(.breakLock, ["other.txt"]))
+
+        await viewModel.confirmPending()
+        let calls = await provider.recordedCalls()
+        XCTAssertTrue(calls.contains(where: { $0.operation == "unlock" && $0.force == true }))
+        XCTAssertEqual(viewModel.state, .loaded)
     }
 
     @MainActor

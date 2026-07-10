@@ -440,6 +440,8 @@ public struct MacSvnChangesView: View {
             return "\(descriptor.displayName)…"
         case .resolved:
             return "\(descriptor.displayName)…"
+        case .getLock, .breakLock:
+            return "\(descriptor.displayName)…"
         default:
             return descriptor.displayName
         }
@@ -455,6 +457,8 @@ public struct MacSvnChangesView: View {
             return true
         case .resolved:
             return !selectedMarkResolvedPaths.isEmpty && actionsVM?.isRunning != true
+        case .getLock, .releaseLock, .breakLock:
+            return !selectedPaths.isEmpty && actionsVM?.isRunning != true
         case .delete, .revert, .addToIgnoreList:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
                 && (id != .addToIgnoreList || session != nil)
@@ -534,6 +538,8 @@ public struct MacSvnChangesView: View {
                 ?? "打开冲突工作区"
         case .resolved:
             confirmMarkResolved = true
+        case .getLock, .releaseLock, .breakLock:
+            _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
         default:
             _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
         }

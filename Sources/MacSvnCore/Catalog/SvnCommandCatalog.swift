@@ -176,7 +176,10 @@ public enum SvnCommandCatalog: Sendable {
         .copyMove,
         .repairMoveCopy,
         .editConflicts,
-        .resolved
+        .resolved,
+        .getLock,
+        .releaseLock,
+        .breakLock
     ]
 
     public static var dailyCFMCommands: [SvnCommandDescriptor] {

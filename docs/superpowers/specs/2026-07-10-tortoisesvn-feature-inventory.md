@@ -65,7 +65,7 @@
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ❌ | T3 |
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | 🟡 | T2 |
 | D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | 🟡 | T2/T3 |
-| D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | 🟡 | T2 |
+| D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
 | D22 | Patch | create/apply patch | ❌ | T2 |
 | D23 | Blame | blame + blame differences | 🟡 | T2/T3 |
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | 🟡 | T2 |
@@ -98,9 +98,9 @@
 | 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T2 |
 | 17 | Revert | `status`→勾选→`revert [-R]` | 勾选、单项 Diff | ✅ | T1 |
 | 18 | Cleanup | `cleanup` | 刷新壳层/断锁等选项 | ✅ | T1 |
-| 19 | Get Lock | `lock -m [--force]` | 注释、steal | 🟡 | T2 |
-| 20 | Release Lock | `unlock` | 多选 | 🟡 | T2 |
-| 21 | Break lock | 🔷 | 高危确认 | ❌ | T2 |
+| 19 | Get Lock | `lock -m [--force]` | 注释、steal | ✅ 锁定页+CFM/⌘K；注释与夺锁确认 | T2 |
+| 20 | Release Lock | `unlock` | 多选 | ✅ 多选释放；优先本 WC 持有 | T2 |
+| 21 | Break lock | 🔷 | 高危确认 | ✅ `unlock --force` + 确认门控 | T2 |
 | 22 | Branch/Tag | `copy` 三种源 | HEAD / 特定修订 / WC | 🟡 | T2 |
 | 23 | Switch | `switch [-r] URL` | 未提交警告 | 🟡 | T2 |
 | 24 | Merge | `merge [--dry-run]` + unified 预览 | 范围/树、Test merge | 🟡 | T2 |

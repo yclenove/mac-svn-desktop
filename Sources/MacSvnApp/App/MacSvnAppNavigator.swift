@@ -46,6 +46,10 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingConflictPath: String?
     /// ⌘K / 自动化「标记为已解决」：进入冲突工作区后提示勾选批量 Resolved（#12）。
     @Published public var pendingResolvedHint = false
+    /// CFM / ⌘K → 锁定页预选路径（#19–#21）。
+    @Published public var pendingLockPaths: [String] = []
+    /// CFM / ⌘K → 锁定页意图。
+    @Published public var pendingLockIntent: LockActionIntent?
     /// 历史 → 仓库浏览器 URL（L08）。
     @Published public var pendingBrowseURL: String?
     @Published public var pendingBrowseRevision: Revision?
@@ -87,7 +91,9 @@ public final class MacSvnAppNavigator: ObservableObject {
         paths: [String] = [],
         options: SvnCommandOptions = SvnCommandOptions()
     ) -> SvnCommandPerformResult {
-        if let firstPath = paths.first, !firstPath.isEmpty {
+        // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
+        let isLockCommand = Self.lockIntent(for: command) != nil
+        if !isLockCommand, let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
         }
         if paths.count >= 2, !paths[1].isEmpty {
@@ -111,6 +117,12 @@ public final class MacSvnAppNavigator: ObservableObject {
                 pendingConflictPath = first
             }
             pendingResolvedHint = (command == .resolved)
+        }
+
+        // #19–#21：锁定命令注入路径与意图。
+        if let lockIntent = Self.lockIntent(for: command) {
+            pendingLockPaths = paths.filter { !$0.isEmpty }
+            pendingLockIntent = lockIntent
         }
 
         guard let route = Self.route(for: command) else {
@@ -168,6 +180,15 @@ public final class MacSvnAppNavigator: ObservableObject {
              .logFilterStatisticsOffline, .logActionsColumnIcons, .logFetchStrategy:
             // 日志动作最终应在历史页上下文执行；T0 先导航到日志页作为可达入口
             return .log
+        }
+    }
+
+    public static func lockIntent(for command: SvnCommandID) -> LockActionIntent? {
+        switch command {
+        case .getLock: return .getLock
+        case .releaseLock: return .releaseLock
+        case .breakLock: return .breakLock
+        default: return nil
         }
     }
 
@@ -262,6 +283,18 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingResolvedHint() -> Bool {
         let value = pendingResolvedHint
         pendingResolvedHint = false
+        return value
+    }
+
+    public func consumePendingLockPaths() -> [String] {
+        let value = pendingLockPaths
+        pendingLockPaths = []
+        return value
+    }
+
+    public func consumePendingLockIntent() -> LockActionIntent? {
+        let value = pendingLockIntent
+        pendingLockIntent = nil
         return value
     }
 

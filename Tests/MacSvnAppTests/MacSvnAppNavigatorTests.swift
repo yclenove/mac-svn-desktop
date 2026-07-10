@@ -118,6 +118,19 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertEqual(navigator.pendingDiffPath, "/tmp/wc/a.swift")
     }
 
+    func testPerformLockCommandsInjectIntentWithoutOpeningWC() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+        _ = navigator.perform(command: .breakLock, paths: ["locked.txt", "other.txt"])
+
+        XCTAssertEqual(navigator.selectedRoute, .locks)
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(navigator.pendingLockIntent, .breakLock)
+        XCTAssertEqual(navigator.consumePendingLockPaths(), ["locked.txt", "other.txt"])
+        XCTAssertEqual(navigator.consumePendingLockIntent(), .breakLock)
+        XCTAssertNil(navigator.pendingLockIntent)
+    }
+
+
     func testPerformCoversEveryCatalogIDWithoutCrash() {
         let navigator = MacSvnAppNavigator()
         for id in SvnCommandID.allCases {
