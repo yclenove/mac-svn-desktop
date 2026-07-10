@@ -81,6 +81,8 @@ swift test
 
 依赖：macOS 14+、Xcode 16+ / Swift 6.1、本机 `svn` ≥ 1.14（`brew install subversion`）。
 
+对外分发签名与公证：见 [docs/packaging/signing-and-notarization.md](docs/packaging/signing-and-notarization.md)。
+
 ## 功能矩阵（长程交付）
 
 | 能力 | 状态 |

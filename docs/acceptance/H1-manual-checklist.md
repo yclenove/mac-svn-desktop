@@ -34,3 +34,31 @@
 
 - [ ] 按 `docs/extensions/FinderSync/README.md` 在 Xcode 包装工程验证
 - [ ] 按 `docs/extensions/QuickLook/README.md` 验证预览
+
+## 干净机冒烟（V4）
+
+在**未安装 Xcode / 未开开发者模式**的 macOS 上（虚拟机或第二台机器），使用已 `stapler staple` 的 `MacSVN.app`：
+
+### 准备
+
+- [ ] 机器仅有用户级权限；未预先执行过 `spctl --master-disable`
+- [ ] 已安装 `svn` ≥ 1.14（Homebrew 或系统包；应用本身不捆绑 svn）
+- [ ] 拷贝公证后的 `MacSVN.app`（或 dmg/zip 解压结果），**不要**用 ad-hoc 开发包
+
+### Gatekeeper
+
+- [ ] 双击 `MacSVN.app`：Gatekeeper **直接放行**（无「无法打开，因为来自身份不明的开发者」阻断；若仅首次「打开」确认框可接受）
+- [ ] 本机执行：`spctl --assess --type execute --verbose=4 /path/to/MacSVN.app` 结果为 `accepted`
+
+### 功能冒烟（最小）
+
+- [ ] 启动后环境门禁通过（检测到 svn）
+- [ ] 添加一个真实 WC，变更页可刷新 status
+- [ ] 菜单栏角标可见
+- [ ] （可选）系统设置中启用 Finder 扩展后，WC 内可见角标
+- [ ] （可选）对已修改文本文件空格预览可见 Diff
+
+### 失败时
+
+- 回查 `docs/packaging/signing-and-notarization.md` 常见失败表
+- 确认分发的是 **staple 之后** 的副本，且扩展与主应用同一 Developer ID 签名

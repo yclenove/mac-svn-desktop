@@ -42,4 +42,17 @@ xcodebuild -project MacSVN.xcodeproj -scheme MacSVN -configuration Release \
 
 1. `dist/MacSVN.app` 或 Xcode `BUILT_PRODUCTS_DIR/MacSVN.app` 存在
 2. `verify-macos-app.sh` 通过（可执行文件、Bundle ID、`macsvn` scheme）
-3. 本机可双击启动（开发签名为 ad-hoc；正式公证见 V4）
+3. 本机可双击启动（开发签名为 ad-hoc；正式公证见 [signing-and-notarization.md](signing-and-notarization.md)）
+
+## 签名与公证（V4）
+
+见 **[signing-and-notarization.md](signing-and-notarization.md)**。
+
+```bash
+# 无证书时验证脚本骨架
+MACSVN_DRY_RUN=1 ./scripts/verify-signing-prereqs.sh
+MACSVN_DRY_RUN=1 MACSVN_APP_PATH=dist/MacSVN.app \
+  MACSVN_SIGN_IDENTITY='Developer ID Application: Example (TEAMID)' \
+  ./scripts/sign-and-notarize.sh
+```
+

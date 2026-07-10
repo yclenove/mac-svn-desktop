@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop V4：新增签名/公证流程文档与 `sign-and-notarize.sh` / `verify-signing-prereqs.sh`（支持 DRY_RUN）；H1 验收清单补充干净机冒烟步骤
+- Affected: docs/packaging/signing-and-notarization.md, docs/packaging/README.md, docs/acceptance/H1-manual-checklist.md, scripts/sign-and-notarize.sh, scripts/verify-signing-prereqs.sh
+- Impact: NFR-10 / P4 分发路径可按文档执行；下一未勾项 V5 全量测试合 main
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop V3：MacSVN.xcodeproj 增加 Quick Look 扩展并嵌入 PlugIns；`QuickLookPreviewTextBuilder` 生成 Diff/冲突/二进制预览文案；verify-quicklook-appex 通过
 - Affected: Packaging/QuickLook/**, MacSVN.xcodeproj, Sources/MacSvnCore/Services/QuickLookPreviewTextBuilder.swift, Tests/**, scripts/verify-quicklook-appex.sh, docs/extensions/QuickLook/**
 - Impact: FR-EX-08 可安装形态可验收；下一未勾项 V4 签名/公证

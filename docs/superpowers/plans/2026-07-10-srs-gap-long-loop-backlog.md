@@ -139,7 +139,7 @@
 - [x] **V1** Xcode 包装工程（或等价）可构建 `.app`，嵌入 SwiftPM 产物
 - [x] **V2** Finder Sync `.appex` 可安装：角标 + 右键深链（FR-EX-05）；更新 `docs/extensions/FinderSync/`
 - [x] **V3** Quick Look `.appex` 可安装：空格预览 Diff（FR-EX-08）；更新 `docs/extensions/QuickLook/`
-- [ ] **V4** 签名 / 公证流程文档 + 脚本骨架（P4 验收）；干净机冒烟步骤写入验收清单
+- [x] **V4** 签名 / 公证流程文档 + 脚本骨架（P4 验收）；干净机冒烟步骤写入验收清单
 - [ ] **V5** 全量 `swift test` + 扩展冒烟；FF 合入 `main`；README 功能矩阵全部改为可验收状态
 
 ---
@@ -165,6 +165,7 @@
 | 2026-07-10 14:54 | V1 | 2e4f952 | MacSVN.xcodeproj + build-macos-app.sh；两条路径 verify 通过 |
 | 2026-07-10 15:07 | V2 | 9c0f765 | Finder Sync appex 嵌入；roots 导出；深链 Builder；verify 通过 |
 | 2026-07-10 15:14 | V3 | 86bfc5d | Quick Look appex 嵌入；PreviewTextBuilder；verify 通过 |
+| 2026-07-10 15:18 | V4 | （本轮） | 签名公证文档+脚本 DRY_RUN；H1 干净机冒烟清单 |
 
 ## 阻塞日志
 
