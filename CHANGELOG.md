@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.2：新增 `SvnCommandCatalog`（#1–46 + L01–L20、扩展菜单标记、displayName/keywords、按 ID/inventoryKey 查询）及单测
+- Affected: Sources/MacSvnCore/Catalog/SvnCommandCatalog.swift, Tests/MacSvnCoreTests/SvnCommandCatalogTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: 命令矩阵可枚举，为 T0.3 Navigator 统一入口与覆盖率报表奠基
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.1：落地 `DiffPerformanceLimits` 性能门禁；Diff/变更工作区走统一阈值；新增 Core/App 回归测与 `docs/acceptance/performance-guards.md`
 - Affected: Sources/MacSvnCore/Models/DiffPerformanceLimits.swift, DiffViewModel.swift, MacSvnDiffView.swift, Tests/**/DiffPerformance*, WorkingCopyWorkspacePerformanceGuardTests.swift, docs/acceptance/performance-guards.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: 防 AttributeGraph 卡死有可重复验证；清单核对：异常/空值 N/A（纯阈值）；测试通过；无 SQL
