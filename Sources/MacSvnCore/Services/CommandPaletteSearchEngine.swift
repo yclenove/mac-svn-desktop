@@ -4,11 +4,18 @@ public struct CommandPaletteSearchEngine: Sendable {
     private let actions: [CommandPaletteAction]
     private let files: [CommandPaletteFileItem]
     private let logs: [LogEntry]
+    private let catalogCommands: [SvnCommandDescriptor]
 
-    public init(actions: [CommandPaletteAction], files: [CommandPaletteFileItem], logs: [LogEntry]) {
+    public init(
+        actions: [CommandPaletteAction],
+        files: [CommandPaletteFileItem],
+        logs: [LogEntry],
+        catalogCommands: [SvnCommandDescriptor] = SvnCommandCatalog.dailyCFMCommands
+    ) {
         self.actions = actions
         self.files = files
         self.logs = logs
+        self.catalogCommands = catalogCommands
     }
 
     public func search(_ rawQuery: String, limit: Int = 20) -> [CommandPaletteResult] {
@@ -17,7 +24,10 @@ public struct CommandPaletteSearchEngine: Sendable {
             return []
         }
 
-        let results = actionResults(query: query) + fileResults(query: query) + logResults(query: query)
+        let results = catalogResults(query: query)
+            + actionResults(query: query)
+            + fileResults(query: query)
+            + logResults(query: query)
         guard !results.isEmpty else {
             return [
                 CommandPaletteResult(
@@ -35,6 +45,23 @@ public struct CommandPaletteSearchEngine: Sendable {
             }
             return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }.prefix(max(1, limit)))
+    }
+
+    private func catalogResults(query: String) -> [CommandPaletteResult] {
+        catalogCommands.compactMap { descriptor in
+            let haystack = (
+                [descriptor.displayName, descriptor.inventoryKey] + descriptor.keywords
+            ).joined(separator: " ")
+            guard let score = Self.score(query: query, text: haystack) else {
+                return nil
+            }
+            return CommandPaletteResult(
+                kind: .svnCommand(descriptor.id),
+                title: descriptor.displayName,
+                subtitle: descriptor.inventoryKey,
+                score: score + 20
+            )
+        }
     }
 
     private func actionResults(query: String) -> [CommandPaletteResult] {

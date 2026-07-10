@@ -3,6 +3,20 @@ import XCTest
 @testable import MacSvnCore
 
 final class CommandPaletteSearchEngineTests: XCTestCase {
+    func testSearchIncludesDailyCatalogCommands() {
+        let engine = CommandPaletteSearchEngine(
+            actions: [
+                CommandPaletteAction(id: .commit, title: "提交更改", keywords: ["commit", "ci"])
+            ],
+            files: [],
+            logs: []
+        )
+
+        let results = engine.search("rename")
+        XCTAssertEqual(results.first?.kind, .svnCommand(.rename))
+        XCTAssertEqual(results.first?.subtitle, "cmd.13")
+    }
+
     func testSearchRanksActionsFilesAndLogs() {
         let engine = CommandPaletteSearchEngine(
             actions: [
@@ -25,8 +39,10 @@ final class CommandPaletteSearchEngineTests: XCTestCase {
         let revisionResults = engine.search("r1200")
         let keywordResults = engine.search("支付")
 
-        XCTAssertEqual(actionResults.first?.kind, .action(.commit))
-        XCTAssertEqual(actionResults.first?.title, "提交更改")
+        // Catalog 日常「提交」与面板动作「提交更改」均可命中；Catalog 加权更高
+        XCTAssertEqual(actionResults.first?.kind, .svnCommand(.commit))
+        XCTAssertEqual(actionResults.first?.title, "提交")
+        XCTAssertTrue(actionResults.contains { $0.kind == .action(.commit) })
         XCTAssertEqual(fileResults.first?.kind, .file(path: "Sources/LoginView.swift"))
         XCTAssertEqual(revisionResults.first?.kind, .log(revision: Revision(1200)))
         XCTAssertEqual(keywordResults.first?.kind, .log(revision: Revision(1199)))

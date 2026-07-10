@@ -613,6 +613,7 @@ public struct CommandPaletteFileItem: Equatable, Sendable {
 
 public enum CommandPaletteResultKind: Equatable, Sendable {
     case action(CommandPaletteActionID)
+    case svnCommand(SvnCommandID)
     case file(path: String)
     case log(revision: Revision)
     case aiChat(query: String)

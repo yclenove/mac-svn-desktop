@@ -160,6 +160,52 @@ public enum SvnCommandCatalog: Sendable {
         return byInventoryKey[String(format: "log.L%02d", number)]
     }
 
+    /// Wave T1 日常命令子集：CFM 右键与 ⌘K 必须可到达（对齐已交付 #2–5,#7–8,#13–14,#17–18,#29,#32,#36,#45）。
+    public static let dailyCFMCommandIDs: [SvnCommandID] = [
+        .update,
+        .commit,
+        .diff,
+        .showLog,
+        .checkForModifications,
+        .add,
+        .delete,
+        .revert,
+        .cleanup,
+        .rename,
+        .addToIgnoreList,
+        .copyMove,
+        .repairMoveCopy
+    ]
+
+    public static var dailyCFMCommands: [SvnCommandDescriptor] {
+        dailyCFMCommandIDs.compactMap { descriptor(for: $0) }
+    }
+
+    /// 按标题 / keywords / inventoryKey 模糊匹配日常子集（供 ⌘K）。
+    public static func searchDailyCFM(query: String, limit: Int = 20) -> [SvnCommandDescriptor] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let tokens = trimmed.lowercased().split(separator: " ").map(String.init)
+        let scored: [(SvnCommandDescriptor, Int)] = dailyCFMCommands.compactMap { descriptor in
+            let haystack = (
+                [descriptor.displayName, descriptor.inventoryKey] + descriptor.keywords
+            ).joined(separator: " ").lowercased()
+            guard tokens.allSatisfy({ haystack.contains($0) }) else { return nil }
+            var score = tokens.reduce(0) { $0 + $1.count }
+            if haystack.hasPrefix(trimmed.lowercased()) { score += 50 }
+            if descriptor.displayName.lowercased() == trimmed.lowercased() { score += 100 }
+            return (descriptor, score)
+        }
+        return Array(
+            scored.sorted { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                return lhs.0.displayName.localizedCaseInsensitiveCompare(rhs.0.displayName) == .orderedAscending
+            }
+            .prefix(max(1, limit))
+            .map(\.0)
+        )
+    }
+
     // MARK: - Private table
 
     private static let byID: [SvnCommandID: SvnCommandDescriptor] = {

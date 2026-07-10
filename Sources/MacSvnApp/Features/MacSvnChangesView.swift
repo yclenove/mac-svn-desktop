@@ -385,38 +385,92 @@ public struct MacSvnChangesView: View {
                     }
                 }
                 .contextMenu {
-                    Button("重命名…") {
-                        prepareRenameSheet()
-                        showRenameSheet = true
+                    ForEach(SvnCommandCatalog.dailyCFMCommands, id: \.id) { descriptor in
+                        catalogContextButton(descriptor)
                     }
-                    .disabled(selectedPaths.count != 1)
-
-                    Button("复制/移动…") {
-                        prepareCopyMoveSheet()
-                        showCopyMoveSheet = true
-                    }
-                    .disabled(selectedPaths.count != 1)
-
-                    Button("忽略…") {
-                        ignoreKind = .exactFilename
-                        showIgnoreSheet = true
-                    }
-                    .disabled(selectedPaths.isEmpty || session == nil)
-
-                    Button("修复移动") {
-                        Task { await runRepairMove() }
-                    }
-                    .disabled(!canRepairMove)
-
-                    Button("修复复制") {
-                        Task { await runRepairCopy() }
-                    }
-                    .disabled(!canRepairCopy)
                 }
             }
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func catalogContextButton(_ descriptor: SvnCommandDescriptor) -> some View {
+        switch descriptor.id {
+        case .repairMoveCopy:
+            Button("修复移动") {
+                Task { await runRepairMove() }
+            }
+            .disabled(!canRepairMove)
+            Button("修复复制") {
+                Task { await runRepairCopy() }
+            }
+            .disabled(!canRepairCopy)
+        default:
+            Button(menuTitle(for: descriptor)) {
+                handleCatalogCommand(descriptor.id)
+            }
+            .disabled(!isCatalogCommandEnabled(descriptor.id))
+        }
+    }
+
+    private func menuTitle(for descriptor: SvnCommandDescriptor) -> String {
+        switch descriptor.id {
+        case .rename, .copyMove, .addToIgnoreList, .add, .cleanup, .revert:
+            return "\(descriptor.displayName)…"
+        default:
+            return descriptor.displayName
+        }
+    }
+
+    private func isCatalogCommandEnabled(_ id: SvnCommandID) -> Bool {
+        switch id {
+        case .update, .cleanup, .checkForModifications:
+            return actionsVM != nil && actionsVM?.isRunning != true
+        case .add:
+            return changesVM != nil && actionsVM?.isRunning != true
+        case .commit, .diff, .showLog:
+            return true
+        case .delete, .revert, .addToIgnoreList:
+            return !selectedPaths.isEmpty && actionsVM?.isRunning != true
+                && (id != .addToIgnoreList || session != nil)
+        case .rename, .copyMove:
+            return selectedPaths.count == 1 && actionsVM?.isRunning != true
+        default:
+            return actionsVM?.isRunning != true
+        }
+    }
+
+    private func handleCatalogCommand(_ id: SvnCommandID) {
+        switch id {
+        case .update:
+            Task { await runUpdate() }
+        case .add:
+            prepareAddSheet()
+            showAddSheet = true
+        case .delete:
+            confirmDelete = true
+        case .revert:
+            revertRecursive = false
+            showRevertSheet = true
+        case .cleanup:
+            cleanupOptions = .default
+            showCleanupSheet = true
+        case .rename:
+            prepareRenameSheet()
+            showRenameSheet = true
+        case .addToIgnoreList:
+            ignoreKind = .exactFilename
+            showIgnoreSheet = true
+        case .copyMove:
+            prepareCopyMoveSheet()
+            showCopyMoveSheet = true
+        case .commit, .diff, .showLog, .checkForModifications:
+            _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
+        default:
+            _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
         }
     }
 

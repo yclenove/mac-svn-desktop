@@ -44,7 +44,7 @@
 - [x] Rename（#13）
 - [x] Ignore 文件/通配（#32）
 - [x] SVN Copy / Move 向导（#36）
-- [ ] 变更树右键 + ⌘K 可达日常命令子集
+- [x] 变更树右键 + ⌘K 可达日常命令子集
 - [ ] **G1**：inventory T1 范围全 ✅；本节全部勾选；`swift test` 绿
 
 ---

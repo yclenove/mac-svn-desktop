@@ -133,7 +133,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T1.8** Rename（#13）
 - [x] **T1.9** Ignore 文件/通配（#32）
 - [x] **T1.10** SVN Copy / Move 向导（#36）
-- [ ] **T1.11** 变更树右键 = Catalog 日常子集；⌘K 可搜到
+- [x] **T1.11** 变更树右键 = Catalog 日常子集；⌘K 可搜到
 - [ ] **T1.12** **闸门 G1**：更新 inventory 对应行 → ✅；H-tortoise T1 节手工勾选；`swift test` 全绿
 
 ### Wave T2 — 进阶日常 + 仓库
@@ -239,6 +239,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.8 | ed54297 | Rename 新名校验 + svn rename + CFM 对话框 | #13 ✅ | 大小写冲突修复仍属 #46 |
 | 2026-07-10 | T1.9 | 7021266 | Ignore 文件名/扩展名通配 + svn:ignore 合并写入 | #32 ✅ | global-ignores 仍属 S01/T5 |
 | 2026-07-10 | T1.10 | 3f4a472 | Copy/Move 目标路径校验 + svn copy/move 向导 | #36 ✅ | Finder 拖拽引导仍开 |
+| 2026-07-10 | T1.11 | （提交后回填） | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
 
 ---
 

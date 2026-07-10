@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.11：CFM 右键改为 `SvnCommandCatalog.dailyCFMCommands`；⌘K 可搜索并分发同一日常命令子集
+- Affected: SvnCommandCatalog.swift, CommandPaletteSearchEngine.swift, MacSvnCommandPaletteView, MacSvnChangesView, Tests/*, docs/*
+- Impact: 右键与 ⌘K 同源；下一闸门 G1（T1.12）
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.10：Copy/Move 向导——目标相对路径校验（绝对/同路径/跳出 WC/冲突）+ `svn copy`/`svn move` + CFM 对话框
 - Affected: CopyMoveValidationPolicy.swift, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*, docs/*
 - Impact: inventory #36 ✅；Finder 拖拽引导仍开

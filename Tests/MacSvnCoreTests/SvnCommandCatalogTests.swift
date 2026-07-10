@@ -48,6 +48,20 @@ final class SvnCommandCatalogTests: XCTestCase {
         }
     }
 
+    func testDailyCFMSubsetCoversWaveT1CommandsAndIsSearchable() {
+        let ids = Set(SvnCommandCatalog.dailyCFMCommandIDs)
+        XCTAssertEqual(SvnCommandCatalog.dailyCFMCommands.count, SvnCommandCatalog.dailyCFMCommandIDs.count)
+        XCTAssertTrue(ids.isSuperset(of: [
+            .update, .commit, .diff, .add, .delete, .revert, .cleanup,
+            .rename, .addToIgnoreList, .copyMove, .repairMoveCopy
+        ]))
+        let renameHits = SvnCommandCatalog.searchDailyCFM(query: "rename")
+        XCTAssertEqual(renameHits.first?.id, .rename)
+        let ignoreHits = SvnCommandCatalog.searchDailyCFM(query: "ignore")
+        XCTAssertEqual(ignoreHits.first?.id, .addToIgnoreList)
+        XCTAssertTrue(SvnCommandCatalog.searchDailyCFM(query: "   ").isEmpty)
+    }
+
     func testAllCasesHaveMatchingDescriptor() {
         for id in SvnCommandID.allCases {
             XCTAssertNotNil(SvnCommandCatalog.descriptor(for: id), "missing descriptor for \(id)")

@@ -135,6 +135,9 @@ public struct MacSvnCommandPaletteView: View {
             case .goSettings:
                 navigator.selectMode(.settings)
             }
+        case .svnCommand(let command):
+            // Catalog 日常命令：经 Navigator 统一分发（与 CFM 右键同源）
+            _ = navigator.perform(command: command)
         case .file(let path):
             navigator.pendingDiffPath = path
             navigator.selectMode(.changes)
