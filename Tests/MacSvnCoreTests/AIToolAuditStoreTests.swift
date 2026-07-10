@@ -150,6 +150,38 @@ private actor FakeAuditToolService: AISVNToolServicing {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data {
         Data()
     }
+
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+        UpdateSummary()
+    }
+
+    func add(wc: URL, paths: [String]) async throws {}
+
+    func cleanup(wc: URL) async throws {}
+
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
+        Revision(1)
+    }
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws {}
+
+    func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        MergeSummary()
+    }
+
+    func switchTo(wc: URL, url: String, auth: Credential?, allowLocalChanges: Bool) async throws -> UpdateSummary {
+        UpdateSummary()
+    }
+
+    func delete(wc: URL, paths: [String]) async throws {}
+
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision {
+        Revision(1)
+    }
+
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        Revision(1)
+    }
 }
 
 private extension JSONDecoder {

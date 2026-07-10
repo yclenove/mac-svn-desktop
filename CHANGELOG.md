@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop U5：AI Chat 确认门通过后真实执行低危/高危写工具（update/add/cleanup/commit/revert/merge/switch/delete/copy）并审计
+- Affected: Sources/MacSvnCore/Services/AISVNToolRegistry.swift, ViewModels/AIAssistantChatViewModel.swift, Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift, AIAssistantChatViewModelTests.swift, AIToolAuditStoreTests.swift
+- Impact: FR-AI-04 / NFR-13 可验收；下一未勾项 U6 ⌘K 无匹配转 AI Chat
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop U4：Blame 页接入行选区 AI 演化解释（摘要 + 关键 revision 变更）
 - Affected: Sources/MacSvnCore/ViewModels/AIBlameEvolutionViewModel.swift, Sources/MacSvnApp/Features/MacSvnBlameView.swift, MacSvnAppSession.swift, Tests/MacSvnCoreTests/AIBlameEvolutionViewModelTests.swift
 - Impact: FR-AI-06 可验收；下一未勾项 U5 AI Chat 真实写工具执行

@@ -72,23 +72,29 @@ public final class AIAssistantChatViewModel {
     public func confirmPendingTool() async {
         guard let pending = pendingConfirmation else { return }
         let arguments = pendingCallArguments
+        let toolName = pending.toolName
         pendingConfirmation = nil
         pendingCallArguments = [:]
         state = .thinking
 
-        await auditStore.append(AISVNToolAuditRecord(
-            sessionID: sessionID,
-            toolName: pending.toolName,
-            risk: pending.risk,
-            arguments: arguments,
-            outcome: .completed,
-            summary: "用户确认：\(pending.commandPreview)"
-        ))
-        messages.append(AIAssistantChatMessage(
-            role: .assistant,
-            content: "已确认工具「\(pending.toolName)」：\(pending.commandPreview)\n请在对应功能页执行该写操作（确认门已记录审计）。"
-        ))
-        state = .idle
+        do {
+            let result = try await toolRegistry.executeConfirmed(
+                toolName: toolName,
+                arguments: arguments,
+                sessionID: sessionID
+            )
+            messages.append(AIAssistantChatMessage(
+                role: .assistant,
+                content: "已确认并执行「\(toolName)」：\n\(pending.commandPreview)\n\n结果：\n\(result.content)"
+            ))
+            state = .idle
+        } catch {
+            messages.append(AIAssistantChatMessage(
+                role: .assistant,
+                content: "已确认但执行失败「\(toolName)」：\(error.localizedDescription)"
+            ))
+            state = .error(String(describing: error))
+        }
         await refreshAudit()
     }
 

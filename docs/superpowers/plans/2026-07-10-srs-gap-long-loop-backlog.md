@@ -129,7 +129,7 @@
 - [x] **U2** 迁移完成 revision 对账报告展示与失败阻断（FR-GM-04 / NFR-14）
 - [x] **U3** AI Release Notes 页/入口（接 `AIReleaseNotesGenerator`）（FR-AI-05）
 - [x] **U4** Blame 页接入演化解释（接 `AIBlameEvolutionExplainer`）（FR-AI-06）
-- [ ] **U5** AI Chat：确认门通过后真实执行低危/高危写工具（仍须确认+审计）（FR-AI-04 / NFR-13）
+- [x] **U5** AI Chat：确认门通过后真实执行低危/高危写工具（仍须确认+审计）（FR-AI-04 / NFR-13）
 - [ ] **U6** ⌘K：无匹配动作时转入 AI Chat 并带上 query（FR-EX-04）
 - [ ] **U7** 菜单栏：FSEvents（或等价）本地变更近实时刷新（FR-EX-03）
 - [ ] **U8** 团队活动：按日提交热力图可视化（FR-EX-06）
@@ -157,7 +157,8 @@
 | 2026-07-10 14:06 | U2 | ee01a0e | 对账报告 UI + 失败阻断同步；源分析保留 sourceRevisions |
 | 2026-07-10 14:13 | 唤醒协议 | a227fc6 | 废弃 while-true；改为 one-shot re-arm |
 | 2026-07-10 14:16 | U3 | 0a066a6 | Release Notes 页+日志入口；one-shot 唤醒验证通过 |
-| 2026-07-10 14:23 | U4 | （本轮） | Blame 选区 AI 演化解释；4 tests passed |
+| 2026-07-10 14:23 | U4 | 73ee382 | Blame 选区 AI 演化解释；4 tests passed |
+| 2026-07-10 14:28 | U5 | （本轮） | 确认门后真实执行写工具+审计；10 tests passed |
 
 ## 阻塞日志
 

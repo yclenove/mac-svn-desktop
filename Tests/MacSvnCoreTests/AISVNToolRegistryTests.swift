@@ -77,6 +77,26 @@ final class AISVNToolRegistryTests: XCTestCase {
         XCTAssertEqual(records.map(\.outcome), [.confirmationRequired, .confirmationRequired])
     }
 
+    func testExecuteConfirmedRunsWriteToolAndAuditsCompleted() async throws {
+        let service = FakeAISVNToolService()
+        let audit = InMemoryAIToolAuditStore()
+        let registry = AISVNToolRegistry(service: service, auditStore: audit)
+
+        let result = try await registry.executeConfirmed(
+            toolName: "svn_update",
+            arguments: ["wc": "/tmp/wc", "paths": "README.md"],
+            sessionID: "session-4"
+        )
+
+        XCTAssertTrue(result.content.contains("update 完成"))
+        let serviceCalls = await service.recordedCalls()
+        XCTAssertEqual(serviceCalls, ["update:/tmp/wc:README.md"])
+        let records = await audit.records(sessionID: "session-4")
+        XCTAssertEqual(records.map(\.toolName), ["svn_update"])
+        XCTAssertEqual(records.map(\.outcome), [.completed])
+        XCTAssertEqual(records.map(\.risk), [.lowRiskWrite])
+    }
+
     func testUnknownToolIsRejectedAndAuditedAsForbidden() async throws {
         let audit = InMemoryAIToolAuditStore()
         let registry = AISVNToolRegistry(service: FakeAISVNToolService(), auditStore: audit)
@@ -151,5 +171,51 @@ private actor FakeAISVNToolService: AISVNToolServicing {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data {
         calls.append("cat:\(url)")
         return catResult
+    }
+
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+        calls.append("update:\(wc.path):\(paths.joined(separator: ","))")
+        return UpdateSummary(updated: paths.isEmpty ? 1 : paths.count)
+    }
+
+    func add(wc: URL, paths: [String]) async throws {
+        calls.append("add:\(wc.path):\(paths.joined(separator: ","))")
+    }
+
+    func cleanup(wc: URL) async throws {
+        calls.append("cleanup:\(wc.path)")
+    }
+
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
+        calls.append("commit:\(wc.path):\(message)")
+        return Revision(42)
+    }
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws {
+        calls.append("revert:\(wc.path):\(paths.joined(separator: ","))")
+    }
+
+    func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        calls.append("merge:\(wc.path):\(source)")
+        return MergeSummary()
+    }
+
+    func switchTo(wc: URL, url: String, auth: Credential?, allowLocalChanges: Bool) async throws -> UpdateSummary {
+        calls.append("switch:\(wc.path):\(url)")
+        return UpdateSummary(updated: 1)
+    }
+
+    func delete(wc: URL, paths: [String]) async throws {
+        calls.append("delete-wc:\(wc.path):\(paths.joined(separator: ","))")
+    }
+
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision {
+        calls.append("delete-url:\(url)")
+        return Revision(43)
+    }
+
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
+        calls.append("copy:\(source)->\(destination)")
+        return Revision(44)
     }
 }
