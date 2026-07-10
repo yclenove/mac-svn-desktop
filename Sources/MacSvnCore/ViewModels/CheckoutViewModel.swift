@@ -2,7 +2,14 @@ import Foundation
 import Observation
 
 public protocol CheckoutProviding: Sendable {
-    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws
+    func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth,
+        revision: Revision?,
+        ignoreExternals: Bool,
+        auth: Credential?
+    ) async throws
 }
 
 public protocol WorkspaceImporting: Sendable {
@@ -45,6 +52,8 @@ public final class CheckoutViewModel {
         url: String,
         to destination: URL,
         depth: SvnDepth,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil,
         username: String? = nil,
         name: String? = nil
@@ -53,7 +62,14 @@ public final class CheckoutViewModel {
         importedWorkingCopy = nil
 
         do {
-            try await checkoutProvider.checkout(url: url, to: destination, depth: depth, auth: auth)
+            try await checkoutProvider.checkout(
+                url: url,
+                to: destination,
+                depth: depth,
+                revision: revision,
+                ignoreExternals: ignoreExternals,
+                auth: auth
+            )
             let record = try await workspaceImporter.addExistingWorkingCopy(
                 localPath: destination,
                 infoProvider: infoProvider,
@@ -72,6 +88,8 @@ public final class CheckoutViewModel {
         baseURL: String,
         to destination: URL,
         depth: SvnDepth,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil,
         username: String? = nil,
         name: String? = nil
@@ -86,6 +104,8 @@ public final class CheckoutViewModel {
             url: remoteURL(baseURL: baseURL, entryPath: entry.path),
             to: destination,
             depth: depth,
+            revision: revision,
+            ignoreExternals: ignoreExternals,
             auth: auth,
             username: username,
             name: name

@@ -394,7 +394,7 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         calls
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary {
         calls.append(ActionCall(
             operation: .update,
             wc: wc,

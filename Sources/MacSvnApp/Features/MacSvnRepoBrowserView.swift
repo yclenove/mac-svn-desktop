@@ -12,6 +12,8 @@ public struct MacSvnRepoBrowserView: View {
     @State private var rootURL: String = ""
     @State private var selectedEntry: RemoteEntry?
     @State private var selectedDepth: SvnDepth = .infinity
+    @State private var checkoutRevisionText = ""
+    @State private var checkoutIgnoreExternals = false
     @State private var statusText: String?
     @State private var previewText: String = ""
 
@@ -169,6 +171,8 @@ public struct MacSvnRepoBrowserView: View {
                     Text("immediates").tag(SvnDepth.immediates)
                     Text("infinity").tag(SvnDepth.infinity)
                 }
+                TextField("检出修订（留空=HEAD）", text: $checkoutRevisionText)
+                Toggle("忽略外部项", isOn: $checkoutIgnoreExternals)
 
                 Button("Checkout 到…") {
                     presentCheckout(for: selectedEntry)
@@ -370,6 +374,17 @@ public struct MacSvnRepoBrowserView: View {
     }
 
     private func presentCheckout(for entry: RemoteEntry) {
+        let trimmedRev = checkoutRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let revision: Revision?
+        if trimmedRev.isEmpty {
+            revision = nil
+        } else if let value = Int(trimmedRev), value > 0 {
+            revision = Revision(value)
+        } else {
+            statusText = "检出修订号无效：\(trimmedRev)"
+            return
+        }
+
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -381,7 +396,9 @@ public struct MacSvnRepoBrowserView: View {
                 entry: entry,
                 baseURL: rootURL,
                 to: destination.appendingPathComponent(entry.name),
-                depth: selectedDepth
+                depth: selectedDepth,
+                revision: revision,
+                ignoreExternals: checkoutIgnoreExternals
             )
             switch checkoutVM.state {
             case .completed(let record):

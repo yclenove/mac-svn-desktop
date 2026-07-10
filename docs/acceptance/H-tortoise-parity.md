@@ -51,7 +51,7 @@
 
 ## T2 — 进阶日常 + 仓库
 
-- [ ] Checkout / Update to revision（depth、ignore-externals）（#1,#3）
+- [x] Checkout / Update to revision（depth、ignore-externals）（#1,#3）
 - [ ] Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20）
 - [ ] 日志右键 L01–L08、L09–L12、L14、L17（见 inventory §5）
 - [ ] Edit Conflicts + Resolved（#11,#12）

@@ -5,7 +5,7 @@ public protocol SvnBackend: Sendable {
     func status(wc: URL) async throws -> [FileStatus]
     /// Check for Modifications → Check Repository（`svn status -u`）
     func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, auth: Credential?) async throws -> UpdateSummary
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool, auth: Credential?) async throws -> UpdateSummary
     func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
     func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
@@ -39,7 +39,7 @@ public protocol SvnBackend: Sendable {
     func remoteLogFromHead(url: String, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
-    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws
+    func checkout(url: String, to destination: URL, depth: SvnDepth, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws
     func export(url: String, to destination: URL, revision: Revision?, auth: Credential?) async throws
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
     func mkdir(url: String, message: String, auth: Credential?) async throws -> Revision

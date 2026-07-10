@@ -120,7 +120,8 @@ public actor SvnService {
         wc: URL,
         paths: [String] = [],
         revision: Revision? = nil,
-        setDepth: SvnDepth? = nil
+        setDepth: SvnDepth? = nil,
+        ignoreExternals: Bool = false
     ) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
             try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
@@ -135,6 +136,7 @@ public actor SvnService {
                     paths: paths,
                     revision: effectiveRevision,
                     setDepth: setDepth,
+                    ignoreExternals: ignoreExternals,
                     auth: auth
                 )
             }
@@ -181,11 +183,20 @@ public actor SvnService {
         url: String,
         to destination: URL,
         depth: SvnDepth = .infinity,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil
     ) async throws {
         try await withWriteLock(wc: destination, operation: "checkout") {
             try await retryingAuthentication(wc: destination, initialAuth: auth) { auth in
-                try await backend.checkout(url: url, to: destination, depth: depth, auth: auth)
+                try await backend.checkout(
+                    url: url,
+                    to: destination,
+                    depth: depth,
+                    revision: revision,
+                    ignoreExternals: ignoreExternals,
+                    auth: auth
+                )
             }
         }
     }

@@ -1098,6 +1098,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         paths: [String],
         revision: Revision?,
         setDepth: SvnDepth?,
+        ignoreExternals: Bool,
         auth: Credential?
     ) async throws -> UpdateSummary {
         let error = recordUpdate(revision: revision, setDepth: setDepth, auth: auth)
@@ -1232,8 +1233,17 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return remoteLogFromHeadResult
     }
 
-    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
+    func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth,
+        revision: Revision?,
+        ignoreExternals: Bool,
+        auth: Credential?
+    ) async throws {
         let error = recordCheckout(depth: depth, auth: auth)
+        _ = revision
+        _ = ignoreExternals
         if let error {
             throw error
         }

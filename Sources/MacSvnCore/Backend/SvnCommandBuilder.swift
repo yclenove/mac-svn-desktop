@@ -54,6 +54,7 @@ public enum SvnCommandBuilder {
         paths: [String] = [],
         revision: Revision? = nil,
         setDepth: SvnDepth? = nil,
+        ignoreExternals: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
         var arguments = ["update", "--accept", "postpone", "--non-interactive"]
@@ -65,6 +66,10 @@ public enum SvnCommandBuilder {
 
         if let setDepth {
             arguments += ["--set-depth", setDepth.rawValue]
+        }
+
+        if ignoreExternals {
+            arguments.append("--ignore-externals")
         }
 
         arguments += paths
@@ -298,12 +303,23 @@ public enum SvnCommandBuilder {
         url: String,
         to destination: String,
         depth: SvnDepth = .infinity,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
-        SvnCommand(arguments: [
+        var arguments = [
             "checkout", "--non-interactive",
             "--depth", depth.rawValue
-        ] + authArguments + [url, destination])
+        ]
+        if let revision {
+            arguments += ["-r", revision.description]
+        }
+        if ignoreExternals {
+            arguments.append("--ignore-externals")
+        }
+        arguments += authArguments
+        arguments += [url, destination]
+        return SvnCommand(arguments: arguments)
     }
 
     public static func export(

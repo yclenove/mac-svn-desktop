@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 public protocol WorkingCopyActionProviding: Sendable {
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
@@ -63,7 +63,12 @@ public final class WorkingCopyActionsViewModel {
         return false
     }
 
-    public func update(paths: [String] = [], revision: Revision? = nil, setDepth: SvnDepth? = nil) async {
+    public func update(
+        paths: [String] = [],
+        revision: Revision? = nil,
+        setDepth: SvnDepth? = nil,
+        ignoreExternals: Bool = false
+    ) async {
         state = .running(.update)
 
         do {
@@ -71,7 +76,8 @@ public final class WorkingCopyActionsViewModel {
                 wc: workingCopy,
                 paths: paths,
                 revision: revision,
-                setDepth: setDepth
+                setDepth: setDepth,
+                ignoreExternals: ignoreExternals
             )
             lastUpdateSummary = summary
             refreshedStatuses = try await statusProvider.status(wc: workingCopy)

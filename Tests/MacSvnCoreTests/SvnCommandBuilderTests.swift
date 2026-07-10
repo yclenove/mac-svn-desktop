@@ -320,6 +320,39 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testCheckoutCanPinRevisionAndIgnoreExternals() {
+        let command = SvnCommandBuilder.checkout(
+            url: "file:///repo/trunk",
+            to: "/tmp/wc",
+            depth: .immediates,
+            revision: Revision(12),
+            ignoreExternals: true
+        )
+        XCTAssertEqual(command.arguments, [
+            "checkout", "--non-interactive",
+            "--depth", "immediates",
+            "-r", "12",
+            "--ignore-externals",
+            "file:///repo/trunk", "/tmp/wc"
+        ])
+    }
+
+    func testUpdateCanIgnoreExternalsWithRevisionAndDepth() {
+        let command = SvnCommandBuilder.update(
+            paths: ["src"],
+            revision: Revision(9),
+            setDepth: .files,
+            ignoreExternals: true
+        )
+        XCTAssertEqual(command.arguments, [
+            "update", "--accept", "postpone", "--non-interactive",
+            "-r", "9",
+            "--set-depth", "files",
+            "--ignore-externals",
+            "src"
+        ])
+    }
+
     func testExportUsesRevisionAuthenticationUrlAndDestination() {
         let command = SvnCommandBuilder.export(
             url: "file:///repo/trunk",

@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-10T14:53:09Z",
+  "generated_at": "2026-07-10T15:03:17Z",
   "total": 114,
-  "done": 19,
-  "partial": 36,
+  "done": 22,
+  "partial": 33,
   "missing": 59,
-  "coverage": 0.166667,
-  "coverage_percent": 16.67,
+  "coverage": 0.192982,
+  "coverage_percent": 19.3,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 7,
-      "partial": 14,
+      "done": 8,
+      "partial": 13,
       "missing": 7
     },
     "command": {
       "total": 46,
-      "done": 12,
-      "partial": 14,
+      "done": 14,
+      "partial": 12,
       "missing": 20
     },
     "log": {
@@ -72,8 +72,8 @@
       "key": "D05",
       "section": "domain",
       "title": "Checkout",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ depth/rev/omit-ext；pristines 进阶仍开",
+      "status": "done"
     },
     {
       "key": "D06",
@@ -240,8 +240,8 @@
       "key": "cmd.01",
       "section": "command",
       "title": "Checkout",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.02",
@@ -254,8 +254,8 @@
       "key": "cmd.03",
       "section": "command",
       "title": "Update to revision",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.04",

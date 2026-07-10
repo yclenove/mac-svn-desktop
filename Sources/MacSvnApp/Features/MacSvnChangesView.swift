@@ -37,7 +37,9 @@ public struct MacSvnChangesView: View {
     @State private var cleanupOptions = SvnCleanupOptions()
     @State private var statusBanner: String?
     @State private var setDepth: SvnDepth = .infinity
-    @State private var showSetDepth = false
+    @State private var showUpdateToRevisionSheet = false
+    @State private var updateToRevisionText = ""
+    @State private var updateIgnoreExternals = false
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -139,32 +141,34 @@ public struct MacSvnChangesView: View {
         .sheet(isPresented: $showCopyMoveSheet) {
             copyMoveSheet
         }
-        .sheet(isPresented: $showSetDepth) {
+        .sheet(isPresented: $showUpdateToRevisionSheet) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("调整工作副本深度（svn update --set-depth）")
+                Text("更新到修订（svn update -r）")
                     .font(.headline)
-                Picker("深度", selection: $setDepth) {
+                TextField("修订号（留空=HEAD）", text: $updateToRevisionText)
+                Picker("深度（--set-depth，可选）", selection: $setDepth) {
                     Text("empty").tag(SvnDepth.empty)
                     Text("files").tag(SvnDepth.files)
                     Text("immediates").tag(SvnDepth.immediates)
                     Text("infinity").tag(SvnDepth.infinity)
                 }
                 .pickerStyle(.radioGroup)
-                Text("将作用于选中路径；未选中时作用于 WC 根。")
+                Toggle("忽略外部项（--ignore-externals）", isOn: $updateIgnoreExternals)
+                Text("将作用于选中路径；未选中时作用于 WC 根。指定修订时不再自动钉 HEAD。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button("取消") { showSetDepth = false }
+                    Button("取消") { showUpdateToRevisionSheet = false }
                     Spacer()
-                    Button("执行") {
-                        showSetDepth = false
-                        Task { await runSetDepth() }
+                    Button("更新") {
+                        showUpdateToRevisionSheet = false
+                        Task { await runUpdateToRevision() }
                     }
                     .keyboardShortcut(.defaultAction)
                 }
             }
             .padding(24)
-            .frame(width: 420)
+            .frame(width: 440)
         }
     }
 
@@ -290,8 +294,11 @@ public struct MacSvnChangesView: View {
             }
             .disabled(!canRepairCopy || actionsVM?.isRunning == true)
 
-            Button("调整深度…") {
-                showSetDepth = true
+            Button("更新到修订…") {
+                updateToRevisionText = ""
+                updateIgnoreExternals = false
+                setDepth = .infinity
+                showUpdateToRevisionSheet = true
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
@@ -427,7 +434,7 @@ public struct MacSvnChangesView: View {
 
     private func isCatalogCommandEnabled(_ id: SvnCommandID) -> Bool {
         switch id {
-        case .update, .cleanup, .checkForModifications:
+        case .update, .cleanup, .checkForModifications, .updateToRevision:
             return actionsVM != nil && actionsVM?.isRunning != true
         case .add:
             return changesVM != nil && actionsVM?.isRunning != true
@@ -447,6 +454,11 @@ public struct MacSvnChangesView: View {
         switch id {
         case .update:
             Task { await runUpdate() }
+        case .updateToRevision:
+            updateToRevisionText = ""
+            updateIgnoreExternals = false
+            setDepth = .infinity
+            showUpdateToRevisionSheet = true
         case .add:
             prepareAddSheet()
             showAddSheet = true
@@ -631,6 +643,34 @@ public struct MacSvnChangesView: View {
         // 有多选时按选中路径更新（≥2 时 Service 层会钉住 HEAD 防 mixed-rev）
         await actionsVM.update(paths: Array(selectedPaths))
         await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private func runUpdateToRevision() async {
+        guard let actionsVM, let changesVM else { return }
+        let paths = Array(selectedPaths)
+        let trimmed = updateToRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let revision: Revision?
+        if trimmed.isEmpty {
+            revision = nil
+        } else if let value = Int(trimmed), value > 0 {
+            revision = Revision(value)
+        } else {
+            statusBanner = "修订号无效：\(trimmed)"
+            return
+        }
+        // infinity 表示不改 depth（仅 -r / ignore-externals）；其它值传 --set-depth
+        let depthArg: SvnDepth? = setDepth == .infinity ? nil : setDepth
+        await actionsVM.update(
+            paths: paths,
+            revision: revision,
+            setDepth: depthArg,
+            ignoreExternals: updateIgnoreExternals
+        )
+        await syncAfterAction(actionsVM, changesVM)
+        if case .updateCompleted = actionsVM.state {
+            let revLabel = revision.map { "r\($0.value)" } ?? "HEAD"
+            statusBanner = "已更新到 \(revLabel)"
+        }
     }
 
     private func runSetDepth() async {

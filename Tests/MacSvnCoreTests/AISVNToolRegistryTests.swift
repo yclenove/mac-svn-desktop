@@ -173,7 +173,7 @@ private actor FakeAISVNToolService: AISVNToolServicing {
         return catResult
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary {
         calls.append("update:\(wc.path):\(paths.joined(separator: ","))")
         return UpdateSummary(updated: paths.isEmpty ? 1 : paths.count)
     }

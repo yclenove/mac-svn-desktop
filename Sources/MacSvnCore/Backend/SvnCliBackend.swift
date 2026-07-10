@@ -34,6 +34,7 @@ public struct SvnCliBackend: SvnBackend {
         paths: [String] = [],
         revision: Revision? = nil,
         setDepth: SvnDepth? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil
     ) async throws -> UpdateSummary {
         let authArguments = try AuthArguments.build(credential: auth)
@@ -41,6 +42,7 @@ public struct SvnCliBackend: SvnBackend {
             paths: paths,
             revision: revision,
             setDepth: setDepth,
+            ignoreExternals: ignoreExternals,
             authArguments: authArguments.arguments
         )
         let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
@@ -397,6 +399,8 @@ public struct SvnCliBackend: SvnBackend {
         url: String,
         to destination: URL,
         depth: SvnDepth = .infinity,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil
     ) async throws {
         let authArguments = try AuthArguments.build(credential: auth)
@@ -405,6 +409,8 @@ public struct SvnCliBackend: SvnBackend {
                 url: url,
                 to: destination.path,
                 depth: depth,
+                revision: revision,
+                ignoreExternals: ignoreExternals,
                 authArguments: authArguments.arguments
             ),
             currentDirectory: nil,

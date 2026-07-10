@@ -151,7 +151,7 @@ private actor FakeAuditToolService: AISVNToolServicing {
         Data()
     }
 
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary {
         UpdateSummary()
     }
 

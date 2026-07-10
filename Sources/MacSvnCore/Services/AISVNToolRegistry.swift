@@ -10,7 +10,7 @@ public protocol AISVNToolServicing: Sendable {
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
 
     // 写工具：仅在用户确认门通过后由 registry.executeConfirmed 调用
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary
     func add(wc: URL, paths: [String]) async throws
     func cleanup(wc: URL) async throws
     func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision
@@ -239,7 +239,8 @@ public struct AISVNToolRegistry: Sendable {
                 wc: wc,
                 paths: paths,
                 revision: revisionArgument(arguments["revision"]),
-                setDepth: nil
+                setDepth: nil,
+                ignoreExternals: arguments["ignoreExternals"] == "true"
             )
             return AISVNToolResult(
                 content: "update 完成：updated=\(summary.updated) conflicted=\(summary.conflicted)",
