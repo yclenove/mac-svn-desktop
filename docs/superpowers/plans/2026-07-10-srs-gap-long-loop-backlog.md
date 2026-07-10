@@ -161,7 +161,7 @@
 | 2026-07-10 14:28 | U5 | 1247aac | 确认门后真实执行写工具+审计；10 tests passed |
 | 2026-07-10 14:32 | U6 | 333206b | ⌘K 无匹配 handoff query→AI Chat 自动发送 |
 | 2026-07-10 14:40 | U7 | a3e1ef4 | FSEvents + debounce 刷新；测试禁用通知权限；DispatchQueue 挂流 |
-| 2026-07-10 14:46 | U8 | （本轮） | 日历热力图 Builder+UI；锚定今天；周标签跟随 firstWeekday |
+| 2026-07-10 14:46 | U8 | e3b82c9 | 日历热力图 Builder+UI；锚定今天；周标签跟随 firstWeekday |
 
 ## 阻塞日志
 
