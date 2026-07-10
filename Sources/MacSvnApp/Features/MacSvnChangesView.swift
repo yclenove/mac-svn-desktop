@@ -15,6 +15,8 @@ public struct MacSvnChangesView: View {
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
     @State private var statusBanner: String?
+    @State private var setDepth: SvnDepth = .infinity
+    @State private var showSetDepth = false
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -59,6 +61,33 @@ public struct MacSvnChangesView: View {
                 Task { await runRevert(confirmed: true) }
             }
             Button("取消", role: .cancel) {}
+        }
+        .sheet(isPresented: $showSetDepth) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("调整工作副本深度（svn update --set-depth）")
+                    .font(.headline)
+                Picker("深度", selection: $setDepth) {
+                    Text("empty").tag(SvnDepth.empty)
+                    Text("files").tag(SvnDepth.files)
+                    Text("immediates").tag(SvnDepth.immediates)
+                    Text("infinity").tag(SvnDepth.infinity)
+                }
+                .pickerStyle(.radioGroup)
+                Text("将作用于选中路径；未选中时作用于 WC 根。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("取消") { showSetDepth = false }
+                    Spacer()
+                    Button("执行") {
+                        showSetDepth = false
+                        Task { await runSetDepth() }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(24)
+            .frame(width: 420)
         }
     }
 
@@ -129,6 +158,11 @@ public struct MacSvnChangesView: View {
                 confirmRevert = true
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
+
+            Button("调整深度…") {
+                showSetDepth = true
+            }
+            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
             if actionsVM?.isRunning == true {
                 ProgressView()
@@ -260,6 +294,16 @@ public struct MacSvnChangesView: View {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.update()
         await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private func runSetDepth() async {
+        guard let actionsVM, let changesVM else { return }
+        let paths = Array(selectedPaths)
+        await actionsVM.update(paths: paths, setDepth: setDepth)
+        await syncAfterAction(actionsVM, changesVM)
+        if case .updateCompleted = actionsVM.state {
+            statusBanner = "已设置深度 \(String(describing: setDepth))"
+        }
     }
 
     private func runCleanup() async {

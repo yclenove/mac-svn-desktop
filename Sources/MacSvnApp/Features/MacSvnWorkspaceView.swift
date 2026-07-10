@@ -60,6 +60,15 @@ public struct MacSvnWorkspaceView: View {
                     .opacity(record.isValid == false ? 0.55 : 1)
                 }
             }
+            .overlay(alignment: .bottom) {
+                Text("也可将本地 SVN 目录拖入此列表添加")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+            }
+            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                handleDrop(providers)
+            }
         }
         .task { await controller.reload() }
         .confirmationDialog(
@@ -72,5 +81,19 @@ public struct MacSvnWorkspaceView: View {
             }
             Button("取消", role: .cancel) {}
         }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var accepted = false
+        for provider in providers {
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url, url.isFileURL else { return }
+                Task { @MainActor in
+                    await controller.addWorkingCopy(at: url)
+                }
+            }
+            accepted = true
+        }
+        return accepted
     }
 }
