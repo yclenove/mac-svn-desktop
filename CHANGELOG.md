@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 新增长期迭代路线图（L0–L8）与长期产品开发详设（TortoiseSVN 映射、性能规范、模块设计）
+- Affected: docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, docs/superpowers/specs/2026-07-10-long-term-product-design.md, docs/README.md
+- Impact: 后续按 L0 稳定门禁 → L1 Finder 小乌龟 → L2–L4 深度 → L5 视觉 推进；待确认波次顺序后开工
+
+## 2026-07-10
+
 - Summary: 修复变更工作区卡死（嵌套 SplitView + 逐行 Diff 导致 AttributeGraph 100% CPU）；历史页改为左列表右详情可点开查看；Diff 嵌入模式改单块文本渲染
 - Affected: MacSvnWorkingCopyWorkspaceView.swift, MacSvnDiffView.swift, DiffViewModel.swift, MacSvnLogView.swift
 - Impact: 应用应可正常响应；历史可点选修订看说明与变更路径

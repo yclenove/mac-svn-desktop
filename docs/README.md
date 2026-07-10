@@ -13,6 +13,8 @@
 | [superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md) | 长程 Loop 二：SRS 缺口补齐（验收/体验/扩展/发布） | 完成 |
 | [superpowers/specs/2026-07-10-ui-ux-ia-design.md](superpowers/specs/2026-07-10-ui-ux-ia-design.md) | UI/UX 信息架构：WC 侧栏 + WorkspaceMode + 变更工作区 | 已落地 |
 | [superpowers/plans/2026-07-10-ui-ux-ia-refactor.md](superpowers/plans/2026-07-10-ui-ux-ia-refactor.md) | UI/UX IA 重构实现计划（U1–U4） | 已落地 |
+| [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 L0–L8（稳定→小乌龟→深度→视觉→分发） | 草案 |
+| [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（Tortoise 映射、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |
 
 ## 阅读顺序
@@ -20,4 +22,4 @@
 - 了解产品做什么：01 → 02
 - 参与开发：03 → 04（先看第 2 节 `SvnBackend` 协议）
 - 参与测试：01 第 6 节验收标准 → 05
-- 继续长程交付：UI/UX 见 [IA 规格](superpowers/specs/2026-07-10-ui-ux-ia-design.md)；历史 Loop 见 [SRS 缺口 Loop](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)
+- 继续长程交付：先看 [长期路线图](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) 与 [长期详设](superpowers/specs/2026-07-10-long-term-product-design.md)；UI/UX 见 [IA 规格](superpowers/specs/2026-07-10-ui-ux-ia-design.md)
