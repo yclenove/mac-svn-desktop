@@ -184,13 +184,22 @@ public final class ChangesViewModel {
 
     public private(set) var state: ChangesViewState = .idle
     public private(set) var entries: [FileStatus] = []
+    /// 最近一次本地 status 刷新成功时间（CFM「刷新」可观测）
+    public private(set) var lastRefreshedAt: Date?
     public var displayMode: ChangesDisplayMode = .tree
     public var filter: StatusFilter = .all
     public var searchText = ""
+    /// CFM 列配置（由设置注入并可回写）
+    public var columnConfiguration: CFMColumnConfiguration = .default
 
-    public init(workingCopy: URL, statusProvider: any StatusProviding) {
+    public init(
+        workingCopy: URL,
+        statusProvider: any StatusProviding,
+        columnConfiguration: CFMColumnConfiguration = .default
+    ) {
         self.workingCopy = workingCopy
         self.statusProvider = statusProvider
+        self.columnConfiguration = columnConfiguration
     }
 
     public var visibleFlatEntries: [FileStatus] {
@@ -201,11 +210,20 @@ public final class ChangesViewModel {
         FileStatusListBuilder.tree(from: visibleFlatEntries)
     }
 
+    public var visibleColumns: [CFMColumnID] {
+        columnConfiguration.visibleOrderedIDs
+    }
+
+    public func setColumnVisible(_ id: CFMColumnID, visible: Bool) {
+        columnConfiguration.setVisible(id, visible: visible)
+    }
+
     public func refresh() async {
         state = .loading
 
         do {
             entries = try await statusProvider.status(wc: workingCopy)
+            lastRefreshedAt = Date()
             state = .loaded
         } catch {
             entries = []

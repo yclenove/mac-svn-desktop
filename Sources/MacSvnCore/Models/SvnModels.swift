@@ -933,6 +933,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var commitGuardHardBlockConflictMarkers: Bool
     /// AI 隐私：脱敏开关与自定义规则（随设置持久化）
     public var aiPrivacy: AIPrivacySettings
+    /// Check for Modifications 列配置（可见列与顺序）
+    public var cfmColumns: CFMColumnConfiguration
 
     public init(
         svnPath: String? = nil,
@@ -941,7 +943,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         processTimeout: TimeInterval = 120,
         externalDiffTool: ExternalDiffToolConfiguration? = nil,
         commitGuardHardBlockConflictMarkers: Bool = false,
-        aiPrivacy: AIPrivacySettings = AIPrivacySettings()
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
@@ -950,6 +953,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.externalDiffTool = externalDiffTool
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
         self.aiPrivacy = aiPrivacy
+        self.cfmColumns = cfmColumns
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -960,6 +964,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case externalDiffTool
         case commitGuardHardBlockConflictMarkers
         case aiPrivacy
+        case cfmColumns
     }
 
     public init(from decoder: Decoder) throws {
@@ -971,6 +976,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         externalDiffTool = try container.decodeIfPresent(ExternalDiffToolConfiguration.self, forKey: .externalDiffTool)
         commitGuardHardBlockConflictMarkers = try container.decodeIfPresent(Bool.self, forKey: .commitGuardHardBlockConflictMarkers) ?? false
         aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
+        cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -982,6 +988,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encodeIfPresent(externalDiffTool, forKey: .externalDiffTool)
         try container.encode(commitGuardHardBlockConflictMarkers, forKey: .commitGuardHardBlockConflictMarkers)
         try container.encode(aiPrivacy, forKey: .aiPrivacy)
+        try container.encode(cfmColumns, forKey: .cfmColumns)
     }
 }
 

@@ -9,7 +9,7 @@ final class SvnCommandBuilderTests: XCTestCase {
 
     func testStatusUsesXmlAndNonInteractive() {
         let command = SvnCommandBuilder.status()
-        XCTAssertEqual(command.arguments, ["status", "--xml", "--non-interactive"])
+        XCTAssertEqual(command.arguments, ["status", "-v", "--xml", "--non-interactive"])
     }
 
     func testCommitUsesUtf8EncodingNonInteractiveMessageAndPaths() {

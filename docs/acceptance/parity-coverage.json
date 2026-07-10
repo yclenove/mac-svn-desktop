@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-10T12:28:43Z",
+  "generated_at": "2026-07-10T12:36:27Z",
   "total": 114,
   "done": 0,
   "partial": 52,
@@ -289,7 +289,7 @@
       "key": "cmd.08",
       "section": "command",
       "title": "Check for Modifications",
-      "raw_status": "🟡",
+      "raw_status": "🟡 本地列/刷新已齐；远端/Repair 待 T1.2–1.3",
       "status": "partial"
     },
     {

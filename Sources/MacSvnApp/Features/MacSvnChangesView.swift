@@ -62,6 +62,13 @@ public struct MacSvnChangesView: View {
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
             }
+            if let refreshed = changesVM?.lastRefreshedAt {
+                Text("本地 status 刷新于 \(Self.refreshFormatter.string(from: refreshed))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, embedded ? 12 : 24)
+                    .padding(.bottom, 4)
+            }
             content
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
@@ -149,6 +156,22 @@ public struct MacSvnChangesView: View {
             TextField("搜索文件名", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: embedded ? 140 : 220)
+            Menu("列") {
+                ForEach(CFMColumnID.allCases, id: \.self) { column in
+                    Button {
+                        Task { await toggleColumn(column) }
+                    } label: {
+                        HStack {
+                            Text(column.displayName)
+                            if changesVM?.columnConfiguration.isVisible(column) == true {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    .disabled(column == .path)
+                }
+            }
+            .disabled(changesVM == nil)
             Button("刷新") {
                 Task { await changesVM?.refresh() }
             }
@@ -266,17 +289,35 @@ public struct MacSvnChangesView: View {
     }
 
     private func flatRow(_ entry: FileStatus) -> some View {
-        HStack {
-            Text(statusLabel(entry.itemStatus))
-                .font(.caption.monospaced())
-                .frame(width: 28, alignment: .leading)
-                .foregroundStyle(statusColor(entry.itemStatus))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.path)
-                if entry.isTreeConflict {
-                    Text("树冲突")
+        let columns = changesVM?.visibleColumns ?? CFMColumnID.allCases
+        return HStack(spacing: 8) {
+            ForEach(columns, id: \.self) { column in
+                switch column {
+                case .textStatus:
+                    Text(statusLabel(entry.itemStatus))
+                        .font(.caption.monospaced())
+                        .frame(width: 28, alignment: .leading)
+                        .foregroundStyle(statusColor(entry.itemStatus))
+                case .path:
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.path)
+                        if entry.isTreeConflict, columns.contains(.treeConflict) == false {
+                            Text("树冲突")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                case .revision:
+                    Text(entry.revision.map { "r\($0.value)" } ?? "—")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 56, alignment: .trailing)
+                case .treeConflict:
+                    Text(entry.isTreeConflict ? "是" : "")
                         .font(.caption2)
                         .foregroundStyle(.orange)
+                        .frame(width: 40, alignment: .center)
                 }
             }
         }
@@ -311,7 +352,17 @@ public struct MacSvnChangesView: View {
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
-        let changes = ChangesViewModel(workingCopy: wc, statusProvider: svnService)
+        let cfmColumns: CFMColumnConfiguration
+        if let session {
+            cfmColumns = await session.settingsStore.settings().cfmColumns
+        } else {
+            cfmColumns = .default
+        }
+        let changes = ChangesViewModel(
+            workingCopy: wc,
+            statusProvider: svnService,
+            columnConfiguration: cfmColumns
+        )
         let actions = WorkingCopyActionsViewModel(
             workingCopy: wc,
             actionProvider: svnService,
@@ -328,6 +379,27 @@ public struct MacSvnChangesView: View {
         applyFilters()
         await changes.refresh()
     }
+
+    private func toggleColumn(_ column: CFMColumnID) async {
+        guard let changesVM else { return }
+        let currentlyVisible = changesVM.columnConfiguration.isVisible(column)
+        changesVM.setColumnVisible(column, visible: !currentlyVisible)
+        guard let session else { return }
+        var settings = await session.settingsStore.settings()
+        settings.cfmColumns = changesVM.columnConfiguration
+        do {
+            try await session.settingsStore.update(settings)
+        } catch {
+            statusBanner = "列配置保存失败：\(error.localizedDescription)"
+        }
+    }
+
+    private static let refreshFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        return formatter
+    }()
 
     private func applyFilters() {
         guard let changesVM else { return }

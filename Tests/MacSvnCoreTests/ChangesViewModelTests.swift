@@ -55,7 +55,21 @@ final class ChangesViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .loaded)
         XCTAssertEqual(viewModel.visibleFlatEntries.map(\.path), ["Sources/View.swift"])
+        XCTAssertNotNil(viewModel.lastRefreshedAt)
         XCTAssertEqual(requestedWorkingCopies, [URL(fileURLWithPath: "/tmp/wc")])
+    }
+
+    @MainActor
+    func testColumnVisibilityUpdatesConfiguration() async {
+        let viewModel = ChangesViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            columnConfiguration: CFMColumnConfiguration(visibleOrderedIDs: [.path, .textStatus, .revision])
+        )
+        viewModel.setColumnVisible(.revision, visible: false)
+        XCTAssertEqual(viewModel.visibleColumns, [.path, .textStatus])
+        viewModel.setColumnVisible(.treeConflict, visible: true)
+        XCTAssertEqual(viewModel.visibleColumns, [.path, .textStatus, .treeConflict])
     }
 
     @MainActor
