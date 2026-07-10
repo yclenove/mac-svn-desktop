@@ -163,7 +163,7 @@
 | 2026-07-10 14:40 | U7 | a3e1ef4 | FSEvents + debounce 刷新；测试禁用通知权限；DispatchQueue 挂流 |
 | 2026-07-10 14:46 | U8 | e3b82c9 | 日历热力图 Builder+UI；锚定今天；周标签跟随 firstWeekday |
 | 2026-07-10 14:54 | V1 | 2e4f952 | MacSVN.xcodeproj + build-macos-app.sh；两条路径 verify 通过 |
-| 2026-07-10 15:07 | V2 | （本轮） | Finder Sync appex 嵌入；roots 导出；深链 Builder；verify 通过 |
+| 2026-07-10 15:07 | V2 | 9c0f765 | Finder Sync appex 嵌入；roots 导出；深链 Builder；verify 通过 |
 
 ## 阻塞日志
 
