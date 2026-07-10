@@ -113,6 +113,51 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCopyMoveValidatesThenCallsProvider() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.copyMove(
+            kind: .move,
+            sourcePath: "a.txt",
+            destinationPath: "dir/a.txt",
+            existingPaths: ["a.txt"]
+        )
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(.move))
+        XCTAssertEqual(actionCalls.map(\.operation), [.repairMove])
+        XCTAssertEqual(actionCalls.first?.paths, ["a.txt", "dir/a.txt"])
+    }
+
+    @MainActor
+    func testCopyMoveRejectsInvalidDestinationWithoutCallingProvider() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.copyMove(
+            kind: .copy,
+            sourcePath: "a.txt",
+            destinationPath: "/abs/a.txt",
+            existingPaths: ["a.txt"]
+        )
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("目标须为工作副本内相对路径"))
+        XCTAssertTrue(actionCalls.isEmpty)
+    }
+
+    @MainActor
     func testRenameValidatesThenCallsProviderAndRefreshes() async {
         let actionProvider = FakeWorkingCopyActionProvider()
         let statusProvider = ActionStatusProvider(result: .success([]))

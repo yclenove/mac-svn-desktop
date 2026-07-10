@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T14:36:19Z",
+  "generated_at": "2026-07-10T14:42:06Z",
   "total": 114,
-  "done": 12,
+  "done": 13,
   "partial": 42,
-  "missing": 60,
-  "coverage": 0.105263,
-  "coverage_percent": 10.53,
+  "missing": 59,
+  "coverage": 0.114035,
+  "coverage_percent": 11.4,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 11,
+      "done": 12,
       "partial": 14,
-      "missing": 21
+      "missing": 20
     },
     "log": {
       "total": 20,
@@ -485,8 +485,8 @@
       "key": "cmd.36",
       "section": "command",
       "title": "Copy / Move",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.37",

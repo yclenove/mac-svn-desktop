@@ -17,6 +17,8 @@ public enum WorkingCopyOperation: Equatable, Sendable {
     case add
     case delete
     case rename
+    case copy
+    case move
     case repairMove
     case repairCopy
     case revert
@@ -107,6 +109,42 @@ public final class WorkingCopyActionsViewModel {
                     source: plan.sourcePath,
                     destination: plan.destinationPath
                 )
+            }
+        }
+    }
+
+    /// 跨目录复制/移动向导：校验目标后 `svn copy` / `svn move`。
+    public func copyMove(
+        kind: CopyMoveKind,
+        sourcePath: String,
+        destinationPath: String,
+        existingPaths: Set<String>
+    ) async {
+        switch CopyMoveValidationPolicy.resolve(
+            kind: kind,
+            sourcePath: sourcePath,
+            destinationPath: destinationPath,
+            existingRelativePaths: existingPaths
+        ) {
+        case .failure(let error):
+            state = .error(error.localizedDescription)
+        case .success(let plan):
+            let operation: WorkingCopyOperation = plan.kind == .copy ? .copy : .move
+            await perform(operation) {
+                switch plan.kind {
+                case .copy:
+                    try await actionProvider.copyInWorkingCopy(
+                        wc: workingCopy,
+                        source: plan.sourcePath,
+                        destination: plan.destinationPath
+                    )
+                case .move:
+                    try await actionProvider.moveInWorkingCopy(
+                        wc: workingCopy,
+                        source: plan.sourcePath,
+                        destination: plan.destinationPath
+                    )
+                }
             }
         }
     }

@@ -115,7 +115,7 @@
 | 33 | Create Patch | `diff > patch` | 路径勾选 | ❌ | T2 |
 | 34 | Apply Patch | TortoiseMerge 级应用 | 冲突处理 | ❌ | T2 |
 | 35 | Properties | 属性 CRUD + 模板 | svn:/tsvn: 编辑器 | 🟡 | T2 |
-| 36 | Copy / Move | `copy`/`move` | 目标路径 | ❌ | T1 |
+| 36 | Copy / Move | `copy`/`move` | 目标路径 | ✅ | T1 |
 | 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置 | 🟡 | T3 |
 | 38 | Change Lists | changelist 分组 | 提交按列表 | ❌ | T3 |
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ❌ | T3 |

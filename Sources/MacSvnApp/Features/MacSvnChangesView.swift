@@ -27,8 +27,11 @@ public struct MacSvnChangesView: View {
     @State private var showRevertSheet = false
     @State private var showRenameSheet = false
     @State private var showIgnoreSheet = false
+    @State private var showCopyMoveSheet = false
     @State private var renameNewName = ""
     @State private var ignoreKind: IgnorePatternKind = .exactFilename
+    @State private var copyMoveKind: CopyMoveKind = .move
+    @State private var copyMoveDestination = ""
     @State private var addSelectedPaths: Set<String> = []
     @State private var revertRecursive = false
     @State private var cleanupOptions = SvnCleanupOptions()
@@ -132,6 +135,9 @@ public struct MacSvnChangesView: View {
         }
         .sheet(isPresented: $showIgnoreSheet) {
             ignoreSheet
+        }
+        .sheet(isPresented: $showCopyMoveSheet) {
+            copyMoveSheet
         }
         .sheet(isPresented: $showSetDepth) {
             VStack(alignment: .leading, spacing: 16) {
@@ -268,6 +274,12 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
 
+            Button("复制/移动…") {
+                prepareCopyMoveSheet()
+                showCopyMoveSheet = true
+            }
+            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+
             Button("修复移动") {
                 Task { await runRepairMove() }
             }
@@ -376,6 +388,12 @@ public struct MacSvnChangesView: View {
                     Button("重命名…") {
                         prepareRenameSheet()
                         showRenameSheet = true
+                    }
+                    .disabled(selectedPaths.count != 1)
+
+                    Button("复制/移动…") {
+                        prepareCopyMoveSheet()
+                        showCopyMoveSheet = true
                     }
                     .disabled(selectedPaths.count != 1)
 
@@ -508,11 +526,14 @@ public struct MacSvnChangesView: View {
         showRevertSheet = false
         showRenameSheet = false
         showIgnoreSheet = false
+        showCopyMoveSheet = false
         confirmDelete = false
         confirmRevert = false
         addSelectedPaths = []
         renameNewName = ""
         ignoreKind = .exactFilename
+        copyMoveKind = .move
+        copyMoveDestination = ""
         revertRecursive = false
         cleanupOptions = .default
     }
@@ -837,6 +858,76 @@ public struct MacSvnChangesView: View {
         await syncAfterAction(actionsVM, changesVM)
     }
 
+    private var copyMoveSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("复制 / 移动")
+                .font(.headline)
+            if let source = selectedPaths.sorted().first {
+                Text("源：\(source)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("操作", selection: $copyMoveKind) {
+                    ForEach(CopyMoveKind.allCases, id: \.self) { kind in
+                        Text(kind.displayName).tag(kind)
+                    }
+                }
+                .pickerStyle(.segmented)
+                TextField("目标相对路径", text: $copyMoveDestination)
+                Text("目标须在工作副本内；同目录改名请用「重命名」。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("取消") { showCopyMoveSheet = false }
+                Spacer()
+                Button(copyMoveKind.displayName) {
+                    Task { await runCopyMoveFromSheet() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(
+                    selectedPaths.count != 1
+                        || copyMoveDestination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+            }
+        }
+        .padding(24)
+        .frame(width: 480)
+    }
+
+    private func prepareCopyMoveSheet() {
+        copyMoveKind = .move
+        guard let path = selectedPaths.sorted().first else {
+            copyMoveDestination = ""
+            return
+        }
+        let parent = (path as NSString).deletingLastPathComponent
+        let name = (path as NSString).lastPathComponent
+        let suggested = "\(name)-copy"
+        if parent.isEmpty || parent == "." {
+            copyMoveDestination = suggested
+        } else {
+            copyMoveDestination = (parent as NSString).appendingPathComponent(suggested)
+        }
+    }
+
+    private func runCopyMoveFromSheet() async {
+        guard let actionsVM, let changesVM else { return }
+        guard let source = selectedPaths.sorted().first, selectedPaths.count == 1 else {
+            statusBanner = "请先选中恰好一项再复制/移动"
+            showCopyMoveSheet = false
+            return
+        }
+        let existing = Set(changesVM.entries.map(\.path))
+        showCopyMoveSheet = false
+        await actionsVM.copyMove(
+            kind: copyMoveKind,
+            sourcePath: source,
+            destinationPath: copyMoveDestination,
+            existingPaths: existing
+        )
+        await syncAfterAction(actionsVM, changesVM)
+    }
+
     private func runRepairMove() async {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.repairMove(selectedPaths: selectedPaths, statuses: changesVM.entries)
@@ -898,6 +989,8 @@ public struct MacSvnChangesView: View {
         case .add: return "添加"
         case .delete: return "删除"
         case .rename: return "重命名"
+        case .copy: return "复制"
+        case .move: return "移动"
         case .repairMove: return "修复移动"
         case .repairCopy: return "修复复制"
         case .revert: return "还原"

@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.10：Copy/Move 向导——目标相对路径校验（绝对/同路径/跳出 WC/冲突）+ `svn copy`/`svn move` + CFM 对话框
+- Affected: CopyMoveValidationPolicy.swift, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*, docs/*
+- Impact: inventory #36 ✅；Finder 拖拽引导仍开
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.9：Ignore 对话框——按文件名 / 按扩展名通配写入父目录 `svn:ignore`（去重合并）
 - Affected: IgnorePatternPolicy.swift, MacSvnChangesView, Tests/*, docs/*
 - Impact: inventory #32 ✅；global-ignores 仍属设置 S01/T5
