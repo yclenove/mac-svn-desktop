@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.1：落地 `DiffPerformanceLimits` 性能门禁；Diff/变更工作区走统一阈值；新增 Core/App 回归测与 `docs/acceptance/performance-guards.md`
+- Affected: Sources/MacSvnCore/Models/DiffPerformanceLimits.swift, DiffViewModel.swift, MacSvnDiffView.swift, Tests/**/DiffPerformance*, WorkingCopyWorkspacePerformanceGuardTests.swift, docs/acceptance/performance-guards.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: 防 AttributeGraph 卡死有可重复验证；清单核对：异常/空值 N/A（纯阈值）；测试通过；无 SQL
+
+## 2026-07-10
+
 - Summary: 新增 Tortoise 全量对标「完美 Loop」规划：T0–T5 原子 backlog、G0–G5/PERFECT 闸门、one-shot 唤醒协议、停止条件=inventory 100%+无 stub+全测+H1
 - Affected: docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, docs/README.md
 - Impact: 说「开始 loop」即从 T0.1 在 `feat/tortoise-parity-perfect-loop` 上执行，直到 PERFECT 才停

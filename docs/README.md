@@ -14,7 +14,8 @@
 | [superpowers/specs/2026-07-10-ui-ux-ia-design.md](superpowers/specs/2026-07-10-ui-ux-ia-design.md) | UI/UX 信息架构：WC 侧栏 + WorkspaceMode + 变更工作区 | 已落地 |
 | [superpowers/plans/2026-07-10-ui-ux-ia-refactor.md](superpowers/plans/2026-07-10-ui-ux-ia-refactor.md) | UI/UX IA 重构实现计划（U1–U4） | 已落地 |
 | [superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md) | **小乌龟全量能力清单 v2**（DUG 域、命令#、日志右键 L#、设置 S#、Overlay；验收唯一真相） | 基线 |
-| [superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) | **完美 Loop**：T0–T5 原子 backlog + 唤醒协议 + PERFECT 停止条件（一直 loop 到 inventory 100%） | 执行中待开工 |
+| [superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) | **完美 Loop**：T0–T5 原子 backlog + 唤醒协议 + PERFECT 停止条件 | 执行中（T0.1 已完成） |
+| [acceptance/performance-guards.md](acceptance/performance-guards.md) | UI 性能门禁（AttributeGraph / Diff 阈值，T0.1） | 生效 |
 | [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |

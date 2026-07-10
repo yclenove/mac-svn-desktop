@@ -113,7 +113,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 
 ### Wave T0 — 门禁与骨架
 
-- [ ] **T0.1** 性能规范落地：变更工作区/Diff 回归测试或文档化断言（防 AttributeGraph 再发）；确认无嵌套 Split+逐行 Diff
+- [x] **T0.1** 性能规范落地：变更工作区/Diff 回归测试或文档化断言（防 AttributeGraph 再发）；确认无嵌套 Split+逐行 Diff
 - [ ] **T0.2** 新增 `SvnCommandCatalog`：ID 对齐 inventory `#1–46` + `L01–L20` + 扩展菜单标记；可枚举、可查 displayName
 - [ ] **T0.3** `Navigator.perform(command:paths:options:)`（或等价）统一入口；未实现命令明确 `unimplemented`（仅 T0 允许）
 - [ ] **T0.4** 可取消 `svn` 任务模型（取消令牌 / Task 取消接到 ProcessRunner）
@@ -222,7 +222,7 @@ roadmap T0–T6（战略波次）
 
 | 时间 | 条目 | commit | 测试 | inventory 变更 | 备注 |
 |------|------|--------|------|----------------|------|
-| 2026-07-10 | （规划创建） | — | — | inventory v2 已存在 | Loop 未开工；待切 `feat/tortoise-parity-perfect-loop` 从 T0.1 开始 |
+| 2026-07-10 | T0.1 | （待填） | DiffPerformanceLimits* + WorkspaceGuard 6 测绿 | 无（横切门禁） | `DiffPerformanceLimits` + 源码门禁 + docs/acceptance/performance-guards.md |
 
 ---
 

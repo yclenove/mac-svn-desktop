@@ -157,13 +157,13 @@ public final class DiffViewModel {
                 return
             }
 
-            // 大 Diff 跳过逐行解析，避免 UI 侧构建海量子视图
-            if rawDiff.count > 200_000 {
-                lines = []
-                sideBySideRows = []
-            } else {
+            // 大 Diff 跳过逐行解析，避免 UI 侧构建海量子视图（见 DiffPerformanceLimits）
+            if DiffPerformanceLimits.shouldParseLineStructures(diffCharacterCount: rawDiff.count) {
                 lines = Self.parseLines(rawDiff)
                 sideBySideRows = Self.parseSideBySideRows(rawDiff)
+            } else {
+                lines = []
+                sideBySideRows = []
             }
             state = .loaded
         } catch {

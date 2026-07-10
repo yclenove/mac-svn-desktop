@@ -165,7 +165,10 @@ public struct MacSvnDiffView: View {
             case .error(let message):
                 ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
             case .loaded:
-                if !embedded, mode == .sideBySide, !viewModel.sideBySideRows.isEmpty, viewModel.sideBySideRows.count < 2_000 {
+                if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
+                    lineOrRowCount: viewModel.sideBySideRows.count,
+                    embedded: embedded
+                ), mode == .sideBySide {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 4) {
                             ForEach(viewModel.sideBySideRows) { row in
@@ -185,7 +188,10 @@ public struct MacSvnDiffView: View {
                         }
                         .padding(12)
                     }
-                } else if !embedded, mode == .unified, !viewModel.lines.isEmpty, viewModel.lines.count < 2_000 {
+                } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
+                    lineOrRowCount: viewModel.lines.count,
+                    embedded: embedded
+                ), mode == .unified {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(viewModel.lines) { line in
@@ -201,7 +207,7 @@ public struct MacSvnDiffView: View {
                 } else {
                     // 嵌入工作区 / 超大 Diff：单块文本，避免 AttributeGraph 死循环
                     ScrollView([.vertical, .horizontal]) {
-                        Text(displayDiffText(viewModel.diffText))
+                        Text(DiffPerformanceLimits.truncatedDisplayText(viewModel.diffText))
                             .font(.system(.caption, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -212,13 +218,6 @@ public struct MacSvnDiffView: View {
         } else {
             ContentUnavailableView("选择文件", systemImage: "doc.text.magnifyingglass", description: Text("从左侧选择变更文件查看 diff"))
         }
-    }
-
-    private func displayDiffText(_ raw: String) -> String {
-        let maxChars = 200_000
-        guard raw.count > maxChars else { return raw }
-        let idx = raw.index(raw.startIndex, offsetBy: maxChars)
-        return String(raw[..<idx]) + "\n\n… Diff 过长，已截断显示前 \(maxChars) 字符。请用外部 Diff 工具查看全文。"
     }
 
     private func reloadPaths() async {

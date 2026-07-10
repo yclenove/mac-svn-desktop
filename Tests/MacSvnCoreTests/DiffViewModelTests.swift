@@ -75,6 +75,28 @@ final class DiffViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.lines, [])
     }
 
+    @MainActor
+    func testLoadSkipsLineParsingForOversizedDiff() async {
+        let oversized = String(
+            repeating: "+line\n",
+            count: (DiffPerformanceLimits.maxParseCharacterCount / 6) + 10
+        )
+        XCTAssertGreaterThan(oversized.count, DiffPerformanceLimits.maxParseCharacterCount)
+
+        let provider = FakeDiffProvider(result: .success(oversized))
+        let viewModel = DiffViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            diffProvider: provider
+        )
+
+        await viewModel.load(target: "big.swift")
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.diffText, oversized)
+        XCTAssertTrue(viewModel.lines.isEmpty)
+        XCTAssertTrue(viewModel.sideBySideRows.isEmpty)
+    }
+
     func testParseSideBySideRowsAlignsContextModificationsAndSingleSidedChanges() {
         let diff = """
         Index: a.swift
