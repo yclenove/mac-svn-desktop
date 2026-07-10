@@ -166,9 +166,20 @@ public struct SvnCliBackend: SvnBackend {
         } catch {
             if let asideURL, fileManager.fileExists(atPath: asideURL.path) {
                 if !fileManager.fileExists(atPath: destinationURL.path) {
+                    // svn 未写出目标：把用户文件放回原路径后继续抛出原错误
                     try? fileManager.moveItem(at: asideURL, to: destinationURL)
                 } else {
-                    try? fileManager.removeItem(at: asideURL)
+                    // svn 可能已成功但盖回失败：用 aside 覆盖目标；成功则视为修复完成
+                    do {
+                        try fileManager.removeItem(at: destinationURL)
+                        try fileManager.moveItem(at: asideURL, to: destinationURL)
+                        return
+                    } catch {
+                        throw SvnError.other(
+                            code: nil,
+                            stderr: "修复复制后恢复用户文件失败，内容保留在 \(asideURL.lastPathComponent)：\(error)"
+                        )
+                    }
                 }
             }
             throw error

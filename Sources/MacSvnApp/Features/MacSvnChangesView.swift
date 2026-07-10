@@ -571,7 +571,7 @@ public struct MacSvnChangesView: View {
         switch actionsVM.state {
         case .updateCompleted(let summary):
             statusBanner = "更新完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
-            await changesVM.refresh()
+            await refreshAfterMutation(changesVM)
             selectedPaths = []
             if summary.conflicted > 0 {
                 navigator?.selectMode(.conflicts)
@@ -579,14 +579,25 @@ public struct MacSvnChangesView: View {
             }
         case .completed(let op):
             statusBanner = "\(label(for: op)) 完成"
-            await changesVM.refresh()
+            await refreshAfterMutation(changesVM)
             selectedPaths = []
         case .error(let message):
             statusBanner = "操作失败：\(message)"
+            // 可能已发生部分文件系统挪动，必须刷新以免基于过期 status 再次操作
+            await refreshAfterMutation(changesVM)
         case .confirmationRequired:
             confirmRevert = true
         default:
             break
+        }
+    }
+
+    /// 写操作后刷新：若当前处于「已对照仓库」则继续 `-u`，避免丢失远端高亮。
+    private func refreshAfterMutation(_ changesVM: ChangesViewModel) async {
+        if changesVM.includesRepositoryCheck {
+            await changesVM.checkRepository()
+        } else {
+            await changesVM.refresh()
         }
     }
 

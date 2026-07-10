@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-10T13:13:15Z",
+  "generated_at": "2026-07-10T13:19:09Z",
   "total": 114,
-  "done": 2,
-  "partial": 51,
+  "done": 3,
+  "partial": 50,
   "missing": 61,
-  "coverage": 0.017544,
-  "coverage_percent": 1.75,
+  "coverage": 0.026316,
+  "coverage_percent": 2.63,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 0,
-      "partial": 21,
+      "done": 1,
+      "partial": 20,
       "missing": 7
     },
     "command": {
@@ -100,8 +100,8 @@
       "key": "D09",
       "section": "domain",
       "title": "Check for Modifications",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "D10",

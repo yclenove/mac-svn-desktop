@@ -53,7 +53,7 @@
 | D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | 🟡 | T1 |
 | D07 | Update | 统一 HEAD 修订、冲突列表入口 | 🟡 | T1 |
 | D08 | Conflicts | 文件/属性/树冲突、编辑、resolved | 🟡 | T2 |
-| D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | 🟡 | T1 |
+| D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | ✅ | T1 |
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | 🟡 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
