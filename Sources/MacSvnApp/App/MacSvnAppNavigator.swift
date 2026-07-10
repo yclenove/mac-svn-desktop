@@ -42,6 +42,10 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingLogDiff: PendingLogDiffIntent?
     /// 历史 → Blame（L07）。
     @Published public var pendingBlamePath: String?
+    /// CFM / 更新后 → 冲突工作区预选路径（#11）。
+    @Published public var pendingConflictPath: String?
+    /// ⌘K / 自动化「标记为已解决」：进入冲突工作区后提示勾选批量 Resolved（#12）。
+    @Published public var pendingResolvedHint = false
     /// 历史 → 仓库浏览器 URL（L08）。
     @Published public var pendingBrowseURL: String?
     @Published public var pendingBrowseRevision: Revision?
@@ -99,6 +103,14 @@ public final class MacSvnAppNavigator: ObservableObject {
         }
         if let revision = options.revision {
             pendingDiffRevision = revision
+        }
+
+        // #11/#12：冲突相关命令注入预选路径与 Resolved 提示，避免仅「打开合并页」语义空洞。
+        if command == .editConflicts || command == .resolved {
+            if let first = paths.first, !first.isEmpty {
+                pendingConflictPath = first
+            }
+            pendingResolvedHint = (command == .resolved)
         }
 
         guard let route = Self.route(for: command) else {
@@ -238,6 +250,18 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingBlamePath() -> String? {
         let value = pendingBlamePath
         pendingBlamePath = nil
+        return value
+    }
+
+    public func consumePendingConflictPath() -> String? {
+        let value = pendingConflictPath
+        pendingConflictPath = nil
+        return value
+    }
+
+    public func consumePendingResolvedHint() -> Bool {
+        let value = pendingResolvedHint
+        pendingResolvedHint = false
         return value
     }
 

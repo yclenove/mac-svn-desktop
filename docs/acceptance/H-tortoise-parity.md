@@ -56,8 +56,8 @@
 - [x] 日志右键 L01–L08（除 L03→T3；L09–L12、L14、L17 见后续）
 - [x] 日志右键 L09–L12、L14
 - [x] 日志右键 L17（Copy clipboard）
-- [ ] Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
-- [ ] Edit Conflicts + Resolved（#11,#12）
+- [x] Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
+- [x] Edit Conflicts + Resolved（#11,#12）
 - [ ] Lock / Unlock / Break lock（#19–21）
 - [ ] Branch-Tag / Switch / Merge+dry-run（#22–24）
 - [ ] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）

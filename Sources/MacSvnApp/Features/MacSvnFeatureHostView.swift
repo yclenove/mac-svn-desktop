@@ -49,6 +49,7 @@ public struct MacSvnFeatureHostView: View {
             MacSvnConflictWorkspaceView(
                 workspaceController: workspaceController,
                 session: session,
+                navigator: navigator,
                 onReturnToChanges: {
                     navigator.selectMode(.changes)
                     navigator.lastAutomationMessage = "已返回变更工作区"

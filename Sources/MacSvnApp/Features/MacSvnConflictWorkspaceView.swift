@@ -1,9 +1,10 @@
 import SwiftUI
 import MacSvnCore
 
-/// 冲突工作区：列表 + 文本三路合并 / 树冲突解决；并保留 Merge 向导入口。
+/// 冲突工作区：列表 + 文本三路合并 / 树冲突 / 属性冲突；批量 Resolved（#12）；CFM 入口（#11）。
 public struct MacSvnConflictWorkspaceView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
     private let onReturnToChanges: (() -> Void)?
 
@@ -15,6 +16,8 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var statusText: String?
     @State private var conflictBadgeCount = 0
     @State private var privacySettings = AIPrivacySettings()
+    @State private var kindFilterPick: KindFilterPick = .all
+    @State private var confirmMarkResolved = false
 
     private enum Tab: String, CaseIterable, Identifiable {
         case conflicts = "冲突列表"
@@ -22,13 +25,23 @@ public struct MacSvnConflictWorkspaceView: View {
         var id: String { rawValue }
     }
 
+    private enum KindFilterPick: String, CaseIterable, Identifiable {
+        case all = "全部"
+        case text = "文本"
+        case tree = "树"
+        case property = "属性"
+        var id: String { rawValue }
+    }
+
     public init(
         workspaceController: MacSvnWorkspaceController,
         session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator,
         onReturnToChanges: (() -> Void)? = nil
     ) {
         self.workspaceController = workspaceController
         self.session = session
+        self.navigator = navigator
         self.onReturnToChanges = onReturnToChanges
     }
 
@@ -80,9 +93,32 @@ public struct MacSvnConflictWorkspaceView: View {
         .task {
             privacySettings = await session.currentAIPrivacy()
             await reloadConflicts()
+            await consumePendingConflictPath()
+            consumePendingResolvedHint()
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadConflicts() }
+        }
+        .onChange(of: navigator.pendingConflictPath) { _, _ in
+            Task { await consumePendingConflictPath() }
+        }
+        .onChange(of: navigator.pendingResolvedHint) { _, isHint in
+            if isHint {
+                consumePendingResolvedHint()
+            }
+        }
+        .onChange(of: kindFilterPick) { _, pick in
+            applyKindFilter(pick)
+        }
+        .confirmationDialog(
+            "将勾选的文本/属性冲突标记为已解决（svn resolve --accept working）？树冲突请用右侧专用操作。",
+            isPresented: $confirmMarkResolved,
+            titleVisibility: .visible
+        ) {
+            Button("标记已解决") {
+                Task { await markCheckedResolved() }
+            }
+            Button("取消", role: .cancel) {}
         }
     }
 
@@ -97,6 +133,38 @@ public struct MacSvnConflictWorkspaceView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 12)
+
+                    HStack(spacing: 8) {
+                        Picker("类型", selection: $kindFilterPick) {
+                            ForEach(KindFilterPick.allCases) { item in
+                                Text(item.rawValue).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 280)
+                        TextField("过滤路径", text: Binding(
+                            get: { listVM.searchText },
+                            set: { listVM.searchText = $0 }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                    }
+                    .padding(.horizontal, 12)
+
+                    HStack(spacing: 8) {
+                        Button("勾选可解决") {
+                            listVM.checkAllVisibleEligible()
+                        }
+                        Button("清除勾选") {
+                            listVM.clearChecked()
+                        }
+                        Button("标记已解决 (\(listVM.checkedPathsEligibleForMarkResolved.count))") {
+                            confirmMarkResolved = true
+                        }
+                        .disabled(listVM.checkedPathsEligibleForMarkResolved.isEmpty || listVM.state == .resolving)
+                        .help("对勾选的文本/属性冲突执行 svn resolve --accept working（树冲突请用右侧专用操作）")
+                    }
+                    .padding(.horizontal, 12)
+
                     List(selection: Binding(
                         get: { listVM.selectedConflictPath },
                         set: { path in
@@ -108,6 +176,20 @@ public struct MacSvnConflictWorkspaceView: View {
                     )) {
                         ForEach(listVM.visibleConflicts, id: \.path) { conflict in
                             HStack {
+                                Toggle(
+                                    "",
+                                    isOn: Binding(
+                                        get: { listVM.checkedPaths.contains(conflict.path) },
+                                        set: { listVM.setChecked(conflict.path, isChecked: $0) }
+                                    )
+                                )
+                                .toggleStyle(.checkbox)
+                                .disabled(!ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict))
+                                .help(
+                                    ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict)
+                                        ? "勾选后可批量标记已解决"
+                                        : "树冲突请在右侧专用面板处理"
+                                )
                                 Text(kindLabel(conflict.kind))
                                     .font(.caption.monospaced())
                                     .foregroundStyle(kindColor(conflict.kind))
@@ -115,10 +197,23 @@ public struct MacSvnConflictWorkspaceView: View {
                                 Text(conflict.path)
                             }
                             .tag(conflict.path)
+                            .contextMenu {
+                                Button("编辑冲突") {
+                                    listVM.selectConflict(path: conflict.path)
+                                    Task { await openSelected() }
+                                }
+                                if ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict) {
+                                    Button("标记此项已解决") {
+                                        listVM.clearChecked()
+                                        listVM.setChecked(conflict.path, isChecked: true)
+                                        confirmMarkResolved = true
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                .frame(minWidth: 260)
+                .frame(minWidth: 280)
 
                 detailPane
                     .frame(minWidth: 420)
@@ -171,18 +266,68 @@ public struct MacSvnConflictWorkspaceView: View {
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
-        let list = ConflictListViewModel(workingCopy: wc, provider: session.conflictService)
+        let list = ConflictListViewModel(
+            workingCopy: wc,
+            provider: session.conflictService,
+            batchResolver: session.conflictService
+        )
         listVM = list
         editorVM = MergeEditorViewModel(
             provider: session.conflictService,
             aiConflictAssistant: session.aiConflictAssistant
         )
+        applyKindFilter(kindFilterPick)
         await list.refresh()
         conflictBadgeCount = list.summary.total
         if case .error(let message) = list.state {
             statusText = message
         } else {
             statusText = list.summary.total == 0 ? "无冲突" : "发现 \(list.summary.total) 个冲突"
+            await openSelected()
+        }
+    }
+
+    /// 仅在 listVM 就绪时消费 pending，避免路径被吞掉。
+    private func consumePendingConflictPath() async {
+        guard listVM != nil, navigator.pendingConflictPath != nil else { return }
+        guard let path = navigator.consumePendingConflictPath(), let listVM else { return }
+        listVM.selectConflict(path: path)
+        statusText = "来自变更区：\(path)"
+        await openSelected()
+    }
+
+    /// ⌘K「标记为已解决」：预勾选可解决项并提示确认。
+    private func consumePendingResolvedHint() {
+        guard navigator.consumePendingResolvedHint(), let listVM else { return }
+        listVM.checkAllVisibleEligible()
+        statusText = "请确认后点击「标记已解决」（已预勾选可批量项）"
+        if !listVM.checkedPathsEligibleForMarkResolved.isEmpty {
+            confirmMarkResolved = true
+        }
+    }
+
+    private func applyKindFilter(_ pick: KindFilterPick) {
+        guard let listVM else { return }
+        switch pick {
+        case .all:
+            listVM.kindFilter = .all
+        case .text:
+            listVM.kindFilter = .kinds([.text])
+        case .tree:
+            listVM.kindFilter = .kinds([.tree])
+        case .property:
+            listVM.kindFilter = .kinds([.property])
+        }
+    }
+
+    private func markCheckedResolved() async {
+        guard let listVM else { return }
+        let count = await listVM.markCheckedAsResolved()
+        conflictBadgeCount = listVM.summary.total
+        if case .error(let message) = listVM.state {
+            statusText = message
+        } else if count > 0 {
+            statusText = "已标记 \(count) 项为已解决"
             await openSelected()
         }
     }

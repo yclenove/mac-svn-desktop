@@ -22,6 +22,7 @@ public struct MacSvnChangesView: View {
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
     @State private var confirmDelete = false
+    @State private var confirmMarkResolved = false
     @State private var showAddSheet = false
     @State private var showCleanupSheet = false
     @State private var showRevertSheet = false
@@ -120,6 +121,16 @@ public struct MacSvnChangesView: View {
         ) {
             Button("删除", role: .destructive) {
                 Task { await runDelete() }
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "将选中冲突路径标记为已解决（svn resolve --accept working）？树冲突建议在冲突工作区专用面板处理。",
+            isPresented: $confirmMarkResolved,
+            titleVisibility: .visible
+        ) {
+            Button("标记已解决") {
+                Task { await runMarkResolved() }
             }
             Button("取消", role: .cancel) {}
         }
@@ -427,6 +438,8 @@ public struct MacSvnChangesView: View {
         switch descriptor.id {
         case .rename, .copyMove, .addToIgnoreList, .add, .cleanup, .revert:
             return "\(descriptor.displayName)…"
+        case .resolved:
+            return "\(descriptor.displayName)…"
         default:
             return descriptor.displayName
         }
@@ -438,8 +451,10 @@ public struct MacSvnChangesView: View {
             return actionsVM != nil && actionsVM?.isRunning != true
         case .add:
             return changesVM != nil && actionsVM?.isRunning != true
-        case .commit, .diff, .showLog:
+        case .commit, .diff, .showLog, .editConflicts:
             return true
+        case .resolved:
+            return !selectedMarkResolvedPaths.isEmpty && actionsVM?.isRunning != true
         case .delete, .revert, .addToIgnoreList:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
                 && (id != .addToIgnoreList || session != nil)
@@ -448,6 +463,35 @@ public struct MacSvnChangesView: View {
         default:
             return actionsVM?.isRunning != true
         }
+    }
+
+    /// 当前选中中处于冲突状态的路径（保持 CFM 可见列表顺序，非字母序）。
+    private var selectedConflictedPaths: [String] {
+        guard let changesVM else { return [] }
+        let selected = selectedPaths
+        return changesVM.visibleFlatEntries
+            .filter { selected.contains($0.path) && ($0.itemStatus == .conflicted || $0.isTreeConflict) }
+            .map(\.path)
+    }
+
+    /// 多选时取列表可见顺序中的首个冲突路径。
+    private var primarySelectedConflictedPath: String? {
+        selectedConflictedPaths.first
+    }
+
+    /// 可批量「标记已解决」的选中路径（排除树冲突；保持可见列表顺序）。
+    private var selectedMarkResolvedPaths: [String] {
+        guard let changesVM else { return [] }
+        let selected = selectedPaths
+        return changesVM.visibleFlatEntries
+            .filter {
+                selected.contains($0.path)
+                    && ConflictResolveBatchPolicy.isEligibleForMarkResolved(
+                        itemStatus: $0.itemStatus,
+                        isTreeConflict: $0.isTreeConflict
+                    )
+            }
+            .map(\.path)
     }
 
     private func handleCatalogCommand(_ id: SvnCommandID) {
@@ -481,6 +525,15 @@ public struct MacSvnChangesView: View {
             showCopyMoveSheet = true
         case .commit, .diff, .showLog, .checkForModifications:
             _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
+        case .editConflicts:
+            if let first = primarySelectedConflictedPath {
+                navigator?.pendingConflictPath = first
+            }
+            navigator?.selectMode(.conflicts)
+            navigator?.lastAutomationMessage = primarySelectedConflictedPath.map { "编辑冲突：\($0)" }
+                ?? "打开冲突工作区"
+        case .resolved:
+            confirmMarkResolved = true
         default:
             _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
         }
@@ -595,6 +648,7 @@ public struct MacSvnChangesView: View {
         showCopyMoveSheet = false
         confirmDelete = false
         confirmRevert = false
+        confirmMarkResolved = false
         addSelectedPaths = []
         renameNewName = ""
         ignoreKind = .exactFilename
@@ -795,6 +849,37 @@ public struct MacSvnChangesView: View {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.delete(paths: Array(selectedPaths))
         await syncAfterAction(actionsVM, changesVM)
+    }
+
+    /// CFM「标记为已解决」：对选中文本/属性冲突执行 `svn resolve --accept working`。
+    private func runMarkResolved() async {
+        guard let changesVM, let record = workspaceController.selectedRecord else { return }
+        let paths = selectedMarkResolvedPaths
+        guard !paths.isEmpty else {
+            statusBanner = "无可用路径：树冲突请在冲突工作区处理"
+            return
+        }
+        let wc = URL(fileURLWithPath: record.localPath)
+        var succeeded: [String] = []
+        var failures: [String] = []
+        for path in paths {
+            do {
+                try await svnService.resolve(wc: wc, path: path, accept: .working)
+                succeeded.append(path)
+            } catch {
+                failures.append("\(path): \(error.localizedDescription)")
+            }
+        }
+        if failures.isEmpty {
+            statusBanner = "已标记 \(succeeded.count) 项为已解决"
+        } else if succeeded.isEmpty {
+            statusBanner = "标记已解决失败：\(failures.joined(separator: "; "))"
+        } else {
+            statusBanner = "部分成功 \(succeeded.count)/\(paths.count)：\(failures.joined(separator: "; "))"
+        }
+        navigator?.lastAutomationMessage = statusBanner
+        await changesVM.refresh()
+        selectedPaths = selectedPaths.subtracting(succeeded)
     }
 
     private func runRevert(confirmed: Bool) async {

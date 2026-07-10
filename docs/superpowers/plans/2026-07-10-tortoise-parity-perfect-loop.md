@@ -143,7 +143,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T2.3** 日志右键：Compare WC/previous、unified diff、Save/Open、Blame、Browse（L01–L08）
 - [x] **T2.4** 日志右键：Branch/Tag from rev、Update to rev、Revert to/from rev、Checkout/Export from log（L09–L12,L14）
 - [x] **T2.5** 日志：Copy clipboard（L17）；Edit author/msg / rev props 可放 T3（L15–L16 若本轮做不完保持 `[ ]` 并移到 T3 显式条目——**本条先做 L17**）
-- [ ] **T2.6** Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
+- [x] **T2.6** Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
 - [ ] **T2.7** Lock / Unlock / Break lock（#19–21）
 - [ ] **T2.8** Branch-Tag / Switch / Merge+dry-run（#22–24）
 - [ ] **T2.9** Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
@@ -246,6 +246,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T2.3 | 48b94a8 | 日志右键 L01/L02/L04–L08 | L01–L08(除L03) ✅ | L03→T3；L09+→T2.4 |
 | 2026-07-10 | T2.4 | 687137b | 日志右键 L09–L12、L14 | L09–L12、L14 ✅ | L13→T3；下一 T2.5 L17 |
 | 2026-07-10 | T2.5 | ea8cd77 | 日志复制到剪贴板 L17 | L17 ✅ | L15–L16→T3.10 |
+| 2026-07-10 | T2.6 | （提交后回填） | Edit Conflicts + Resolved；属性/树入口 | #11/#12、D08 ✅ | 下一 T2.7 Lock |
 
 ---
 

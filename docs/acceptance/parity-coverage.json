@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-10T15:47:41Z",
+  "generated_at": "2026-07-10T16:11:44Z",
   "total": 114,
-  "done": 38,
-  "partial": 30,
+  "done": 41,
+  "partial": 27,
   "missing": 46,
-  "coverage": 0.333333,
-  "coverage_percent": 33.33,
+  "coverage": 0.359649,
+  "coverage_percent": 35.96,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 8,
-      "partial": 13,
+      "done": 9,
+      "partial": 12,
       "missing": 7
     },
     "command": {
       "total": 46,
-      "done": 15,
-      "partial": 11,
+      "done": 17,
+      "partial": 9,
       "missing": 20
     },
     "log": {
@@ -93,8 +93,8 @@
       "key": "D08",
       "section": "domain",
       "title": "Conflicts",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 文本三路/树/属性面板 + 批量 Resolved；外置合并工具仍可增强",
+      "status": "done"
     },
     {
       "key": "D09",
@@ -128,7 +128,7 @@
       "key": "D13",
       "section": "domain",
       "title": "Show Log",
-      "raw_status": "🟡 过滤/stop/Next·All/Actions/L01–L12+L14(除L03/L13) ✅；统计/离线/L15+ 仍开",
+      "raw_status": "🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开",
       "status": "partial"
     },
     {
@@ -282,7 +282,7 @@
       "key": "cmd.07",
       "section": "command",
       "title": "Show Log",
-      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L12+L14(除L03/L13)；L15+ 仍开",
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3",
       "status": "done"
     },
     {
@@ -310,15 +310,15 @@
       "key": "cmd.11",
       "section": "command",
       "title": "Edit Conflicts",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ CFM/冲突工作区入口；内置三路+树/属性；外置工具可增强",
+      "status": "done"
     },
     {
       "key": "cmd.12",
       "section": "command",
       "title": "Resolved",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除",
+      "status": "done"
     },
     {
       "key": "cmd.13",

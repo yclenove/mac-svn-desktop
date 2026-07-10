@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.6：Edit Conflicts + Resolved（#11,#12）— CFM 入口、冲突工作区类型过滤/勾选批量 Resolved、树冲突排除
+- Affected: ConflictResolveBatchPolicy, ConflictListViewModel, ConflictService, MacSvnConflictWorkspaceView, MacSvnChangesView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: inventory #11/#12、D08 ✅；下一 T2.7 Lock/Unlock/Break lock
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T2.5：Show Log 复制修订摘要到剪贴板（L17）
 - Affected: LogClipboardSummary, MacSvnLogView, Tests/*, docs/*
 - Impact: inventory L17 ✅；L15–L16 仍属 T3.10；下一 T2.6

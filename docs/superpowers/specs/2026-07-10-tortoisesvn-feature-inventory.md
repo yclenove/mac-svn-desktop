@@ -52,7 +52,7 @@
 | D05 | Checkout | depth、revision、ignore-externals、pristines | ✅ depth/rev/omit-ext；pristines 进阶仍开 | T2 |
 | D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | ✅ | T1 |
 | D07 | Update | 统一 HEAD 修订、冲突列表入口 | ✅ | T1 |
-| D08 | Conflicts | 文件/属性/树冲突、编辑、resolved | 🟡 | T2 |
+| D08 | Conflicts | 文件/属性/树冲突、编辑、resolved | ✅ 文本三路/树/属性面板 + 批量 Resolved；外置合并工具仍可增强 | T2 |
 | D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | ✅ | T1 |
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
@@ -90,8 +90,8 @@
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
-| 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | 🟡 | T2 |
-| 12 | Resolved | `resolved` | 多选 | 🟡 | T2 |
+| 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | ✅ CFM/冲突工作区入口；内置三路+树/属性；外置工具可增强 | T2 |
+| 12 | Resolved | `resolved` | 多选 | ✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除 | T2 |
 | 13 | Rename | `rename` | 新名校验 | ✅ | T1 |
 | 14 | Delete | `delete` | 确认 | ✅ | T1 |
 | 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T2 |

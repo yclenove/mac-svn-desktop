@@ -174,7 +174,9 @@ public enum SvnCommandCatalog: Sendable {
         .rename,
         .addToIgnoreList,
         .copyMove,
-        .repairMoveCopy
+        .repairMoveCopy,
+        .editConflicts,
+        .resolved
     ]
 
     public static var dailyCFMCommands: [SvnCommandDescriptor] {
