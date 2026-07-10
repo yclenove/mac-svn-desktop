@@ -243,7 +243,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.12 / G1 | 5771e3e | G1：T1 命令行全 ✅；domain D06/07/10/14–16；H-T1 全勾；全测绿 | G1 通过 | 进入 T2.1；#3 仍 T2 |
 | 2026-07-10 | T2.1 | 50d0eaa | Checkout/Update-to-rev：-r、depth、--ignore-externals | #1,#3 ✅ | pristines 进阶仍开 |
 | 2026-07-10 | T2.2 | eba8ef7 | Show Log：过滤/stop-on-copy/Next·All/Actions | #7 ✅；L18 🟡；L19–L20 ✅ | 统计/离线 T3；右键 T2.3 |
-| 2026-07-10 | T2.3 | （提交后回填） | 日志右键 L01/L02/L04–L08 | L01–L08(除L03) ✅ | L03→T3；L09+→T2.4 |
+| 2026-07-10 | T2.3 | 48b94a8 | 日志右键 L01/L02/L04–L08 | L01–L08(除L03) ✅ | L03→T3；L09+→T2.4 |
 
 ---
 
