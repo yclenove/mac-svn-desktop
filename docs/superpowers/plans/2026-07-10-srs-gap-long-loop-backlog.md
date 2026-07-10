@@ -132,7 +132,7 @@
 - [x] **U5** AI Chat：确认门通过后真实执行低危/高危写工具（仍须确认+审计）（FR-AI-04 / NFR-13）
 - [x] **U6** ⌘K：无匹配动作时转入 AI Chat 并带上 query（FR-EX-04）
 - [x] **U7** 菜单栏：FSEvents（或等价）本地变更近实时刷新（FR-EX-03）
-- [ ] **U8** 团队活动：按日提交热力图可视化（FR-EX-06）
+- [x] **U8** 团队活动：按日提交热力图可视化（FR-EX-06）
 
 ### Wave V — 系统扩展与发布
 
@@ -160,7 +160,8 @@
 | 2026-07-10 14:23 | U4 | 73ee382 | Blame 选区 AI 演化解释；4 tests passed |
 | 2026-07-10 14:28 | U5 | 1247aac | 确认门后真实执行写工具+审计；10 tests passed |
 | 2026-07-10 14:32 | U6 | 333206b | ⌘K 无匹配 handoff query→AI Chat 自动发送 |
-| 2026-07-10 14:40 | U7 | （本轮） | FSEvents + debounce 刷新；测试禁用通知权限；DispatchQueue 挂流 |
+| 2026-07-10 14:40 | U7 | a3e1ef4 | FSEvents + debounce 刷新；测试禁用通知权限；DispatchQueue 挂流 |
+| 2026-07-10 14:46 | U8 | （本轮） | 日历热力图 Builder+UI；锚定今天；周标签跟随 firstWeekday |
 
 ## 阻塞日志
 
