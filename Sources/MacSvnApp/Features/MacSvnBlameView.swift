@@ -8,6 +8,10 @@ public struct MacSvnBlameView: View {
     @State private var paths: [String] = []
     @State private var selected: Set<String> = []
     @State private var viewModel: BlameViewModel?
+    @State private var evolutionVM: AIBlameEvolutionViewModel?
+    @State private var rangeStartText = "1"
+    @State private var rangeEndText = "1"
+    @State private var statusText: String?
 
     public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
         self.workspaceController = workspaceController
@@ -25,6 +29,13 @@ public struct MacSvnBlameView: View {
             }
             .padding(24)
 
+            if let statusText {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+            }
+
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
             } else {
@@ -32,10 +43,16 @@ public struct MacSvnBlameView: View {
                     MacSvnPathPicker(paths: paths, selection: $selected, allowsMultiple: false)
                         .frame(minWidth: 220)
                     blameContent
+                        .frame(minWidth: 320)
+                    evolutionPane
+                        .frame(minWidth: 280)
                 }
             }
         }
-        .task { await reloadPaths() }
+        .task {
+            evolutionVM = AIBlameEvolutionViewModel(explainer: session.aiBlameEvolutionExplainer)
+            await reloadPaths()
+        }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadPaths() }
         }
@@ -64,7 +81,17 @@ public struct MacSvnBlameView: View {
                         Spacer()
                     }
                     .contentShape(Rectangle())
-                    .onTapGesture { viewModel.selectLine(line.lineNumber) }
+                    .background(
+                        isLineInSelectedRange(line.lineNumber)
+                            ? Color.accentColor.opacity(0.12)
+                            : Color.clear
+                    )
+                    .onTapGesture {
+                        viewModel.selectLine(line.lineNumber)
+                        rangeStartText = "\(line.lineNumber)"
+                        rangeEndText = "\(line.lineNumber)"
+                        applyRangeToEvolutionVM()
+                    }
                 }
             default:
                 ContentUnavailableView("选择文件", systemImage: "doc.text")
@@ -72,6 +99,83 @@ public struct MacSvnBlameView: View {
         } else {
             ContentUnavailableView("选择文件后点击加载", systemImage: "doc.text.magnifyingglass")
         }
+    }
+
+    private var evolutionPane: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("AI 演化解释")
+                .font(.headline)
+            Text("选择行范围后生成该区段的 revision 演化说明（FR-AI-06）。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                TextField("起始行", text: $rangeStartText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                Text("–")
+                TextField("结束行", text: $rangeEndText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                Button("应用") { applyRangeToEvolutionVM() }
+            }
+
+            Button(evolutionVM?.state == .explaining ? "解释中…" : "AI 解释选区") {
+                Task { await runEvolutionExplain() }
+            }
+            .disabled(
+                viewModel?.state != .loaded
+                    || evolutionVM?.state == .explaining
+                    || selected.count != 1
+            )
+
+            if case .error(let message) = evolutionVM?.state {
+                Text(message).foregroundStyle(.red).font(.caption)
+            }
+
+            if let explanation = evolutionVM?.explanation {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(explanation.summary)
+                            .font(.body)
+                            .textSelection(.enabled)
+                        ForEach(explanation.keyChanges, id: \.revision.value) { change in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("r\(change.revision.value) · \(change.title)")
+                                    .font(.caption.weight(.semibold))
+                                Text(change.explanation)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                        Text("证据 revision：\(explanation.evidenceRevisionCount)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            } else {
+                Spacer()
+            }
+        }
+        .padding()
+    }
+
+    private func isLineInSelectedRange(_ lineNumber: Int) -> Bool {
+        guard let range = evolutionVM?.selectedLineRange else { return false }
+        return range.contains(lineNumber)
+    }
+
+    private func applyRangeToEvolutionVM() {
+        let start = Int(rangeStartText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+        let end = Int(rangeEndText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? start
+        evolutionVM?.setRange(start: start, end: end)
+        rangeStartText = "\(evolutionVM?.rangeStart ?? start)"
+        rangeEndText = "\(evolutionVM?.rangeEnd ?? end)"
     }
 
     private func reloadPaths() async {
@@ -95,5 +199,37 @@ public struct MacSvnBlameView: View {
         )
         viewModel = vm
         await vm.load()
+        if case .loaded = vm.state, let first = vm.lines.first?.lineNumber, let last = vm.lines.last?.lineNumber {
+            rangeStartText = "\(first)"
+            rangeEndText = "\(min(first + 9, last))"
+            applyRangeToEvolutionVM()
+            statusText = "已加载 \(vm.lines.count) 行"
+        } else if case .error(let message) = vm.state {
+            statusText = message
+        }
+    }
+
+    private func runEvolutionExplain() async {
+        guard let record = workspaceController.selectedRecord,
+              let path = selected.first,
+              let viewModel,
+              let evolutionVM
+        else { return }
+        applyRangeToEvolutionVM()
+        let privacy = await session.currentAIPrivacy()
+        await evolutionVM.explain(
+            wc: URL(fileURLWithPath: record.localPath),
+            target: path,
+            blameLines: viewModel.lines,
+            privacySettings: privacy
+        )
+        switch evolutionVM.state {
+        case .completed(let explanation):
+            statusText = "演化解释完成（\(explanation.keyChanges.count) 个关键变更）"
+        case .error(let message):
+            statusText = "演化解释失败：\(message)"
+        default:
+            break
+        }
     }
 }

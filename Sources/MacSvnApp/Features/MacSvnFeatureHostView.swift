@@ -6,15 +6,18 @@ public struct MacSvnFeatureHostView: View {
     public let route: MacSvnAppRoute
     @ObservedObject public var session: MacSvnAppSession
     @ObservedObject public var workspaceController: MacSvnWorkspaceController
+    @ObservedObject public var navigator: MacSvnAppNavigator
 
     public init(
         route: MacSvnAppRoute,
         session: MacSvnAppSession,
-        workspaceController: MacSvnWorkspaceController
+        workspaceController: MacSvnWorkspaceController,
+        navigator: MacSvnAppNavigator
     ) {
         self.route = route
         self.session = session
         self.workspaceController = workspaceController
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -24,14 +27,16 @@ public struct MacSvnFeatureHostView: View {
         case .changes:
             MacSvnChangesView(
                 workspaceController: workspaceController,
-                statusProvider: session.svnService
+                statusProvider: session.svnService,
+                navigator: navigator,
+                session: session
             )
         case .commit:
             MacSvnCommitView(workspaceController: workspaceController, session: session)
         case .diff:
-            MacSvnDiffView(workspaceController: workspaceController, svnService: session.svnService)
+            MacSvnDiffView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .log:
-            MacSvnLogView(workspaceController: workspaceController, session: session)
+            MacSvnLogView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .repositoryBrowser:
             MacSvnRepoBrowserView(session: session, workspaceController: workspaceController)
         case .branches:
@@ -51,7 +56,17 @@ public struct MacSvnFeatureHostView: View {
         case .teamActivity:
             MacSvnTeamActivityView(workspaceController: workspaceController, session: session)
         case .aiAssistant:
-            MacSvnAIAssistantView(workspaceController: workspaceController, session: session)
+            MacSvnAIAssistantView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
+        case .releaseNotes:
+            MacSvnReleaseNotesView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .settings:
             MacSvnSettingsView(session: session)
         }

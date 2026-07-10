@@ -4,14 +4,20 @@ import MacSvnCore
 /// AI 助手 Chat：本地 SVN tool + LLM；写操作走确认门并展示审计。
 public struct MacSvnAIAssistantView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
 
     @State private var viewModel: AIAssistantChatViewModel?
     @State private var showAudit = false
 
-    public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
+    public init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator
+    ) {
         self.workspaceController = workspaceController
         self.session = session
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -54,7 +60,17 @@ public struct MacSvnAIAssistantView: View {
                 )
             }
             await viewModel?.refreshAudit()
+            await consumePendingQueryIfNeeded()
         }
+        .onChange(of: navigator.pendingAIChatQuery) { _, _ in
+            Task { await consumePendingQueryIfNeeded() }
+        }
+    }
+
+    private func consumePendingQueryIfNeeded() async {
+        guard let query = navigator.consumePendingAIChatQuery(), let viewModel else { return }
+        viewModel.draft = query
+        await viewModel.sendDraft(workingCopyPath: workspaceController.selectedRecord?.localPath)
     }
 
     @ViewBuilder

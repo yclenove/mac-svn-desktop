@@ -9,6 +9,7 @@ public struct MacSvnBranchesView: View {
     @State private var browserVM: BranchBrowserViewModel?
     @State private var copyVM: BranchCopyViewModel?
     @State private var switchVM: BranchSwitchViewModel?
+    @State private var mergeInfoVM: MergeInfoViewModel?
     @State private var newName = ""
     @State private var createMessage = "create branch"
     @State private var createKind: BranchReferenceKind = .branch
@@ -71,6 +72,38 @@ public struct MacSvnBranchesView: View {
                             Button("创建") { Task { await createBranch() } }
                                 .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
+                        Section("svn:mergeinfo（当前 WC）") {
+                            if let mergeInfoVM {
+                                switch mergeInfoVM.state {
+                                case .loading:
+                                    ProgressView("加载 mergeinfo…")
+                                case .error(let message):
+                                    Text(message).foregroundStyle(.red)
+                                case .loaded where mergeInfoVM.entries.isEmpty:
+                                    Text("无 mergeinfo")
+                                        .foregroundStyle(.secondary)
+                                case .loaded, .idle:
+                                    Text("已合并 revision 合计 \(mergeInfoVM.totalMergedRevisionCount)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    ForEach(mergeInfoVM.entries, id: \.sourcePath) { entry in
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(entry.sourcePath)
+                                                .font(.caption.weight(.semibold))
+                                            Text(entry.ranges.map(rangeLabel).joined(separator: ", "))
+                                                .font(.caption2.monospaced())
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                Button("刷新 mergeinfo") {
+                                    Task { await mergeInfoVM.load() }
+                                }
+                            } else {
+                                Text("未加载")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         if case .confirmationRequired(let paths) = switchVM?.state {
                             Section("切换确认") {
                                 Text("存在未提交变更（\(paths.count)）：继续切换可能混淆变更归属。")
@@ -119,9 +152,17 @@ public struct MacSvnBranchesView: View {
         }
     }
 
+    private func rangeLabel(_ range: MergeInfoRevisionRange) -> String {
+        if range.start == range.end {
+            return "r\(range.start.value)"
+        }
+        return "r\(range.start.value)-\(range.end.value)"
+    }
+
     private func reload() async {
         guard let record = workspaceController.selectedRecord, record.isValid else {
             browserVM = nil
+            mergeInfoVM = nil
             return
         }
         let settings = await session.settingsStore.settings()
@@ -129,11 +170,14 @@ public struct MacSvnBranchesView: View {
         browserVM = browser
         copyVM = BranchCopyViewModel(copyProvider: session.svnService)
         switchVM = BranchSwitchViewModel(provider: session.svnService)
+        let wc = URL(fileURLWithPath: record.localPath)
+        let mergeInfo = MergeInfoViewModel(workingCopy: wc, target: ".", provider: session.svnService)
+        mergeInfoVM = mergeInfo
 
         // repositoryRoot：优先用 info 的 repositoryRoot，否则从 WC URL 推断
         let root: String
         if let info = try? await session.svnService.info(
-            wc: URL(fileURLWithPath: record.localPath),
+            wc: wc,
             target: "."
         ), let repositoryRoot = info.repositoryRoot, !repositoryRoot.isEmpty {
             root = repositoryRoot
@@ -142,10 +186,19 @@ public struct MacSvnBranchesView: View {
         }
 
         await browser.load(repositoryRoot: root, layout: settings.branchLayout)
+        await mergeInfo.load()
         if case .error(let message) = browser.state {
             statusText = "加载失败：\(message)"
         } else {
-            statusText = "分支 \(browser.branchList.branches.count) / 标签 \(browser.branchList.tags.count)"
+            let mergeSuffix: String
+            if case .loaded = mergeInfo.state {
+                mergeSuffix = "；mergeinfo \(mergeInfo.totalMergedRevisionCount) rev"
+            } else if case .error = mergeInfo.state {
+                mergeSuffix = "；mergeinfo 加载失败"
+            } else {
+                mergeSuffix = ""
+            }
+            statusText = "分支 \(browser.branchList.branches.count) / 标签 \(browser.branchList.tags.count)\(mergeSuffix)"
         }
     }
 

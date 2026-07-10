@@ -76,14 +76,9 @@ public struct MacSvnTeamActivityView: View {
                                 }
                             }
 
-                            sectionTitle("按日提交")
-                            ForEach(summary.dailyCommits, id: \.date) { day in
-                                HStack {
-                                    Text(day.date.formatted(date: .abbreviated, time: .omitted))
-                                    Spacer()
-                                    Text("\(day.commitCount)")
-                                }
-                            }
+                            sectionTitle("按日提交热力图")
+                            TeamActivityHeatmapView(days: summary.dailyCommits)
+                                .accessibilityIdentifier("team-activity-heatmap")
 
                             sectionTitle("锁")
                             if summary.lockCards.isEmpty {

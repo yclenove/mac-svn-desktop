@@ -103,4 +103,61 @@ final class GitMigrationAuthorMappingViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.mappings, [])
         XCTAssertEqual(viewModel.coverage, GitMigrationAuthorMappingCoverage(totalCount: 0, coveredCount: 0))
     }
+
+    @MainActor
+    func testApplyAISuggestionsMarksPendingReviewUntilEdited() {
+        let viewModel = GitMigrationAuthorMappingViewModel(mapper: GitMigrationAuthorMapper())
+        viewModel.loadAuthors([
+            GitMigrationAuthor(svnUsername: "zhangsan"),
+            GitMigrationAuthor(svnUsername: "lisi")
+        ])
+
+        viewModel.applyAISuggestions([
+            AIAuthorMappingSuggestion(svnUsername: "zhangsan", gitName: "张三", gitEmail: "zhangsan@acme.com")
+        ])
+
+        XCTAssertEqual(viewModel.mappings.first(where: { $0.svnUsername == "zhangsan" })?.gitEmail, "zhangsan@acme.com")
+        XCTAssertEqual(viewModel.aiPendingReviewUsernames, ["zhangsan"])
+        XCTAssertEqual(viewModel.coverage.coveredCount, 1)
+
+        viewModel.updateMapping(svnUsername: "zhangsan", gitName: "张三", gitEmail: "zhangsan@acme.com")
+        XCTAssertTrue(viewModel.aiPendingReviewUsernames.isEmpty)
+    }
+
+    @MainActor
+    func testInferWithAIAppliesSuggestionsViaInferrer() async {
+        let viewModel = GitMigrationAuthorMappingViewModel(mapper: GitMigrationAuthorMapper())
+        viewModel.loadAuthors([GitMigrationAuthor(svnUsername: "lisi")])
+        let inferrer = FakeAuthorMappingInferrer(draft: AIAuthorMappingInferenceDraft(
+            suggestions: [
+                AIAuthorMappingSuggestion(svnUsername: "lisi", gitName: "李四", gitEmail: "lisi@acme.com")
+            ],
+            providerID: UUID(),
+            promptCount: 1
+        ))
+
+        await viewModel.inferWithAI(
+            emailDomain: "acme.com",
+            privacySettings: AIPrivacySettings(),
+            inferrer: inferrer
+        )
+
+        XCTAssertEqual(viewModel.state, .editing)
+        XCTAssertEqual(viewModel.mappings, [
+            GitMigrationAuthorMapping(svnUsername: "lisi", gitName: "李四", gitEmail: "lisi@acme.com")
+        ])
+        XCTAssertEqual(viewModel.aiPendingReviewUsernames, ["lisi"])
+    }
+}
+
+private struct FakeAuthorMappingInferrer: AIAuthorMappingInferring {
+    let draft: AIAuthorMappingInferenceDraft
+
+    func inferMappings(
+        authors: [GitMigrationAuthor],
+        emailDomain: String,
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIAuthorMappingInferenceDraft {
+        draft
+    }
 }

@@ -44,6 +44,7 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
     case gitMigration
     case teamActivity
     case aiAssistant
+    case releaseNotes
     case settings
 
     public var id: String { rawValue }
@@ -58,6 +59,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "team-activity"
         case .aiAssistant:
             "ai-assistant"
+        case .releaseNotes:
+            "release-notes"
         default:
             rawValue
         }
@@ -95,6 +98,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "团队动态"
         case .aiAssistant:
             "AI 助手"
+        case .releaseNotes:
+            "Release Notes"
         case .settings:
             "设置"
         }
@@ -132,6 +137,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "团队概览"
         case .aiAssistant:
             "智能辅助"
+        case .releaseNotes:
+            "AI 发布说明"
         case .settings:
             "应用配置"
         }
@@ -169,6 +176,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "person.3"
         case .aiAssistant:
             "sparkles"
+        case .releaseNotes:
+            "doc.richtext"
         case .settings:
             "gearshape"
         }
@@ -184,7 +193,7 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             .conflictResolution
         case .blame, .properties, .locks, .shelve:
             .advancedSVN
-        case .gitMigration, .teamActivity, .aiAssistant:
+        case .gitMigration, .teamActivity, .aiAssistant, .releaseNotes:
             .automation
         case .settings:
             .settings

@@ -2,7 +2,7 @@ import SwiftUI
 import MacSvnCore
 import AppKit
 
-/// 仓库浏览器：远端目录懒加载、预览、收藏、Checkout 入口。
+/// 仓库浏览器：远端目录懒加载、预览、收藏、Checkout 与远端写操作（mkdir/删/复制/移动）。
 public struct MacSvnRepoBrowserView: View {
     private let session: MacSvnAppSession
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
@@ -14,6 +14,22 @@ public struct MacSvnRepoBrowserView: View {
     @State private var selectedDepth: SvnDepth = .infinity
     @State private var statusText: String?
     @State private var previewText: String = ""
+
+    /// 远端写操作弹窗状态（均需提交说明，对应 FR-RB-06）。
+    @State private var showRemoteWriteSheet = false
+    @State private var remoteWriteKind: RemoteWriteKind = .mkdir
+    @State private var remoteWriteName = ""
+    @State private var remoteWriteDestination = ""
+    @State private var remoteWriteMessage = ""
+
+    private enum RemoteWriteKind: String, Identifiable {
+        case mkdir = "新建目录"
+        case delete = "删除"
+        case copy = "复制"
+        case move = "移动"
+
+        var id: String { rawValue }
+    }
 
     public init(session: MacSvnAppSession, workspaceController: MacSvnWorkspaceController) {
         self.session = session
@@ -33,6 +49,9 @@ public struct MacSvnRepoBrowserView: View {
             }
         }
         .task { await bootstrap() }
+        .sheet(isPresented: $showRemoteWriteSheet) {
+            remoteWriteSheet
+        }
     }
 
     private var header: some View {
@@ -73,6 +92,7 @@ public struct MacSvnRepoBrowserView: View {
 
     private var centerPane: some View {
         VStack(alignment: .leading, spacing: 0) {
+            remoteWriteToolbar
             if let statusText {
                 Text(statusText)
                     .font(.caption)
@@ -117,6 +137,21 @@ public struct MacSvnRepoBrowserView: View {
         }
     }
 
+    private var remoteWriteToolbar: some View {
+        HStack(spacing: 8) {
+            Button("新建目录") { presentRemoteWrite(.mkdir) }
+            Button("删除") { presentRemoteWrite(.delete) }
+                .disabled(selectedEntry == nil)
+            Button("复制") { presentRemoteWrite(.copy) }
+                .disabled(selectedEntry == nil)
+            Button("移动") { presentRemoteWrite(.move) }
+                .disabled(selectedEntry == nil)
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+
     private var detailPane: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("详情")
@@ -154,6 +189,128 @@ public struct MacSvnRepoBrowserView: View {
             Spacer()
         }
         .padding()
+    }
+
+    private var remoteWriteSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(remoteWriteKind.rawValue)
+                .font(.title2.weight(.semibold))
+            Text("远端写操作会立即提交到仓库，必须填写提交说明。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            switch remoteWriteKind {
+            case .mkdir:
+                TextField("目录名", text: $remoteWriteName)
+                    .textFieldStyle(.roundedBorder)
+            case .delete:
+                if let selectedEntry {
+                    LabeledContent("将删除", value: selectedEntry.name)
+                }
+            case .copy, .move:
+                if let selectedEntry {
+                    LabeledContent("源", value: selectedEntry.name)
+                }
+                TextField("目标 URL", text: $remoteWriteDestination)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            TextField("提交说明（必填）", text: $remoteWriteMessage)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Spacer()
+                Button("取消") { showRemoteWriteSheet = false }
+                Button("执行并提交") {
+                    Task { await executeRemoteWrite() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!canSubmitRemoteWrite)
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 420)
+    }
+
+    private var canSubmitRemoteWrite: Bool {
+        let messageOK = !remoteWriteMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard messageOK else { return false }
+        switch remoteWriteKind {
+        case .mkdir:
+            return !remoteWriteName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .delete:
+            return selectedEntry != nil
+        case .copy, .move:
+            return selectedEntry != nil
+                && !remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private func presentRemoteWrite(_ kind: RemoteWriteKind) {
+        remoteWriteKind = kind
+        remoteWriteMessage = ""
+        remoteWriteName = ""
+        if let selectedEntry {
+            remoteWriteDestination = join(rootURL, selectedEntry.name + (kind == .copy ? "-copy" : "-moved"))
+        } else {
+            remoteWriteDestination = rootURL
+        }
+        showRemoteWriteSheet = true
+    }
+
+    private func executeRemoteWrite() async {
+        guard let browserVM else { return }
+        let message = remoteWriteMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch remoteWriteKind {
+        case .mkdir:
+            await browserVM.createDirectory(named: remoteWriteName, in: rootURL, message: message)
+        case .delete:
+            guard let selectedEntry else { return }
+            await browserVM.delete(entry: selectedEntry, baseURL: rootURL, message: message)
+        case .copy:
+            guard let selectedEntry else { return }
+            await browserVM.copy(
+                entry: selectedEntry,
+                baseURL: rootURL,
+                to: remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines),
+                message: message
+            )
+        case .move:
+            guard let selectedEntry else { return }
+            await browserVM.move(
+                entry: selectedEntry,
+                baseURL: rootURL,
+                to: remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines),
+                message: message
+            )
+        }
+        applyRemoteOperationStatus(browserVM.remoteOperationState)
+        if case .completed = browserVM.remoteOperationState {
+            showRemoteWriteSheet = false
+            selectedEntry = nil
+        }
+    }
+
+    private func applyRemoteOperationStatus(_ state: RepoRemoteOperationState) {
+        switch state {
+        case .completed(let op, let revision):
+            statusText = "\(label(for: op))成功 r\(revision.value)"
+        case .error(let message):
+            statusText = "远端写失败：\(message)"
+        case .running(let op):
+            statusText = "正在\(label(for: op))…"
+        case .idle:
+            break
+        }
+    }
+
+    private func label(for op: RepoRemoteOperation) -> String {
+        switch op {
+        case .mkdir: return "新建目录"
+        case .delete: return "删除"
+        case .copy: return "复制"
+        case .move: return "移动"
+        }
     }
 
     private func bootstrap() async {

@@ -2,6 +2,108 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop V5：全量 `swift test` 502 通过；Xcode/SPM `.app` 与 Finder Sync/Quick Look 冒烟通过；README 功能矩阵改为可验收；合入 `main`（因 main 已有早期 PR merge，采用 merge 而非纯 FF）
+- Affected: README.md, docs/README.md, docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
+- Impact: SRS 缺口 Loop 全部 `[x]`；长程交付收口
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop V4：新增签名/公证流程文档与 `sign-and-notarize.sh` / `verify-signing-prereqs.sh`（支持 DRY_RUN）；H1 验收清单补充干净机冒烟步骤
+- Affected: docs/packaging/signing-and-notarization.md, docs/packaging/README.md, docs/acceptance/H1-manual-checklist.md, scripts/sign-and-notarize.sh, scripts/verify-signing-prereqs.sh
+- Impact: NFR-10 / P4 分发路径可按文档执行；下一未勾项 V5 全量测试合 main
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop V3：MacSVN.xcodeproj 增加 Quick Look 扩展并嵌入 PlugIns；`QuickLookPreviewTextBuilder` 生成 Diff/冲突/二进制预览文案；verify-quicklook-appex 通过
+- Affected: Packaging/QuickLook/**, MacSVN.xcodeproj, Sources/MacSvnCore/Services/QuickLookPreviewTextBuilder.swift, Tests/**, scripts/verify-quicklook-appex.sh, docs/extensions/QuickLook/**
+- Impact: FR-EX-08 可安装形态可验收；下一未勾项 V4 签名/公证
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop V2：MacSVN.xcodeproj 增加 Finder Sync 扩展并嵌入 PlugIns；主应用导出 WC 根目录；角标+右键 macsvn 深链；verify-finder-sync-appex 通过
+- Affected: Packaging/FinderSync/**, MacSVN.xcodeproj, Sources/MacSvnCore/Services/FinderSync*.swift, MacSvnWorkspaceController.swift, MacSvnAppSession.swift, scripts/verify-finder-sync-appex.sh, docs/extensions/FinderSync/**
+- Impact: FR-EX-05 可安装形态可验收；下一未勾项 V3 Quick Look `.appex`
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop V1：新增 MacSVN.xcodeproj 包装工程（嵌入本地 SwiftPM）与 `scripts/build-macos-app.sh`；两条路径均可产出并通过 `verify-macos-app.sh`
+- Affected: MacSVN.xcodeproj/**, Packaging/MacSVN/Info.plist, scripts/build-macos-app.sh, scripts/verify-macos-app.sh, docs/packaging/README.md, README.md, docs/extensions/FinderSync/README.md
+- Impact: 可构建 `MacSVN.app`；下一未勾项 V2 Finder Sync `.appex`
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U8：团队活动页按日提交改为日历热力图（12 周）；窗口锚定今天、强度按窗内峰值、周标签跟随 firstWeekday
+- Affected: Sources/MacSvnCore/Services/TeamActivityHeatmapBuilder.swift, Sources/MacSvnApp/Features/MacSvnTeamActivityView+Heatmap.swift, MacSvnTeamActivityView.swift, Tests/MacSvnCoreTests/TeamActivityHeatmapBuilderTests.swift
+- Impact: FR-EX-06 可验收；下一未勾项 Wave V（Xcode .app / 扩展）
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U7：菜单栏接入 FSEvents 本地变更监视，debounce 后近实时刷新；测试可注入 Fake watcher 并关闭通知权限
+- Affected: Sources/MacSvnCore/Services/FSEventsWorkingCopyWatcher.swift, Sources/MacSvnApp/Features/MacSvnMenuBarController.swift, Tests/MacSvnAppTests/MacSvnMenuBarControllerTests.swift
+- Impact: FR-EX-03 可验收；下一未勾项 U8 团队活动按日提交热力图
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U6：⌘K 无结构化命中时 handoff 到 AI Chat，并自动带上原 query 发送
+- Affected: Sources/MacSvnApp/App/MacSvnAppNavigator.swift, Features/MacSvnCommandPaletteView.swift, MacSvnAIAssistantView.swift, MacSvnFeatureHostView.swift, Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift
+- Impact: FR-EX-04 可验收；下一未勾项 U7 菜单栏 FSEvents 近实时刷新
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U5：AI Chat 确认门通过后真实执行低危/高危写工具（update/add/cleanup/commit/revert/merge/switch/delete/copy）并审计
+- Affected: Sources/MacSvnCore/Services/AISVNToolRegistry.swift, ViewModels/AIAssistantChatViewModel.swift, Tests/MacSvnCoreTests/AISVNToolRegistryTests.swift, AIAssistantChatViewModelTests.swift, AIToolAuditStoreTests.swift
+- Impact: FR-AI-04 / NFR-13 可验收；下一未勾项 U6 ⌘K 无匹配转 AI Chat
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U4：Blame 页接入行选区 AI 演化解释（摘要 + 关键 revision 变更）
+- Affected: Sources/MacSvnCore/ViewModels/AIBlameEvolutionViewModel.swift, Sources/MacSvnApp/Features/MacSvnBlameView.swift, MacSvnAppSession.swift, Tests/MacSvnCoreTests/AIBlameEvolutionViewModelTests.swift
+- Impact: FR-AI-06 可验收；下一未勾项 U5 AI Chat 真实写工具执行
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U3：新增 AI Release Notes 页与侧边栏路由；日志页可带入过滤结果；one-shot 唤醒已验证可续跑
+- Affected: Sources/MacSvnCore/ViewModels/AIReleaseNotesViewModel.swift, Sources/MacSvnApp/Features/MacSvnReleaseNotesView.swift, MacSvnAppRoute.swift, MacSvnAppSession.swift, MacSvnLogView.swift, Tests/**
+- Impact: FR-AI-05 可验收；下一未勾项 U4 Blame 演化解释
+
+## 2026-07-10
+
+- Summary: 修复长程 Loop「续不上」根因：废弃无限 while 心跳，改为每轮结束 one-shot sleep+WAKE 并重新挂 notify；协议写入 SRS backlog
+- Affected: docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
+- Impact: 终端刷 WAKE 但代理空闲的问题有明确修复路径；下一功能项仍为 U3
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U2：历史迁移后展示 revision 对账报告；不一致时阻断进入同步；源分析保留 `sourceRevisions` 供对账
+- Affected: Sources/MacSvnCore/Models/GitMigrationModels.swift, Services/GitMigrationSourceAnalyzer.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, Tests/MacSvnCoreTests/GitMigrationSourceAnalyzerTests.swift
+- Impact: FR-GM-04 / NFR-14 可验收；下一未勾项 U3 AI Release Notes
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop U1：Git 迁移 Authors 页接入 AI 批量推断（邮箱域名规则）与「AI 待复核」标记；编辑/确认后清除待复核
+- Affected: Sources/MacSvnCore/Services/AIAuthorMappingInferrer.swift, ViewModels/GitMigrationAuthorMappingViewModel.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, MacSvnAppSession.swift, Tests/**
+- Impact: FR-GM-03 AI 路径可验收；下一未勾项 U2 revision 对账报告
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop 续跑 T4–T6：仓库浏览器远端写（mkdir/删/复制/移动+提交说明）、分支页 `svn:mergeinfo`、属性冲突双方对比与 Mine/Theirs resolve；心跳仍在但会话空闲未续跑，已人工续上
+- Affected: Sources/MacSvnApp/Features/MacSvnRepoBrowserView.swift, MacSvnBranchesView.swift, MacSvnConflictWorkspaceView.swift, Sources/MacSvnCore/ViewModels/PropertyConflictViewModel.swift, Tests/MacSvnCoreTests/PropertyConflictViewModelTests.swift
+- Impact: Wave T 全部勾完；下一未勾项为 U1（Git 迁移 authors AI）
+
+## 2026-07-10
+
+- Summary: SRS 缺口 Loop 续跑：S7 认证失败弹窗（`--password-from-stdin`）+ T2 变更页「忽略选中」写 `svn:ignore`；修复心跳进程中断后以可监听方式重启
+- Affected: Sources/MacSvnApp/App/MacSvnInteractiveCredentialProvider.swift, MacSvnAppSession.swift, MacSvnChangesView.swift, Tests/MacSvnCoreTests/AuthArgumentsPasswordFromStdinTests.swift
+- Impact: 下一未勾项为 T4 远端写操作
+
+## 2026-07-10
+
+- Summary: 启动 SRS 缺口 Loop：接入火山方舟 Coding 预设与本机 Keychain 注入脚本；完成 R1–R3、S1–S5/S8、T3（树/平铺、Update→冲突跳转、日志过滤与动作、双 revision Diff、左右分栏 Diff、设置分支布局/外部 Diff）
+- Affected: Sources/MacSvnApp/**, scripts/seed-volcengine-ark.sh, docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, docs/acceptance/H1-run-2026-07-10.md, README.md
+- Impact: 工作分支 `feat/srs-gap-full-delivery`；API Key 不入库；下一波 S6/S7 与 Wave T/U
+
+## 2026-07-10
+
 - Summary: 梳理 SRS 相对当前交付的缺口，新增第二轮长程 Loop 文档（Wave R–V：验收、P1/P2 体验、仓库/冲突补齐、AI/迁移补齐、扩展与发布）
 - Affected: docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, docs/README.md
 - Impact: 明确「主路径接线完成 ≠ SRS 全量完成」；后续 loop 按该文档第一个未勾项推进

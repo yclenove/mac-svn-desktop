@@ -32,6 +32,9 @@ public final class MacSvnAppSession: ObservableObject {
     public let aiCommitMessageGenerator: AICommitMessageGenerator
     public let aiPreCommitReviewer: AIPreCommitReviewer
     public let aiConflictAssistant: AIConflictAssistant
+    public let aiAuthorMappingInferrer: AIAuthorMappingInferrer
+    public let aiReleaseNotesGenerator: AIReleaseNotesGenerator
+    public let aiBlameEvolutionExplainer: AIBlameEvolutionExplainer
     public let aiToolRegistry: AISVNToolRegistry
     public let aiToolAuditStore: AIToolAuditStore
 
@@ -59,6 +62,9 @@ public final class MacSvnAppSession: ObservableObject {
         aiCommitMessageGenerator: AICommitMessageGenerator,
         aiPreCommitReviewer: AIPreCommitReviewer,
         aiConflictAssistant: AIConflictAssistant,
+        aiAuthorMappingInferrer: AIAuthorMappingInferrer,
+        aiReleaseNotesGenerator: AIReleaseNotesGenerator,
+        aiBlameEvolutionExplainer: AIBlameEvolutionExplainer,
         aiToolRegistry: AISVNToolRegistry,
         aiToolAuditStore: AIToolAuditStore
     ) {
@@ -85,6 +91,9 @@ public final class MacSvnAppSession: ObservableObject {
         self.aiCommitMessageGenerator = aiCommitMessageGenerator
         self.aiPreCommitReviewer = aiPreCommitReviewer
         self.aiConflictAssistant = aiConflictAssistant
+        self.aiAuthorMappingInferrer = aiAuthorMappingInferrer
+        self.aiReleaseNotesGenerator = aiReleaseNotesGenerator
+        self.aiBlameEvolutionExplainer = aiBlameEvolutionExplainer
         self.aiToolRegistry = aiToolRegistry
         self.aiToolAuditStore = aiToolAuditStore
     }
@@ -121,6 +130,11 @@ public final class MacSvnAppSession: ObservableObject {
             at: directory.appendingPathComponent("workspaces.json"),
             defaultJSON: #"{"version":1,"workspaces":[]}"#
         )
+        // 同步导出 Finder Sync 监视根目录（扩展启动时读取）
+        try? FinderSyncRootsExporter.export(
+            records: workspaces,
+            to: FinderSyncRootsExporter.fileURL(in: directory)
+        )
 
         let svnPath = resolveSvnExecutablePath(configured: settings.svnPath)
         let backend = SvnCliBackend(
@@ -134,6 +148,7 @@ public final class MacSvnAppSession: ObservableObject {
         }
         let svnService = SvnService(
             backend: backend,
+            credentialProvider: MacSvnInteractiveCredentialProvider(),
             commitGuard: CommitGuardService(configuration: guardConfig)
         )
         let branchListService = BranchListService(listProvider: svnService)
@@ -201,6 +216,20 @@ public final class MacSvnAppSession: ObservableObject {
             providerManager: aiProviderStore,
             llmClient: llmClient
         )
+        let aiAuthorMappingInferrer = AIAuthorMappingInferrer(
+            providerManager: aiProviderStore,
+            llmClient: llmClient
+        )
+        let aiReleaseNotesGenerator = AIReleaseNotesGenerator(
+            providerManager: aiProviderStore,
+            llmClient: llmClient
+        )
+        let aiBlameEvolutionExplainer = AIBlameEvolutionExplainer(
+            providerManager: aiProviderStore,
+            diffProvider: svnService,
+            logProvider: svnService,
+            llmClient: llmClient
+        )
         let aiToolAuditStore = AIToolAuditStore(
             fileURL: directory.appendingPathComponent("ai-tool-audit.json")
         )
@@ -232,6 +261,9 @@ public final class MacSvnAppSession: ObservableObject {
             aiCommitMessageGenerator: aiCommitMessageGenerator,
             aiPreCommitReviewer: aiPreCommitReviewer,
             aiConflictAssistant: aiConflictAssistant,
+            aiAuthorMappingInferrer: aiAuthorMappingInferrer,
+            aiReleaseNotesGenerator: aiReleaseNotesGenerator,
+            aiBlameEvolutionExplainer: aiBlameEvolutionExplainer,
             aiToolRegistry: aiToolRegistry,
             aiToolAuditStore: aiToolAuditStore
         )

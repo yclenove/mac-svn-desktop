@@ -11,10 +11,17 @@ public final class MacSvnWorkspaceController: ObservableObject {
 
     private let workspaceStore: WorkspaceStore
     private let infoProvider: any WorkingCopyInfoProviding
+    /// 用于导出 Finder Sync 根目录；测试可注入临时目录。
+    private let supportDirectory: URL?
 
-    public init(workspaceStore: WorkspaceStore, infoProvider: any WorkingCopyInfoProviding) {
+    public init(
+        workspaceStore: WorkspaceStore,
+        infoProvider: any WorkingCopyInfoProviding,
+        supportDirectory: URL? = nil
+    ) {
         self.workspaceStore = workspaceStore
         self.infoProvider = infoProvider
+        self.supportDirectory = supportDirectory
     }
 
     public var selectedRecord: WorkingCopyRecord? {
@@ -30,6 +37,7 @@ public final class MacSvnWorkspaceController: ObservableObject {
             } else if selectedID == nil {
                 selectedID = records.first?.id
             }
+            exportFinderSyncRootsIfPossible()
             errorMessage = nil
         } catch {
             errorMessage = "加载工作副本失败：\(error.localizedDescription)"
@@ -90,5 +98,12 @@ public final class MacSvnWorkspaceController: ObservableObject {
         }
 
         await addWorkingCopy(at: URL(fileURLWithPath: normalized, isDirectory: true))
+    }
+
+    /// 将有效 WC 根目录导出给 Finder Sync 扩展读取。
+    private func exportFinderSyncRootsIfPossible() {
+        guard let supportDirectory else { return }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: supportDirectory)
+        try? FinderSyncRootsExporter.export(records: records, to: fileURL)
     }
 }

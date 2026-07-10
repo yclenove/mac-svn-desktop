@@ -10,7 +10,7 @@
 | [06-innovative-features.md](06-innovative-features.md) | 创新功能设计：AI 智能助手（多 Provider、tool-calling 分级安全）、一键迁移 Git（五步向导、增量同步）、生态效率（提交守护/搁置/Finder/命令面板等） | v1.0 |
 | [specs/2026-07-08-mac-svn-desktop-design.md](specs/2026-07-08-mac-svn-desktop-design.md) | 原始决策记录（产品档位、技术选型过程） | 归档 |
 | [superpowers/plans/2026-07-10-long-loop-backlog.md](superpowers/plans/2026-07-10-long-loop-backlog.md) | 长程 Loop 一：主路径 UI 接线（Wave A–H，已完成） | 完成 |
-| [superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md) | 长程 Loop 二：SRS 缺口补齐（验收/体验/扩展/发布） | 待启动 |
+| [superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md) | 长程 Loop 二：SRS 缺口补齐（验收/体验/扩展/发布） | 完成 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |
 
 ## 阅读顺序

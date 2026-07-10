@@ -45,14 +45,16 @@ public struct GitMigrationSourceAnalyzer: Sendable {
             auth: auth
         )
 
+        let revisions = logs.map(\.revision).sorted { $0.value < $1.value }
         return GitMigrationSourceAnalysis(
             repositoryRoot: normalizedRoot,
             environment: environment,
             layout: Self.layout(from: entries),
             authors: Self.authors(from: logs),
-            latestRevision: logs.map(\.revision).max { $0.value < $1.value },
-            oldestRevision: logs.map(\.revision).min { $0.value < $1.value },
-            totalRevisionCount: logs.count
+            latestRevision: revisions.last,
+            oldestRevision: revisions.first,
+            totalRevisionCount: revisions.count,
+            sourceRevisions: revisions
         )
     }
 

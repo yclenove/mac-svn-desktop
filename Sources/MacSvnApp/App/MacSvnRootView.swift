@@ -19,7 +19,8 @@ public struct MacSvnRootView: View {
         _workspaceController = StateObject(
             wrappedValue: MacSvnWorkspaceController(
                 workspaceStore: session.workspaceStore,
-                infoProvider: session.svnService
+                infoProvider: session.svnService,
+                supportDirectory: session.supportDirectory
             )
         )
     }
@@ -52,7 +53,8 @@ public struct MacSvnRootView: View {
                 MacSvnFeatureHostView(
                     route: navigator.selectedRoute,
                     session: session,
-                    workspaceController: workspaceController
+                    workspaceController: workspaceController,
+                    navigator: navigator
                 )
             }
         }

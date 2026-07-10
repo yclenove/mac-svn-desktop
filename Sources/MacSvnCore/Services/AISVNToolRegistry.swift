@@ -8,6 +8,18 @@ public protocol AISVNToolServicing: Sendable {
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
     func blame(wc: URL, target: String) async throws -> [BlameLine]
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
+
+    // 写工具：仅在用户确认门通过后由 registry.executeConfirmed 调用
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary
+    func add(wc: URL, paths: [String]) async throws
+    func cleanup(wc: URL) async throws
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws
+    func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
+    func switchTo(wc: URL, url: String, auth: Credential?, allowLocalChanges: Bool) async throws -> UpdateSummary
+    func delete(wc: URL, paths: [String]) async throws
+    func delete(url: String, message: String, auth: Credential?) async throws -> Revision
+    func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
 }
 
 public protocol AIToolAuditing: Sendable {
@@ -77,6 +89,51 @@ public struct AISVNToolRegistry: Sendable {
                 )
                 return .confirmationRequired(confirmation)
             }
+        } catch {
+            await audit(
+                call: call,
+                sessionID: sessionID,
+                risk: toolName.risk,
+                outcome: .failed,
+                summary: String(describing: error)
+            )
+            throw error
+        }
+    }
+
+    /// 用户确认门通过后真实执行写工具，并写入审计（FR-AI-04 / NFR-13）。
+    public func executeConfirmed(
+        toolName rawName: String,
+        arguments: [String: String],
+        sessionID: String
+    ) async throws -> AISVNToolResult {
+        guard let toolName = AISVNToolName(rawValue: rawName) else {
+            let error = AISVNToolError.forbiddenTool(rawName)
+            await audit(
+                call: AISVNToolCall(name: rawName, arguments: arguments),
+                sessionID: sessionID,
+                risk: nil,
+                outcome: .failed,
+                summary: String(describing: error)
+            )
+            throw error
+        }
+
+        guard toolName.risk == .lowRiskWrite || toolName.risk == .highRiskWrite else {
+            throw AISVNToolError.invalidArgument(name: "tool", value: rawName)
+        }
+
+        let call = AISVNToolCall(name: rawName, arguments: arguments)
+        do {
+            let result = try await executeWrite(toolName, arguments: arguments)
+            await audit(
+                call: call,
+                sessionID: sessionID,
+                risk: toolName.risk,
+                outcome: .completed,
+                summary: result.content
+            )
+            return result
         } catch {
             await audit(
                 call: call,
@@ -166,6 +223,119 @@ public struct AISVNToolRegistry: Sendable {
                 metadata: ["bytes": String(data.count)]
             )
         case .svnUpdate, .svnAdd, .svnCleanup, .svnCommit, .svnRevert, .svnMerge, .svnSwitch, .svnDelete, .svnCopy:
+            throw AISVNToolError.invalidArgument(name: "tool", value: toolName.rawValue)
+        }
+    }
+
+    private func executeWrite(
+        _ toolName: AISVNToolName,
+        arguments: [String: String]
+    ) async throws -> AISVNToolResult {
+        switch toolName {
+        case .svnUpdate:
+            let wc = try wcArgument(arguments)
+            let paths = pathsArgument(arguments["paths"])
+            let summary = try await service.update(
+                wc: wc,
+                paths: paths,
+                revision: revisionArgument(arguments["revision"]),
+                setDepth: nil
+            )
+            return AISVNToolResult(
+                content: "update 完成：updated=\(summary.updated) conflicted=\(summary.conflicted)",
+                metadata: ["conflicted": String(summary.conflicted)]
+            )
+        case .svnAdd:
+            let wc = try wcArgument(arguments)
+            let paths = pathsArgument(arguments["paths"])
+            guard !paths.isEmpty else {
+                throw AISVNToolError.missingArgument("paths")
+            }
+            try await service.add(wc: wc, paths: paths)
+            return AISVNToolResult(content: "add 完成：\(paths.joined(separator: ", "))")
+        case .svnCleanup:
+            let wc = try wcArgument(arguments)
+            try await service.cleanup(wc: wc)
+            return AISVNToolResult(content: "cleanup 完成：\(wc.path)")
+        case .svnCommit:
+            let wc = try wcArgument(arguments)
+            let paths = pathsArgument(arguments["paths"])
+            let message = try requiredArgument("message", arguments: arguments)
+            let revision = try await service.commit(wc: wc, paths: paths, message: message, auth: nil)
+            return AISVNToolResult(
+                content: "commit 完成：r\(revision.value)",
+                metadata: ["revision": String(revision.value)]
+            )
+        case .svnRevert:
+            let wc = try wcArgument(arguments)
+            let paths = pathsArgument(arguments["paths"])
+            guard !paths.isEmpty else {
+                throw AISVNToolError.missingArgument("paths")
+            }
+            try await service.revert(wc: wc, paths: paths, recursive: boolArgument(arguments["recursive"]) ?? false)
+            return AISVNToolResult(content: "revert 完成：\(paths.joined(separator: ", "))")
+        case .svnMerge:
+            let wc = try wcArgument(arguments)
+            let source = try requiredArgument("source", arguments: arguments)
+            let summary = try await service.merge(
+                wc: wc,
+                source: source,
+                range: revisionRangeArgument(arguments["range"]),
+                dryRun: boolArgument(arguments["dryRun"]) ?? false,
+                auth: nil
+            )
+            return AISVNToolResult(
+                content: "merge 完成：conflicts=\(summary.conflicted)",
+                metadata: ["conflicts": String(summary.conflicted)]
+            )
+        case .svnSwitch:
+            let wc = try wcArgument(arguments)
+            let url = try requiredArgument("url", arguments: arguments)
+            let summary = try await service.switchTo(
+                wc: wc,
+                url: url,
+                auth: nil,
+                allowLocalChanges: boolArgument(arguments["allowLocalChanges"]) ?? false
+            )
+            return AISVNToolResult(
+                content: "switch 完成：updated=\(summary.updated)",
+                metadata: ["updated": String(summary.updated)]
+            )
+        case .svnDelete:
+            if let url = arguments["url"]?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
+                let message = arguments["message"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                    ? arguments["message"]!
+                    : "AI tool delete"
+                let revision = try await service.delete(url: url, message: message, auth: nil)
+                return AISVNToolResult(
+                    content: "remote delete 完成：r\(revision.value)",
+                    metadata: ["revision": String(revision.value)]
+                )
+            }
+            let wc = try wcArgument(arguments)
+            let paths = pathsArgument(arguments["paths"])
+            guard !paths.isEmpty else {
+                throw AISVNToolError.missingArgument("paths")
+            }
+            try await service.delete(wc: wc, paths: paths)
+            return AISVNToolResult(content: "delete 完成：\(paths.joined(separator: ", "))")
+        case .svnCopy:
+            let source = try requiredArgument("source", arguments: arguments)
+            let destination = try requiredArgument("destination", arguments: arguments)
+            let message = arguments["message"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? arguments["message"]!
+                : "AI tool copy"
+            let revision = try await service.copy(
+                source: source,
+                destination: destination,
+                message: message,
+                auth: nil
+            )
+            return AISVNToolResult(
+                content: "copy 完成：r\(revision.value)",
+                metadata: ["revision": String(revision.value)]
+            )
+        case .svnStatus, .svnLog, .svnDiff, .svnInfo, .svnList, .svnBlame, .svnCat:
             throw AISVNToolError.invalidArgument(name: "tool", value: toolName.rawValue)
         }
     }
@@ -262,6 +432,21 @@ public struct AISVNToolRegistry: Sendable {
             return nil
         }
         return Revision(revision)
+    }
+
+    /// 解析 `N:M` 或单 revision 字符串为 RevisionRange。
+    private func revisionRangeArgument(_ value: String?) -> RevisionRange? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let colon = trimmed.firstIndex(of: ":") {
+            let startText = String(trimmed[..<colon])
+            let endText = String(trimmed[trimmed.index(after: colon)...])
+            guard let start = Int(startText), let end = Int(endText) else { return nil }
+            return RevisionRange(start: Revision(start), end: Revision(end))
+        }
+        guard let single = Int(trimmed) else { return nil }
+        return RevisionRange(start: Revision(single), end: Revision(single))
     }
 
     private func intArgument(_ value: String?) -> Int? {

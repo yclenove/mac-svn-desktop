@@ -6,10 +6,10 @@ public struct MacSvnAIProviderSettingsView: View {
     private let session: MacSvnAppSession
 
     @State private var viewModel: AIProviderSettingsViewModel?
-    @State private var draftName = "OpenAI Compatible"
+    @State private var draftName = "火山方舟 Coding"
     @State private var draftKind: AIProviderKind = .openAICompatible
-    @State private var draftBaseURL = "https://api.openai.com/v1"
-    @State private var draftModel = "gpt-4o-mini"
+    @State private var draftBaseURL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+    @State private var draftModel = "doubao-seed-code"
     @State private var draftAPIKey = ""
     @State private var draftMaxTokens = 2048
     @State private var draftTemperature = 0.2
@@ -82,6 +82,19 @@ public struct MacSvnAIProviderSettingsView: View {
             }
 
             Section("新增 / 更新 Provider") {
+                HStack {
+                    Button("填入火山方舟 Coding 预设") {
+                        draftName = "火山方舟 Coding"
+                        draftKind = .openAICompatible
+                        draftBaseURL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+                        draftModel = "doubao-seed-code"
+                        draftMaxTokens = 4096
+                        draftTemperature = 0.2
+                        makeDefault = true
+                        statusText = "已填入预设；请粘贴 API Key 后保存（Key 只进 Keychain）"
+                    }
+                    Spacer()
+                }
                 TextField("名称", text: $draftName)
                 Picker("类型", selection: $draftKind) {
                     Text("OpenAI Compatible").tag(AIProviderKind.openAICompatible)

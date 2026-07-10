@@ -40,4 +40,22 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertEqual(navigator.selectedRoute, .changes)
         XCTAssertEqual(navigator.pendingOpenPath, "/wc")
     }
+
+    func testCommandPaletteHandoffCarriesQueryToAIChat() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .log)
+        navigator.handoffCommandPaletteQueryToAIChat("  帮我总结未提交变更  ")
+
+        XCTAssertEqual(navigator.selectedRoute, .aiAssistant)
+        XCTAssertEqual(navigator.pendingAIChatQuery, "帮我总结未提交变更")
+        XCTAssertEqual(navigator.consumePendingAIChatQuery(), "帮我总结未提交变更")
+        XCTAssertNil(navigator.pendingAIChatQuery)
+        XCTAssertTrue(navigator.lastAutomationMessage?.contains("⌘K 转 AI") == true)
+    }
+
+    func testCommandPaletteHandoffIgnoresBlankQuery() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+        navigator.handoffCommandPaletteQueryToAIChat("   ")
+        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertNil(navigator.pendingAIChatQuery)
+    }
 }

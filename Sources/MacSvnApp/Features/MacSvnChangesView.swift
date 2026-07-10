@@ -5,14 +5,19 @@ import MacSvnCore
 public struct MacSvnChangesView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     private let svnService: SvnService
+    private let navigator: MacSvnAppNavigator?
+    private let session: MacSvnAppSession?
 
     @State private var changesVM: ChangesViewModel?
     @State private var actionsVM: WorkingCopyActionsViewModel?
     @State private var filterMode: FilterMode = .all
+    @State private var displayMode: ChangesDisplayMode = .flat
     @State private var searchText = ""
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
     @State private var statusBanner: String?
+    @State private var setDepth: SvnDepth = .infinity
+    @State private var showSetDepth = false
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -23,10 +28,14 @@ public struct MacSvnChangesView: View {
 
     public init(
         workspaceController: MacSvnWorkspaceController,
-        statusProvider: SvnService
+        statusProvider: SvnService,
+        navigator: MacSvnAppNavigator? = nil,
+        session: MacSvnAppSession? = nil
     ) {
         self.workspaceController = workspaceController
         self.svnService = statusProvider
+        self.navigator = navigator
+        self.session = session
     }
 
     public var body: some View {
@@ -56,6 +65,33 @@ public struct MacSvnChangesView: View {
             }
             Button("取消", role: .cancel) {}
         }
+        .sheet(isPresented: $showSetDepth) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("调整工作副本深度（svn update --set-depth）")
+                    .font(.headline)
+                Picker("深度", selection: $setDepth) {
+                    Text("empty").tag(SvnDepth.empty)
+                    Text("files").tag(SvnDepth.files)
+                    Text("immediates").tag(SvnDepth.immediates)
+                    Text("infinity").tag(SvnDepth.infinity)
+                }
+                .pickerStyle(.radioGroup)
+                Text("将作用于选中路径；未选中时作用于 WC 根。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("取消") { showSetDepth = false }
+                    Spacer()
+                    Button("执行") {
+                        showSetDepth = false
+                        Task { await runSetDepth() }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(24)
+            .frame(width: 420)
+        }
     }
 
     private var header: some View {
@@ -77,6 +113,15 @@ public struct MacSvnChangesView: View {
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 280)
+            Picker("视图", selection: $displayMode) {
+                Text("平铺").tag(ChangesDisplayMode.flat)
+                Text("树").tag(ChangesDisplayMode.tree)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 160)
+            .onChange(of: displayMode) { _, newValue in
+                changesVM?.displayMode = newValue
+            }
             TextField("搜索文件名", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 220)
@@ -117,6 +162,16 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
+            Button("调整深度…") {
+                showSetDepth = true
+            }
+            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+
+            Button("忽略选中") {
+                Task { await ignoreSelected() }
+            }
+            .disabled(selectedPaths.isEmpty || session == nil)
+
             if actionsVM?.isRunning == true {
                 ProgressView()
                     .controlSize(.small)
@@ -152,28 +207,60 @@ public struct MacSvnChangesView: View {
                 )
             case .loaded:
                 List(selection: $selectedPaths) {
-                    ForEach(changesVM.visibleFlatEntries, id: \.path) { entry in
-                        HStack {
-                            Text(statusLabel(entry.itemStatus))
-                                .font(.caption.monospaced())
-                                .frame(width: 28, alignment: .leading)
-                                .foregroundStyle(statusColor(entry.itemStatus))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.path)
-                                if entry.isTreeConflict {
-                                    Text("树冲突")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
+                    if displayMode == .flat {
+                        ForEach(changesVM.visibleFlatEntries, id: \.path) { entry in
+                            flatRow(entry)
+                                .tag(entry.path)
                         }
-                        .tag(entry.path)
+                    } else {
+                        OutlineGroup(changesVM.visibleTreeEntries, children: \.outlineChildren) { node in
+                            treeRow(node)
+                                .tag(node.path)
+                        }
                     }
                 }
             }
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func flatRow(_ entry: FileStatus) -> some View {
+        HStack {
+            Text(statusLabel(entry.itemStatus))
+                .font(.caption.monospaced())
+                .frame(width: 28, alignment: .leading)
+                .foregroundStyle(statusColor(entry.itemStatus))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.path)
+                if entry.isTreeConflict {
+                    Text("树冲突")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private func treeRow(_ node: FileStatusNode) -> some View {
+        HStack {
+            if !node.isDirectory {
+                Text(statusLabel(node.itemStatus))
+                    .font(.caption.monospaced())
+                    .frame(width: 28, alignment: .leading)
+                    .foregroundStyle(statusColor(node.itemStatus))
+            } else {
+                Image(systemName: "folder")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+            }
+            Text(node.name)
+            if node.isTreeConflict {
+                Text("树冲突")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
@@ -217,6 +304,47 @@ public struct MacSvnChangesView: View {
         await syncAfterAction(actionsVM, changesVM)
     }
 
+    private func runSetDepth() async {
+        guard let actionsVM, let changesVM else { return }
+        let paths = Array(selectedPaths)
+        await actionsVM.update(paths: paths, setDepth: setDepth)
+        await syncAfterAction(actionsVM, changesVM)
+        if case .updateCompleted = actionsVM.state {
+            statusBanner = "已设置深度 \(String(describing: setDepth))"
+        }
+    }
+
+    /// 将选中路径的 basename 追加到父目录 `svn:ignore`（FR-ST-05）。
+    private func ignoreSelected() async {
+        guard let session, let record = workspaceController.selectedRecord, let changesVM else { return }
+        let wc = URL(fileURLWithPath: record.localPath)
+        do {
+            for path in selectedPaths {
+                let url = URL(fileURLWithPath: path, relativeTo: wc)
+                let parentRel = url.deletingLastPathComponent().relativePath
+                let target = parentRel.isEmpty || parentRel == "." ? "." : parentRel
+                let pattern = url.lastPathComponent
+                let existing = try await session.svnService.propertyValue(wc: wc, target: target, name: "svn:ignore")
+                var lines = (existing?.value ?? "")
+                    .split(separator: "\n", omittingEmptySubsequences: false)
+                    .map(String.init)
+                if !lines.contains(pattern) {
+                    if lines.last == "" { lines.removeLast() }
+                    lines.append(pattern)
+                }
+                let value = lines.joined(separator: "\n") + "\n"
+                let vm = PropertyViewModel(workingCopy: wc, target: target, provider: session.svnService)
+                await vm.load()
+                await vm.save(name: "svn:ignore", value: value)
+            }
+            statusBanner = "已写入 svn:ignore"
+            await changesVM.refresh()
+            selectedPaths = []
+        } catch {
+            statusBanner = "忽略失败：\(error.localizedDescription)"
+        }
+    }
+
     private func runCleanup() async {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.cleanup()
@@ -250,6 +378,10 @@ public struct MacSvnChangesView: View {
             statusBanner = "Update 完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
             await changesVM.refresh()
             selectedPaths = []
+            if summary.conflicted > 0 {
+                navigator?.selectedRoute = .merge
+                navigator?.lastAutomationMessage = "Update 产生 \(summary.conflicted) 个冲突，已跳转冲突页"
+            }
         case .completed(let op):
             statusBanner = "\(label(for: op)) 完成"
             await changesVM.refresh()
@@ -297,5 +429,12 @@ public struct MacSvnChangesView: View {
         case .modified, .replaced: return .blue
         default: return .secondary
         }
+    }
+}
+
+private extension FileStatusNode {
+    /// OutlineGroup 需要 Optional children：叶子为 nil。
+    var outlineChildren: [FileStatusNode]? {
+        children.isEmpty ? nil : children
     }
 }
