@@ -1,12 +1,25 @@
 import SwiftUI
+import MacSvnCore
 
 public struct MacSvnRootView: View {
+    @ObservedObject private var session: MacSvnAppSession
+    @StateObject private var workspaceController: MacSvnWorkspaceController
     private let sidebarModel: MacSvnSidebarModel
     @State private var selection: MacSvnAppRoute?
 
-    public init(sidebarModel: MacSvnSidebarModel = MacSvnSidebarModel()) {
+    public init(
+        session: MacSvnAppSession,
+        sidebarModel: MacSvnSidebarModel = MacSvnSidebarModel()
+    ) {
+        self.session = session
         self.sidebarModel = sidebarModel
         _selection = State(initialValue: sidebarModel.defaultSelection)
+        _workspaceController = StateObject(
+            wrappedValue: MacSvnWorkspaceController(
+                workspaceStore: session.workspaceStore,
+                infoProvider: session.svnService
+            )
+        )
     }
 
     public var body: some View {
@@ -23,7 +36,11 @@ public struct MacSvnRootView: View {
             }
             .navigationTitle("MacSVN")
         } detail: {
-            MacSvnRoutePlaceholderView(route: selection ?? sidebarModel.defaultSelection)
+            MacSvnFeatureHostView(
+                route: selection ?? sidebarModel.defaultSelection,
+                session: session,
+                workspaceController: workspaceController
+            )
         }
     }
 }
@@ -47,6 +64,9 @@ public struct MacSvnRoutePlaceholderView: View {
                 Text(route.subtitle)
                     .font(.title3)
                     .foregroundStyle(.secondary)
+                Text("功能页接线中（长程 Loop 将按 backlog 逐项替换占位）")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -61,7 +81,7 @@ public struct MacSvnSettingsPlaceholderView: View {
     public var body: some View {
         Form {
             LabeledContent("应用", value: "MacSVN")
-            LabeledContent("配置", value: "准备就绪")
+            LabeledContent("配置", value: "请从主窗口打开「设置」路由")
         }
         .padding()
         .frame(width: 420)

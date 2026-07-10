@@ -1,0 +1,35 @@
+import SwiftUI
+import MacSvnCore
+
+/// 按路由分发到真实功能页；尚未接线的路由保留占位，避免阻塞导航。
+public struct MacSvnFeatureHostView: View {
+    public let route: MacSvnAppRoute
+    @ObservedObject public var session: MacSvnAppSession
+    @ObservedObject public var workspaceController: MacSvnWorkspaceController
+
+    public init(
+        route: MacSvnAppRoute,
+        session: MacSvnAppSession,
+        workspaceController: MacSvnWorkspaceController
+    ) {
+        self.route = route
+        self.session = session
+        self.workspaceController = workspaceController
+    }
+
+    public var body: some View {
+        switch route {
+        case .workspace:
+            MacSvnWorkspaceView(controller: workspaceController)
+        case .changes:
+            MacSvnChangesView(
+                workspaceController: workspaceController,
+                statusProvider: session.svnService
+            )
+        case .settings:
+            MacSvnSettingsView(session: session)
+        default:
+            MacSvnRoutePlaceholderView(route: route)
+        }
+    }
+}

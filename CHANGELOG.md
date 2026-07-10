@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 启动长程 Loop 全量交付；新建 `feat/long-loop-full-delivery` 与 backlog（Wave A–H）；完成 A1–A3/B1/B2/B7——`MacSvnAppSession` DI、svn 环境门禁、工作副本管理页、变更页接线、设置页、App 启动引导
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnDesktopApp/**, Tests/MacSvnAppTests/**, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: App 可启动并管理 WC / 查看 status；下一轮 backlog 首项为 B3（Update/Cleanup/Revert 等动作栏）
+
+## 2026-07-10
+
 - Summary: 将 `codex/p1-core-scaffold` 快进合并进 `main` 并推送远程；全量测试 464 通过；`main` 现为可继续开发的基线（含 MacSvnCore P1–P6 核心、SwiftUI App 壳）
 - Affected: 分支合并（无新增业务代码）；远程 `main` / `codex/p1-core-scaffold`
 - Impact: 后续应从最新 `main` 新开功能分支；旧 scaffold 分支仅作历史备份
