@@ -231,7 +231,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T0.7 / G0 | 5330255 | `swift test` 529 绿；parity-coverage + fixture 测绿 | 0/114 基线 | **G0 通过**；进入 T1 |
 | 2026-07-10 | T1.1 | 2b4068a | CFMColumn* + ChangesViewModel + status -v | #8 仍 🟡（本地列/刷新齐） | CFM 列持久化 + 刷新时间戳 |
 | 2026-07-10 | T1.2 | 4621639 | CFMChangeHighlight* + status -u + repos-status | #8 仍 🟡（远端/颜色齐；Repair 待 T1.3） | Check Repository + 行高亮 |
-| 2026-07-10 | T1.3 | （提交后回填） | RepairMoveCopyPairing + WC move/copy + CFM 菜单 | #45 ✅；#8 ✅ | Repair Move/Copy 集成测绿 |
+| 2026-07-10 | T1.3 | d84b794 | RepairMoveCopyPairing + WC move/copy + CFM 菜单 | #45 ✅；#8 ✅ | Repair Move/Copy 集成测绿 |
 
 ---
 
