@@ -63,9 +63,13 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
         }
         .task {
             applyPendingDiffPathSeed()
+            applyPendingLogDiffSeed()
         }
         .onChange(of: navigator.pendingDiffPath) { _, _ in
             applyPendingDiffPathSeed()
+        }
+        .onChange(of: navigator.pendingLogDiff) { _, _ in
+            applyPendingLogDiffSeed()
         }
     }
 
@@ -75,6 +79,15 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
         seededSelection = [path]
         if focusedDiffPath != path {
             focusedDiffPath = path
+        }
+    }
+
+    /// 历史页原子 Diff：只同步 CFM 选中，修订由 DiffView 消费 `pendingLogDiff`。
+    private func applyPendingLogDiffSeed() {
+        guard let intent = navigator.pendingLogDiff else { return }
+        seededSelection = [intent.path]
+        if focusedDiffPath != intent.path {
+            focusedDiffPath = intent.path
         }
     }
 }

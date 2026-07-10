@@ -389,23 +389,19 @@ public struct MacSvnLogView: View {
             revision: revision,
             workingCopyURL: workingCopyURL
         ) else {
-            errorText = "不支持的日志动作"
+            errorText = "无法解析路径「\(changedPath)」相对工作副本 URL，请确认已刷新且路径属于当前 WC"
             return
         }
 
         switch intent {
         case .compareWithWorkingCopy(let path, let rev):
-            navigator.pendingDiffCompareKind = .workingCopy
-            navigator.pendingDiffRevision = rev
-            navigator.pendingDiffPath = path
+            navigator.pendingLogDiff = PendingLogDiffIntent(path: path, revision: rev, kind: .workingCopy)
             navigator.selectMode(.changes)
             statusText = "与工作副本比较：\(path) @ r\(rev.value)"
             navigator.lastAutomationMessage = statusText
 
         case .compareWithPrevious(let path, let rev):
-            navigator.pendingDiffCompareKind = .previous
-            navigator.pendingDiffRevision = rev
-            navigator.pendingDiffPath = path
+            navigator.pendingLogDiff = PendingLogDiffIntent(path: path, revision: rev, kind: .previous)
             navigator.selectMode(.changes)
             statusText = "与上一修订比较：\(path) @ r\(rev.value)"
             navigator.lastAutomationMessage = statusText
@@ -471,10 +467,14 @@ public struct MacSvnLogView: View {
     private func saveRevision(path: String, revision: Revision) async {
         do {
             let (data, basename) = try await materializeRevisionData(path: path, revision: revision)
-            let panel = NSSavePanel()
-            panel.nameFieldStringValue = basename
-            panel.canCreateDirectories = true
-            guard panel.runModal() == .OK, let url = panel.url else { return }
+            let saved: URL? = await MainActor.run {
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = basename
+                panel.canCreateDirectories = true
+                guard panel.runModal() == .OK else { return nil }
+                return panel.url
+            }
+            guard let url = saved else { return }
             try data.write(to: url, options: .atomic)
             statusText = "已另存 r\(revision.value) → \(url.path)"
         } catch {

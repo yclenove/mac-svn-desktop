@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: T2.3 审计修复：历史 Diff 改用原子 `pendingLogDiff`；SavePanel 回主线程；CFM 切文件重置修订范围；路径解析失败提示更明确
+- Affected: MacSvnAppNavigator, MacSvnDiffView, MacSvnWorkingCopyWorkspaceView, MacSvnLogView, MacSvnRepoBrowserView, CHANGELOG.md
+- Impact: 消除历史→嵌入 Diff 竞态与 SavePanel 线程风险
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T2.3：Show Log 右键 L01/L02/L04–L08（与 WC/上一修订比较、统一 Diff、另存/打开、Blame、Browse）；L03 仍属 T3
 - Affected: LogContextActionPolicy, MacSvnLogView, MacSvnDiffView, MacSvnBlameView, MacSvnRepoBrowserView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: inventory L01–L08(除L03) ✅；下一 T2.4（L09–L12/L14）

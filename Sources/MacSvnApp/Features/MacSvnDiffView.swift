@@ -136,8 +136,10 @@ public struct MacSvnDiffView: View {
         }
         .onChange(of: externalSelectedPath) { _, newValue in
             guard embedded else { return }
+            // 历史原子 Diff 由 pendingLogDiff 路径处理，避免先按 BASE 加载
+            if navigator.pendingLogDiff != nil { return }
             if let newValue {
-                Task { await loadExternalPath(newValue) }
+                Task { await loadExternalPath(newValue, resetRevisionRange: true) }
             } else {
                 selectedPath = nil
                 // 保留 viewModel 实例，仅清空展示，避免反复重建 Observable
@@ -149,8 +151,8 @@ public struct MacSvnDiffView: View {
             if embedded {
                 await ensureViewModel()
                 await consumeNavigatorIntent()
-                if let externalSelectedPath {
-                    await loadExternalPath(externalSelectedPath)
+                if navigator.pendingLogDiff == nil, let externalSelectedPath {
+                    await loadExternalPath(externalSelectedPath, resetRevisionRange: false)
                 }
             } else {
                 await reloadPaths()
@@ -163,11 +165,18 @@ public struct MacSvnDiffView: View {
         .onChange(of: navigator.pendingDiffRevision) { _, _ in
             Task { await consumeNavigatorIntent() }
         }
+        .onChange(of: navigator.pendingLogDiff) { _, _ in
+            Task { await consumeNavigatorIntent() }
+        }
     }
 
-    private func loadExternalPath(_ path: String) async {
+    private func loadExternalPath(_ path: String, resetRevisionRange: Bool) async {
         await ensureViewModel()
-        // 不因「同路径已 loaded」跳过：历史页可能后到 pendingDiffRevision，需按新修订重载
+        if resetRevisionRange {
+            // CFM 切换文件：回到 WC/BASE，避免沿用历史页修订窗口
+            r1Text = ""
+            r2Text = ""
+        }
         if !paths.contains(path) {
             paths.insert(path, at: 0)
         }
@@ -346,6 +355,19 @@ public struct MacSvnDiffView: View {
     }
 
     private func consumeNavigatorIntent() async {
+        if let intent = navigator.consumePendingLogDiff() {
+            switch intent.kind {
+            case .previous:
+                r1Text = String(max(0, intent.revision.value - 1))
+                r2Text = String(intent.revision.value)
+            case .workingCopy:
+                r1Text = String(intent.revision.value)
+                r2Text = ""
+            }
+            await loadExternalPath(intent.path, resetRevisionRange: false)
+            return
+        }
+
         var revisionApplied = false
         if let rev = navigator.consumePendingDiffRevision() {
             let kind = navigator.consumePendingDiffCompareKind()
@@ -361,7 +383,7 @@ public struct MacSvnDiffView: View {
         }
         // 嵌入模式由 WorkingCopyWorkspace 消费 pendingDiffPath 并经 externalSelectedPath 注入
         if embedded {
-            // 修订后到时，对当前嵌入路径按 r1:r2 重载，避免只看到 WC/BASE
+            // 分字段修订后到：对当前嵌入路径按 r1:r2 重载
             if revisionApplied, let path = externalSelectedPath ?? selectedPath {
                 await loadDiff(path: path)
             }

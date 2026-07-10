@@ -15,6 +15,19 @@ public enum PendingDiffCompareKind: Equatable, Sendable {
     case workingCopy
 }
 
+/// 历史页一次性注入的 Diff 意图（路径 + 修订 + 对比模式），避免分字段竞态。
+public struct PendingLogDiffIntent: Equatable, Sendable {
+    public let path: String
+    public let revision: Revision
+    public let kind: PendingDiffCompareKind
+
+    public init(path: String, revision: Revision, kind: PendingDiffCompareKind) {
+        self.path = path
+        self.revision = revision
+        self.kind = kind
+    }
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -25,6 +38,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingDiffRevision: Revision?
     /// 历史页 Diff 对比模式：与上一修订 / 与工作副本（L01/L02）。
     @Published public var pendingDiffCompareKind: PendingDiffCompareKind = .previous
+    /// 历史页原子 Diff 意图（优先于分字段 pendingDiff*）。
+    @Published public var pendingLogDiff: PendingLogDiffIntent?
     /// 历史 → Blame（L07）。
     @Published public var pendingBlamePath: String?
     /// 历史 → 仓库浏览器 URL（L08）。
@@ -211,6 +226,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingDiffCompareKind() -> PendingDiffCompareKind {
         let value = pendingDiffCompareKind
         pendingDiffCompareKind = .previous
+        return value
+    }
+
+    public func consumePendingLogDiff() -> PendingLogDiffIntent? {
+        let value = pendingLogDiff
+        pendingLogDiff = nil
         return value
     }
 

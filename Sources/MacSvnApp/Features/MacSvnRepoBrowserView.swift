@@ -351,14 +351,18 @@ public struct MacSvnRepoBrowserView: View {
     }
 
     /// 消费历史页 L08 注入的仓库 URL（及可选修订）。
+    ///
+    /// 列表仍按 URL 浏览；修订写入检出表单，提示用户当前为历史 peg（完整 peg list 属 Repo Browser 进阶）。
     private func consumePendingBrowse() async {
         guard let url = navigator.consumePendingBrowseURL() else { return }
         let rev = navigator.consumePendingBrowseRevision()
         rootURL = url
         if let rev {
             checkoutRevisionText = String(rev.value)
+            statusText = "来自历史：\(url) @ r\(rev.value)（目录列表为当前 HEAD；检出请用下方修订）"
+        } else {
+            statusText = "来自历史：\(url)"
         }
-        statusText = rev.map { "来自历史：\(url) @ r\($0.value)" } ?? "来自历史：\(url)"
         await openRoot()
     }
 
