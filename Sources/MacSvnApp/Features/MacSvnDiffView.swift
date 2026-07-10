@@ -167,9 +167,7 @@ public struct MacSvnDiffView: View {
 
     private func loadExternalPath(_ path: String) async {
         await ensureViewModel()
-        if selectedPath == path, viewModel?.state == .loaded {
-            return
-        }
+        // 不因「同路径已 loaded」跳过：历史页可能后到 pendingDiffRevision，需按新修订重载
         if !paths.contains(path) {
             paths.insert(path, at: 0)
         }
@@ -348,12 +346,20 @@ public struct MacSvnDiffView: View {
     }
 
     private func consumeNavigatorIntent() async {
+        var revisionApplied = false
         if let rev = navigator.consumePendingDiffRevision() {
             r1Text = String(max(0, rev.value - 1))
             r2Text = String(rev.value)
+            revisionApplied = true
         }
         // 嵌入模式由 WorkingCopyWorkspace 消费 pendingDiffPath 并经 externalSelectedPath 注入
-        guard !embedded else { return }
+        if embedded {
+            // 修订后到时，对当前嵌入路径按 r1:r2 重载，避免只看到 WC/BASE
+            if revisionApplied, let path = externalSelectedPath ?? selectedPath {
+                await loadDiff(path: path)
+            }
+            return
+        }
         if let path = navigator.consumePendingDiffPath() {
             if !paths.contains(path) {
                 paths.insert(path, at: 0)

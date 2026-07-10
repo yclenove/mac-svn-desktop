@@ -29,6 +29,8 @@ public final class LogViewModel {
     private let batchSize: Int
     private let logProvider: any LogProviding
     private var nextFromRevision: Revision?
+    /// 防止 stop-on-copy / 刷新并发重入导致分页游标错乱。
+    private var loadGeneration = 0
 
     /// 是否在拷贝点停止（`--stop-on-copy`）。变更后需重新 `loadInitial`。
     public var stopOnCopy: Bool = false
@@ -54,6 +56,8 @@ public final class LogViewModel {
     }
 
     public func loadInitial(from revision: Revision) async {
+        loadGeneration += 1
+        let generation = loadGeneration
         state = .loading
         entries = []
         hasMore = false
@@ -61,10 +65,12 @@ public final class LogViewModel {
 
         do {
             let loadedEntries = try await fetchLog(from: revision, batch: batchSize)
+            guard generation == loadGeneration else { return }
             entries = loadedEntries
             updatePagination(from: loadedEntries, pageSize: batchSize)
             state = .loaded
         } catch {
+            guard generation == loadGeneration else { return }
             entries = []
             hasMore = false
             nextFromRevision = nil
@@ -78,14 +84,18 @@ public final class LogViewModel {
             return
         }
 
+        loadGeneration += 1
+        let generation = loadGeneration
         state = .loadingMore
 
         do {
             let loadedEntries = try await fetchLog(from: nextFromRevision, batch: batchSize)
+            guard generation == loadGeneration else { return }
             entries += loadedEntries
             updatePagination(from: loadedEntries, pageSize: batchSize)
             state = .loaded
         } catch {
+            guard generation == loadGeneration else { return }
             state = .error(String(describing: error))
         }
     }

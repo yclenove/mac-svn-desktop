@@ -77,6 +77,11 @@ public struct MacSvnLogView: View {
                     Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if !pathFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, shown == 0, !viewModel.entries.isEmpty {
+                        Text("路径过滤无命中（需 verbose 路径明细）")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -205,8 +210,9 @@ public struct MacSvnLogView: View {
                                         .textSelection(.enabled)
                                     Spacer()
                                     Button("Diff") {
-                                        navigator.pendingDiffPath = change.path
+                                        // 先写修订再写路径，降低嵌入 Diff 先按 BASE 加载的竞态窗口
                                         navigator.pendingDiffRevision = entry.revision
+                                        navigator.pendingDiffPath = change.path
                                         navigator.selectMode(.changes)
                                         navigator.lastAutomationMessage = "查看 r\(entry.revision.value) · \(change.path)"
                                     }
@@ -219,12 +225,12 @@ public struct MacSvnLogView: View {
 
                     HStack {
                         Button("在变更区查看 Diff") {
+                            guard let first = entry.changedPaths.first?.path else { return }
                             navigator.pendingDiffRevision = entry.revision
-                            if let first = entry.changedPaths.first?.path {
-                                navigator.pendingDiffPath = first
-                            }
+                            navigator.pendingDiffPath = first
                             navigator.selectMode(.changes)
                         }
+                        .disabled(entry.changedPaths.isEmpty)
                         Button("更新到此版本") {
                             Task { await updateTo(entry.revision) }
                         }
@@ -275,8 +281,11 @@ public struct MacSvnLogView: View {
         viewModel = vm
         let from = Revision(record.revision?.value ?? 1)
         await vm.loadInitial(from: from)
-        if selectedRevision == nil {
-            selectedRevision = vm.entries.first?.revision.value
+        if let selectedRevision,
+           vm.entries.contains(where: { $0.revision.value == selectedRevision }) {
+            // 保留仍存在的选中修订
+        } else {
+            self.selectedRevision = vm.entries.first?.revision.value
         }
     }
 
