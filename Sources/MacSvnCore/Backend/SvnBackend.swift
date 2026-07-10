@@ -8,7 +8,7 @@ public protocol SvnBackend: Sendable {
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, auth: Credential?) async throws -> UpdateSummary
     func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
-    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
     /// CFM Repair Move：`svn move --force`（工作副本内，不提交）

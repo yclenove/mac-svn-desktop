@@ -100,20 +100,58 @@ public struct MacSvnCommitView: View {
 
     @ViewBuilder
     private func candidateList(_ viewModel: CommitViewModel) -> some View {
-        List {
-            ForEach(viewModel.candidateStatuses, id: \.path) { status in
-                Toggle(isOn: Binding(
-                    get: { viewModel.selectedPaths.contains(status.path) },
-                    set: { viewModel.setSelected($0, for: status.path) }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(status.path)
-                        Text(status.itemStatus.rawValue)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Button("Diff") {
+                    diffSelected(viewModel)
+                }
+                .disabled(viewModel.orderedSelectedPaths.count != 1)
+
+                Button("还原") {
+                    Task { await revertSelected(viewModel) }
+                }
+                .disabled(viewModel.orderedSelectedPaths.isEmpty || viewModel.state == .committing)
+
+                Spacer()
+                Text("已选 \(viewModel.orderedSelectedPaths.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            List {
+                ForEach(viewModel.candidateStatuses, id: \.path) { status in
+                    Toggle(isOn: Binding(
+                        get: { viewModel.selectedPaths.contains(status.path) },
+                        set: { viewModel.setSelected($0, for: status.path) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(status.path)
+                            HStack(spacing: 6) {
+                                Text(status.itemStatus.rawValue)
+                                if status.itemStatus == .unversioned {
+                                    Text("提交前将 add")
+                                }
+                            }
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                        }
+                    }
+                    .disabled(status.itemStatus == .conflicted || status.isTreeConflict)
+                    .contextMenu {
+                        Button("Diff") {
+                            _ = navigator.perform(command: .diff, paths: [status.path])
+                        }
+                        Button("还原") {
+                            Task {
+                                await viewModel.revertSelected(paths: [status.path])
+                                await reloadCandidates()
+                            }
+                        }
+                        .disabled(status.itemStatus == .unversioned)
                     }
                 }
-                .disabled(status.itemStatus == .conflicted || status.isTreeConflict)
             }
         }
     }
@@ -130,6 +168,12 @@ public struct MacSvnCommitView: View {
             .font(.body)
             .frame(minHeight: embedded ? 80 : 160)
             .border(Color.secondary.opacity(0.3))
+
+            Toggle("Keep locks（提交后保留锁）", isOn: Binding(
+                get: { viewModel.keepLocks },
+                set: { viewModel.keepLocks = $0 }
+            ))
+            .font(.callout)
 
             if !viewModel.recentMessages.isEmpty {
                 Text("最近说明")
@@ -165,6 +209,11 @@ public struct MacSvnCommitView: View {
             if case .committed(let revision) = viewModel.state {
                 Text("已提交 r\(revision.value)")
                     .foregroundStyle(.green)
+            }
+
+            if case .reverted = viewModel.state {
+                Text("已还原选中项")
+                    .foregroundStyle(.secondary)
             }
 
             if case .error(let message) = viewModel.state {
@@ -243,6 +292,22 @@ public struct MacSvnCommitView: View {
         await viewModel.commit(auth: nil, skipGuardWarnings: skipWarnings)
         if case .committed(let revision) = viewModel.state {
             statusText = "提交成功 r\(revision.value)"
+        }
+    }
+
+    private func diffSelected(_ viewModel: CommitViewModel) {
+        guard let path = viewModel.orderedSelectedPaths.first,
+              viewModel.orderedSelectedPaths.count == 1 else { return }
+        _ = navigator.perform(command: .diff, paths: [path])
+    }
+
+    private func revertSelected(_ viewModel: CommitViewModel) async {
+        await viewModel.revertSelected()
+        if case .reverted = viewModel.state {
+            statusText = "已还原"
+            await reloadCandidates()
+        } else if case .error(let message) = viewModel.state {
+            statusText = "还原失败：\(message)"
         }
     }
 

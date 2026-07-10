@@ -126,7 +126,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T1.1** Check for Modifications：本地 status、列、刷新（#8 升 🟡→接近 ✅）
 - [x] **T1.2** CFM：Check Repository (`status -u`)、颜色规则（#8）
 - [x] **T1.3** CFM：Repair Move / Repair Copy（#45）
-- [ ] **T1.4** Commit 对话框级：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4 + §4.1）
+- [x] **T1.4** Commit 对话框级：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4 + §4.1）
 - [ ] **T1.5** Update：同仓多路径统一 revision（#2 + §4.3）
 - [ ] **T1.6** Diff：BASE、双文件、外置查看器入口（#5）
 - [ ] **T1.7** Add / Delete / Revert（勾选列表）/ Cleanup（#14,17,18,29）
@@ -232,6 +232,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.1 | 2b4068a | CFMColumn* + ChangesViewModel + status -v | #8 仍 🟡（本地列/刷新齐） | CFM 列持久化 + 刷新时间戳 |
 | 2026-07-10 | T1.2 | 4621639 | CFMChangeHighlight* + status -u + repos-status | #8 仍 🟡（远端/颜色齐；Repair 待 T1.3） | Check Repository + 行高亮 |
 | 2026-07-10 | T1.3 | d84b794 | RepairMoveCopyPairing + WC move/copy + CFM 菜单 | #45 ✅；#8 ✅ | Repair Move/Copy 集成测绿 |
+| 2026-07-10 | T1.4 | （提交后回填） | CommitSelection+keepLocks+unversioned add+Diff/Revert | #4 ✅ | 说明历史已有；§4.1 进阶项仍开 |
 
 ---
 

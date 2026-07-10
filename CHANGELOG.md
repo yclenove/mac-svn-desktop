@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.4：Commit 对话框级——未版本进候选且勾选后提交前 add；Keep locks（`--no-unlock`）；单项 Diff/Revert；说明历史沿用
+- Affected: CommitViewModel, CommitSelectionPolicy, SvnCommandBuilder/Backend/Cli/Service, MacSvnCommitView, Tests/*, docs/*
+- Impact: inventory #4 ✅；§4.1 递归未版本目录/自动完成/重开对话框仍开
+
+## 2026-07-10
+
 - Summary: fix(T1.3)：Repair Copy 失败路径禁止删除 aside；写操作失败也刷新 CFM；成功刷新保留 Check Repository；D09 ✅
 - Affected: SvnCliBackend.swift, MacSvnChangesView.swift, inventory D09, parity-coverage.json
 - Impact: 避免用户未版本文件被误删；失败后列表与磁盘一致；远端高亮不因 Repair 回退

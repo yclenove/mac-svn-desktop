@@ -83,7 +83,7 @@
 | 1 | Checkout | `checkout [-depth] [--ignore-externals] [-r] URL PATH` | depth、omit externals、revision | 🟡 | T2 |
 | 2 | Update | 先 `info` 取统一 rev 再 `update`（多选同仓） | 进度、冲突入口 | 🟡 | T1 |
 | 3 | Update to revision | `update [-r][-depth][--ignore-externals]` | rev、depth、omit externals | 🟡 | T2 |
-| 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | 🟡 | T1 |
+| 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | 🟡 | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | 🟡 | T2 |
@@ -133,13 +133,13 @@
 
 ### 4.1 Commit（必须）
 
-- [ ] 修改项默认勾选（可配置「不自动勾选」）  
-- [ ] 显示未版本；勾选未版本 → 提交前 `add`  
+- [x] 修改项默认勾选（可配置「不自动勾选」）  
+- [x] 显示未版本；勾选未版本 → 提交前 `add`  
 - [ ] 递归进入未版本目录（可关）  
-- [ ] 双击/按钮 Diff；单项 Revert  
-- [ ] 最近日志消息历史（条数可配）  
+- [x] 双击/按钮 Diff；单项 Revert  
+- [x] 最近日志消息历史（条数可配）  
 - [ ] 路径/关键字自动完成（可配超时）  
-- [ ] Keep locks → `--no-unlock`  
+- [x] Keep locks → `--no-unlock`  
 - [ ] Bugtraq / issue 正则高亮与校验（T5）  
 - [ ] 客户端 pre-commit 钩子（T5）  
 - [ ] 提交后若仍有未提交项可重开对话框（可配）  

@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T13:19:09Z",
+  "generated_at": "2026-07-10T13:27:34Z",
   "total": 114,
-  "done": 3,
-  "partial": 50,
+  "done": 4,
+  "partial": 49,
   "missing": 61,
-  "coverage": 0.026316,
-  "coverage_percent": 2.63,
+  "coverage": 0.035088,
+  "coverage_percent": 3.51,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,8 +16,8 @@
     },
     "command": {
       "total": 46,
-      "done": 2,
-      "partial": 22,
+      "done": 3,
+      "partial": 21,
       "missing": 22
     },
     "log": {
@@ -261,8 +261,8 @@
       "key": "cmd.04",
       "section": "command",
       "title": "Commit",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.05",

@@ -3,7 +3,7 @@ import XCTest
 @testable import MacSvnCore
 
 final class CommitViewModelTests: XCTestCase {
-    func testCommitCandidatesIncludeVersionedChangesAndConflictsOnly() {
+    func testCommitCandidatesIncludeVersionedChangesConflictsAndUnversioned() {
         let candidates = CommitSelectionPolicy.candidates(from: sampleStatuses())
 
         XCTAssertEqual(candidates.map(\.path), [
@@ -12,11 +12,12 @@ final class CommitViewModelTests: XCTestCase {
             "deleted.swift",
             "replaced.swift",
             "conflict.swift",
-            "tree-conflict.swift"
+            "tree-conflict.swift",
+            "scratch.tmp"
         ])
     }
 
-    func testDefaultSelectionExcludesConflictsAndUnsupportedStatuses() {
+    func testDefaultSelectionExcludesConflictsUnversionedAndUnsupportedStatuses() {
         let selected = CommitSelectionPolicy.defaultSelectedPaths(from: sampleStatuses())
 
         XCTAssertEqual(selected, Set([
@@ -25,6 +26,7 @@ final class CommitViewModelTests: XCTestCase {
             "deleted.swift",
             "replaced.swift"
         ]))
+        XCTAssertFalse(selected.contains("scratch.tmp"))
     }
 
     @MainActor
@@ -55,7 +57,8 @@ final class CommitViewModelTests: XCTestCase {
                 paths: ["modified.swift", "added.swift", "replaced.swift"],
                 message: "修复：登录超时",
                 auth: Credential(username: "u", password: "p"),
-                skipGuardWarnings: false
+                skipGuardWarnings: false,
+                keepLocks: false
             )
         ])
         XCTAssertEqual(statusRequests, [URL(fileURLWithPath: "/tmp/wc")])
@@ -132,6 +135,45 @@ final class CommitViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .committed(Revision(42)))
         XCTAssertEqual(skipFlags, [false, true])
+    }
+
+    @MainActor
+    func testCommitPassesKeepLocksFlag() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(7)))
+        let statusProvider = FakeStatusProvider(result: .success([]))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: statusProvider
+        )
+        viewModel.message = "keep locks"
+        viewModel.keepLocks = true
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(7)))
+        XCTAssertEqual(calls.map(\.keepLocks), [true])
+    }
+
+    @MainActor
+    func testRevertSelectedCallsProviderAndClearsSelection() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(1)))
+        let statusProvider = FakeStatusProvider(result: .success([]))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+        let revertCalls = await commitProvider.recordedRevertCalls()
+
+        XCTAssertEqual(viewModel.state, .reverted)
+        XCTAssertEqual(revertCalls, [["modified.swift"]])
+        XCTAssertFalse(viewModel.selectedPaths.contains("modified.swift"))
     }
 
     @MainActor
@@ -411,11 +453,13 @@ private struct CommitCall: Equatable, Sendable {
     let message: String
     let auth: Credential?
     let skipGuardWarnings: Bool
+    let keepLocks: Bool
 }
 
 private actor FakeCommitProvider: CommitProviding {
     private var results: [Result<Revision, Error>]
     private var calls: [CommitCall] = []
+    private var revertCalls: [[String]] = []
 
     init(result: Result<Revision, Error>) {
         self.results = [result]
@@ -429,24 +473,34 @@ private actor FakeCommitProvider: CommitProviding {
         calls
     }
 
+    func recordedRevertCalls() -> [[String]] {
+        revertCalls
+    }
+
     func commit(
         wc: URL,
         paths: [String],
         message: String,
         auth: Credential?,
-        skipGuardWarnings: Bool
+        skipGuardWarnings: Bool,
+        keepLocks: Bool
     ) async throws -> Revision {
         calls.append(CommitCall(
             wc: wc,
             paths: paths,
             message: message,
             auth: auth,
-            skipGuardWarnings: skipGuardWarnings
+            skipGuardWarnings: skipGuardWarnings,
+            keepLocks: keepLocks
         ))
         guard !results.isEmpty else {
             return Revision(0)
         }
         return try results.removeFirst().get()
+    }
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws {
+        revertCalls.append(paths)
     }
 }
 

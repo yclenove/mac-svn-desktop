@@ -37,7 +37,7 @@
 - [x] CFM：本地 status、列、刷新（#8）
 - [x] CFM：Check Repository（`status -u`）、颜色（#8）
 - [x] CFM：Repair Move / Repair Copy（#45）
-- [ ] Commit：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4）
+- [x] Commit：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4）
 - [ ] Update：同仓多路径统一 revision（#2）
 - [ ] Diff：BASE、双文件、外置查看器入口（#5）
 - [ ] Add / Delete / Revert（勾选）/ Cleanup（#14,#17,#18,#29）

@@ -7,14 +7,19 @@ public protocol CommitProviding: Sendable {
         paths: [String],
         message: String,
         auth: Credential?,
-        skipGuardWarnings: Bool
+        skipGuardWarnings: Bool,
+        keepLocks: Bool
     ) async throws -> Revision
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws
 }
 
 public enum CommitViewState: Equatable, Sendable {
     case idle
     case committing
     case committed(Revision)
+    case reverting
+    case reverted
     case guardWarnings([CommitGuardIssue])
     case error(String)
 }
@@ -41,10 +46,11 @@ public enum CommitMessageHistoryViewState: Equatable, Sendable {
 }
 
 public enum CommitSelectionPolicy {
+    /// 提交对话框候选：版本化变更 + 冲突 + 未版本（勾选未版本将在提交前 add）
     public static func candidates(from statuses: [FileStatus]) -> [FileStatus] {
         statuses.filter { status in
             switch status.itemStatus {
-            case .modified, .added, .deleted, .replaced, .conflicted:
+            case .modified, .added, .deleted, .replaced, .conflicted, .unversioned:
                 return true
             default:
                 return status.isTreeConflict
@@ -52,9 +58,12 @@ public enum CommitSelectionPolicy {
         }
     }
 
+    /// 默认勾选修改项；未版本与冲突不自动勾选（对齐小乌龟）
     public static func defaultSelectedPaths(from statuses: [FileStatus]) -> Set<String> {
         Set(candidates(from: statuses).compactMap { status in
-            guard status.itemStatus != .conflicted, !status.isTreeConflict else {
+            guard status.itemStatus != .conflicted,
+                  status.itemStatus != .unversioned,
+                  !status.isTreeConflict else {
                 return nil
             }
 
@@ -86,6 +95,8 @@ public final class CommitViewModel {
     public let candidateStatuses: [FileStatus]
     public var selectedPaths: Set<String>
     public var message = ""
+    /// Keep locks：提交后保留锁（`svn commit --no-unlock`）
+    public var keepLocks = false
 
     public init(
         workingCopy: URL,
@@ -114,6 +125,7 @@ public final class CommitViewModel {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !orderedSelectedPaths.isEmpty
             && state != .committing
+            && state != .reverting
     }
 
     public func setSelected(_ isSelected: Bool, for path: String) {
@@ -220,7 +232,8 @@ public final class CommitViewModel {
                 paths: paths,
                 message: message,
                 auth: auth,
-                skipGuardWarnings: skipGuardWarnings
+                skipGuardWarnings: skipGuardWarnings,
+                keepLocks: keepLocks
             )
             committedRevision = revision
             guardIssues = []
@@ -230,6 +243,28 @@ public final class CommitViewModel {
         } catch SvnServiceError.commitGuardWarnings(let issues) {
             guardIssues = issues
             state = .guardWarnings(issues)
+        } catch {
+            state = .error(String(describing: error))
+        }
+    }
+
+    /// 单项/多选还原：先业务成功再刷新候选 status。
+    public func revertSelected(paths: [String]? = nil, recursive: Bool = false) async {
+        let targets = paths ?? orderedSelectedPaths
+        guard !targets.isEmpty else {
+            state = .error("noSelectedPaths")
+            return
+        }
+
+        state = .reverting
+
+        do {
+            try await commitProvider.revert(wc: workingCopy, paths: targets, recursive: recursive)
+            refreshedStatuses = try await statusProvider.status(wc: workingCopy)
+            for path in targets {
+                selectedPaths.remove(path)
+            }
+            state = .reverted
         } catch {
             state = .error(String(describing: error))
         }

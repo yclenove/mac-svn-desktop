@@ -244,7 +244,7 @@ public actor SvnService {
         message: String,
         auth: Credential?
     ) async throws -> Revision {
-        try await commit(wc: wc, paths: paths, message: message, auth: auth, skipGuardWarnings: false)
+        try await commit(wc: wc, paths: paths, message: message, auth: auth, skipGuardWarnings: false, keepLocks: false)
     }
 
     public func commit(
@@ -252,7 +252,8 @@ public actor SvnService {
         paths: [String],
         message: String,
         auth: Credential?,
-        skipGuardWarnings: Bool = false
+        skipGuardWarnings: Bool = false,
+        keepLocks: Bool = false
     ) async throws -> Revision {
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SvnServiceError.emptyCommitMessage
@@ -260,10 +261,17 @@ public actor SvnService {
 
         return try await withWriteLock(wc: wc, operation: "commit") {
             let statuses = try await backend.status(wc: wc)
+            let statusesByPath = Dictionary(uniqueKeysWithValues: statuses.map { ($0.path, $0) })
             let conflicts = conflictingSelectedPaths(paths: paths, statuses: statuses)
 
             guard conflicts.isEmpty else {
                 throw SvnError.conflict(paths: conflicts)
+            }
+
+            // 勾选未版本项：提交前在同一写锁内 add（失败则不进入 commit）
+            let unversionedToAdd = paths.filter { statusesByPath[$0]?.itemStatus == .unversioned }
+            if !unversionedToAdd.isEmpty {
+                try await backend.add(wc: wc, paths: unversionedToAdd)
             }
 
             let guardIssues = try await commitGuard?.evaluate(wc: wc, paths: paths) ?? []
@@ -278,7 +286,13 @@ public actor SvnService {
             }
 
             return try await retryingAuthentication(wc: wc, initialAuth: auth) { auth in
-                try await backend.commit(wc: wc, paths: paths, message: message, auth: auth)
+                try await backend.commit(
+                    wc: wc,
+                    paths: paths,
+                    message: message,
+                    auth: auth,
+                    keepLocks: keepLocks
+                )
             }
         }
     }

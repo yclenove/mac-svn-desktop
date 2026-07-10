@@ -45,7 +45,7 @@
 必须达到对话框级，而非仅按钮：
 
 - [x] **Check for Modifications**：本地 status、Check Repository(`-u`)、颜色规则、列配置、Repair Move/Copy
-- [ ] **Commit**：勾选、未版本勾选→add、Keep locks、说明历史、单项 Diff/Revert
+- [x] **Commit**：勾选、未版本勾选→add、Keep locks、说明历史、单项 Diff/Revert
 - [ ] **Update**：统一 revision 更新策略
 - [ ] **Diff**：BASE Diff、双文件 Diff、外置查看器入口
 - [ ] **Add / Delete / Revert / Cleanup / Rename**

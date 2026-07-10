@@ -27,6 +27,20 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testCommitKeepLocksAddsNoUnlock() {
+        let command = SvnCommandBuilder.commit(
+            paths: ["locked.txt"],
+            message: "keep",
+            keepLocks: true
+        )
+        XCTAssertEqual(command.arguments, [
+            "commit", "--encoding", "UTF-8", "--non-interactive",
+            "-m", "keep",
+            "--no-unlock",
+            "locked.txt"
+        ])
+    }
+
     func testUpdatePostponesConflictsAndCanTargetRevision() {
         let command = SvnCommandBuilder.update(paths: ["src"], revision: Revision(42))
         XCTAssertEqual(command.arguments, [

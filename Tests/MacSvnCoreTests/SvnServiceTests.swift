@@ -648,6 +648,47 @@ final class SvnServiceTests: XCTestCase {
         ])
     }
 
+    func testCommitAddsSelectedUnversionedPathsBeforeCommit() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false),
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitResult = Revision(9)
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let revision = try await service.commit(
+            wc: wc,
+            paths: ["new.txt", "a.txt"],
+            message: "add and commit",
+            auth: nil
+        )
+
+        XCTAssertEqual(revision, Revision(9))
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "add", "commit"])
+        XCTAssertEqual(backend.commitKeepLocks, [false])
+    }
+
+    func testCommitKeepLocksPassesNoUnlockToBackend() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitResult = Revision(3)
+        let service = SvnService(backend: backend)
+
+        _ = try await service.commit(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["a.txt"],
+            message: "locked",
+            auth: nil,
+            keepLocks: true
+        )
+
+        XCTAssertEqual(backend.commitKeepLocks, [true])
+    }
+
     func testCommitGuardBlockingIssuesCannotBeSkipped() async {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -751,6 +792,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedUpdateCredentials: [Credential?] = []
     private var recordedUpdateSetDepths: [SvnDepth?] = []
     private var recordedCommitCredentials: [Credential?] = []
+    private var recordedCommitKeepLocks: [Bool] = []
     private var recordedCheckoutCredentials: [Credential?] = []
     private var recordedCheckoutDepths: [SvnDepth] = []
     private var recordedExportCredentials: [Credential?] = []
@@ -800,6 +842,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedCommitCredentials
+    }
+
+    var commitKeepLocks: [Bool] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCommitKeepLocks
     }
 
     var checkoutCredentials: [Credential?] {
@@ -1019,8 +1069,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return updateResult
     }
 
-    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
-        let error = recordCommit(auth: auth)
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision {
+        let error = recordCommit(auth: auth, keepLocks: keepLocks)
         if let error {
             throw error
         }
@@ -1240,10 +1290,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return error
     }
 
-    private func recordCommit(auth: Credential?) -> SvnError? {
+    private func recordCommit(auth: Credential?, keepLocks: Bool = false) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "commit"))
         recordedCommitCredentials.append(auth)
+        recordedCommitKeepLocks.append(keepLocks)
         let error = commitErrors.isEmpty ? nil : commitErrors.removeFirst()
         callsLock.unlock()
         return error

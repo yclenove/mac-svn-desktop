@@ -79,9 +79,20 @@ public struct SvnCliBackend: SvnBackend {
         return try MergeOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
     }
 
-    public func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
+    public func commit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        auth: Credential?,
+        keepLocks: Bool = false
+    ) async throws -> Revision {
         let authArguments = try AuthArguments.build(credential: auth)
-        let command = SvnCommandBuilder.commit(paths: paths, message: message, authArguments: authArguments.arguments)
+        let command = SvnCommandBuilder.commit(
+            paths: paths,
+            message: message,
+            authArguments: authArguments.arguments,
+            keepLocks: keepLocks
+        )
         let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
         return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
     }

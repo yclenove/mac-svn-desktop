@@ -31,11 +31,23 @@ public enum SvnCommandBuilder {
         ] + targets)
     }
 
-    public static func commit(paths: [String], message: String, authArguments: [String] = []) -> SvnCommand {
-        SvnCommand(arguments: [
+    public static func commit(
+        paths: [String],
+        message: String,
+        authArguments: [String] = [],
+        keepLocks: Bool = false
+    ) -> SvnCommand {
+        var arguments = [
             "commit", "--encoding", "UTF-8", "--non-interactive",
             "-m", message
-        ] + authArguments + paths)
+        ]
+        // Keep locks：提交后不释放锁（对齐 Tortoise `--no-unlock`）
+        if keepLocks {
+            arguments.append("--no-unlock")
+        }
+        arguments += authArguments
+        arguments += paths
+        return SvnCommand(arguments: arguments)
     }
 
     public static func update(
