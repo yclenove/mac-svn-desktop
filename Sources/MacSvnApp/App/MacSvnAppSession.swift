@@ -15,6 +15,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let commitMessageHistoryStore: CommitMessageHistoryStore
     public let repoBookmarkStore: RepoBookmarkStore
     public let branchListService: BranchListService
+    public let conflictService: ConflictService
     public let svnService: SvnService
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
@@ -26,6 +27,7 @@ public final class MacSvnAppSession: ObservableObject {
         commitMessageHistoryStore: CommitMessageHistoryStore,
         repoBookmarkStore: RepoBookmarkStore,
         branchListService: BranchListService,
+        conflictService: ConflictService,
         svnService: SvnService,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String
@@ -36,6 +38,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.commitMessageHistoryStore = commitMessageHistoryStore
         self.repoBookmarkStore = repoBookmarkStore
         self.branchListService = branchListService
+        self.conflictService = conflictService
         self.svnService = svnService
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
@@ -77,6 +80,12 @@ public final class MacSvnAppSession: ObservableObject {
         )
         let svnService = SvnService(backend: backend)
         let branchListService = BranchListService(listProvider: svnService)
+        let conflictService = ConflictService(
+            statusProvider: svnService,
+            infoProvider: svnService,
+            resolveProvider: svnService,
+            revertProvider: svnService
+        )
 
         return MacSvnAppSession(
             supportDirectory: directory,
@@ -85,6 +94,7 @@ public final class MacSvnAppSession: ObservableObject {
             commitMessageHistoryStore: commitMessageHistoryStore,
             repoBookmarkStore: repoBookmarkStore,
             branchListService: branchListService,
+            conflictService: conflictService,
             svnService: svnService,
             svnExecutablePath: svnPath
         )

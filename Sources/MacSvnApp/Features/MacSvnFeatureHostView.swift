@@ -37,8 +37,7 @@ public struct MacSvnFeatureHostView: View {
         case .branches:
             MacSvnBranchesView(workspaceController: workspaceController, session: session)
         case .merge:
-            // 路由标题为「冲突合并」：Wave C 先接 Merge 向导；Wave D 再叠冲突列表/编辑器
-            MacSvnMergeWizardView(workspaceController: workspaceController, session: session)
+            MacSvnConflictWorkspaceView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
         default:

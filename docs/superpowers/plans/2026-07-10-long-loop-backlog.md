@@ -55,9 +55,9 @@
 
 ### Wave D — P3 冲突 UI
 
-- [ ] **D1** 冲突列表：接 `ConflictListViewModel`，有冲突时侧边栏角标
-- [ ] **D2** 三路合并编辑器窗口：接 `MergeEditorViewModel`（逐块操作、保存 resolve）
-- [ ] **D3** 树冲突解决：接 `TreeConflictViewModel`
+- [x] **D1** 冲突列表：接 `ConflictListViewModel`，有冲突时侧边栏角标
+- [x] **D2** 三路合并编辑器窗口：接 `MergeEditorViewModel`（逐块操作、保存 resolve）
+- [x] **D3** 树冲突解决：接 `TreeConflictViewModel`
 
 ### Wave E — P4 高级 SVN + 效率 UI
 
