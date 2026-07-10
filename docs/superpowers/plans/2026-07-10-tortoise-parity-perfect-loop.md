@@ -241,7 +241,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.10 | 3f4a472 | Copy/Move 目标路径校验 + svn copy/move 向导 | #36 ✅ | Finder 拖拽引导仍开 |
 | 2026-07-10 | T1.11 | 3803f1c | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
 | 2026-07-10 | T1.12 / G1 | 5771e3e | G1：T1 命令行全 ✅；domain D06/07/10/14–16；H-T1 全勾；全测绿 | G1 通过 | 进入 T2.1；#3 仍 T2 |
-| 2026-07-10 | T2.1 | （提交后回填） | Checkout/Update-to-rev：-r、depth、--ignore-externals | #1,#3 ✅ | pristines 进阶仍开 |
+| 2026-07-10 | T2.1 | 50d0eaa | Checkout/Update-to-rev：-r、depth、--ignore-externals | #1,#3 ✅ | pristines 进阶仍开 |
 
 ---
 
