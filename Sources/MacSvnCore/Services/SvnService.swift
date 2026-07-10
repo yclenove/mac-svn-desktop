@@ -140,6 +140,11 @@ public actor SvnService {
         try await backend.info(wc: wc, target: target)
     }
 
+    /// 查询仓库 HEAD 修订号（供 L11「还原到此修订」等）。
+    public func repositoryHeadRevision(wc: URL, target: String = "") async throws -> Revision {
+        try await backend.repositoryHeadRevision(wc: wc, target: target)
+    }
+
     public func update(
         wc: URL,
         paths: [String] = [],

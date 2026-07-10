@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.4：Show Log 右键 L09–L12、L14（从修订建分支/标签、更新到修订、还原到/撤销修订、检出/导出）
+- Affected: LogContextActionPolicy, MacSvnLogView, SvnService.repositoryHeadRevision, Tests/*, docs/*
+- Impact: inventory L09–L12、L14 ✅；L13 仍属 T3；下一 T2.5（L17）
+
+## 2026-07-10
+
 - Summary: T2.3 审计修复：历史 Diff 改用原子 `pendingLogDiff`；SavePanel 回主线程；CFM 切文件重置修订范围；路径解析失败提示更明确
 - Affected: MacSvnAppNavigator, MacSvnDiffView, MacSvnWorkingCopyWorkspaceView, MacSvnLogView, MacSvnRepoBrowserView, CHANGELOG.md
 - Impact: 消除历史→嵌入 Diff 竞态与 SavePanel 线程风险

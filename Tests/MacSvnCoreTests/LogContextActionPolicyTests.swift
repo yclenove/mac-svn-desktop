@@ -17,6 +17,13 @@ final class LogChangedPathPolicyTests: XCTestCase {
         )
         XCTAssertEqual(relative, "Sources/a.swift")
     }
+
+    func testPegURLAppendsAtRevision() {
+        XCTAssertEqual(
+            LogChangedPathPolicy.pegURL(workingCopyURL: "file:///repo/trunk", revision: Revision(9)),
+            "file:///repo/trunk@9"
+        )
+    }
 }
 
 final class LogContextActionPolicyTests: XCTestCase {
@@ -52,5 +59,44 @@ final class LogContextActionPolicyTests: XCTestCase {
                 workingCopyURL: "file:///repo/trunk"
             )
         )
+    }
+
+    func testCreateBranchTagUsesPegURL() {
+        let intent = LogContextActionPolicy.intent(
+            command: .logCreateBranchTagFromRevision,
+            changedPath: "",
+            revision: Revision(7),
+            workingCopyURL: "file:///repo/trunk"
+        )
+        XCTAssertEqual(
+            intent,
+            .createBranchTag(sourcePegURL: "file:///repo/trunk@7", revision: Revision(7))
+        )
+    }
+
+    func testUpdateToRevisionDefaultsToDotWhenPathEmpty() {
+        let intent = LogContextActionPolicy.intent(
+            command: .logUpdateItemToRevision,
+            changedPath: "",
+            revision: Revision(5),
+            workingCopyURL: "file:///repo/trunk"
+        )
+        XCTAssertEqual(intent, .updateToRevision(path: ".", revision: Revision(5)))
+    }
+
+    func testReverseSingleRevisionRange() {
+        XCTAssertEqual(
+            LogContextActionPolicy.reverseSingleRevisionRange(Revision(10)),
+            RevisionRange(start: Revision(10), end: Revision(9))
+        )
+        XCTAssertNil(LogContextActionPolicy.reverseSingleRevisionRange(Revision(0)))
+    }
+
+    func testRevertToRevisionRangeRequiresHeadAtOrAfterTarget() {
+        XCTAssertEqual(
+            LogContextActionPolicy.revertToRevisionRange(head: Revision(20), target: Revision(12)),
+            RevisionRange(start: Revision(20), end: Revision(12))
+        )
+        XCTAssertNil(LogContextActionPolicy.revertToRevisionRange(head: Revision(5), target: Revision(12)))
     }
 }
