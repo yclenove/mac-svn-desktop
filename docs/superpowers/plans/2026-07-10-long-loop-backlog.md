@@ -48,10 +48,10 @@
 
 ### Wave C — P2 仓库 / 分支 UI
 
-- [ ] **C1** 仓库浏览器：接 `RepoBrowserViewModel`（懒加载树、预览、收藏）
-- [ ] **C2** Checkout 向导：深度选项 + 进度
-- [ ] **C3** 分支与标签：列表 / 创建 / 切换（未提交变更警告）
-- [ ] **C4** Merge 向导：dry-run 预览 + 执行
+- [x] **C1** 仓库浏览器：接 `RepoBrowserViewModel`（懒加载树、预览、收藏）
+- [x] **C2** Checkout 向导：深度选项 + 进度
+- [x] **C3** 分支与标签：列表 / 创建 / 切换（未提交变更警告）
+- [x] **C4** Merge 向导：dry-run 预览 + 执行
 
 ### Wave D — P3 冲突 UI
 
@@ -95,4 +95,5 @@
 | 时间 | 条目 | Commit | 验证 |
 |------|------|--------|------|
 | 2026-07-10 12:17 | A1/A2/A3/B1/B2/B7 | bf0cbe9 | `swift test --filter MacSvnApp` 6 passed |
-| 2026-07-10 12:19 | B3/B4/B5/B6 | （本轮提交） | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:19 | B3/B4/B5/B6 | 9488ab8 | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:23 | C1/C2/C3/C4 | （本轮提交） | `swift test --filter MacSvnApp` 6 passed |

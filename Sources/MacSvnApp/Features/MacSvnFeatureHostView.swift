@@ -32,6 +32,13 @@ public struct MacSvnFeatureHostView: View {
             MacSvnDiffView(workspaceController: workspaceController, svnService: session.svnService)
         case .log:
             MacSvnLogView(workspaceController: workspaceController, session: session)
+        case .repositoryBrowser:
+            MacSvnRepoBrowserView(session: session, workspaceController: workspaceController)
+        case .branches:
+            MacSvnBranchesView(workspaceController: workspaceController, session: session)
+        case .merge:
+            // 路由标题为「冲突合并」：Wave C 先接 Merge 向导；Wave D 再叠冲突列表/编辑器
+            MacSvnMergeWizardView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
         default:

@@ -2,9 +2,9 @@
 
 ## 2026-07-10
 
-- Summary: 长程 Loop 完成 Wave A + Wave B（P1 日常流 UI 全接线）：AppSession DI、环境门禁、WC 管理、变更+动作栏、提交（含历史/守护警告）、Diff、日志、设置
-- Affected: Sources/MacSvnApp/**, Sources/MacSvnDesktopApp/**, Tests/MacSvnAppTests/**, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
-- Impact: P1 日常流可在 App 内操作；下一轮 backlog 首项为 C1（仓库浏览器 UI）
+- Summary: 长程 Loop 完成 Wave A–C：P1 日常流 UI + P2 仓库浏览器/Checkout/分支标签/Merge 向导全部接线；已启动 8 分钟心跳 loop（PID 见终端）持续推进 Wave D–H
+- Affected: Sources/MacSvnApp/**, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: 下一未完成项为 D1（冲突列表 UI）；`.merge` 路由暂挂 Merge 向导，Wave D 将叠冲突列表与三路编辑器
 
 ## 2026-07-10
 
