@@ -52,7 +52,8 @@ public struct MacSvnRootView: View {
                 MacSvnFeatureHostView(
                     route: navigator.selectedRoute,
                     session: session,
-                    workspaceController: workspaceController
+                    workspaceController: workspaceController,
+                    navigator: navigator
                 )
             }
         }

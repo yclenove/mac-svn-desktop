@@ -89,6 +89,19 @@ swift test
 | 命令面板 ⌘K / 团队动态 | ✅ |
 | Finder Sync / Quick Look | ✅ 契约+骨架（见 `docs/extensions/`，需 Xcode 包装工程装扩展） |
 
+> 当前分支：`feat/srs-gap-full-delivery` — **SRS 缺口补齐中**（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
+
+## AI Provider（本机）
+
+火山方舟 Coding（OpenAI 兼容）：
+
+```bash
+export ARK_API_KEY='你的密钥'   # 勿提交到 git
+./scripts/seed-volcengine-ark.sh
+```
+
+默认写入 `~/Library/Application Support/MacSVN/ai-providers.json`，API Key 仅进 Keychain。
+
 ## 工程结构
 
 ```

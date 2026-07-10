@@ -7,6 +7,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var selectedRoute: MacSvnAppRoute
     @Published public var pendingOpenPath: String?
     @Published public var pendingCommitMessage: String?
+    @Published public var pendingDiffPath: String?
+    @Published public var pendingDiffRevision: Revision?
     @Published public var lastAutomationMessage: String?
 
     public init(selectedRoute: MacSvnAppRoute = .workspace) {
@@ -20,11 +22,15 @@ public final class MacSvnAppNavigator: ObservableObject {
             selectedRoute = .workspace
             lastAutomationMessage = "深链打开：\(path)"
         case .log(let target, _):
-            apply(target: target, fallbackRoute: .log)
+            apply(target: target)
             selectedRoute = .log
             lastAutomationMessage = "深链跳转日志"
-        case .diff(let target, _):
-            apply(target: target, fallbackRoute: .diff)
+        case .diff(let target, let range):
+            apply(target: target)
+            if case .path(let path) = target {
+                pendingDiffPath = path
+            }
+            pendingDiffRevision = range?.end
             selectedRoute = .diff
             lastAutomationMessage = "深链跳转 Diff"
         }
@@ -60,12 +66,23 @@ public final class MacSvnAppNavigator: ObservableObject {
         return value
     }
 
-    private func apply(target: MacSvnAutomationTarget, fallbackRoute _: MacSvnAppRoute) {
+    public func consumePendingDiffPath() -> String? {
+        let value = pendingDiffPath
+        pendingDiffPath = nil
+        return value
+    }
+
+    public func consumePendingDiffRevision() -> Revision? {
+        let value = pendingDiffRevision
+        pendingDiffRevision = nil
+        return value
+    }
+
+    private func apply(target: MacSvnAutomationTarget) {
         switch target {
         case .path(let path):
             pendingOpenPath = path
         case .repositoryURL:
-            // 远端 URL 由对应功能页自行使用；此处仅切换路由
             break
         }
     }

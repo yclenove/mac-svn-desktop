@@ -5,10 +5,12 @@ import MacSvnCore
 public struct MacSvnChangesView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     private let svnService: SvnService
+    private let navigator: MacSvnAppNavigator?
 
     @State private var changesVM: ChangesViewModel?
     @State private var actionsVM: WorkingCopyActionsViewModel?
     @State private var filterMode: FilterMode = .all
+    @State private var displayMode: ChangesDisplayMode = .flat
     @State private var searchText = ""
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
@@ -23,10 +25,12 @@ public struct MacSvnChangesView: View {
 
     public init(
         workspaceController: MacSvnWorkspaceController,
-        statusProvider: SvnService
+        statusProvider: SvnService,
+        navigator: MacSvnAppNavigator? = nil
     ) {
         self.workspaceController = workspaceController
         self.svnService = statusProvider
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -77,6 +81,15 @@ public struct MacSvnChangesView: View {
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 280)
+            Picker("视图", selection: $displayMode) {
+                Text("平铺").tag(ChangesDisplayMode.flat)
+                Text("树").tag(ChangesDisplayMode.tree)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 160)
+            .onChange(of: displayMode) { _, newValue in
+                changesVM?.displayMode = newValue
+            }
             TextField("搜索文件名", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 220)
@@ -152,28 +165,60 @@ public struct MacSvnChangesView: View {
                 )
             case .loaded:
                 List(selection: $selectedPaths) {
-                    ForEach(changesVM.visibleFlatEntries, id: \.path) { entry in
-                        HStack {
-                            Text(statusLabel(entry.itemStatus))
-                                .font(.caption.monospaced())
-                                .frame(width: 28, alignment: .leading)
-                                .foregroundStyle(statusColor(entry.itemStatus))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.path)
-                                if entry.isTreeConflict {
-                                    Text("树冲突")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
+                    if displayMode == .flat {
+                        ForEach(changesVM.visibleFlatEntries, id: \.path) { entry in
+                            flatRow(entry)
+                                .tag(entry.path)
                         }
-                        .tag(entry.path)
+                    } else {
+                        OutlineGroup(changesVM.visibleTreeEntries, children: \.outlineChildren) { node in
+                            treeRow(node)
+                                .tag(node.path)
+                        }
                     }
                 }
             }
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func flatRow(_ entry: FileStatus) -> some View {
+        HStack {
+            Text(statusLabel(entry.itemStatus))
+                .font(.caption.monospaced())
+                .frame(width: 28, alignment: .leading)
+                .foregroundStyle(statusColor(entry.itemStatus))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.path)
+                if entry.isTreeConflict {
+                    Text("树冲突")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private func treeRow(_ node: FileStatusNode) -> some View {
+        HStack {
+            if !node.isDirectory {
+                Text(statusLabel(node.itemStatus))
+                    .font(.caption.monospaced())
+                    .frame(width: 28, alignment: .leading)
+                    .foregroundStyle(statusColor(node.itemStatus))
+            } else {
+                Image(systemName: "folder")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+            }
+            Text(node.name)
+            if node.isTreeConflict {
+                Text("树冲突")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
@@ -250,6 +295,10 @@ public struct MacSvnChangesView: View {
             statusBanner = "Update 完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
             await changesVM.refresh()
             selectedPaths = []
+            if summary.conflicted > 0 {
+                navigator?.selectedRoute = .merge
+                navigator?.lastAutomationMessage = "Update 产生 \(summary.conflicted) 个冲突，已跳转冲突页"
+            }
         case .completed(let op):
             statusBanner = "\(label(for: op)) 完成"
             await changesVM.refresh()
@@ -297,5 +346,12 @@ public struct MacSvnChangesView: View {
         case .modified, .replaced: return .blue
         default: return .secondary
         }
+    }
+}
+
+private extension FileStatusNode {
+    /// OutlineGroup 需要 Optional children：叶子为 nil。
+    var outlineChildren: [FileStatusNode]? {
+        children.isEmpty ? nil : children
     }
 }

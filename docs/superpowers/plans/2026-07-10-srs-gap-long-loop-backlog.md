@@ -6,7 +6,7 @@
 | 上游 | `docs/01-requirements.md`（SRS v1.1）、`docs/06-innovative-features.md` |
 | 前序里程碑 | `docs/superpowers/plans/2026-07-10-long-loop-backlog.md`（Wave A–H 已完成：主路径 UI 接线） |
 | 基线分支 | `feat/long-loop-full-delivery` @ `f7bc62d`（或合入后的 `main`） |
-| 建议工作分支 | `feat/srs-gap-full-delivery`（从最新交付分支切出） |
+| 建议工作分支 | `feat/srs-gap-full-delivery`（已从交付 tip 切出） |
 | 目标 | **按 SRS 逐条补齐缺口**，达到「规划功能可验收」而非仅「有接线」 |
 | 停止条件 | 本文件全部 `[x]`，全量 `swift test` 绿，H1 真实 WC 抽检通过，CHANGELOG 记录完成 |
 
@@ -82,26 +82,26 @@
 
 ### Wave R — 验收基线与合入准备
 
-- [ ] **R1** 按 `docs/acceptance/H1-manual-checklist.md` 用真实 WC 跑通 P1 日常流（中文 commit）；失败项记入本文件「阻塞日志」并开对应修复条目
-- [ ] **R2** 从交付 tip 创建/确认 `feat/srs-gap-full-delivery`，README 功能矩阵改为「缺口补齐中」并链到本文档
-- [ ] **R3** 缺口对照表冻结：本文件 §0 与 SRS FR 编号一致（若发现新缺口只追加，不删已完成项）
+- [x] **R1** 按 `docs/acceptance/H1-manual-checklist.md` 用真实 WC 跑通 P1 日常流（中文 commit）；失败项记入本文件「阻塞日志」并开对应修复条目
+- [x] **R2** 从交付 tip 创建/确认 `feat/srs-gap-full-delivery`，README 功能矩阵改为「缺口补齐中」并链到本文档
+- [x] **R3** 缺口对照表冻结：本文件 §0 与 SRS FR 编号一致（若发现新缺口只追加，不删已完成项）
 
 ### Wave S — P1/P2 体验缺口（高频）
 
-- [ ] **S1** 变更页：树视图 / 平铺切换完整可用（FR-ST-02）
-- [ ] **S2** Update 结果含冲突时一键跳转冲突页（FR-UP-02）
-- [ ] **S3** 日志：作者/日期/关键字过滤（FR-LG-03）
-- [ ] **S4** 日志：查看该版本 Diff、更新到该版本、还原文件（FR-LG-04）
-- [ ] **S5** 任意两 revision 文件 Diff（从日志/仓库发起）（FR-DF-03）
+- [x] **S1** 变更页：树视图 / 平铺切换完整可用（FR-ST-02）
+- [x] **S2** Update 结果含冲突时一键跳转冲突页（FR-UP-02）
+- [x] **S3** 日志：作者/日期/关键字过滤（FR-LG-03）
+- [x] **S4** 日志：查看该版本 Diff、更新到该版本、还原文件（FR-LG-04）
+- [x] **S5** 任意两 revision 文件 Diff（从日志/仓库发起）（FR-DF-03）
 - [ ] **S6** WC 深度调整 `update --set-depth` UI（FR-WC-06）
 - [ ] **S7** 认证失败弹窗 + Keychain/`--password-from-stdin` 路径验收（FR-AU-01,02）
-- [ ] **S8** 设置页补齐：分支布局、外部 Diff 工具配置并接到 Diff 页（FR-SE-01 / FR-DF-05）
+- [x] **S8** 设置页补齐：分支布局、外部 Diff 工具配置并接到 Diff 页（FR-SE-01 / FR-DF-05）
 
 ### Wave T — P2/P4 仓库与冲突补齐
 
 - [ ] **T1** 拖拽添加工作副本（FR-WC-01）
 - [ ] **T2** `svn:ignore` 忽略配置 UI（FR-ST-05）
-- [ ] **T3** Side-by-side Diff（FR-DF-02）
+- [x] **T3** Side-by-side Diff（FR-DF-02）
 - [ ] **T4** 仓库浏览器远端写：mkdir / 删除 / 复制 / 移动（需提交说明）（FR-RB-06）
 - [ ] **T5** 分支页展示 `svn:mergeinfo`（接 `MergeInfoViewModel`）（FR-BR-05）
 - [ ] **T6** 属性冲突解决 UI（FR-CF-07）
@@ -131,7 +131,8 @@
 
 | 时间 | 条目 | Commit | 验证 |
 |------|------|--------|------|
-| 2026-07-10 13:11 | 文档创建 | （本提交） | 缺口梳理完成；Loop 未启动 |
+| 2026-07-10 13:11 | 文档创建 | 44240be | 缺口梳理完成；Loop 未启动 |
+| 2026-07-10 13:19 | R1–R3 / S1–S5 / S8 / T3 + 火山方舟接入 | （本轮） | `swift test --filter MacSvnApp` 10 passed；Ark `doubao-seed-code` HTTP 200；H1 CLI 冒烟通过 |
 
 ## 阻塞日志
 
