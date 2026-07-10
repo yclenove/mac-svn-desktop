@@ -229,7 +229,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T0.5 | 27d3fcd | scripts/tests/test_parity_coverage.py 2 测绿 | 生成 parity-coverage.json（当前 0/114） | `scripts/parity-coverage.py` |
 | 2026-07-10 | T0.6 | 3e970f5 | 文档骨架 | 无 | `docs/acceptance/H-tortoise-parity.md` |
 | 2026-07-10 | T0.7 / G0 | 5330255 | `swift test` 529 绿；parity-coverage + fixture 测绿 | 0/114 基线 | **G0 通过**；进入 T1 |
-| 2026-07-10 | T1.1 | （待填） | CFMColumn* + ChangesViewModel + status -v | #8 仍 🟡（本地列/刷新齐） | CFM 列持久化 + 刷新时间戳 |
+| 2026-07-10 | T1.1 | 2b4068a | CFMColumn* + ChangesViewModel + status -v | #8 仍 🟡（本地列/刷新齐） | CFM 列持久化 + 刷新时间戳 |
 
 ---
 
