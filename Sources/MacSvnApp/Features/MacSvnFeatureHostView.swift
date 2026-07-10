@@ -32,7 +32,11 @@ public struct MacSvnFeatureHostView: View {
                 session: session
             )
         case .commit:
-            MacSvnCommitView(workspaceController: workspaceController, session: session)
+            MacSvnCommitView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .diff:
             MacSvnDiffView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .log:

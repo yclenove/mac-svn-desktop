@@ -32,6 +32,19 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testEmbeddedCommitViewAvoidsSplitViewInEmbeddedBranch() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnCommitView.swift")
+        // 嵌入分支须用 HStack；独立页仍可用 HSplitView
+        XCTAssertTrue(
+            source.contains("if embedded"),
+            "Commit 须区分 embedded 布局"
+        )
+        XCTAssertTrue(
+            source.contains("嵌入变更工作区禁止 HSplitView") || source.contains("AttributeGraph"),
+            "须保留嵌入禁止 Split 的说明"
+        )
+    }
+
     private static func readFeatureSource(named fileName: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         // Tests/MacSvnAppTests/... → 仓库根

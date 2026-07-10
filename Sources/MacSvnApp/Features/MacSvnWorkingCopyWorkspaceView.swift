@@ -56,6 +56,7 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
             MacSvnCommitView(
                 workspaceController: workspaceController,
                 session: session,
+                navigator: navigator,
                 embedded: true
             )
             .frame(minHeight: 160, idealHeight: 200, maxHeight: 260)
@@ -69,7 +70,8 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
     }
 
     private func applyPendingDiffPathSeed() {
-        guard let path = navigator.pendingDiffPath else { return }
+        // 工作区独占消费 pendingDiffPath，避免与嵌入 Diff 竞态
+        guard let path = navigator.consumePendingDiffPath() else { return }
         seededSelection = [path]
         if focusedDiffPath != path {
             focusedDiffPath = path

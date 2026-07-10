@@ -104,6 +104,20 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertTrue(navigator.lastAutomationMessage?.hasPrefix("未实现：") == true)
     }
 
+    func testPerformCheckForModificationsDoesNotSetDiffPath() {
+        let navigator = MacSvnAppNavigator()
+        _ = navigator.perform(command: .checkForModifications, paths: ["/tmp/wc/file.swift"])
+        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc/file.swift")
+        XCTAssertNil(navigator.pendingDiffPath)
+    }
+
+    func testPerformDiffSetsPendingDiffPath() {
+        let navigator = MacSvnAppNavigator()
+        _ = navigator.perform(command: .diff, paths: ["/tmp/wc/a.swift"])
+        XCTAssertEqual(navigator.pendingDiffPath, "/tmp/wc/a.swift")
+    }
+
     func testPerformCoversEveryCatalogIDWithoutCrash() {
         let navigator = MacSvnAppNavigator()
         for id in SvnCommandID.allCases {

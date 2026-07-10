@@ -67,6 +67,12 @@ public struct MacSvnChangesView: View {
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await bindAndRefresh() }
         }
+        .onChange(of: initialSelectedPaths) { _, newValue in
+            // 深链 / ⌘K / 工作区种子路径会在 init 之后更新，必须同步选中
+            guard !newValue.isEmpty else { return }
+            selectedPaths = newValue
+            onFocusedPathChange?(newValue.sorted().first)
+        }
         .task { await bindAndRefresh() }
         .confirmationDialog(
             "确认还原选中文件的本地修改？此操作不可撤销。",

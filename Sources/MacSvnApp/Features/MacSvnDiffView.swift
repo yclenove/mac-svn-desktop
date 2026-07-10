@@ -43,14 +43,14 @@ public struct MacSvnDiffView: View {
                 Text(embedded ? "差异" : "Diff")
                     .font(embedded ? .headline : .largeTitle.weight(.semibold))
                 Spacer()
-                Picker("", selection: $mode) {
-                    ForEach(DiffMode.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
                 if !embedded {
+                    Picker("", selection: $mode) {
+                        ForEach(DiffMode.allCases) { item in
+                            Text(item.rawValue).tag(item)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 220)
                     TextField("r1", text: $r1Text)
                         .frame(width: 72)
                         .textFieldStyle(.roundedBorder)
@@ -266,6 +266,8 @@ public struct MacSvnDiffView: View {
             r1Text = String(max(0, rev.value - 1))
             r2Text = String(rev.value)
         }
+        // 嵌入模式由 WorkingCopyWorkspace 消费 pendingDiffPath 并经 externalSelectedPath 注入
+        guard !embedded else { return }
         if let path = navigator.consumePendingDiffPath() {
             if !paths.contains(path) {
                 paths.insert(path, at: 0)

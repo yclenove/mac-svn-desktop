@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 修复 Bugbot 指出的工作区接线问题：种子路径同步选中、提交说明预填、嵌入 Commit 去 HSplitView、CFM 不再误写 Diff 路径、嵌入 Diff 隐藏无效模式切换、pendingDiffPath 由工作区独占消费
+- Affected: MacSvnChangesView/CommitView/DiffView/WorkingCopyWorkspaceView/FeatureHostView, MacSvnAppNavigator, Tests/MacSvnAppTests/*
+- Impact: 深链/⌘K/CLI 与同屏 Diff/提交预填一致；降低 AttributeGraph 风险
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.4：`ProcessRunner` 支持 Task 取消（SIGTERM→5s SIGKILL→`SvnError.cancelled`）；新增 `SvnCancellableTask` 包装
 - Affected: Sources/MacSvnCore/Process/ProcessRunner.swift, Tests/MacSvnCoreTests/ProcessRunnerTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: 长耗时 svn 可被 UI 取消；对齐详设取消传播；清单：异常映射通过、无吞异常

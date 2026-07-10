@@ -59,7 +59,8 @@ public final class MacSvnAppNavigator: ObservableObject {
         if paths.count >= 2, !paths[1].isEmpty {
             // 第二路径常用于 Diff 目标文件
             pendingDiffPath = paths[1]
-        } else if let only = paths.first, command == .diff || command == .checkForModifications {
+        } else if let only = paths.first, command == .diff {
+            // 仅 Diff 注入 pendingDiffPath；CFM 等命令不应误触发 Diff 加载
             pendingDiffPath = only
         }
 
