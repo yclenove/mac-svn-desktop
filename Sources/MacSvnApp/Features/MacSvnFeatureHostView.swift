@@ -28,7 +28,8 @@ public struct MacSvnFeatureHostView: View {
             MacSvnChangesView(
                 workspaceController: workspaceController,
                 statusProvider: session.svnService,
-                navigator: navigator
+                navigator: navigator,
+                session: session
             )
         case .commit:
             MacSvnCommitView(workspaceController: workspaceController, session: session)

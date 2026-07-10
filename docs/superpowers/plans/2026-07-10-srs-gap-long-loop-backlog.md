@@ -94,13 +94,13 @@
 - [x] **S4** 日志：查看该版本 Diff、更新到该版本、还原文件（FR-LG-04）
 - [x] **S5** 任意两 revision 文件 Diff（从日志/仓库发起）（FR-DF-03）
 - [x] **S6** WC 深度调整 `update --set-depth` UI（FR-WC-06）
-- [ ] **S7** 认证失败弹窗 + Keychain/`--password-from-stdin` 路径验收（FR-AU-01,02）
+- [x] **S7** 认证失败弹窗 + Keychain/`--password-from-stdin` 路径验收（FR-AU-01,02）
 - [x] **S8** 设置页补齐：分支布局、外部 Diff 工具配置并接到 Diff 页（FR-SE-01 / FR-DF-05）
 
 ### Wave T — P2/P4 仓库与冲突补齐
 
 - [x] **T1** 拖拽添加工作副本（FR-WC-01）
-- [ ] **T2** `svn:ignore` 忽略配置 UI（FR-ST-05）
+- [x] **T2** `svn:ignore` 忽略配置 UI（FR-ST-05）
 - [x] **T3** Side-by-side Diff（FR-DF-02）
 - [ ] **T4** 仓库浏览器远端写：mkdir / 删除 / 复制 / 移动（需提交说明）（FR-RB-06）
 - [ ] **T5** 分支页展示 `svn:mergeinfo`（接 `MergeInfoViewModel`）（FR-BR-05）
@@ -133,7 +133,8 @@
 |------|------|--------|------|
 | 2026-07-10 13:11 | 文档创建 | 44240be | 缺口梳理完成；Loop 未启动 |
 | 2026-07-10 13:19 | R1–R3 / S1–S5 / S8 / T3 + 火山方舟接入 | a6f0f5b | `swift test --filter MacSvnApp` 10 passed；Ark `doubao-seed-code` HTTP 200；H1 CLI 冒烟通过 |
-| 2026-07-10 13:20 | S6 / T1 | （本轮） | set-depth UI + 拖拽添加 WC；MacSvnApp 10 passed |
+| 2026-07-10 13:20 | S6 / T1 | 81b0d8a | set-depth UI + 拖拽添加 WC；MacSvnApp 10 passed |
+| 2026-07-10 13:30 | S7 / T2 | （本轮） | 认证弹窗+password-from-stdin 测试；变更页忽略选中写 svn:ignore |
 
 ## 阻塞日志
 

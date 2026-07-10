@@ -6,6 +6,7 @@ public struct MacSvnChangesView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     private let svnService: SvnService
     private let navigator: MacSvnAppNavigator?
+    private let session: MacSvnAppSession?
 
     @State private var changesVM: ChangesViewModel?
     @State private var actionsVM: WorkingCopyActionsViewModel?
@@ -28,11 +29,13 @@ public struct MacSvnChangesView: View {
     public init(
         workspaceController: MacSvnWorkspaceController,
         statusProvider: SvnService,
-        navigator: MacSvnAppNavigator? = nil
+        navigator: MacSvnAppNavigator? = nil,
+        session: MacSvnAppSession? = nil
     ) {
         self.workspaceController = workspaceController
         self.svnService = statusProvider
         self.navigator = navigator
+        self.session = session
     }
 
     public var body: some View {
@@ -163,6 +166,11 @@ public struct MacSvnChangesView: View {
                 showSetDepth = true
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+
+            Button("忽略选中") {
+                Task { await ignoreSelected() }
+            }
+            .disabled(selectedPaths.isEmpty || session == nil)
 
             if actionsVM?.isRunning == true {
                 ProgressView()
@@ -303,6 +311,37 @@ public struct MacSvnChangesView: View {
         await syncAfterAction(actionsVM, changesVM)
         if case .updateCompleted = actionsVM.state {
             statusBanner = "已设置深度 \(String(describing: setDepth))"
+        }
+    }
+
+    /// 将选中路径的 basename 追加到父目录 `svn:ignore`（FR-ST-05）。
+    private func ignoreSelected() async {
+        guard let session, let record = workspaceController.selectedRecord, let changesVM else { return }
+        let wc = URL(fileURLWithPath: record.localPath)
+        do {
+            for path in selectedPaths {
+                let url = URL(fileURLWithPath: path, relativeTo: wc)
+                let parentRel = url.deletingLastPathComponent().relativePath
+                let target = parentRel.isEmpty || parentRel == "." ? "." : parentRel
+                let pattern = url.lastPathComponent
+                let existing = try await session.svnService.propertyValue(wc: wc, target: target, name: "svn:ignore")
+                var lines = (existing?.value ?? "")
+                    .split(separator: "\n", omittingEmptySubsequences: false)
+                    .map(String.init)
+                if !lines.contains(pattern) {
+                    if lines.last == "" { lines.removeLast() }
+                    lines.append(pattern)
+                }
+                let value = lines.joined(separator: "\n") + "\n"
+                let vm = PropertyViewModel(workingCopy: wc, target: target, provider: session.svnService)
+                await vm.load()
+                await vm.save(name: "svn:ignore", value: value)
+            }
+            statusBanner = "已写入 svn:ignore"
+            await changesVM.refresh()
+            selectedPaths = []
+        } catch {
+            statusBanner = "忽略失败：\(error.localizedDescription)"
         }
     }
 
