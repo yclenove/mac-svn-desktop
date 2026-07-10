@@ -485,6 +485,19 @@ public struct SvnCliBackend: SvnBackend {
         return try InfoXMLParser.parse(result.stdout)
     }
 
+    public func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision {
+        let result = try await run(
+            SvnCommandBuilder.info(target: target, revisionSpec: "HEAD"),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+        let info = try InfoXMLParser.parse(result.stdout)
+        guard let revision = info.revision else {
+            throw SvnError.parse(detail: "svn info -r HEAD 未返回 revision")
+        }
+        return revision
+    }
+
     private func run(_ command: SvnCommand, currentDirectory: String?, stdin: Data?) async throws -> ProcessResult {
         let result = try await runner.run(
             executable: svnExecutable,

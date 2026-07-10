@@ -116,7 +116,19 @@ public actor SvnService {
     ) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
             try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
-                try await backend.update(wc: wc, paths: paths, revision: revision, setDepth: setDepth, auth: auth)
+                var effectiveRevision = revision
+                // 同仓多路径：先钉 HEAD，再统一 -r，避免更新间隙产生 mixed-rev（对齐小乌龟）
+                if UpdateRevisionPolicy.shouldPinRepositoryHead(paths: paths, revision: revision) {
+                    let probe = UpdateRevisionPolicy.headProbeTarget(paths: paths)
+                    effectiveRevision = try await backend.repositoryHeadRevision(wc: wc, target: probe)
+                }
+                return try await backend.update(
+                    wc: wc,
+                    paths: paths,
+                    revision: effectiveRevision,
+                    setDepth: setDepth,
+                    auth: auth
+                )
             }
         }
     }

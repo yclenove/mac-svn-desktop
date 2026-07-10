@@ -81,7 +81,7 @@
 | # | 命令 | 核心 `svn` / 行为 | 对话框必选项（摘要） | Studio | 波次 |
 |---|------|-------------------|----------------------|--------|------|
 | 1 | Checkout | `checkout [-depth] [--ignore-externals] [-r] URL PATH` | depth、omit externals、revision | 🟡 | T2 |
-| 2 | Update | 先 `info` 取统一 rev 再 `update`（多选同仓） | 进度、冲突入口 | 🟡 | T1 |
+| 2 | Update | 先 `info` 取统一 rev 再 `update`（多选同仓） | 进度、冲突入口 | ✅ | T1 |
 | 3 | Update to revision | `update [-r][-depth][--ignore-externals]` | rev、depth、omit externals | 🟡 | T2 |
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | 🟡 | T1 |
@@ -157,8 +157,8 @@
 
 ### 4.3 Update（必须）
 
-- [ ] 多路径同仓：先统一 revision 再更新（防 mixed-rev）  
-- [ ] 结束后冲突列表 → 一键 Edit Conflicts  
+- [x] 多路径同仓：先统一 revision 再更新（防 mixed-rev）  
+- [x] 结束后冲突列表 → 一键 Edit Conflicts  
 - [ ] Auto-close 策略与进度日志（对齐设置）  
 
 ### 4.4 Merge（必须）

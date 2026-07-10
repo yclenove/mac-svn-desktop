@@ -337,8 +337,13 @@ public enum SvnCommandBuilder {
         ] + authArguments + [source, destination])
     }
 
-    public static func info(target: String) -> SvnCommand {
-        SvnCommand(arguments: ["info", "--xml", "--non-interactive", target])
+    public static func info(target: String, revisionSpec: String? = nil) -> SvnCommand {
+        var arguments = ["info", "--xml", "--non-interactive"]
+        if let revisionSpec, !revisionSpec.isEmpty {
+            arguments += ["-r", revisionSpec]
+        }
+        arguments.append(target)
+        return SvnCommand(arguments: arguments)
     }
 
     private static func usesUTF8Encoding(forPropertyNamed name: String) -> Bool {

@@ -40,4 +40,6 @@ public protocol SvnBackend: Sendable {
     func delete(url: String, message: String, auth: Credential?) async throws -> Revision
     func move(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
     func info(wc: URL, target: String) async throws -> SvnInfo
+    /// 查询仓库 HEAD 修订号（`svn info -r HEAD`），供多路径统一更新钉住 revision。
+    func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision
 }

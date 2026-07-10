@@ -164,6 +164,35 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.updateSetDepths, [.files, .files])
     }
 
+    func testMultiPathUpdatePinsRepositoryHeadBeforeUpdating() async throws {
+        let backend = MockSvnBackend()
+        backend.headRevisionResult = Revision(42)
+        backend.updateResult = UpdateSummary(updated: 2, revision: Revision(42))
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let summary = try await service.update(wc: wc, paths: ["a.txt", "b.txt"], revision: nil)
+
+        XCTAssertEqual(summary.revision, Revision(42))
+        XCTAssertEqual(backend.calls.map(\.name), ["repositoryHeadRevision", "update"])
+        XCTAssertEqual(backend.updateRevisions, [Revision(42)])
+    }
+
+    func testSinglePathUpdateDoesNotPinHead() async throws {
+        let backend = MockSvnBackend()
+        backend.updateResult = UpdateSummary(updated: 1, revision: Revision(7))
+        let service = SvnService(backend: backend)
+
+        _ = try await service.update(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["only.txt"],
+            revision: nil
+        )
+
+        XCTAssertEqual(backend.calls.map(\.name), ["update"])
+        XCTAssertEqual(backend.updateRevisions, [nil])
+    }
+
     func testCheckoutPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
         let backend = MockSvnBackend()
         backend.checkoutErrors = [.authentication]
@@ -791,6 +820,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCalls: [Call] = []
     private var recordedUpdateCredentials: [Credential?] = []
     private var recordedUpdateSetDepths: [SvnDepth?] = []
+    private var recordedUpdateRevisions: [Revision?] = []
     private var recordedCommitCredentials: [Credential?] = []
     private var recordedCommitKeepLocks: [Bool] = []
     private var recordedCheckoutCredentials: [Credential?] = []
@@ -834,6 +864,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedUpdateSetDepths
+    }
+
+    var updateRevisions: [Revision?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedUpdateRevisions
     }
 
     var commitCredentials: [Credential?] {
@@ -1004,6 +1042,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var locksResult: [SvnLock] = []
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
+    var headRevisionResult = Revision(99)
     var listResult: [RemoteEntry] = []
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
@@ -1061,7 +1100,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         setDepth: SvnDepth?,
         auth: Credential?
     ) async throws -> UpdateSummary {
-        let error = recordUpdate(setDepth: setDepth, auth: auth)
+        let error = recordUpdate(revision: revision, setDepth: setDepth, auth: auth)
         await onUpdate?(wc)
         if let error {
             throw error
@@ -1280,9 +1319,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return infoResult
     }
 
-    private func recordUpdate(setDepth: SvnDepth?, auth: Credential?) -> SvnError? {
+    func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision {
+        record("repositoryHeadRevision")
+        return headRevisionResult
+    }
+
+    private func recordUpdate(revision: Revision?, setDepth: SvnDepth?, auth: Credential?) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "update"))
+        recordedUpdateRevisions.append(revision)
         recordedUpdateSetDepths.append(setDepth)
         recordedUpdateCredentials.append(auth)
         let error = updateErrors.isEmpty ? nil : updateErrors.removeFirst()

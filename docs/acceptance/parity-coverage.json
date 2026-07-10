@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T13:27:34Z",
+  "generated_at": "2026-07-10T13:36:28Z",
   "total": 114,
-  "done": 4,
-  "partial": 49,
+  "done": 5,
+  "partial": 48,
   "missing": 61,
-  "coverage": 0.035088,
-  "coverage_percent": 3.51,
+  "coverage": 0.04386,
+  "coverage_percent": 4.39,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,8 +16,8 @@
     },
     "command": {
       "total": 46,
-      "done": 3,
-      "partial": 21,
+      "done": 4,
+      "partial": 20,
       "missing": 22
     },
     "log": {
@@ -247,8 +247,8 @@
       "key": "cmd.02",
       "section": "command",
       "title": "Update",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.03",

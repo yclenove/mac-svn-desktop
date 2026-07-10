@@ -365,6 +365,11 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["info", "--xml", "--non-interactive", "."])
     }
 
+    func testInfoCanTargetRepositoryHead() {
+        let command = SvnCommandBuilder.info(target: "src", revisionSpec: "HEAD")
+        XCTAssertEqual(command.arguments, ["info", "--xml", "--non-interactive", "-r", "HEAD", "src"])
+    }
+
     func testBlameUsesXmlNonInteractiveAndTarget() {
         let command = SvnCommandBuilder.blame(target: "README.txt")
 

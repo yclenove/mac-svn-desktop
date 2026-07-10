@@ -477,7 +477,8 @@ public struct MacSvnChangesView: View {
 
     private func runUpdate() async {
         guard let actionsVM, let changesVM else { return }
-        await actionsVM.update()
+        // 有多选时按选中路径更新（≥2 时 Service 层会钉住 HEAD 防 mixed-rev）
+        await actionsVM.update(paths: Array(selectedPaths))
         await syncAfterAction(actionsVM, changesVM)
     }
 

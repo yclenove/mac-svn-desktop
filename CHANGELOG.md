@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.5：多路径 Update 先 `info -r HEAD` 钉住统一 revision 再 update；CFM 多选走选中路径更新
+- Affected: UpdateRevisionPolicy.swift, SvnCommandBuilder/Backend/Cli, SvnService, MacSvnChangesView, Tests/*, docs/*
+- Impact: inventory #2 ✅；防 mixed-rev；Auto-close 仍待设置页
+
+## 2026-07-10
+
 - Summary: fix(T1.4)：Commit Guard 移到 add 之前，避免取消警告残留已 add 项；右键还原失败不再强制 reload 掩盖错误
 - Affected: SvnService.swift, MacSvnCommitView.swift
 - Impact: 警告/阻断路径保持 WC 干净；还原失败可见
