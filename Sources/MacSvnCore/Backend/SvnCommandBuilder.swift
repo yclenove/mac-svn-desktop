@@ -11,9 +11,18 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["--version", "--quiet"])
     }
 
-    public static func status() -> SvnCommand {
-        // 对齐小乌龟 CFM：`svn status -v`（XML 下提供 revision 等列信息）
-        SvnCommand(arguments: ["status", "-v", "--xml", "--non-interactive"])
+    public static func status(verbose: Bool = true, showUpdates: Bool = false) -> SvnCommand {
+        // 对齐小乌龟 CFM：本地 `status -v`；Check Repository 再加 `--show-updates`（-u）
+        var arguments = ["status"]
+        if verbose {
+            arguments.append("-v")
+        }
+        arguments.append("--xml")
+        if showUpdates {
+            arguments.append("--show-updates")
+        }
+        arguments.append("--non-interactive")
+        return SvnCommand(arguments: arguments)
     }
 
     public static func lockStatus(targets: [String]) -> SvnCommand {

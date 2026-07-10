@@ -18,7 +18,13 @@ public struct SvnCliBackend: SvnBackend {
     }
 
     public func status(wc: URL) async throws -> [FileStatus] {
-        let command = SvnCommandBuilder.status()
+        let command = SvnCommandBuilder.status(verbose: true, showUpdates: false)
+        let result = try await run(command, currentDirectory: wc.path, stdin: nil)
+        return try StatusXMLParser.parse(result.stdout)
+    }
+
+    public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        let command = SvnCommandBuilder.status(verbose: true, showUpdates: true)
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)
         return try StatusXMLParser.parse(result.stdout)
     }

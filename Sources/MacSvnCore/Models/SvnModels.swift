@@ -84,12 +84,67 @@ public struct FileStatus: Equatable, Sendable {
     public let itemStatus: ItemStatus
     public let revision: Revision?
     public let isTreeConflict: Bool
+    /// 对照仓库时的远端状态（`status -u` 的 `repos-status`）；未检查仓库时为 `nil`
+    public let remoteItemStatus: ItemStatus?
 
-    public init(path: String, itemStatus: ItemStatus, revision: Revision?, isTreeConflict: Bool) {
+    public init(
+        path: String,
+        itemStatus: ItemStatus,
+        revision: Revision?,
+        isTreeConflict: Bool,
+        remoteItemStatus: ItemStatus? = nil
+    ) {
         self.path = path
         self.itemStatus = itemStatus
         self.revision = revision
         self.isTreeConflict = isTreeConflict
+        self.remoteItemStatus = remoteItemStatus
+    }
+}
+
+/// CFM 行颜色语义（对齐小乌龟：仅本地 / 仅远端 / 双方 / 冲突）
+public enum CFMChangeHighlight: Equatable, Sendable {
+    case none
+    case localOnly
+    case remoteOnly
+    case both
+    case conflicted
+
+    public static func classify(_ status: FileStatus) -> CFMChangeHighlight {
+        if status.itemStatus == .conflicted || status.isTreeConflict {
+            return .conflicted
+        }
+        let localChanged = isLocallyInteresting(status.itemStatus)
+        let remoteChanged = isRemotelyInteresting(status.remoteItemStatus)
+        switch (localChanged, remoteChanged) {
+        case (true, true):
+            return .both
+        case (true, false):
+            return .localOnly
+        case (false, true):
+            return .remoteOnly
+        case (false, false):
+            return .none
+        }
+    }
+
+    private static func isLocallyInteresting(_ status: ItemStatus) -> Bool {
+        switch status {
+        case .modified, .added, .deleted, .missing, .replaced, .conflicted, .obstructed, .incomplete, .unversioned:
+            return true
+        case .normal, .ignored, .external, .none:
+            return false
+        }
+    }
+
+    private static func isRemotelyInteresting(_ status: ItemStatus?) -> Bool {
+        guard let status else { return false }
+        switch status {
+        case .modified, .added, .deleted, .replaced, .conflicted:
+            return true
+        case .none, .normal, .unversioned, .missing, .ignored, .external, .incomplete, .obstructed:
+            return false
+        }
     }
 }
 

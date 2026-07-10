@@ -3,6 +3,8 @@ import Foundation
 public protocol SvnBackend: Sendable {
     func version() async throws -> SvnVersion
     func status(wc: URL) async throws -> [FileStatus]
+    /// Check for Modifications → Check Repository（`svn status -u`）
+    func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, auth: Credential?) async throws -> UpdateSummary
     func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary

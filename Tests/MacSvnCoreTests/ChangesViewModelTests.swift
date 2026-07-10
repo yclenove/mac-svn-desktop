@@ -73,6 +73,45 @@ final class ChangesViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCheckRepositoryLoadsRemoteStatusesAndSetsFlag() async {
+        let remoteAware = [
+            FileStatus(
+                path: "a.swift",
+                itemStatus: .modified,
+                revision: Revision(1),
+                isTreeConflict: false,
+                remoteItemStatus: .modified
+            )
+        ]
+        let provider = FakeStatusProvider(result: .success(remoteAware))
+        let viewModel = ChangesViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statusProvider: provider
+        )
+
+        await viewModel.checkRepository()
+        let repoCalls = await provider.requestedRepositoryChecks()
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertTrue(viewModel.includesRepositoryCheck)
+        XCTAssertEqual(viewModel.highlight(for: remoteAware[0]), .both)
+        XCTAssertEqual(repoCalls, [URL(fileURLWithPath: "/tmp/wc")])
+    }
+
+    @MainActor
+    func testRefreshClearsRepositoryCheckFlag() async {
+        let provider = FakeStatusProvider(result: .success(sampleStatuses()))
+        let viewModel = ChangesViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statusProvider: provider
+        )
+        await viewModel.checkRepository()
+        XCTAssertTrue(viewModel.includesRepositoryCheck)
+        await viewModel.refresh()
+        XCTAssertFalse(viewModel.includesRepositoryCheck)
+    }
+
+    @MainActor
     func testRefreshStoresErrorStateWhenStatusProviderFails() async {
         let provider = FakeStatusProvider(result: .failure(SvnError.authentication))
         let viewModel = ChangesViewModel(
@@ -99,6 +138,7 @@ final class ChangesViewModelTests: XCTestCase {
 private actor FakeStatusProvider: StatusProviding {
     private let result: Result<[FileStatus], Error>
     private var requests: [URL] = []
+    private var repositoryRequests: [URL] = []
 
     init(result: Result<[FileStatus], Error>) {
         self.result = result
@@ -108,8 +148,17 @@ private actor FakeStatusProvider: StatusProviding {
         requests
     }
 
+    func requestedRepositoryChecks() -> [URL] {
+        repositoryRequests
+    }
+
     func status(wc: URL) async throws -> [FileStatus] {
         requests.append(wc)
+        return try result.get()
+    }
+
+    func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        repositoryRequests.append(wc)
         return try result.get()
     }
 }

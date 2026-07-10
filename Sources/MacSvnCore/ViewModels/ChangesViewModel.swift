@@ -3,6 +3,14 @@ import Observation
 
 public protocol StatusProviding: Sendable {
     func status(wc: URL) async throws -> [FileStatus]
+    func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
+}
+
+extension StatusProviding {
+    /// 默认回退到本地 status（测试假对象可省略实现；生产路径由 `SvnService` 覆盖）
+    public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        try await status(wc: wc)
+    }
 }
 
 public enum ChangesDisplayMode: Equatable, Sendable {
@@ -186,6 +194,8 @@ public final class ChangesViewModel {
     public private(set) var entries: [FileStatus] = []
     /// 最近一次本地 status 刷新成功时间（CFM「刷新」可观测）
     public private(set) var lastRefreshedAt: Date?
+    /// 当前 entries 是否来自 Check Repository（含远端状态）
+    public private(set) var includesRepositoryCheck = false
     public var displayMode: ChangesDisplayMode = .tree
     public var filter: StatusFilter = .all
     public var searchText = ""
@@ -218,15 +228,37 @@ public final class ChangesViewModel {
         columnConfiguration.setVisible(id, visible: visible)
     }
 
+    public func highlight(for entry: FileStatus) -> CFMChangeHighlight {
+        CFMChangeHighlight.classify(entry)
+    }
+
     public func refresh() async {
         state = .loading
 
         do {
             entries = try await statusProvider.status(wc: workingCopy)
+            includesRepositoryCheck = false
             lastRefreshedAt = Date()
             state = .loaded
         } catch {
             entries = []
+            includesRepositoryCheck = false
+            state = .error(String(describing: error))
+        }
+    }
+
+    /// 小乌龟 CFM「Check Repository」：`svn status -u`
+    public func checkRepository() async {
+        state = .loading
+
+        do {
+            entries = try await statusProvider.statusAgainstRepository(wc: workingCopy)
+            includesRepositoryCheck = true
+            lastRefreshedAt = Date()
+            state = .loaded
+        } catch {
+            entries = []
+            includesRepositoryCheck = false
             state = .error(String(describing: error))
         }
     }

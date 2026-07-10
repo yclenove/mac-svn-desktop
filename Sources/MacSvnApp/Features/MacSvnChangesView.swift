@@ -63,11 +63,17 @@ public struct MacSvnChangesView: View {
                     .padding(.bottom, 8)
             }
             if let refreshed = changesVM?.lastRefreshedAt {
-                Text("本地 status 刷新于 \(Self.refreshFormatter.string(from: refreshed))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, embedded ? 12 : 24)
-                    .padding(.bottom, 4)
+                HStack(spacing: 8) {
+                    Text("本地 status 刷新于 \(Self.refreshFormatter.string(from: refreshed))")
+                    if changesVM?.includesRepositoryCheck == true {
+                        Text("· 已对照仓库")
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, embedded ? 12 : 24)
+                .padding(.bottom, 4)
             }
             content
         }
@@ -176,6 +182,11 @@ public struct MacSvnChangesView: View {
                 Task { await changesVM?.refresh() }
             }
             .disabled(changesVM == nil || actionsVM?.isRunning == true)
+            Button("检查仓库") {
+                Task { await changesVM?.checkRepository() }
+            }
+            .disabled(changesVM == nil || actionsVM?.isRunning == true)
+            .help("对照远端（svn status -u），按颜色区分仅本地/仅远端/双方变更")
         }
         .padding(embedded ? 12 : 24)
         .onChange(of: filterMode) { _, _ in applyFilters() }
@@ -273,11 +284,15 @@ public struct MacSvnChangesView: View {
                         ForEach(changesVM.visibleFlatEntries, id: \.path) { entry in
                             flatRow(entry)
                                 .tag(entry.path)
+                                .listRowBackground(highlightColor(changesVM.highlight(for: entry)))
                         }
                     } else {
                         OutlineGroup(changesVM.visibleTreeEntries, children: \.outlineChildren) { node in
                             treeRow(node)
                                 .tag(node.path)
+                                .listRowBackground(
+                                    node.fileStatus.map { highlightColor(changesVM.highlight(for: $0)) } ?? Color.clear
+                                )
                         }
                     }
                 }
@@ -298,6 +313,11 @@ public struct MacSvnChangesView: View {
                         .font(.caption.monospaced())
                         .frame(width: 28, alignment: .leading)
                         .foregroundStyle(statusColor(entry.itemStatus))
+                case .remoteStatus:
+                    Text(entry.remoteItemStatus.map(statusLabel) ?? "—")
+                        .font(.caption.monospaced())
+                        .frame(width: 28, alignment: .leading)
+                        .foregroundStyle(.secondary)
                 case .path:
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.path)
@@ -544,6 +564,22 @@ public struct MacSvnChangesView: View {
         case .deleted: return .orange
         case .modified, .replaced: return .blue
         default: return .secondary
+        }
+    }
+
+    /// CFM 行底色：仅本地 / 仅远端 / 双方 / 冲突
+    private func highlightColor(_ highlight: CFMChangeHighlight) -> Color {
+        switch highlight {
+        case .none:
+            return Color.clear
+        case .localOnly:
+            return Color.blue.opacity(0.10)
+        case .remoteOnly:
+            return Color.purple.opacity(0.12)
+        case .both:
+            return Color.orange.opacity(0.14)
+        case .conflicted:
+            return Color.red.opacity(0.16)
         }
     }
 }

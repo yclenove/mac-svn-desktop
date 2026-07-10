@@ -2,6 +2,18 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.2：CFM Check Repository（`status -u -v`）+ 本地/远端/双方/冲突行高亮；解析 `repos-status`；远端状态列
+- Affected: StatusXMLParser, SvnCommandBuilder, SvnBackend/Cli/Service, ChangesViewModel, MacSvnChangesView, CFMChangeHighlight, FileStatus.remoteItemStatus, Tests/*, docs/*
+- Impact: #8 远端对照与颜色齐；Repair Move/Copy 仍待 T1.3（#8 保持 🟡）
+
+## 2026-07-10
+
+- Summary: Tortoise 完美 Loop T1.1：CFM 本地 status 对齐 `-v`；列配置（路径/状态/修订/树冲突）可切换并写入 AppSettings；刷新时间戳；变更列表按列渲染
+- Affected: CFMColumnConfiguration.swift, ChangesViewModel.swift, MacSvnChangesView.swift, SvnCommandBuilder.swift, AppSettings, Tests/*, docs/acceptance/H-tortoise-parity.md, inventory #8
+- Impact: 检查修改本地闭环可用；远端 Check Repository / Repair 仍待 T1.2–T1.3（#8 保持 🟡）
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.7 / **闸门 G0 通过**：全量 `swift test` 529 绿；parity-coverage 脚本与 fixture 测绿；T0 波次收口，进入 T1
 - Affected: docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md, docs/acceptance/H-tortoise-parity.md, docs/acceptance/parity-coverage.json, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md
 - Impact: 骨架与门禁就绪；下一枪 T1.1 CFM 本地 status

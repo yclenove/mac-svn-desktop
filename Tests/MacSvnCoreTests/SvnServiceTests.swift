@@ -999,6 +999,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return statusResult
     }
 
+    func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        record("statusAgainstRepository")
+        return statusResult
+    }
+
     func update(
         wc: URL,
         paths: [String],

@@ -22,6 +22,7 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentItemStatus: ItemStatus?
     private var currentRevision: Revision?
     private var currentTreeConflict = false
+    private var currentRemoteItemStatus: ItemStatus?
 
     func parser(
         _ parser: XMLParser,
@@ -36,10 +37,14 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
             currentItemStatus = nil
             currentRevision = nil
             currentTreeConflict = false
+            currentRemoteItemStatus = nil
         case "wc-status":
             currentItemStatus = itemStatus(from: attributeDict["item"])
             currentRevision = revision(from: attributeDict["revision"])
             currentTreeConflict = attributeDict["tree-conflicted"] == "true"
+        case "repos-status":
+            // `svn status -u`：远端将变更状态
+            currentRemoteItemStatus = itemStatus(from: attributeDict["item"])
         default:
             break
         }
@@ -59,13 +64,15 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
             path: currentPath,
             itemStatus: currentItemStatus,
             revision: currentRevision,
-            isTreeConflict: currentTreeConflict
+            isTreeConflict: currentTreeConflict,
+            remoteItemStatus: currentRemoteItemStatus
         ))
 
         self.currentPath = nil
         self.currentItemStatus = nil
         self.currentRevision = nil
         self.currentTreeConflict = false
+        self.currentRemoteItemStatus = nil
     }
 
     private func itemStatus(from rawValue: String?) -> ItemStatus {

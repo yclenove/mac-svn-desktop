@@ -32,6 +32,10 @@ public actor SvnService {
         try await backend.status(wc: wc)
     }
 
+    public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        try await backend.statusAgainstRepository(wc: wc)
+    }
+
     public func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         try await backend.diff(wc: wc, target: target, r1: r1, r2: r2)
     }

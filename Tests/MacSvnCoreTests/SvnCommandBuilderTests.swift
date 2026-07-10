@@ -10,6 +10,12 @@ final class SvnCommandBuilderTests: XCTestCase {
     func testStatusUsesXmlAndNonInteractive() {
         let command = SvnCommandBuilder.status()
         XCTAssertEqual(command.arguments, ["status", "-v", "--xml", "--non-interactive"])
+
+        let againstRepo = SvnCommandBuilder.status(verbose: true, showUpdates: true)
+        XCTAssertEqual(
+            againstRepo.arguments,
+            ["status", "-v", "--xml", "--show-updates", "--non-interactive"]
+        )
     }
 
     func testCommitUsesUtf8EncodingNonInteractiveMessageAndPaths() {

@@ -4,6 +4,7 @@ import Foundation
 public enum CFMColumnID: String, Codable, CaseIterable, Equatable, Sendable {
     case path
     case textStatus
+    case remoteStatus
     case revision
     case treeConflict
 
@@ -11,6 +12,7 @@ public enum CFMColumnID: String, Codable, CaseIterable, Equatable, Sendable {
         switch self {
         case .path: return "路径"
         case .textStatus: return "状态"
+        case .remoteStatus: return "远端"
         case .revision: return "修订"
         case .treeConflict: return "树冲突"
         }
