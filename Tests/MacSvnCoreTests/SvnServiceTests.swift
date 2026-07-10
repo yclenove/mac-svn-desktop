@@ -1196,7 +1196,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("unlock")
     }
 
-    func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
+    func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool
+    ) async throws -> [LogEntry] {
         record("log")
         return logResult
     }

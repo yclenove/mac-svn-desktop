@@ -209,6 +209,20 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["log", "--xml", "-v", "--non-interactive", "-r", "20:0", "-l", "100", "trunk"])
     }
 
+    func testLogCanIncludeStopOnCopy() {
+        let command = SvnCommandBuilder.log(
+            target: "branches/feature",
+            from: Revision(20),
+            batch: 100,
+            verbose: true,
+            stopOnCopy: true
+        )
+        XCTAssertEqual(command.arguments, [
+            "log", "--xml", "-v", "--stop-on-copy", "--non-interactive",
+            "-r", "20:0", "-l", "100", "branches/feature"
+        ])
+    }
+
     func testLogCanIncludeAuthenticationArgumentsBeforeTarget() {
         let command = SvnCommandBuilder.log(
             target: "file:///repo/trunk",

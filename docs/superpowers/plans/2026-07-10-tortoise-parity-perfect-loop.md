@@ -139,7 +139,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 ### Wave T2 — 进阶日常 + 仓库
 
 - [x] **T2.1** Checkout + Update to revision（depth、ignore-externals）（#1,#3）
-- [ ] **T2.2** Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20）
+- [x] **T2.2** Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20）
 - [ ] **T2.3** 日志右键：Compare WC/previous、unified diff、Save/Open、Blame、Browse（L01–L08）
 - [ ] **T2.4** 日志右键：Branch/Tag from rev、Update to rev、Revert to/from rev、Checkout/Export from log（L09–L12,L14）
 - [ ] **T2.5** 日志：Copy clipboard（L17）；Edit author/msg / rev props 可放 T3（L15–L16 若本轮做不完保持 `[ ]` 并移到 T3 显式条目——**本条先做 L17**）
@@ -242,6 +242,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.11 | 3803f1c | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
 | 2026-07-10 | T1.12 / G1 | 5771e3e | G1：T1 命令行全 ✅；domain D06/07/10/14–16；H-T1 全勾；全测绿 | G1 通过 | 进入 T2.1；#3 仍 T2 |
 | 2026-07-10 | T2.1 | 50d0eaa | Checkout/Update-to-rev：-r、depth、--ignore-externals | #1,#3 ✅ | pristines 进阶仍开 |
+| 2026-07-10 | T2.2 | （提交后回填） | Show Log：过滤/stop-on-copy/Next·All/Actions | #7 ✅；L18 🟡；L19–L20 ✅ | 统计/离线 T3；右键 T2.3 |
 
 ---
 

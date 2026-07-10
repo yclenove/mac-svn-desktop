@@ -46,7 +46,8 @@ public final class AIReleaseNotesViewModel {
                 target: ".",
                 from: Revision(Int.max),
                 batch: batch,
-                verbose: true
+                verbose: true,
+                stopOnCopy: false
             )
             entries = loaded
             state = loaded.isEmpty ? .idle : .ready

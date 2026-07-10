@@ -2,6 +2,8 @@ import SwiftUI
 import MacSvnCore
 
 /// 历史页：左侧修订列表，右侧详情（说明 / 变更路径 / 操作）。
+///
+/// T2.2：作者/说明/路径过滤、`--stop-on-copy`、Next / Show All、Actions 列（L18–L20）。
 public struct MacSvnLogView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
@@ -11,6 +13,8 @@ public struct MacSvnLogView: View {
     @State private var errorText: String?
     @State private var authorFilter = ""
     @State private var messageFilter = ""
+    @State private var pathFilter = ""
+    @State private var stopOnCopy = false
     @State private var statusText: String?
     @State private var selectedRevision: Int?
 
@@ -39,20 +43,41 @@ public struct MacSvnLogView: View {
                 }
                 .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
                 Button("刷新") { Task { await reload() } }
-                Button("加载更多") {
+                Button("Next") {
                     Task { await viewModel?.loadMore() }
                 }
                 .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+                .help("再加载一批（Tortoise Next）")
+                Button("Show All") {
+                    Task { await viewModel?.loadAll() }
+                }
+                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+                .help("循环拉取直至无更多（Tortoise Show All）")
             }
             .padding(16)
 
-            HStack {
+            HStack(spacing: 8) {
                 TextField("作者过滤", text: $authorFilter)
                     .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 160)
+                    .frame(maxWidth: 140)
                 TextField("说明关键字", text: $messageFilter)
                     .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 220)
+                    .frame(maxWidth: 180)
+                TextField("路径过滤", text: $pathFilter)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 200)
+                Toggle("Stop on copy", isOn: $stopOnCopy)
+                    .toggleStyle(.checkbox)
+                    .help("svn log --stop-on-copy：在分支拷贝点停止")
+                    .onChange(of: stopOnCopy) { _, newValue in
+                        Task { await applyStopOnCopy(newValue) }
+                    }
+                if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
+                    let shown = filteredEntries(viewModel.entries).count
+                    Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
@@ -88,26 +113,33 @@ public struct MacSvnLogView: View {
                 HStack(spacing: 0) {
                     List(selection: $selectedRevision) {
                         ForEach(entries, id: \.revision.value) { entry in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text("r\(entry.revision.value)")
-                                        .font(.headline.monospaced())
-                                    Text(entry.author.isEmpty ? "unknown" : entry.author)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                            HStack(alignment: .top, spacing: 8) {
+                                Text(LogActionsSummary.symbols(for: entry.changedPaths))
+                                    .font(.caption.monospaced().weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 36, alignment: .leading)
+                                    .accessibilityLabel("Actions \(LogActionsSummary.symbols(for: entry.changedPaths))")
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("r\(entry.revision.value)")
+                                            .font(.headline.monospaced())
+                                        Text(entry.author.isEmpty ? "unknown" : entry.author)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Text(entry.message)
+                                        .font(.caption)
+                                        .lineLimit(2)
+                                    Text(entry.date?.formatted() ?? "")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
                                 }
-                                Text(entry.message)
-                                    .font(.caption)
-                                    .lineLimit(2)
-                                Text(entry.date?.formatted() ?? "")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
                             }
                             .tag(entry.revision.value)
                             .padding(.vertical, 2)
                         }
                     }
-                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 360)
+                    .frame(minWidth: 280, idealWidth: 320, maxWidth: 400)
 
                     Divider()
 
@@ -132,6 +164,12 @@ public struct MacSvnLogView: View {
                     HStack {
                         Text("r\(entry.revision.value)")
                             .font(.title2.monospaced().weight(.semibold))
+                        let actions = LogActionsSummary.symbols(for: entry.changedPaths)
+                        if !actions.isEmpty {
+                            Text(actions)
+                                .font(.title3.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Text(entry.date?.formatted() ?? "")
                             .foregroundStyle(.secondary)
@@ -204,13 +242,20 @@ public struct MacSvnLogView: View {
     }
 
     private func filteredEntries(_ entries: [LogEntry]) -> [LogEntry] {
-        let author = authorFilter.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let message = messageFilter.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return entries.filter { entry in
-            let authorOK = author.isEmpty || entry.author.lowercased().contains(author)
-            let messageOK = message.isEmpty || entry.message.lowercased().contains(message)
-            return authorOK && messageOK
+        entries.filter {
+            LogFilterPolicy.matches(
+                $0,
+                authorQuery: authorFilter,
+                messageQuery: messageFilter,
+                pathQuery: pathFilter
+            )
         }
+    }
+
+    private func applyStopOnCopy(_ enabled: Bool) async {
+        guard let viewModel else { return }
+        viewModel.stopOnCopy = enabled
+        await reloadPreservingFilters(viewModel: viewModel)
     }
 
     private func reload() async {
@@ -226,11 +271,22 @@ public struct MacSvnLogView: View {
             batchSize: settings.logBatchSize,
             logProvider: session.svnService
         )
+        vm.stopOnCopy = stopOnCopy
         viewModel = vm
         let from = Revision(record.revision?.value ?? 1)
         await vm.loadInitial(from: from)
         if selectedRevision == nil {
             selectedRevision = vm.entries.first?.revision.value
+        }
+    }
+
+    private func reloadPreservingFilters(viewModel: LogViewModel) async {
+        guard let record = workspaceController.selectedRecord, record.isValid else { return }
+        let from = Revision(record.revision?.value ?? 1)
+        await viewModel.loadInitial(from: from)
+        if let selectedRevision,
+           !viewModel.entries.contains(where: { $0.revision.value == selectedRevision }) {
+            self.selectedRevision = viewModel.entries.first?.revision.value
         }
     }
 

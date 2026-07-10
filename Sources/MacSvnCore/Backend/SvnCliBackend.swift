@@ -311,8 +311,21 @@ public struct SvnCliBackend: SvnBackend {
         )
     }
 
-    public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
-        let command = SvnCommandBuilder.log(target: target, from: from, batch: batch, verbose: verbose)
+    public func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool = false
+    ) async throws -> [LogEntry] {
+        let command = SvnCommandBuilder.log(
+            target: target,
+            from: from,
+            batch: batch,
+            verbose: verbose,
+            stopOnCopy: stopOnCopy
+        )
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)
         return try LogXMLParser.parse(result.stdout)
     }

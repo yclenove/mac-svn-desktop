@@ -106,7 +106,8 @@ private actor FakeReleaseNotesLogProvider: LogProviding {
         target: String,
         from: Revision,
         batch: Int,
-        verbose: Bool
+        verbose: Bool,
+        stopOnCopy: Bool
     ) async throws -> [LogEntry] {
         calls.append(ReleaseNotesLogCall(wc: wc, batch: batch))
         return try result.get()

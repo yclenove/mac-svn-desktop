@@ -244,11 +244,15 @@ public enum SvnCommandBuilder {
         from: Revision,
         batch: Int,
         verbose: Bool,
+        stopOnCopy: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
         var arguments = ["log", "--xml"]
         if verbose {
             arguments.append("-v")
+        }
+        if stopOnCopy {
+            arguments.append("--stop-on-copy")
         }
         arguments += ["--non-interactive", "-r", "\(from):0", "-l", svnLimitArgument(batch)]
         arguments += authArguments
@@ -260,11 +264,15 @@ public enum SvnCommandBuilder {
         target: String,
         batch: Int,
         verbose: Bool,
+        stopOnCopy: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
         var arguments = ["log", "--xml"]
         if verbose {
             arguments.append("-v")
+        }
+        if stopOnCopy {
+            arguments.append("--stop-on-copy")
         }
         arguments += ["--non-interactive", "-r", "HEAD:0", "-l", svnLimitArgument(batch)]
         arguments += authArguments

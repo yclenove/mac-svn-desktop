@@ -64,8 +64,32 @@ public actor SvnService {
         try await backend.locks(wc: wc, targets: targets)
     }
 
-    public func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
-        try await backend.log(wc: wc, target: target, from: from, batch: batch, verbose: verbose)
+    public func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool
+    ) async throws -> [LogEntry] {
+        try await log(wc: wc, target: target, from: from, batch: batch, verbose: verbose, stopOnCopy: false)
+    }
+
+    public func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool
+    ) async throws -> [LogEntry] {
+        try await backend.log(
+            wc: wc,
+            target: target,
+            from: from,
+            batch: batch,
+            verbose: verbose,
+            stopOnCopy: stopOnCopy
+        )
     }
 
     public func remoteLog(

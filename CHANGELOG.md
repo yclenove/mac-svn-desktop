@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.2：Show Log 作者/说明/路径过滤、`--stop-on-copy`、Next / Show All、Actions（MADR）列
+- Affected: LogActionsSummary, LogFilterPolicy, LogViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnLogView, Tests/*, docs/*
+- Impact: inventory #7 ✅；L18 过滤 ✅（统计/离线 T3）；L19–L20 ✅；下一 T2.3 日志右键
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T2.1：Checkout / Update to revision 支持 `-r`、`--depth`/`--set-depth`、`--ignore-externals`；Repo Browser 与 CFM 对话框接线
 - Affected: SvnCommandBuilder/Backend/Cli/Service, CheckoutViewModel, WorkingCopyActionsViewModel, MacSvnRepoBrowserView, MacSvnChangesView, Tests/*, docs/*
 - Impact: inventory #1,#3 ✅；pristines 选项仍开

@@ -34,7 +34,14 @@ public protocol SvnBackend: Sendable {
     func locks(wc: URL, targets: [String]) async throws -> [SvnLock]
     func lock(wc: URL, paths: [String], message: String?, force: Bool) async throws
     func unlock(wc: URL, paths: [String], force: Bool) async throws
-    func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry]
+    func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool
+    ) async throws -> [LogEntry]
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func remoteLogFromHead(url: String, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]

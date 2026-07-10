@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T15:03:17Z",
+  "generated_at": "2026-07-10T15:10:10Z",
   "total": 114,
-  "done": 22,
-  "partial": 33,
-  "missing": 59,
-  "coverage": 0.192982,
-  "coverage_percent": 19.3,
+  "done": 25,
+  "partial": 31,
+  "missing": 58,
+  "coverage": 0.219298,
+  "coverage_percent": 21.93,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,15 +16,15 @@
     },
     "command": {
       "total": 46,
-      "done": 14,
-      "partial": 12,
+      "done": 15,
+      "partial": 11,
       "missing": 20
     },
     "log": {
       "total": 20,
-      "done": 0,
-      "partial": 3,
-      "missing": 17
+      "done": 2,
+      "partial": 2,
+      "missing": 16
     },
     "settings": {
       "total": 13,
@@ -128,7 +128,7 @@
       "key": "D13",
       "section": "domain",
       "title": "Show Log",
-      "raw_status": "🟡",
+      "raw_status": "🟡 过滤/stop/Next·All/Actions ✅；统计/离线/右键 T2.3+",
       "status": "partial"
     },
     {
@@ -282,8 +282,8 @@
       "key": "cmd.07",
       "section": "command",
       "title": "Show Log",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 过滤/stop/Next·All/Actions；右键 L01+ 仍开",
+      "status": "done"
     },
     {
       "key": "cmd.08",
@@ -681,22 +681,22 @@
       "key": "L18",
       "section": "log",
       "title": "Filter / Statistics / Offline cache",
-      "raw_status": "❌/弱",
+      "raw_status": "🟡 作者/说明/路径过滤 ✅；统计/离线 T3",
       "status": "partial"
     },
     {
       "key": "L19",
       "section": "log",
       "title": "Actions 列图标",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ MADR 汇总；Moved/Merged 图标进阶仍开",
+      "status": "done"
     },
     {
       "key": "L20",
       "section": "log",
       "title": "stop-on-copy、Next 100、Show All",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "S01",
