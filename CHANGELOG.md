@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 修复启动后通知授权回调在后台队列触碰 MainActor 导致的 SIGILL 崩溃（`requestNotificationPermission` 改为 `nonisolated`）
+- Affected: Sources/MacSvnApp/Features/MacSvnMenuBarController.swift
+- Impact: 点击「添加工作副本」等路径不再因通知权限回调崩溃；请重新打开 `dist/MacSVN.app`
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop V5：全量 `swift test` 502 通过；Xcode/SPM `.app` 与 Finder Sync/Quick Look 冒烟通过；README 功能矩阵改为可验收；合入 `main`（因 main 已有早期 PR merge，采用 merge 而非纯 FF）
 - Affected: README.md, docs/README.md, docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
 - Impact: SRS 缺口 Loop 全部 `[x]`；长程交付收口
