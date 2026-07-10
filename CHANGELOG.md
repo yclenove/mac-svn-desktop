@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: T2.4 审计修复：peg URL 仅剥离末尾 `@rev`；L11 要求 HEAD>目标；L10 更新增加确认
+- Affected: LogContextActionPolicy, MacSvnLogView, Tests/*, CHANGELOG.md
+- Impact: 修复 svn+ssh user@host 误截断与 HEAD==目标时错误合并
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T2.4：Show Log 右键 L09–L12、L14（从修订建分支/标签、更新到修订、还原到/撤销修订、检出/导出）
 - Affected: LogContextActionPolicy, MacSvnLogView, SvnService.repositoryHeadRevision, Tests/*, docs/*
 - Impact: inventory L09–L12、L14 ✅；L13 仍属 T3；下一 T2.5（L17）

@@ -557,7 +557,10 @@ public struct MacSvnLogView: View {
             showBranchSheet = true
 
         case .updateToRevision(let path, let rev):
-            await updateItemToRevision(path: path, revision: rev)
+            pendingConfirmTitle = "更新到 r\(rev.value)？"
+            pendingConfirmDetail = "将对「\(path)」执行 svn update -r \(rev.value)。工作副本将变为该修订（可能 mixed-rev）。"
+            pendingConfirmAction = { await self.updateItemToRevision(path: path, revision: rev) }
+            showConfirmSheet = true
 
         case .revertToRevision(let path, let rev):
             pendingConfirmTitle = "还原到 r\(rev.value)？"
@@ -628,7 +631,7 @@ public struct MacSvnLogView: View {
         do {
             let head = try await session.svnService.repositoryHeadRevision(wc: wc, target: path == "." ? "" : path)
             guard let range = LogContextActionPolicy.revertToRevisionRange(head: head, target: revision) else {
-                errorText = "仓库 HEAD (r\(head.value)) 不晚于目标 r\(revision.value)，无需还原"
+                errorText = "仓库 HEAD (r\(head.value)) 未晚于目标 r\(revision.value)，无需还原"
                 return
             }
             let summary = try await session.svnService.merge(
@@ -679,15 +682,13 @@ public struct MacSvnLogView: View {
         guard let destination else { return }
         showCheckoutExportSheet = false
 
-        // peg URL 形如 url@rev；检出/导出 API 使用裸 URL + revision 参数
+        // peg URL：仅剥离末尾 @数字，保留 user@host
         let peg = checkoutExportPegURL
-        let url = peg.split(separator: "@").first.map(String.init) ?? peg
+        let url = LogContextActionPolicy.stripPegRevision(from: peg)
         let rev = checkoutExportRevision
-        let target = destination.appendingPathComponent(
-            URL(fileURLWithPath: url).lastPathComponent.isEmpty
-                ? "svn-r\(rev.value)"
-                : URL(fileURLWithPath: url).lastPathComponent
-        )
+        let leaf = URL(string: url)?.lastPathComponent
+        let folderName = (leaf?.isEmpty == false ? leaf! : "svn-r\(rev.value)")
+        let target = destination.appendingPathComponent(folderName)
 
         do {
             if checkoutExportIsExport {

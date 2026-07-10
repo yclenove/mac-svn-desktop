@@ -92,11 +92,27 @@ final class LogContextActionPolicyTests: XCTestCase {
         XCTAssertNil(LogContextActionPolicy.reverseSingleRevisionRange(Revision(0)))
     }
 
-    func testRevertToRevisionRangeRequiresHeadAtOrAfterTarget() {
+    func testRevertToRevisionRangeRequiresHeadStrictlyAfterTarget() {
         XCTAssertEqual(
             LogContextActionPolicy.revertToRevisionRange(head: Revision(20), target: Revision(12)),
             RevisionRange(start: Revision(20), end: Revision(12))
         )
+        XCTAssertNil(LogContextActionPolicy.revertToRevisionRange(head: Revision(12), target: Revision(12)))
         XCTAssertNil(LogContextActionPolicy.revertToRevisionRange(head: Revision(5), target: Revision(12)))
+    }
+
+    func testStripPegRevisionKeepsUserAtHost() {
+        XCTAssertEqual(
+            LogContextActionPolicy.stripPegRevision(from: "svn+ssh://user@host/repo/trunk@42"),
+            "svn+ssh://user@host/repo/trunk"
+        )
+        XCTAssertEqual(
+            LogContextActionPolicy.stripPegRevision(from: "file:///repo/trunk@9"),
+            "file:///repo/trunk"
+        )
+        XCTAssertEqual(
+            LogContextActionPolicy.stripPegRevision(from: "svn+ssh://user@host/repo/trunk"),
+            "svn+ssh://user@host/repo/trunk"
+        )
     }
 }

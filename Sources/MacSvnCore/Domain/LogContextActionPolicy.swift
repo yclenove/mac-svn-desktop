@@ -101,10 +101,20 @@ public enum LogContextActionPolicy: Sendable {
         return RevisionRange(start: revision, end: Revision(revision.value - 1))
     }
 
-    /// L11：从仓库 HEAD 反向合并到目标修订。
+    /// L11：从仓库 HEAD 反向合并到目标修订（HEAD 必须严格大于目标）。
     public static func revertToRevisionRange(head: Revision, target: Revision) -> RevisionRange? {
-        guard head.value >= target.value else { return nil }
+        guard head.value > target.value else { return nil }
         return RevisionRange(start: head, end: target)
+    }
+
+    /// 从 `url@rev` peg 解析裸 URL；仅剥离**最后一个** `@数字`，避免误伤 `user@host`。
+    public static func stripPegRevision(from pegURL: String) -> String {
+        guard let at = pegURL.lastIndex(of: "@") else { return pegURL }
+        let suffix = pegURL[pegURL.index(after: at)...]
+        if !suffix.isEmpty, suffix.allSatisfy(\.isNumber) {
+            return String(pegURL[..<at])
+        }
+        return pegURL
     }
 
     public static func intent(
