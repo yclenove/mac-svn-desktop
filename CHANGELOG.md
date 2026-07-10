@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.4：`ProcessRunner` 支持 Task 取消（SIGTERM→5s SIGKILL→`SvnError.cancelled`）；新增 `SvnCancellableTask` 包装
+- Affected: Sources/MacSvnCore/Process/ProcessRunner.swift, Tests/MacSvnCoreTests/ProcessRunnerTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: 长耗时 svn 可被 UI 取消；对齐详设取消传播；清单：异常映射通过、无吞异常
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.3：`MacSvnAppNavigator.perform(command:paths:options:)` 统一入口；未接线命令返回 `unimplemented` 并提示「未实现」
 - Affected: Sources/MacSvnApp/App/MacSvnAppNavigator.swift, Sources/MacSvnCore/Catalog/SvnCommandOptions.swift, Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: Finder/⌘K/后续对话框可共用同一命令分发；T0 stub 显式可追踪

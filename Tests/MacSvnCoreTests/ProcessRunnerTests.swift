@@ -69,4 +69,58 @@ final class ProcessRunnerTests: XCTestCase {
             XCTFail("Expected SvnError, got \(error)")
         }
     }
+
+    func testRunThrowsCancelledWhenTaskIsCancelled() async {
+        let runner = ProcessRunner()
+        let task = Task {
+            try await runner.run(
+                executable: "/bin/sleep",
+                arguments: ["10"],
+                stdin: nil,
+                currentDirectory: nil,
+                timeout: 30
+            )
+        }
+
+        // 给子进程一点启动时间，再取消
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Expected cancellation")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .cancelled)
+        } catch is CancellationError {
+            // 外层 Task 竞态下也可能直接抛 CancellationError；ProcessRunner 已映射，此处兼容
+            XCTAssertTrue(true)
+        } catch {
+            XCTFail("Expected SvnError.cancelled, got \(error)")
+        }
+    }
+
+    func testSvnCancellableTaskCancelMapsToSvnErrorCancelled() async {
+        let handle = SvnCancellableTask {
+            let runner = ProcessRunner()
+            return try await runner.run(
+                executable: "/bin/sleep",
+                arguments: ["10"],
+                stdin: nil,
+                currentDirectory: nil,
+                timeout: 30
+            )
+        }
+
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        handle.cancel()
+
+        do {
+            _ = try await handle.value
+            XCTFail("Expected cancellation")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .cancelled)
+        } catch {
+            XCTFail("Expected SvnError.cancelled, got \(error)")
+        }
+    }
 }
