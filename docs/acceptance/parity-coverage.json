@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T13:41:58Z",
+  "generated_at": "2026-07-10T13:51:23Z",
   "total": 114,
-  "done": 6,
-  "partial": 47,
+  "done": 10,
+  "partial": 43,
   "missing": 61,
-  "coverage": 0.052632,
-  "coverage_percent": 5.26,
+  "coverage": 0.087719,
+  "coverage_percent": 8.77,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,8 +16,8 @@
     },
     "command": {
       "total": 46,
-      "done": 5,
-      "partial": 19,
+      "done": 9,
+      "partial": 15,
       "missing": 22
     },
     "log": {
@@ -331,8 +331,8 @@
       "key": "cmd.14",
       "section": "command",
       "title": "Delete",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.15",
@@ -352,15 +352,15 @@
       "key": "cmd.17",
       "section": "command",
       "title": "Revert",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.18",
       "section": "command",
       "title": "Cleanup",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.19",
@@ -436,8 +436,8 @@
       "key": "cmd.29",
       "section": "command",
       "title": "Add",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.30",

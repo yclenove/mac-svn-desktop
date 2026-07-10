@@ -9,7 +9,9 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
         let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
 
-        XCTAssertEqual(statuses, [])
+        // status -v 会列出全部正常项；「干净」= 无本地变更/冲突
+        XCTAssertFalse(statuses.isEmpty)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal && !$0.isTreeConflict })
     }
 
     func testSnapshotGitMigrationExportsAndCommitsRepository() async throws {
@@ -279,7 +281,8 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
         let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
 
-        XCTAssertEqual(statuses, [])
+        // empty depth 仍有 WC 根；status -v 返回根节点为 normal
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal && !$0.isTreeConflict })
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
     }

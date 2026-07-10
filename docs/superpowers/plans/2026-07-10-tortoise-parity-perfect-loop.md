@@ -129,7 +129,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T1.4** Commit 对话框级：勾选、未版本→add、Keep locks、说明历史、单项 Diff/Revert（#4 + §4.1）
 - [x] **T1.5** Update：同仓多路径统一 revision（#2 + §4.3）
 - [x] **T1.6** Diff：BASE、双文件、外置查看器入口（#5）
-- [ ] **T1.7** Add / Delete / Revert（勾选列表）/ Cleanup（#14,17,18,29）
+- [x] **T1.7** Add / Delete / Revert（勾选列表）/ Cleanup（#14,17,18,29）
 - [ ] **T1.8** Rename（#13）
 - [ ] **T1.9** Ignore 文件/通配（#32）
 - [ ] **T1.10** SVN Copy / Move 向导（#36）
@@ -235,6 +235,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.4 | d91dfef | CommitSelection+keepLocks+unversioned add+Diff/Revert | #4 ✅ | 说明历史已有；§4.1 进阶项仍开 |
 | 2026-07-10 | T1.5 | b92abb7 | UpdateRevisionPolicy + repositoryHeadRevision + 多选更新 | #2 ✅ | 多路径先钉 HEAD 再 -r |
 | 2026-07-10 | T1.6 | e8d8067 | diffAgainstBase / diffBetweenPaths + 外置 Diff UI | #5 ✅ | EOL/空白进阶仍开 |
+| 2026-07-10 | T1.7 | （提交后回填） | Add 勾选 / Delete 确认 / Revert 递归+Diff / Cleanup 选项 | #14,#17,#18,#29 ✅ | 壳层刷新仍属 #16 外 |
 
 ---
 

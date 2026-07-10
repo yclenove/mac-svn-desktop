@@ -1136,7 +1136,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("revert")
     }
 
-    func cleanup(wc: URL) async throws {
+    func cleanup(wc: URL, options: SvnCleanupOptions) async throws {
         record("cleanup")
     }
 

@@ -16,7 +16,7 @@ public protocol SvnBackend: Sendable {
     /// CFM Repair Copy：`svn copy --force`（工作副本内，不提交）
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
-    func cleanup(wc: URL) async throws
+    func cleanup(wc: URL, options: SvnCleanupOptions) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
     /// 双路径 Diff（`--old` / `--new`）

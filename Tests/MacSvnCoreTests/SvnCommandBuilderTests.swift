@@ -156,6 +156,23 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["cleanup", "--non-interactive"])
     }
 
+    func testCleanupCanIncludeBreakLocksVacuumAndExternals() {
+        let command = SvnCommandBuilder.cleanup(options: SvnCleanupOptions(
+            breakLocks: true,
+            vacuumPristines: true,
+            includeExternals: true
+        ))
+        XCTAssertEqual(
+            command.arguments,
+            [
+                "cleanup", "--non-interactive",
+                "--break-locks",
+                "--vacuum-pristines",
+                "--include-externals"
+            ]
+        )
+    }
+
     func testDiffCanTargetRevisionRange() {
         let command = SvnCommandBuilder.diff(target: "a.txt", r1: Revision(1), r2: Revision(3))
         XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "1:3", "a.txt"])

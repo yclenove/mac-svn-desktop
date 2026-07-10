@@ -93,11 +93,11 @@
 | 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | 🟡 | T2 |
 | 12 | Resolved | `resolved` | 多选 | 🟡 | T2 |
 | 13 | Rename | `rename` | 新名校验 | ❌ | T1 |
-| 14 | Delete | `delete` | 确认 | 🟡 | T1 |
+| 14 | Delete | `delete` | 确认 | ✅ | T1 |
 | 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T2 |
 | 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T2 |
-| 17 | Revert | `status`→勾选→`revert [-R]` | 勾选、单项 Diff | 🟡 | T1 |
-| 18 | Cleanup | `cleanup` | 刷新壳层/断锁等选项 | 🟡 | T1 |
+| 17 | Revert | `status`→勾选→`revert [-R]` | 勾选、单项 Diff | ✅ | T1 |
+| 18 | Cleanup | `cleanup` | 刷新壳层/断锁等选项 | ✅ | T1 |
 | 19 | Get Lock | `lock -m [--force]` | 注释、steal | 🟡 | T2 |
 | 20 | Release Lock | `unlock` | 多选 | 🟡 | T2 |
 | 21 | Break lock | 🔷 | 高危确认 | ❌ | T2 |
@@ -108,7 +108,7 @@
 | 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ❌ | T2 |
 | 27 | Relocate | `switch --relocate` | From/To URL | ❌ | T2 |
 | 28 | Create Repository Here | `svnadmin create --fs-type fsfs` | 路径 | ❌ | T3 |
-| 29 | Add | 递归扫描可添加 | 勾选列表 | 🟡 | T1 |
+| 29 | Add | 递归扫描可添加 | 勾选列表 | ✅ | T1 |
 | 30 | Import | `import -m PATH URL` | 说明 | ❌ | T2 |
 | 31 | Blame | `blame` + `log` tip | 修订范围、悬停 | 🟡 | T2 |
 | 32 | Add to Ignore List | `propget/propset svn:ignore` | 文件名/通配 | 🟡 | T1 |

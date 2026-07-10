@@ -349,8 +349,12 @@ public actor SvnService {
     }
 
     public func cleanup(wc: URL) async throws {
+        try await cleanup(wc: wc, options: .default)
+    }
+
+    public func cleanup(wc: URL, options: SvnCleanupOptions) async throws {
         try await withWriteLock(wc: wc, operation: "cleanup") {
-            try await backend.cleanup(wc: wc)
+            try await backend.cleanup(wc: wc, options: options)
         }
     }
 

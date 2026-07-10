@@ -21,6 +21,13 @@ public struct MacSvnChangesView: View {
     @State private var searchText = ""
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
+    @State private var confirmDelete = false
+    @State private var showAddSheet = false
+    @State private var showCleanupSheet = false
+    @State private var showRevertSheet = false
+    @State private var addSelectedPaths: Set<String> = []
+    @State private var revertRecursive = false
+    @State private var cleanupOptions = SvnCleanupOptions()
     @State private var statusBanner: String?
     @State private var setDepth: SvnDepth = .infinity
     @State private var showSetDepth = false
@@ -96,6 +103,25 @@ public struct MacSvnChangesView: View {
                 Task { await runRevert(confirmed: true) }
             }
             Button("取消", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "确认从版本库调度删除选中路径？本地文件将被删除（未提交前可用还原撤销）。",
+            isPresented: $confirmDelete,
+            titleVisibility: .visible
+        ) {
+            Button("删除", role: .destructive) {
+                Task { await runDelete() }
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .sheet(isPresented: $showAddSheet) {
+            addSheet
+        }
+        .sheet(isPresented: $showCleanupSheet) {
+            cleanupSheet
+        }
+        .sheet(isPresented: $showRevertSheet) {
+            revertSheet
         }
         .sheet(isPresented: $showSetDepth) {
             VStack(alignment: .leading, spacing: 16) {
@@ -204,22 +230,25 @@ public struct MacSvnChangesView: View {
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
             Button("清理") {
-                Task { await runCleanup() }
+                cleanupOptions = .default
+                showCleanupSheet = true
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
             Button("添加") {
-                Task { await runAdd() }
+                prepareAddSheet()
+                showAddSheet = true
             }
-            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
+            .disabled(actionsVM?.isRunning == true || changesVM == nil)
 
             Button("删除") {
-                Task { await runDelete() }
+                confirmDelete = true
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
             Button("还原…") {
-                confirmRevert = true
+                revertRecursive = false
+                showRevertSheet = true
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
@@ -406,6 +435,8 @@ public struct MacSvnChangesView: View {
     }
 
     private func bindAndRefresh() async {
+        // 切换 WC 时关闭对话框，避免把上一副本的勾选路径提交到当前副本
+        dismissActionSheets()
         guard let record = workspaceController.selectedRecord, record.isValid else {
             changesVM = nil
             actionsVM = nil
@@ -439,6 +470,18 @@ public struct MacSvnChangesView: View {
         }
         applyFilters()
         await changes.refresh()
+    }
+
+    /// 关闭 Add/Cleanup/Revert/Delete 等对话框并清空临时勾选，防止跨 WC 误操作。
+    private func dismissActionSheets() {
+        showAddSheet = false
+        showCleanupSheet = false
+        showRevertSheet = false
+        confirmDelete = false
+        confirmRevert = false
+        addSelectedPaths = []
+        revertRecursive = false
+        cleanupOptions = .default
     }
 
     private func toggleColumn(_ column: CFMColumnID) async {
@@ -525,13 +568,27 @@ public struct MacSvnChangesView: View {
 
     private func runCleanup() async {
         guard let actionsVM, let changesVM else { return }
-        await actionsVM.cleanup()
+        await actionsVM.cleanup(options: cleanupOptions)
         await syncAfterAction(actionsVM, changesVM)
     }
 
-    private func runAdd() async {
+    private func prepareAddSheet() {
+        guard let changesVM else { return }
+        addSelectedPaths = AddCandidatesPolicy.defaultSelectedPaths(
+            from: changesVM.entries,
+            preselected: selectedPaths
+        )
+    }
+
+    private func runAddFromSheet() async {
         guard let actionsVM, let changesVM else { return }
-        await actionsVM.add(paths: Array(selectedPaths))
+        let paths = Array(addSelectedPaths).sorted()
+        guard !paths.isEmpty else {
+            statusBanner = "未勾选可添加项"
+            return
+        }
+        showAddSheet = false
+        await actionsVM.add(paths: paths)
         await syncAfterAction(actionsVM, changesVM)
     }
 
@@ -539,6 +596,110 @@ public struct MacSvnChangesView: View {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.delete(paths: Array(selectedPaths))
         await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private func runRevert(confirmed: Bool) async {
+        guard let actionsVM, let changesVM else { return }
+        await actionsVM.revert(paths: Array(selectedPaths), recursive: revertRecursive, confirmed: confirmed)
+        await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private var addSheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("添加未版本文件")
+                .font(.headline)
+            Text("勾选要纳入版本控制的路径（对齐小乌龟 Add 勾选列表）。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            let candidates = AddCandidatesPolicy.candidates(from: changesVM?.entries ?? [])
+            if candidates.isEmpty {
+                Text("当前没有未版本项。")
+                    .foregroundStyle(.secondary)
+            } else {
+                List {
+                    ForEach(candidates, id: \.path) { status in
+                        Toggle(isOn: Binding(
+                            get: { addSelectedPaths.contains(status.path) },
+                            set: { selected in
+                                if selected {
+                                    addSelectedPaths.insert(status.path)
+                                } else {
+                                    addSelectedPaths.remove(status.path)
+                                }
+                            }
+                        )) {
+                            Text(status.path)
+                        }
+                    }
+                }
+                .frame(minHeight: 220)
+            }
+            HStack {
+                Button("取消") { showAddSheet = false }
+                Spacer()
+                Button("添加") {
+                    Task { await runAddFromSheet() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(addSelectedPaths.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 480, height: 360)
+    }
+
+    private var cleanupSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("清理工作副本")
+                .font(.headline)
+            Toggle("打断锁（--break-locks）", isOn: $cleanupOptions.breakLocks)
+            Toggle("清理 pristine（--vacuum-pristines）", isOn: $cleanupOptions.vacuumPristines)
+            Toggle("包含外部项（--include-externals）", isOn: $cleanupOptions.includeExternals)
+            Text("默认仅执行 `svn cleanup`；危险的删除未版本请用独立命令（#16）。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("取消") { showCleanupSheet = false }
+                Spacer()
+                Button("执行清理") {
+                    showCleanupSheet = false
+                    Task { await runCleanup() }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+    }
+
+    private var revertSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("还原本地修改")
+                .font(.headline)
+            Text("已选 \(selectedPaths.count) 项")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Toggle("递归还原目录（--recursive）", isOn: $revertRecursive)
+            if selectedPaths.count == 1, let path = selectedPaths.sorted().first {
+                Button("查看 Diff：\(path)") {
+                    _ = navigator?.perform(command: .diff, paths: [path])
+                }
+            }
+            Text("还原不可撤销未保存的本地修改。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("取消") { showRevertSheet = false }
+                Spacer()
+                Button("还原", role: .destructive) {
+                    showRevertSheet = false
+                    Task { await runRevert(confirmed: true) }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 440)
     }
 
     private func runRepairMove() async {
@@ -557,12 +718,6 @@ public struct MacSvnChangesView: View {
         if case .completed(.repairCopy) = actionsVM.state {
             statusBanner = "已修复复制"
         }
-    }
-
-    private func runRevert(confirmed: Bool) async {
-        guard let actionsVM, let changesVM else { return }
-        await actionsVM.revert(paths: Array(selectedPaths), confirmed: confirmed)
-        await syncAfterAction(actionsVM, changesVM)
     }
 
     private func syncAfterAction(

@@ -201,8 +201,8 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.revert(paths: paths, recursive: recursive), currentDirectory: wc.path, stdin: nil)
     }
 
-    public func cleanup(wc: URL) async throws {
-        _ = try await run(SvnCommandBuilder.cleanup(), currentDirectory: wc.path, stdin: nil)
+    public func cleanup(wc: URL, options: SvnCleanupOptions = .default) async throws {
+        _ = try await run(SvnCommandBuilder.cleanup(options: options), currentDirectory: wc.path, stdin: nil)
     }
 
     public func resolve(wc: URL, path: String, accept: ResolveAccept) async throws {

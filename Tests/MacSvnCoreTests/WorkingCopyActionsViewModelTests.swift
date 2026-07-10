@@ -367,7 +367,7 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         }
     }
 
-    func cleanup(wc: URL) async throws {
+    func cleanup(wc: URL, options: SvnCleanupOptions) async throws {
         calls.append(ActionCall(operation: .cleanup, wc: wc, paths: [], revision: nil, setDepth: nil, recursive: false))
         if let cleanupError {
             throw cleanupError

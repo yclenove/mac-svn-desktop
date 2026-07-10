@@ -132,8 +132,18 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
-    public static func cleanup() -> SvnCommand {
-        SvnCommand(arguments: ["cleanup", "--non-interactive"])
+    public static func cleanup(options: SvnCleanupOptions = .default) -> SvnCommand {
+        var arguments = ["cleanup", "--non-interactive"]
+        if options.breakLocks {
+            arguments.append("--break-locks")
+        }
+        if options.vacuumPristines {
+            arguments.append("--vacuum-pristines")
+        }
+        if options.includeExternals {
+            arguments.append("--include-externals")
+        }
+        return SvnCommand(arguments: arguments)
     }
 
     public static func diff(target: String, r1: Revision?, r2: Revision?) -> SvnCommand {

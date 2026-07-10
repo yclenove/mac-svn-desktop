@@ -8,7 +8,7 @@ public protocol WorkingCopyActionProviding: Sendable {
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
-    func cleanup(wc: URL) async throws
+    func cleanup(wc: URL, options: SvnCleanupOptions) async throws
 }
 
 public enum WorkingCopyOperation: Equatable, Sendable {
@@ -114,9 +114,9 @@ public final class WorkingCopyActionsViewModel {
         }
     }
 
-    public func cleanup() async {
+    public func cleanup(options: SvnCleanupOptions = .default) async {
         await perform(.cleanup) {
-            try await actionProvider.cleanup(wc: workingCopy)
+            try await actionProvider.cleanup(wc: workingCopy, options: options)
         }
     }
 
