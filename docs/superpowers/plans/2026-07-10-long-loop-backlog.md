@@ -61,11 +61,11 @@
 
 ### Wave E — P4 高级 SVN + 效率 UI
 
-- [ ] **E1** Blame 页
-- [ ] **E2** 属性页
-- [ ] **E3** 锁定页
-- [ ] **E4** 搁置页（Shelve）
-- [ ] **E5** 提交守护结果在 Commit 页硬/软阻断可配置
+- [x] **E1** Blame 页
+- [x] **E2** 属性页
+- [x] **E3** 锁定页
+- [x] **E4** 搁置页（Shelve）
+- [x] **E5** 提交守护结果在 Commit 页硬/软阻断可配置
 
 ### Wave F — P5 Git 迁移 + 菜单栏 + 深链
 
@@ -96,4 +96,6 @@
 |------|------|--------|------|
 | 2026-07-10 12:17 | A1/A2/A3/B1/B2/B7 | bf0cbe9 | `swift test --filter MacSvnApp` 6 passed |
 | 2026-07-10 12:19 | B3/B4/B5/B6 | 9488ab8 | `swift test --filter MacSvnApp` 6 passed |
-| 2026-07-10 12:23 | C1/C2/C3/C4 | （本轮提交） | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:23 | C1/C2/C3/C4 | 7d1240b | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:25 | D1/D2/D3 | 14f43a8 | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:26 | E1–E5 | （本轮提交） | `swift test --filter MacSvnApp|SettingsStore` 9 passed |

@@ -7,6 +7,7 @@ public struct MacSvnSettingsView: View {
     @State private var svnPath: String = ""
     @State private var logBatchSize: Int = 100
     @State private var processTimeout: Double = 120
+    @State private var hardBlockConflictMarkers = false
     @State private var statusText: String?
 
     public init(session: MacSvnAppSession) {
@@ -22,6 +23,7 @@ public struct MacSvnSettingsView: View {
             Section("行为") {
                 Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
                 Stepper("进程超时 \(Int(processTimeout)) 秒", value: $processTimeout, in: 30...600, step: 30)
+                Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
             }
             if let statusText {
                 Text(statusText)
@@ -43,6 +45,7 @@ public struct MacSvnSettingsView: View {
         svnPath = settings.svnPath ?? ""
         logBatchSize = settings.logBatchSize
         processTimeout = settings.processTimeout
+        hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
     }
 
     private func save() async {
@@ -51,9 +54,10 @@ public struct MacSvnSettingsView: View {
         settings.svnPath = trimmed.isEmpty ? nil : trimmed
         settings.logBatchSize = logBatchSize
         settings.processTimeout = processTimeout
+        settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         do {
             try await session.settingsStore.update(settings)
-            statusText = "已保存。svn 路径变更将在下次启动会话后完全生效。"
+            statusText = "已保存。svn 路径与提交守护策略将在下次启动会话后完全生效。"
         } catch {
             statusText = "保存失败：\(error.localizedDescription)"
         }

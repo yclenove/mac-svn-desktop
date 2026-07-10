@@ -16,6 +16,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let repoBookmarkStore: RepoBookmarkStore
     public let branchListService: BranchListService
     public let conflictService: ConflictService
+    public let shelveService: ShelveService
     public let svnService: SvnService
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
@@ -28,6 +29,7 @@ public final class MacSvnAppSession: ObservableObject {
         repoBookmarkStore: RepoBookmarkStore,
         branchListService: BranchListService,
         conflictService: ConflictService,
+        shelveService: ShelveService,
         svnService: SvnService,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String
@@ -39,6 +41,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.repoBookmarkStore = repoBookmarkStore
         self.branchListService = branchListService
         self.conflictService = conflictService
+        self.shelveService = shelveService
         self.svnService = svnService
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
@@ -78,13 +81,26 @@ public final class MacSvnAppSession: ObservableObject {
             runner: ProcessRunner(),
             timeout: settings.processTimeout
         )
-        let svnService = SvnService(backend: backend)
+        var guardConfig = CommitGuardConfiguration()
+        if settings.commitGuardHardBlockConflictMarkers {
+            guardConfig.hardBlockedRules.insert(.conflictMarker)
+        }
+        let svnService = SvnService(
+            backend: backend,
+            commitGuard: CommitGuardService(configuration: guardConfig)
+        )
         let branchListService = BranchListService(listProvider: svnService)
         let conflictService = ConflictService(
             statusProvider: svnService,
             infoProvider: svnService,
             resolveProvider: svnService,
             revertProvider: svnService
+        )
+        let shelveRoot = directory.appendingPathComponent("shelves", isDirectory: true)
+        try FileManager.default.createDirectory(at: shelveRoot, withIntermediateDirectories: true)
+        let shelveService = ShelveService(
+            store: ShelveStore(rootDirectory: shelveRoot),
+            svn: svnService
         )
 
         return MacSvnAppSession(
@@ -95,6 +111,7 @@ public final class MacSvnAppSession: ObservableObject {
             repoBookmarkStore: repoBookmarkStore,
             branchListService: branchListService,
             conflictService: conflictService,
+            shelveService: shelveService,
             svnService: svnService,
             svnExecutablePath: svnPath
         )

@@ -38,6 +38,14 @@ public struct MacSvnFeatureHostView: View {
             MacSvnBranchesView(workspaceController: workspaceController, session: session)
         case .merge:
             MacSvnConflictWorkspaceView(workspaceController: workspaceController, session: session)
+        case .blame:
+            MacSvnBlameView(workspaceController: workspaceController, session: session)
+        case .properties:
+            MacSvnPropertiesView(workspaceController: workspaceController, session: session)
+        case .locks:
+            MacSvnLocksView(workspaceController: workspaceController, session: session)
+        case .shelve:
+            MacSvnShelveView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
         default:

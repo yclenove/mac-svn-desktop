@@ -2,9 +2,9 @@
 
 ## 2026-07-10
 
-- Summary: 长程 Loop 完成 Wave A–C：P1 日常流 UI + P2 仓库浏览器/Checkout/分支标签/Merge 向导全部接线；已启动 8 分钟心跳 loop（PID 见终端）持续推进 Wave D–H
-- Affected: Sources/MacSvnApp/**, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
-- Impact: 下一未完成项为 D1（冲突列表 UI）；`.merge` 路由暂挂 Merge 向导，Wave D 将叠冲突列表与三路编辑器
+- Summary: 长程 Loop 完成 Wave A–E（P1–P4 UI 接线）：日常流、仓库/分支、冲突三路合并、Blame/属性/锁定/搁置、提交守护硬阻断设置；8 分钟心跳 loop 已武装，下一波为 F（Git 迁移/菜单栏/深链）
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnCore/Models/SvnModels.swift, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: 侧边栏除 Git 迁移/团队/AI 外均已接真实页；剩余 F/G/H
 
 ## 2026-07-10
 

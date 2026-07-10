@@ -914,19 +914,23 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var branchLayout: BranchLayout
     public var processTimeout: TimeInterval
     public var externalDiffTool: ExternalDiffToolConfiguration?
+    /// 为 true 时，提交守护将冲突标记残留等规则升级为硬阻断（不可跳过警告提交）
+    public var commitGuardHardBlockConflictMarkers: Bool
 
     public init(
         svnPath: String? = nil,
         logBatchSize: Int = 100,
         branchLayout: BranchLayout = BranchLayout(),
         processTimeout: TimeInterval = 120,
-        externalDiffTool: ExternalDiffToolConfiguration? = nil
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
         self.branchLayout = branchLayout
         self.processTimeout = processTimeout
         self.externalDiffTool = externalDiffTool
+        self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
     }
 }
 
