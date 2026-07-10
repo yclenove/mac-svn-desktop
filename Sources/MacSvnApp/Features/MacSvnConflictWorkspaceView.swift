@@ -10,6 +10,7 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var listVM: ConflictListViewModel?
     @State private var editorVM: MergeEditorViewModel?
     @State private var treeVM: TreeConflictViewModel?
+    @State private var propertyVM: PropertyConflictViewModel?
     @State private var statusText: String?
     @State private var conflictBadgeCount = 0
     @State private var privacySettings = AIPrivacySettings()
@@ -83,7 +84,7 @@ public struct MacSvnConflictWorkspaceView: View {
         } else if let listVM {
             HSplitView {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("共 \(listVM.summary.total)（文本 \(listVM.summary.text) / 树 \(listVM.summary.tree)）")
+                    Text("共 \(listVM.summary.total)（文本 \(listVM.summary.text) / 树 \(listVM.summary.tree) / 属性 \(listVM.summary.property)）")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 12)
@@ -135,6 +136,10 @@ public struct MacSvnConflictWorkspaceView: View {
                 MacSvnTreeConflictPane(treeVM: treeVM) {
                     Task { await reloadConflicts() }
                 }
+            case .property:
+                MacSvnPropertyConflictPane(propertyVM: propertyVM) {
+                    Task { await reloadConflicts() }
+                }
             default:
                 ContentUnavailableView(
                     "暂不支持的冲突类型",
@@ -152,6 +157,7 @@ public struct MacSvnConflictWorkspaceView: View {
             listVM = nil
             editorVM = nil
             treeVM = nil
+            propertyVM = nil
             conflictBadgeCount = 0
             return
         }
@@ -186,6 +192,14 @@ public struct MacSvnConflictWorkspaceView: View {
                 workingCopy: wc,
                 resolver: session.conflictService
             )
+        case .property:
+            let vm = PropertyConflictViewModel(
+                conflict: conflict,
+                workingCopy: wc,
+                resolver: session.conflictService
+            )
+            propertyVM = vm
+            await vm.load()
         default:
             break
         }
@@ -378,5 +392,73 @@ private struct MacSvnTreeConflictPane: View {
             Spacer()
         }
         .padding()
+    }
+}
+
+/// 属性冲突：展示 Mine / Base / Theirs 侧文件内容，选择保留一方后 resolve。
+private struct MacSvnPropertyConflictPane: View {
+    let propertyVM: PropertyConflictViewModel?
+    let onResolved: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let propertyVM {
+                Text(propertyVM.path)
+                    .font(.headline)
+                Text("属性冲突：选择保留本地或远端属性值")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                switch propertyVM.state {
+                case .loading:
+                    ProgressView("加载属性侧文件…")
+                case .error(let message):
+                    Text(message).foregroundStyle(.red)
+                case .resolved:
+                    Text("属性冲突已处理").foregroundStyle(.green)
+                case .idle, .loaded, .resolving:
+                    HStack(alignment: .top, spacing: 12) {
+                        propertyPane("Mine", propertyVM.mineValue, .blue)
+                        propertyPane("Base", propertyVM.baseValue, .secondary)
+                        propertyPane("Theirs", propertyVM.theirsValue, .orange)
+                    }
+                    HStack {
+                        Button("保留 Mine") {
+                            Task {
+                                await propertyVM.resolve(.keepMine)
+                                if case .resolved = propertyVM.state { onResolved() }
+                            }
+                        }
+                        .disabled(propertyVM.state == .resolving)
+                        Button("保留 Theirs") {
+                            Task {
+                                await propertyVM.resolve(.keepTheirs)
+                                if case .resolved = propertyVM.state { onResolved() }
+                            }
+                        }
+                        .disabled(propertyVM.state == .resolving)
+                    }
+                }
+            } else {
+                ProgressView()
+            }
+            Spacer()
+        }
+        .padding()
+    }
+
+    private func propertyPane(_ title: String, _ value: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption.weight(.semibold)).foregroundStyle(color)
+            ScrollView {
+                Text(value.isEmpty ? "（空）" : value)
+                    .font(.system(.caption2, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(minHeight: 120)
+            .padding(6)
+            .background(color.opacity(0.08))
+        }
     }
 }

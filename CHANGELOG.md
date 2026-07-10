@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop 续跑 T4–T6：仓库浏览器远端写（mkdir/删/复制/移动+提交说明）、分支页 `svn:mergeinfo`、属性冲突双方对比与 Mine/Theirs resolve；心跳仍在但会话空闲未续跑，已人工续上
+- Affected: Sources/MacSvnApp/Features/MacSvnRepoBrowserView.swift, MacSvnBranchesView.swift, MacSvnConflictWorkspaceView.swift, Sources/MacSvnCore/ViewModels/PropertyConflictViewModel.swift, Tests/MacSvnCoreTests/PropertyConflictViewModelTests.swift
+- Impact: Wave T 全部勾完；下一未勾项为 U1（Git 迁移 authors AI）
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop 续跑：S7 认证失败弹窗（`--password-from-stdin`）+ T2 变更页「忽略选中」写 `svn:ignore`；修复心跳进程中断后以可监听方式重启
 - Affected: Sources/MacSvnApp/App/MacSvnInteractiveCredentialProvider.swift, MacSvnAppSession.swift, MacSvnChangesView.swift, Tests/MacSvnCoreTests/AuthArgumentsPasswordFromStdinTests.swift
 - Impact: 下一未勾项为 T4 远端写操作
