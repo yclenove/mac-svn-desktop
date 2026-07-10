@@ -239,7 +239,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.8 | ed54297 | Rename 新名校验 + svn rename + CFM 对话框 | #13 ✅ | 大小写冲突修复仍属 #46 |
 | 2026-07-10 | T1.9 | 7021266 | Ignore 文件名/扩展名通配 + svn:ignore 合并写入 | #32 ✅ | global-ignores 仍属 S01/T5 |
 | 2026-07-10 | T1.10 | 3f4a472 | Copy/Move 目标路径校验 + svn copy/move 向导 | #36 ✅ | Finder 拖拽引导仍开 |
-| 2026-07-10 | T1.11 | （提交后回填） | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
+| 2026-07-10 | T1.11 | 3803f1c | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
 
 ---
 
