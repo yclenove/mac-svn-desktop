@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: fix(T1.4)：Commit Guard 移到 add 之前，避免取消警告残留已 add 项；右键还原失败不再强制 reload 掩盖错误
+- Affected: SvnService.swift, MacSvnCommitView.swift
+- Impact: 警告/阻断路径保持 WC 干净；还原失败可见
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.4：Commit 对话框级——未版本进候选且勾选后提交前 add；Keep locks（`--no-unlock`）；单项 Diff/Revert；说明历史沿用
 - Affected: CommitViewModel, CommitSelectionPolicy, SvnCommandBuilder/Backend/Cli/Service, MacSvnCommitView, Tests/*, docs/*
 - Impact: inventory #4 ✅；§4.1 递归未版本目录/自动完成/重开对话框仍开

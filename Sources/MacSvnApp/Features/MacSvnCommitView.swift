@@ -146,7 +146,9 @@ public struct MacSvnCommitView: View {
                         Button("还原") {
                             Task {
                                 await viewModel.revertSelected(paths: [status.path])
-                                await reloadCandidates()
+                                if case .reverted = viewModel.state {
+                                    await reloadCandidates()
+                                }
                             }
                         }
                         .disabled(status.itemStatus == .unversioned)

@@ -268,12 +268,7 @@ public actor SvnService {
                 throw SvnError.conflict(paths: conflicts)
             }
 
-            // 勾选未版本项：提交前在同一写锁内 add（失败则不进入 commit）
-            let unversionedToAdd = paths.filter { statusesByPath[$0]?.itemStatus == .unversioned }
-            if !unversionedToAdd.isEmpty {
-                try await backend.add(wc: wc, paths: unversionedToAdd)
-            }
-
+            // Guard 必须在 add 之前：取消警告/阻断时不应留下已 add 的未版本项
             let guardIssues = try await commitGuard?.evaluate(wc: wc, paths: paths) ?? []
             let blockingIssues = guardIssues.filter { $0.severity == .blocking }
             guard blockingIssues.isEmpty else {
@@ -283,6 +278,12 @@ public actor SvnService {
             let warningIssues = guardIssues.filter { $0.severity == .warning }
             if !warningIssues.isEmpty, !skipGuardWarnings {
                 throw SvnServiceError.commitGuardWarnings(warningIssues)
+            }
+
+            // 勾选未版本项：Guard 通过后、commit 前在同一写锁内 add
+            let unversionedToAdd = paths.filter { statusesByPath[$0]?.itemStatus == .unversioned }
+            if !unversionedToAdd.isEmpty {
+                try await backend.add(wc: wc, paths: unversionedToAdd)
             }
 
             return try await retryingAuthentication(wc: wc, initialAuth: auth) { auth in
