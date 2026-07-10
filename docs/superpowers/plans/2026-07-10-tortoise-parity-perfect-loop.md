@@ -226,7 +226,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T0.2 | 18f8413 | SvnCommandCatalogTests 7 测绿 | 无（骨架 ID） | `SvnCommandCatalog` 对齐 #1–46 + L01–L20 |
 | 2026-07-10 | T0.3 | 931cf06 | MacSvnAppNavigatorTests 11 测绿 | 无 | `perform` + unimplemented 不假装成功 |
 | 2026-07-10 | T0.4 | 53cb676 | ProcessRunnerTests 取消相关测绿 | 无 | Task 取消→SIGTERM/5s SIGKILL→`SvnError.cancelled`；`SvnCancellableTask` |
-| 2026-07-10 | T0.5 | （待填） | scripts/tests/test_parity_coverage.py 2 测绿 | 生成 parity-coverage.json（当前 0/114） | `scripts/parity-coverage.py` |
+| 2026-07-10 | T0.5 | 27d3fcd | scripts/tests/test_parity_coverage.py 2 测绿 | 生成 parity-coverage.json（当前 0/114） | `scripts/parity-coverage.py` |
 
 ---
 
