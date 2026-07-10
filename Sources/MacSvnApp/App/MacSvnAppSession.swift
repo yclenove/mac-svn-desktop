@@ -34,6 +34,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let aiConflictAssistant: AIConflictAssistant
     public let aiAuthorMappingInferrer: AIAuthorMappingInferrer
     public let aiReleaseNotesGenerator: AIReleaseNotesGenerator
+    public let aiBlameEvolutionExplainer: AIBlameEvolutionExplainer
     public let aiToolRegistry: AISVNToolRegistry
     public let aiToolAuditStore: AIToolAuditStore
 
@@ -63,6 +64,7 @@ public final class MacSvnAppSession: ObservableObject {
         aiConflictAssistant: AIConflictAssistant,
         aiAuthorMappingInferrer: AIAuthorMappingInferrer,
         aiReleaseNotesGenerator: AIReleaseNotesGenerator,
+        aiBlameEvolutionExplainer: AIBlameEvolutionExplainer,
         aiToolRegistry: AISVNToolRegistry,
         aiToolAuditStore: AIToolAuditStore
     ) {
@@ -91,6 +93,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.aiConflictAssistant = aiConflictAssistant
         self.aiAuthorMappingInferrer = aiAuthorMappingInferrer
         self.aiReleaseNotesGenerator = aiReleaseNotesGenerator
+        self.aiBlameEvolutionExplainer = aiBlameEvolutionExplainer
         self.aiToolRegistry = aiToolRegistry
         self.aiToolAuditStore = aiToolAuditStore
     }
@@ -216,6 +219,12 @@ public final class MacSvnAppSession: ObservableObject {
             providerManager: aiProviderStore,
             llmClient: llmClient
         )
+        let aiBlameEvolutionExplainer = AIBlameEvolutionExplainer(
+            providerManager: aiProviderStore,
+            diffProvider: svnService,
+            logProvider: svnService,
+            llmClient: llmClient
+        )
         let aiToolAuditStore = AIToolAuditStore(
             fileURL: directory.appendingPathComponent("ai-tool-audit.json")
         )
@@ -249,6 +258,7 @@ public final class MacSvnAppSession: ObservableObject {
             aiConflictAssistant: aiConflictAssistant,
             aiAuthorMappingInferrer: aiAuthorMappingInferrer,
             aiReleaseNotesGenerator: aiReleaseNotesGenerator,
+            aiBlameEvolutionExplainer: aiBlameEvolutionExplainer,
             aiToolRegistry: aiToolRegistry,
             aiToolAuditStore: aiToolAuditStore
         )
