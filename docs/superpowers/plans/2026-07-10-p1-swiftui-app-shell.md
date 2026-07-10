@@ -40,7 +40,7 @@
 - 创建测试：`Tests/MacSvnAppTests/MacSvnAppRouteTests.swift`
 - 创建：`Sources/MacSvnApp/App/MacSvnAppRoute.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 先更新 `Package.swift` 增加 `MacSvnAppTests` test target 与待实现的 `MacSvnApp` target，然后创建 `Tests/MacSvnAppTests/MacSvnAppRouteTests.swift`：
 
@@ -126,7 +126,7 @@ final class MacSvnAppRouteTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 ```bash
 swift test --filter MacSvnAppRouteTests
@@ -134,7 +134,7 @@ swift test --filter MacSvnAppRouteTests
 
 预期：编译失败，提示 `MacSvnAppRoute` / `MacSvnSidebarModel` 等类型不存在。
 
-- [ ] **步骤 3：实现最少路由目录**
+- [x] **步骤 3：实现最少路由目录**
 
 创建 `Sources/MacSvnApp/App/MacSvnAppRoute.swift`：
 
@@ -239,7 +239,7 @@ public struct MacSvnSidebarModel: Equatable, Sendable {
 }
 ```
 
-- [ ] **步骤 4：运行目标测试验证通过**
+- [x] **步骤 4：运行目标测试验证通过**
 
 ```bash
 swift test --filter MacSvnAppRouteTests
@@ -247,7 +247,7 @@ swift test --filter MacSvnAppRouteTests
 
 预期：`MacSvnAppRouteTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Package.swift Sources/MacSvnApp/App/MacSvnAppRoute.swift Tests/MacSvnAppTests/MacSvnAppRouteTests.swift docs/superpowers/plans/2026-07-10-p1-swiftui-app-shell.md
@@ -263,7 +263,7 @@ git commit -m "feat: add P1 SwiftUI app route shell"
 - 创建：`Sources/MacSvnApp/App/MacSvnRootView.swift`
 - 创建：`Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift`
 
-- [ ] **步骤 1：实现 Root View**
+- [x] **步骤 1：实现 Root View**
 
 创建 `Sources/MacSvnApp/App/MacSvnRootView.swift`，最少包含：
 
@@ -301,7 +301,7 @@ public struct MacSvnRootView: View {
 
 同文件定义 `MacSvnRoutePlaceholderView`，展示 route 的 `title`、`subtitle` 与 `systemImage`；只用占位说明，不描述快捷键或内部实现细节。
 
-- [ ] **步骤 2：实现 App executable 入口**
+- [x] **步骤 2：实现 App executable 入口**
 
 创建 `Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift`：
 
@@ -324,7 +324,7 @@ struct MacSvnDesktopApplication: App {
 }
 ```
 
-- [ ] **步骤 3：运行 App target 构建验证**
+- [x] **步骤 3：运行 App target 构建验证**
 
 ```bash
 swift build --product MacSvnDesktopApp
@@ -332,7 +332,7 @@ swift build --product MacSvnDesktopApp
 
 预期：构建通过。
 
-- [ ] **步骤 4：运行 App 路由测试验证未回归**
+- [x] **步骤 4：运行 App 路由测试验证未回归**
 
 ```bash
 swift test --filter MacSvnAppRouteTests
@@ -340,7 +340,7 @@ swift test --filter MacSvnAppRouteTests
 
 预期：`MacSvnAppRouteTests` 全部 PASS。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add Sources/MacSvnApp/App/MacSvnRootView.swift Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift docs/superpowers/plans/2026-07-10-p1-swiftui-app-shell.md

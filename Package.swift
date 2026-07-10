@@ -11,15 +11,35 @@ let package = Package(
         .library(
             name: "MacSvnCore",
             targets: ["MacSvnCore"]
+        ),
+        .library(
+            name: "MacSvnApp",
+            targets: ["MacSvnApp"]
+        ),
+        .executable(
+            name: "MacSvnDesktopApp",
+            targets: ["MacSvnDesktopApp"]
         )
     ],
     targets: [
         .target(
             name: "MacSvnCore"
         ),
+        .target(
+            name: "MacSvnApp",
+            dependencies: ["MacSvnCore"]
+        ),
+        .executableTarget(
+            name: "MacSvnDesktopApp",
+            dependencies: ["MacSvnApp"]
+        ),
         .testTarget(
             name: "MacSvnCoreTests",
             dependencies: ["MacSvnCore"]
+        ),
+        .testTarget(
+            name: "MacSvnAppTests",
+            dependencies: ["MacSvnApp"]
         )
     ]
 )
