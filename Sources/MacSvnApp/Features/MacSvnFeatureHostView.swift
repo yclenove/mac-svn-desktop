@@ -56,7 +56,11 @@ public struct MacSvnFeatureHostView: View {
         case .teamActivity:
             MacSvnTeamActivityView(workspaceController: workspaceController, session: session)
         case .aiAssistant:
-            MacSvnAIAssistantView(workspaceController: workspaceController, session: session)
+            MacSvnAIAssistantView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .releaseNotes:
             MacSvnReleaseNotesView(
                 workspaceController: workspaceController,

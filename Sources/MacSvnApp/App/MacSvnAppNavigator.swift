@@ -11,6 +11,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingDiffRevision: Revision?
     /// 从日志页带入 Release Notes 页的候选条目。
     @Published public var pendingReleaseNotesEntries: [LogEntry]?
+    /// ⌘K 无结构化命中时带入 AI Chat 的自然语言 query（FR-EX-04）。
+    @Published public var pendingAIChatQuery: String?
     @Published public var lastAutomationMessage: String?
 
     public init(selectedRoute: MacSvnAppRoute = .workspace) {
@@ -78,6 +80,21 @@ public final class MacSvnAppNavigator: ObservableObject {
         let value = pendingDiffRevision
         pendingDiffRevision = nil
         return value
+    }
+
+    public func consumePendingAIChatQuery() -> String? {
+        let value = pendingAIChatQuery
+        pendingAIChatQuery = nil
+        return value
+    }
+
+    /// ⌘K 无匹配时转入 AI Chat 并携带原 query。
+    public func handoffCommandPaletteQueryToAIChat(_ query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        pendingAIChatQuery = trimmed
+        selectedRoute = .aiAssistant
+        lastAutomationMessage = "⌘K 转 AI：\(trimmed)"
     }
 
     private func apply(target: MacSvnAutomationTarget) {

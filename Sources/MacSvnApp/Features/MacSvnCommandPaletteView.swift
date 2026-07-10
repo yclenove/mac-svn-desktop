@@ -100,8 +100,8 @@ public struct MacSvnCommandPaletteView: View {
             navigator.selectedRoute = .changes
         case .log:
             navigator.selectedRoute = .log
-        case .aiChat:
-            navigator.selectedRoute = .aiAssistant
+        case .aiChat(let query):
+            navigator.handoffCommandPaletteQueryToAIChat(query)
         }
         isPresented = false
     }
