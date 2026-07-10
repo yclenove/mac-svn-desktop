@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop U2：历史迁移后展示 revision 对账报告；不一致时阻断进入同步；源分析保留 `sourceRevisions` 供对账
+- Affected: Sources/MacSvnCore/Models/GitMigrationModels.swift, Services/GitMigrationSourceAnalyzer.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, Tests/MacSvnCoreTests/GitMigrationSourceAnalyzerTests.swift
+- Impact: FR-GM-04 / NFR-14 可验收；下一未勾项 U3 AI Release Notes
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop U1：Git 迁移 Authors 页接入 AI 批量推断（邮箱域名规则）与「AI 待复核」标记；编辑/确认后清除待复核
 - Affected: Sources/MacSvnCore/Services/AIAuthorMappingInferrer.swift, ViewModels/GitMigrationAuthorMappingViewModel.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, MacSvnAppSession.swift, Tests/**
 - Impact: FR-GM-03 AI 路径可验收；下一未勾项 U2 revision 对账报告

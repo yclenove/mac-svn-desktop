@@ -47,7 +47,8 @@ final class GitMigrationSourceAnalyzerTests: XCTestCase {
             ],
             latestRevision: Revision(9),
             oldestRevision: Revision(1),
-            totalRevisionCount: 3
+            totalRevisionCount: 3,
+            sourceRevisions: [Revision(1), Revision(3), Revision(9)]
         ))
         let checkCallCount = await environmentChecker.checkCallCount()
         let recordedListCalls = await sourceProvider.recordedListCalls()

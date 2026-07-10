@@ -21,6 +21,7 @@ public struct MacSvnGitMigrationView: View {
     @State private var syncVM: GitMigrationSyncViewModel?
     @State private var cleanupPlan: GitMigrationCleanupPlan?
     @State private var authorEmailDomain = "example.com"
+    @State private var reconciliationVM: GitMigrationRevisionReconciliationViewModel?
 
     private enum Step: String, CaseIterable, Identifiable {
         case analyze = "1.源分析"
@@ -233,6 +234,43 @@ public struct MacSvnGitMigrationView: View {
                 Text(message).foregroundStyle(.red)
             }
         }
+
+        if mode == .historyPreserving {
+            Section("Revision 对账（NFR-14）") {
+                Button("运行对账") {
+                    Task { await runReconciliation() }
+                }
+                .disabled(destinationPath.isEmpty)
+
+                if case .running = reconciliationVM?.state {
+                    ProgressView("对账中…")
+                }
+                if let report = reconciliationVM?.report {
+                    LabeledContent("源 revision", value: "\(report.sourceRevisionCount)")
+                    LabeledContent("已迁移", value: "\(report.migratedRevisionCount)")
+                    if report.isConsistent {
+                        Text("对账一致，可进入同步步骤。")
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("对账失败：禁止进入同步，请先修复缺失/多余 revision。")
+                            .foregroundStyle(.red)
+                        if !report.missingRevisions.isEmpty {
+                            Text("缺失：\(report.missingRevisions.prefix(20).map { "r\($0.value)" }.joined(separator: ", "))")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        if !report.unexpectedRevisions.isEmpty {
+                            Text("多余：\(report.unexpectedRevisions.prefix(20).map { "r\($0.value)" }.joined(separator: ", "))")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+                if case .error(let message) = reconciliationVM?.state {
+                    Text(message).foregroundStyle(.red)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -289,6 +327,7 @@ public struct MacSvnGitMigrationView: View {
         analysisVM = GitMigrationSourceAnalysisViewModel(provider: session.gitMigrationSourceAnalyzer)
         authorVM = GitMigrationAuthorMappingViewModel(mapper: GitMigrationAuthorMapper())
         migrateVM = GitMigrationViewModel(provider: session.gitMigrationService)
+        reconciliationVM = GitMigrationRevisionReconciliationViewModel(provider: session.gitMigrationService)
         syncVM = GitMigrationSyncViewModel(provider: session.gitMigrationSyncService)
         await syncVM?.loadRecords()
         if let url = workspaceController.selectedRecord?.repoURL {
@@ -349,6 +388,13 @@ public struct MacSvnGitMigrationView: View {
         }
 
         if case .completed = migrateVM.state {
+            if mode == .historyPreserving {
+                await runReconciliation()
+                if reconciliationVM?.report?.isConsistent != true {
+                    statusText = "迁移完成但对账未通过，已阻断进入同步"
+                    return
+                }
+            }
             statusText = "迁移成功"
             step = .sync
             let remote = targetRemote.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -362,7 +408,34 @@ public struct MacSvnGitMigrationView: View {
         }
     }
 
+    private func runReconciliation() async {
+        guard let reconciliationVM else { return }
+        let sourceRevisions = analysisVM?.analysis?.sourceRevisions ?? []
+        guard !sourceRevisions.isEmpty else {
+            statusText = "缺少源 revision 列表，请先完成源分析"
+            step = .analyze
+            return
+        }
+        await reconciliationVM.reconcile(
+            sourceRevisions: sourceRevisions,
+            gitRepository: URL(fileURLWithPath: destinationPath)
+        )
+        if case .error(let message) = reconciliationVM.state {
+            statusText = "对账失败：\(message)"
+        } else if let report = reconciliationVM.report {
+            statusText = report.isConsistent
+                ? "对账一致（\(report.migratedRevisionCount)/\(report.sourceRevisionCount)）"
+                : "对账不一致：缺失 \(report.missingRevisions.count) / 多余 \(report.unexpectedRevisions.count)"
+        }
+    }
+
     private func registerAndSync() async {
+        if mode == .historyPreserving, reconciliationVM?.report?.isConsistent != true {
+            statusText = "对账未通过，禁止同步（NFR-14）"
+            step = .execute
+            await runReconciliation()
+            return
+        }
         guard let syncVM else { return }
         let destination = URL(fileURLWithPath: destinationPath)
         let remote = targetRemote.trimmingCharacters(in: .whitespacesAndNewlines)

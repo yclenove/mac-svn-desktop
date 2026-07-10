@@ -123,6 +123,8 @@ public struct GitMigrationSourceAnalysis: Equatable, Sendable {
     public let latestRevision: Revision?
     public let oldestRevision: Revision?
     public let totalRevisionCount: Int
+    /// 源仓库 revision 全集（供迁移后对账，NFR-14）。
+    public let sourceRevisions: [Revision]
 
     public init(
         repositoryRoot: String,
@@ -131,7 +133,8 @@ public struct GitMigrationSourceAnalysis: Equatable, Sendable {
         authors: [GitMigrationAuthor],
         latestRevision: Revision?,
         oldestRevision: Revision?,
-        totalRevisionCount: Int
+        totalRevisionCount: Int,
+        sourceRevisions: [Revision] = []
     ) {
         self.repositoryRoot = repositoryRoot
         self.environment = environment
@@ -140,6 +143,7 @@ public struct GitMigrationSourceAnalysis: Equatable, Sendable {
         self.latestRevision = latestRevision
         self.oldestRevision = oldestRevision
         self.totalRevisionCount = totalRevisionCount
+        self.sourceRevisions = sourceRevisions
     }
 }
 

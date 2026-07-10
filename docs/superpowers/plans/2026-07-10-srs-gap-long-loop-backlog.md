@@ -109,7 +109,7 @@
 ### Wave U — P5/P6 创新能力补齐
 
 - [x] **U1** Git 迁移：authors AI 批量推断 + 人工复核（FR-GM-03）
-- [ ] **U2** 迁移完成 revision 对账报告展示与失败阻断（FR-GM-04 / NFR-14）
+- [x] **U2** 迁移完成 revision 对账报告展示与失败阻断（FR-GM-04 / NFR-14）
 - [ ] **U3** AI Release Notes 页/入口（接 `AIReleaseNotesGenerator`）（FR-AI-05）
 - [ ] **U4** Blame 页接入演化解释（接 `AIBlameEvolutionExplainer`）（FR-AI-06）
 - [ ] **U5** AI Chat：确认门通过后真实执行低危/高危写工具（仍须确认+审计）（FR-AI-04 / NFR-13）
@@ -136,7 +136,8 @@
 | 2026-07-10 13:20 | S6 / T1 | 81b0d8a | set-depth UI + 拖拽添加 WC；MacSvnApp 10 passed |
 | 2026-07-10 13:30 | S7 / T2 | 5aea092 | 认证弹窗+password-from-stdin 测试；变更页忽略选中写 svn:ignore |
 | 2026-07-10 13:58 | T4 / T5 / T6 | d686e47 | 远端写 UI；分支 mergeinfo；属性冲突 VM+UI；定向测试 30 passed |
-| 2026-07-10 14:01 | U1 | （本轮） | AI authors 推断 + 待复核标记；12 tests passed |
+| 2026-07-10 14:01 | U1 | 82427f7 | AI authors 推断 + 待复核标记；12 tests passed |
+| 2026-07-10 14:06 | U2 | （本轮） | 对账报告 UI + 失败阻断同步；源分析保留 sourceRevisions |
 
 ## 阻塞日志
 
