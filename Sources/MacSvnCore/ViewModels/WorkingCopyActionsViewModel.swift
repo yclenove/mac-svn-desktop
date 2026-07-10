@@ -6,6 +6,7 @@ public protocol WorkingCopyActionProviding: Sendable {
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
+    func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
     func cleanup(wc: URL, options: SvnCleanupOptions) async throws
@@ -15,6 +16,7 @@ public enum WorkingCopyOperation: Equatable, Sendable {
     case update
     case add
     case delete
+    case rename
     case repairMove
     case repairCopy
     case revert
@@ -86,6 +88,26 @@ public final class WorkingCopyActionsViewModel {
     public func delete(paths: [String]) async {
         await performPathAction(.delete, paths: paths) {
             try await actionProvider.delete(wc: workingCopy, paths: paths)
+        }
+    }
+
+    /// 同目录重命名：先校验新名，再 `svn rename`。
+    public func rename(sourcePath: String, newName: String, existingPaths: Set<String>) async {
+        switch RenameValidationPolicy.resolve(
+            sourcePath: sourcePath,
+            newName: newName,
+            existingRelativePaths: existingPaths
+        ) {
+        case .failure(let error):
+            state = .error(error.localizedDescription)
+        case .success(let plan):
+            await perform(.rename) {
+                try await actionProvider.renameInWorkingCopy(
+                    wc: workingCopy,
+                    source: plan.sourcePath,
+                    destination: plan.destinationPath
+                )
+            }
         }
     }
 

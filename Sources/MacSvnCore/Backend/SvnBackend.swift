@@ -11,9 +11,11 @@ public protocol SvnBackend: Sendable {
     func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
-    /// CFM Repair Move：`svn move --force`（工作副本内，不提交）
+    /// CFM Repair Move：`svn move`（工作副本内，不提交）
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
-    /// CFM Repair Copy：`svn copy --force`（工作副本内，不提交）
+    /// 同目录 Rename：`svn rename`（工作副本内，不提交）
+    func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws
+    /// CFM Repair Copy：`svn copy`（工作副本内，不提交）
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
     func cleanup(wc: URL, options: SvnCleanupOptions) async throws

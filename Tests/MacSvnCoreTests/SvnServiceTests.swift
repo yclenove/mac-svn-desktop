@@ -1128,6 +1128,10 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("moveInWorkingCopy")
     }
 
+    func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("renameInWorkingCopy")
+    }
+
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         record("copyInWorkingCopy")
     }

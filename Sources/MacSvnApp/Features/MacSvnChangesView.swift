@@ -25,6 +25,8 @@ public struct MacSvnChangesView: View {
     @State private var showAddSheet = false
     @State private var showCleanupSheet = false
     @State private var showRevertSheet = false
+    @State private var showRenameSheet = false
+    @State private var renameNewName = ""
     @State private var addSelectedPaths: Set<String> = []
     @State private var revertRecursive = false
     @State private var cleanupOptions = SvnCleanupOptions()
@@ -122,6 +124,9 @@ public struct MacSvnChangesView: View {
         }
         .sheet(isPresented: $showRevertSheet) {
             revertSheet
+        }
+        .sheet(isPresented: $showRenameSheet) {
+            renameSheet
         }
         .sheet(isPresented: $showSetDepth) {
             VStack(alignment: .leading, spacing: 16) {
@@ -252,6 +257,12 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
+            Button("重命名…") {
+                prepareRenameSheet()
+                showRenameSheet = true
+            }
+            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+
             Button("修复移动") {
                 Task { await runRepairMove() }
             }
@@ -356,6 +367,12 @@ public struct MacSvnChangesView: View {
                     }
                 }
                 .contextMenu {
+                    Button("重命名…") {
+                        prepareRenameSheet()
+                        showRenameSheet = true
+                    }
+                    .disabled(selectedPaths.count != 1)
+
                     Button("修复移动") {
                         Task { await runRepairMove() }
                     }
@@ -477,9 +494,11 @@ public struct MacSvnChangesView: View {
         showAddSheet = false
         showCleanupSheet = false
         showRevertSheet = false
+        showRenameSheet = false
         confirmDelete = false
         confirmRevert = false
         addSelectedPaths = []
+        renameNewName = ""
         revertRecursive = false
         cleanupOptions = .default
     }
@@ -702,6 +721,57 @@ public struct MacSvnChangesView: View {
         .frame(width: 440)
     }
 
+    private var renameSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("重命名")
+                .font(.headline)
+            if let source = selectedPaths.sorted().first {
+                Text("当前：\(source)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("新名称", text: $renameNewName)
+                Text("仅同目录改名；跨目录请用移动（#36）。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("取消") { showRenameSheet = false }
+                Spacer()
+                Button("重命名") {
+                    Task { await runRenameFromSheet() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(
+                    selectedPaths.count != 1
+                        || renameNewName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+            }
+        }
+        .padding(24)
+        .frame(width: 440)
+    }
+
+    private func prepareRenameSheet() {
+        guard let path = selectedPaths.sorted().first else {
+            renameNewName = ""
+            return
+        }
+        renameNewName = (path as NSString).lastPathComponent
+    }
+
+    private func runRenameFromSheet() async {
+        guard let actionsVM, let changesVM else { return }
+        guard let source = selectedPaths.sorted().first, selectedPaths.count == 1 else {
+            statusBanner = "请先选中恰好一项再重命名"
+            showRenameSheet = false
+            return
+        }
+        let existing = Set(changesVM.entries.map(\.path))
+        showRenameSheet = false
+        await actionsVM.rename(sourcePath: source, newName: renameNewName, existingPaths: existing)
+        await syncAfterAction(actionsVM, changesVM)
+    }
+
     private func runRepairMove() async {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.repairMove(selectedPaths: selectedPaths, statuses: changesVM.entries)
@@ -762,6 +832,7 @@ public struct MacSvnChangesView: View {
         case .update: return "更新"
         case .add: return "添加"
         case .delete: return "删除"
+        case .rename: return "重命名"
         case .repairMove: return "修复移动"
         case .repairCopy: return "修复复制"
         case .revert: return "还原"

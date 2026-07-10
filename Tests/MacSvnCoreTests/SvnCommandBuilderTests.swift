@@ -133,6 +133,14 @@ final class SvnCommandBuilderTests: XCTestCase {
         )
     }
 
+    func testRenameUsesNonInteractiveSourceAndDestination() {
+        let command = SvnCommandBuilder.rename(source: "src/a.txt", destination: "src/b.txt")
+        XCTAssertEqual(
+            command.arguments,
+            ["rename", "--non-interactive", "src/a.txt", "src/b.txt"]
+        )
+    }
+
     func testWorkingCopyCopySchedulesWithoutCommitMessage() {
         let command = SvnCommandBuilder.workingCopyCopy(source: "a.txt", destination: "a-copy.txt")
         XCTAssertEqual(

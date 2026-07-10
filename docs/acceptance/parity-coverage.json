@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T13:51:23Z",
+  "generated_at": "2026-07-10T14:16:56Z",
   "total": 114,
-  "done": 10,
+  "done": 11,
   "partial": 43,
-  "missing": 61,
-  "coverage": 0.087719,
-  "coverage_percent": 8.77,
+  "missing": 60,
+  "coverage": 0.096491,
+  "coverage_percent": 9.65,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 9,
+      "done": 10,
       "partial": 15,
-      "missing": 22
+      "missing": 21
     },
     "log": {
       "total": 20,
@@ -324,8 +324,8 @@
       "key": "cmd.13",
       "section": "command",
       "title": "Rename",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.14",

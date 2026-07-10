@@ -146,6 +146,15 @@ public struct SvnCliBackend: SvnBackend {
         }
     }
 
+    public func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        // 目标冲突已由 RenameValidationPolicy 拦截；直接 svn rename
+        _ = try await run(
+            SvnCommandBuilder.rename(source: source, destination: destination),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         try await repairCopyWithExistingDestination(
             wc: wc,

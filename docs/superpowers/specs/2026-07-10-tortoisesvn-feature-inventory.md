@@ -92,7 +92,7 @@
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
 | 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | 🟡 | T2 |
 | 12 | Resolved | `resolved` | 多选 | 🟡 | T2 |
-| 13 | Rename | `rename` | 新名校验 | ❌ | T1 |
+| 13 | Rename | `rename` | 新名校验 | ✅ | T1 |
 | 14 | Delete | `delete` | 确认 | ✅ | T1 |
 | 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T2 |
 | 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T2 |

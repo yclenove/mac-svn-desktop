@@ -113,6 +113,53 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRenameValidatesThenCallsProviderAndRefreshes() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.rename(
+            sourcePath: "src/a.txt",
+            newName: "b.txt",
+            existingPaths: ["src/a.txt", "src/c.txt"]
+        )
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(.rename))
+        XCTAssertEqual(actionCalls, [
+            ActionCall(
+                operation: .rename,
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["src/a.txt", "src/b.txt"],
+                revision: nil,
+                setDepth: nil,
+                recursive: false
+            )
+        ])
+    }
+
+    @MainActor
+    func testRenameRejectsInvalidNameWithoutCallingProvider() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.rename(sourcePath: "a.txt", newName: "a.txt", existingPaths: ["a.txt"])
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("新名称与当前名称相同"))
+        XCTAssertTrue(actionCalls.isEmpty)
+    }
+
+    @MainActor
     func testRevertRequiresConfirmationBeforeCallingProvider() async {
         let actionProvider = FakeWorkingCopyActionProvider()
         let statusProvider = ActionStatusProvider(result: .success([]))
@@ -344,6 +391,17 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         if let repairMoveError {
             throw repairMoveError
         }
+    }
+
+    func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        calls.append(ActionCall(
+            operation: .rename,
+            wc: wc,
+            paths: [source, destination],
+            revision: nil,
+            setDepth: nil,
+            recursive: false
+        ))
     }
 
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {

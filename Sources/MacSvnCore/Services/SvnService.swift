@@ -336,6 +336,12 @@ public actor SvnService {
         }
     }
 
+    public func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        try await withWriteLock(wc: wc, operation: "rename") {
+            try await backend.renameInWorkingCopy(wc: wc, source: source, destination: destination)
+        }
+    }
+
     public func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         try await withWriteLock(wc: wc, operation: "repairCopy") {
             try await backend.copyInWorkingCopy(wc: wc, source: source, destination: destination)

@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.8：Rename 同目录改名——新名校验（空/同名/分隔符/目标冲突）+ `svn rename` + CFM 对话框/右键
+- Affected: RenameValidationPolicy.swift, SvnCommandBuilder/Backend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*, docs/*
+- Impact: inventory #13 ✅；大小写冲突修复仍属 #46；跨目录移动属 #36
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.7：Add 未版本勾选列表、Delete 确认、Revert 递归+单项 Diff、Cleanup 断锁/pristine/externals；集成测对齐 status -v「干净」语义
 - Affected: SvnCleanupOptions.swift, SvnCommandBuilder/Backend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, IntegrationTests, Tests/*, docs/*
 - Impact: inventory #14,#17,#18,#29 ✅；删除未版本（#16）/壳层刷新仍开

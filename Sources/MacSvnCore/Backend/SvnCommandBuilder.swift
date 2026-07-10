@@ -118,6 +118,11 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["move", "--non-interactive", source, destination])
     }
 
+    /// 同目录重命名（`svn rename`，与 move 同义；对齐小乌龟 Rename）。
+    public static func rename(source: String, destination: String) -> SvnCommand {
+        SvnCommand(arguments: ["rename", "--non-interactive", source, destination])
+    }
+
     /// 工作副本内修复复制（无提交说明；`svn copy` 不支持 `--force`）。
     public static func workingCopyCopy(source: String, destination: String) -> SvnCommand {
         SvnCommand(arguments: ["copy", "--non-interactive", source, destination])
