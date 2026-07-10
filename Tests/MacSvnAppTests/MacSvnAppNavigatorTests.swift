@@ -77,4 +77,44 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         navigator.dismissAutomationBanner()
         XCTAssertNil(navigator.lastAutomationMessage)
     }
+
+    func testPerformCommitNavigatesAndCarriesOptions() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .settings)
+        let result = navigator.perform(
+            command: .commit,
+            paths: ["/tmp/wc"],
+            options: SvnCommandOptions(message: "feat: x")
+        )
+
+        XCTAssertEqual(result, .navigated(to: .commit))
+        XCTAssertEqual(navigator.lastCommandResult, .navigated(to: .commit))
+        XCTAssertEqual(navigator.selectedRoute, .commit)
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc")
+        XCTAssertEqual(navigator.pendingCommitMessage, "feat: x")
+        XCTAssertTrue(navigator.lastAutomationMessage?.contains("提交") == true)
+    }
+
+    func testPerformUnimplementedCommandDoesNotPretendSuccess() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+        let result = navigator.perform(command: .revisionGraph, paths: ["/tmp/wc"])
+
+        XCTAssertEqual(result, .unimplemented(.revisionGraph))
+        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc")
+        XCTAssertTrue(navigator.lastAutomationMessage?.hasPrefix("未实现：") == true)
+    }
+
+    func testPerformCoversEveryCatalogIDWithoutCrash() {
+        let navigator = MacSvnAppNavigator()
+        for id in SvnCommandID.allCases {
+            let result = navigator.perform(command: id)
+            switch result {
+            case .navigated:
+                XCTAssertNotNil(MacSvnAppNavigator.route(for: id))
+            case .unimplemented(let command):
+                XCTAssertEqual(command, id)
+                XCTAssertNil(MacSvnAppNavigator.route(for: id))
+            }
+        }
+    }
 }

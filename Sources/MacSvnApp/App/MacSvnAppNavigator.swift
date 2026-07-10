@@ -1,6 +1,12 @@
 import Foundation
 import MacSvnCore
 
+/// Catalog 命令经 Navigator 执行后的结果。
+public enum SvnCommandPerformResult: Equatable, Sendable {
+    case navigated(to: MacSvnAppRoute)
+    case unimplemented(SvnCommandID)
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -14,6 +20,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     /// ⌘K 无结构化命中时带入 AI Chat 的自然语言 query（FR-EX-04）。
     @Published public var pendingAIChatQuery: String?
     @Published public var lastAutomationMessage: String?
+    /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
+    @Published public var lastCommandResult: SvnCommandPerformResult?
 
     public var selectedMode: MacSvnWorkspaceMode {
         MacSvnWorkspaceMode(route: selectedRoute)
@@ -33,6 +41,91 @@ public final class MacSvnAppNavigator: ObservableObject {
 
     public func dismissAutomationBanner() {
         lastAutomationMessage = nil
+    }
+
+    /// 统一命令入口：对齐 `SvnCommandCatalog`。
+    ///
+    /// - 已接线命令：导航到对应 Route，并可选注入 paths / options。
+    /// - 未接线命令（T0 允许）：返回 `.unimplemented`，并设置可读提示，**不**假装成功。
+    @discardableResult
+    public func perform(
+        command: SvnCommandID,
+        paths: [String] = [],
+        options: SvnCommandOptions = SvnCommandOptions()
+    ) -> SvnCommandPerformResult {
+        if let firstPath = paths.first, !firstPath.isEmpty {
+            pendingOpenPath = firstPath
+        }
+        if paths.count >= 2, !paths[1].isEmpty {
+            // 第二路径常用于 Diff 目标文件
+            pendingDiffPath = paths[1]
+        } else if let only = paths.first, command == .diff || command == .checkForModifications {
+            pendingDiffPath = only
+        }
+
+        if let message = options.message, !message.isEmpty {
+            pendingCommitMessage = message
+        }
+        if let revision = options.revision {
+            pendingDiffRevision = revision
+        }
+
+        guard let route = Self.route(for: command) else {
+            let name = SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue
+            lastAutomationMessage = "未实现：\(name)"
+            let result = SvnCommandPerformResult.unimplemented(command)
+            lastCommandResult = result
+            return result
+        }
+
+        selectedRoute = route
+        let name = SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue
+        lastAutomationMessage = "命令：\(name)"
+        let result = SvnCommandPerformResult.navigated(to: route)
+        lastCommandResult = result
+        return result
+    }
+
+    /// T0 已可导航的命令 → Route 映射；其余一律 unimplemented。
+    public static func route(for command: SvnCommandID) -> MacSvnAppRoute? {
+        switch command {
+        case .commit:
+            return .commit
+        case .update, .updateToRevision, .checkForModifications, .add, .delete, .revert, .cleanup,
+             .rename, .addToIgnoreList, .copyMove, .repairMoveCopy:
+            return .changes
+        case .diff, .diffWithURL:
+            return .diff
+        case .showLog, .saveRevisionOpen:
+            return .log
+        case .repoBrowser:
+            return .repositoryBrowser
+        case .editConflicts, .resolved, .merge, .mergeReintegrate, .mergeRevisionTo:
+            return .merge
+        case .branchTag, .switchBranch:
+            return .branches
+        case .blame, .compareRevisions:
+            return .blame
+        case .properties, .externals:
+            return .properties
+        case .getLock, .releaseLock, .breakLock:
+            return .locks
+        case .shelve:
+            return .shelve
+        case .checkout, .export, .importToRepository, .importInPlace, .relocate,
+             .createRepositoryHere, .removeFromVersionControl, .createPatch, .applyPatch,
+             .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned,
+             .repairFilenameCaseConflict:
+            return nil
+        case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
+             .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,
+             .logCreateBranchTagFromRevision, .logUpdateItemToRevision, .logRevertToThisRevision,
+             .logRevertChangesFromThisRevision, .logMergeRevisionTo, .logCheckoutOrExport,
+             .logEditAuthorOrMessage, .logShowRevisionProperties, .logCopyToClipboard,
+             .logFilterStatisticsOffline, .logActionsColumnIcons, .logFetchStrategy:
+            // 日志动作最终应在历史页上下文执行；T0 先导航到日志页作为可达入口
+            return .log
+        }
     }
 
     public func handle(deepLink action: MacSvnDeepLinkAction) {

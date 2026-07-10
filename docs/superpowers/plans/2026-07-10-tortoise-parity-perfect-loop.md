@@ -115,7 +115,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 
 - [x] **T0.1** 性能规范落地：变更工作区/Diff 回归测试或文档化断言（防 AttributeGraph 再发）；确认无嵌套 Split+逐行 Diff
 - [x] **T0.2** 新增 `SvnCommandCatalog`：ID 对齐 inventory `#1–46` + `L01–L20` + 扩展菜单标记；可枚举、可查 displayName
-- [ ] **T0.3** `Navigator.perform(command:paths:options:)`（或等价）统一入口；未实现命令明确 `unimplemented`（仅 T0 允许）
+- [x] **T0.3** `Navigator.perform(command:paths:options:)`（或等价）统一入口；未实现命令明确 `unimplemented`（仅 T0 允许）
 - [ ] **T0.4** 可取消 `svn` 任务模型（取消令牌 / Task 取消接到 ProcessRunner）
 - [ ] **T0.5** 覆盖率工具：解析 inventory 状态列或维护 `parity-coverage.json`，输出 `✅/总数`
 - [ ] **T0.6** 验收清单骨架：`docs/acceptance/H-tortoise-parity.md`（按 Wave 分节，先空勾）
@@ -224,6 +224,7 @@ roadmap T0–T6（战略波次）
 |------|------|--------|------|----------------|------|
 | 2026-07-10 | T0.1 | bd0e03b | DiffPerformanceLimits* + WorkspaceGuard 6 测绿 | 无（横切门禁） | `DiffPerformanceLimits` + 源码门禁 + docs/acceptance/performance-guards.md |
 | 2026-07-10 | T0.2 | 18f8413 | SvnCommandCatalogTests 7 测绿 | 无（骨架 ID） | `SvnCommandCatalog` 对齐 #1–46 + L01–L20 |
+| 2026-07-10 | T0.3 | （待填） | MacSvnAppNavigatorTests 11 测绿 | 无 | `perform` + unimplemented 不假装成功 |
 
 ---
 

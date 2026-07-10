@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.3：`MacSvnAppNavigator.perform(command:paths:options:)` 统一入口；未接线命令返回 `unimplemented` 并提示「未实现」
+- Affected: Sources/MacSvnApp/App/MacSvnAppNavigator.swift, Sources/MacSvnCore/Catalog/SvnCommandOptions.swift, Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: Finder/⌘K/后续对话框可共用同一命令分发；T0 stub 显式可追踪
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.2：新增 `SvnCommandCatalog`（#1–46 + L01–L20、扩展菜单标记、displayName/keywords、按 ID/inventoryKey 查询）及单测
 - Affected: Sources/MacSvnCore/Catalog/SvnCommandCatalog.swift, Tests/MacSvnCoreTests/SvnCommandCatalogTests.swift, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: 命令矩阵可枚举，为 T0.3 Navigator 统一入口与覆盖率报表奠基
