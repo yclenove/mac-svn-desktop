@@ -2,7 +2,7 @@
 
 面向 macOS 的开源 Subversion（SVN）桌面客户端，目标对标商业客户端（Versions / Cornerstone）：工作副本管理、提交/更新、差异对比、日志、分支/标签、**内置三路合并**、**仓库浏览器**、blame 与锁定。
 
-> 当前阶段：**文档体系已完成，待进入 P1 开发**（需求/概设/详设/测试计划见 [docs 文档索引](docs/README.md)）
+> 当前阶段：**长程交付分支 `feat/long-loop-full-delivery` 已接线 P1–P6 UI**（文档见 [docs 文档索引](docs/README.md)；验收清单见 [H1](docs/acceptance/H1-manual-checklist.md)）
 
 ## 为什么做
 
@@ -59,42 +59,58 @@
 | **P5 Git 迁移** | 平滑转 Git | 快照/历史保真迁移向导、authors 映射（AI 辅助）、过渡期增量同步、菜单栏常驻 |
 | **P6 AI 智能** | 大模型驱动 | 多 Provider 配置（含 Ollama 本地）、AI 提交说明/评审/冲突辅助、自然语言操作 SVN（分级确认+审计）、Finder 集成、命令面板 |
 
-## 目录规划（实现阶段）
-
-```
-mac-svn-desktop/
-├── MacSvnDesktop/          # SwiftUI App 主工程
-│   ├── App/
-│   ├── Features/           # Changes、Commit、Diff、Log、RepoBrowser、Merge
-│   ├── Services/           # SvnBackend、SvnService、Conflict、Credential
-│   └── Models/
-├── docs/
-│   └── specs/              # 设计规格
-├── scripts/                # 构建、签名、公证
-└── README.md
-```
-
-## 开发环境要求
-
-- macOS 14+，Xcode 16+
-- 本机 Subversion CLI ≥ 1.14（`brew install subversion`）
-- （可选）GitHub CLI `gh` 用于发布
-
-## 初始化 GitHub 仓库
-
-GitHub CLI 需先登录：
-
-```bash
-gh auth login -h github.com
-```
-
-然后在项目根目录执行：
+## 如何运行
 
 ```bash
 cd mac-svn-desktop
-gh repo create mac-svn-desktop --public \
-  --description "macOS Subversion desktop client — 原生 SVN 图形客户端，内置三路合并与仓库浏览器" \
-  --source=. --remote=origin --push
+swift run MacSvnDesktopApp
+```
+
+测试：
+
+```bash
+swift test
+```
+
+依赖：macOS 14+、Xcode 16+ / Swift 6.1、本机 `svn` ≥ 1.14（`brew install subversion`）。
+
+## 功能矩阵（长程交付）
+
+| 能力 | 状态 |
+|------|------|
+| 工作副本 / 变更 / Update·Cleanup·Add·Delete·Revert | ✅ UI 已接 |
+| 提交（UTF-8）+ Commit Guard + 说明历史 | ✅ |
+| Diff / 日志 / 仓库浏览器 / Checkout / 分支标签 / Merge | ✅ |
+| 冲突列表 + 内置三路合并 + 树冲突 | ✅ |
+| Blame / 属性 / 锁定 / 搁置 | ✅ |
+| Git 迁移向导 + 增量同步 | ✅ |
+| 菜单栏角标 / `macsvn://` 深链 / CLI 伴生 | ✅ |
+| AI Provider（Keychain）/ Chat / 提交 AI / 冲突 AI | ✅ |
+| 命令面板 ⌘K / 团队动态 | ✅ |
+| Finder Sync / Quick Look | ✅ 契约+骨架（见 `docs/extensions/`，需 Xcode 包装工程装扩展） |
+
+## 工程结构
+
+```
+mac-svn-desktop/
+├── Package.swift
+├── Sources/
+│   ├── MacSvnCore/         # 服务、ViewModel、解析器
+│   ├── MacSvnApp/          # SwiftUI 功能页
+│   └── MacSvnDesktopApp/   # @main 入口（含 MenuBarExtra）
+├── Tests/
+├── docs/                   # SRS/HLD/DLD、长程 backlog、扩展说明、验收清单
+└── README.md
+```
+
+## 合并回 main
+
+长程功能在 `feat/long-loop-full-delivery`。全量 `swift test` 绿且 H1 清单抽检通过后：
+
+```bash
+git checkout main
+git merge --ff-only feat/long-loop-full-delivery
+git push origin main
 ```
 
 ## License

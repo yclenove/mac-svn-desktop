@@ -2,6 +2,36 @@
 
 ## 2026-07-10
 
+- Summary: 梳理 SRS 相对当前交付的缺口，新增第二轮长程 Loop 文档（Wave R–V：验收、P1/P2 体验、仓库/冲突补齐、AI/迁移补齐、扩展与发布）
+- Affected: docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, docs/README.md
+- Impact: 明确「主路径接线完成 ≠ SRS 全量完成」；后续 loop 按该文档第一个未勾项推进
+
+## 2026-07-10
+
+- Summary: 长程 Loop 收口 H3：全量 `swift test` 472 通过；backlog Wave A–H 全部勾选；README 含合入 `main` 说明；2 分钟心跳 loop 可停止
+- Affected: docs/superpowers/plans/2026-07-10-long-loop-backlog.md, CHANGELOG.md, README.md
+- Impact: `feat/long-loop-full-delivery` 具备快进合并 `main` 条件（建议先抽检 H1 清单）
+
+## 2026-07-10
+
+- Summary: 长程 Loop 完成 Wave G + H1/H2：AI Provider/Chat/提交与冲突 AI、⌘K、团队动态；Finder Sync/Quick Look 扩展契约与骨架；验收清单与 README 运行说明/功能矩阵
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnCore/ViewModels/AIAssistantChatViewModel.swift, Sources/MacSvnCore/Models/SvnModels.swift, docs/extensions/**, docs/acceptance/H1-manual-checklist.md, README.md
+- Impact: backlog 仅剩 H3（全量测试与合 main 说明）；扩展需 Xcode 包装工程安装 .appex
+
+## 2026-07-10
+
+- Summary: 长程 Loop 完成 Wave F：Git 迁移五步向导 UI、MenuBarExtra 状态角标与远端提交通知、`macsvn://` 深链与 CLI 伴生入口（`MacSvnAppNavigator`）
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift, Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: 自动化分区仅剩团队动态/AI 助手占位；下一波 G（AI + 生态扩展）
+
+## 2026-07-10
+
+- Summary: 长程 Loop 完成 Wave A–E（P1–P4 UI 接线）：日常流、仓库/分支、冲突三路合并、Blame/属性/锁定/搁置、提交守护硬阻断设置；8 分钟心跳 loop 已武装，下一波为 F（Git 迁移/菜单栏/深链）
+- Affected: Sources/MacSvnApp/**, Sources/MacSvnCore/Models/SvnModels.swift, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
+- Impact: 侧边栏除 Git 迁移/团队/AI 外均已接真实页；剩余 F/G/H
+
+## 2026-07-10
+
 - Summary: 将 `codex/p1-core-scaffold` 快进合并进 `main` 并推送远程；全量测试 464 通过；`main` 现为可继续开发的基线（含 MacSvnCore P1–P6 核心、SwiftUI App 壳）
 - Affected: 分支合并（无新增业务代码）；远程 `main` / `codex/p1-core-scaffold`
 - Impact: 后续应从最新 `main` 新开功能分支；旧 scaffold 分支仅作历史备份
