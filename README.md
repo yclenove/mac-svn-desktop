@@ -87,18 +87,19 @@ swift test
 
 | 能力 | 状态 |
 |------|------|
-| 工作副本 / 变更 / Update·Cleanup·Add·Delete·Revert | ✅ UI 已接 |
-| 提交（UTF-8）+ Commit Guard + 说明历史 | ✅ |
-| Diff / 日志 / 仓库浏览器 / Checkout / 分支标签 / Merge | ✅ |
-| 冲突列表 + 内置三路合并 + 树冲突 | ✅ |
-| Blame / 属性 / 锁定 / 搁置 | ✅ |
-| Git 迁移向导 + 增量同步 | ✅ |
-| 菜单栏角标 / `macsvn://` 深链 / CLI 伴生 | ✅ |
-| AI Provider（Keychain）/ Chat / 提交 AI / 冲突 AI | ✅ |
-| 命令面板 ⌘K / 团队动态 | ✅ |
-| Finder Sync / Quick Look | ✅ 均已嵌入 `.appex`（见 `docs/extensions/`） |
+| 工作副本 / 变更 / Update·Cleanup·Add·Delete·Revert | ✅ 可验收 |
+| 提交（UTF-8）+ Commit Guard + 说明历史 | ✅ 可验收 |
+| Diff / 日志 / 仓库浏览器 / Checkout / 分支标签 / Merge | ✅ 可验收 |
+| 冲突列表 + 内置三路合并 + 树冲突 | ✅ 可验收 |
+| Blame / 属性 / 锁定 / 搁置 | ✅ 可验收 |
+| Git 迁移向导 + 增量同步 | ✅ 可验收 |
+| 菜单栏角标 / FSEvents 近实时 / `macsvn://` / CLI | ✅ 可验收 |
+| AI Provider（Keychain）/ Chat 写工具 / 提交·冲突·Blame·RN AI | ✅ 可验收 |
+| 命令面板 ⌘K（含无匹配转 Chat）/ 团队热力图 | ✅ 可验收 |
+| Finder Sync / Quick Look `.appex` | ✅ 可验收（嵌入 `MacSVN.app`） |
+| `.app` 包装 / 签名公证流程 | ✅ 可验收（公证需 Developer 账号执行） |
 
-> 当前分支：`feat/srs-gap-full-delivery` — **SRS 缺口补齐中**（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
+> 当前主干：`main` — SRS 缺口 Loop 已收口（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
 
 ## AI Provider（本机）
 

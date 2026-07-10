@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop V5：全量 `swift test` 502 通过；Xcode/SPM `.app` 与 Finder Sync/Quick Look 冒烟通过；README 功能矩阵改为可验收；合入 `main`（因 main 已有早期 PR merge，采用 merge 而非纯 FF）
+- Affected: README.md, docs/README.md, docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
+- Impact: SRS 缺口 Loop 全部 `[x]`；长程交付收口
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop V4：新增签名/公证流程文档与 `sign-and-notarize.sh` / `verify-signing-prereqs.sh`（支持 DRY_RUN）；H1 验收清单补充干净机冒烟步骤
 - Affected: docs/packaging/signing-and-notarization.md, docs/packaging/README.md, docs/acceptance/H1-manual-checklist.md, scripts/sign-and-notarize.sh, scripts/verify-signing-prereqs.sh
 - Impact: NFR-10 / P4 分发路径可按文档执行；下一未勾项 V5 全量测试合 main
