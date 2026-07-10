@@ -2,9 +2,9 @@
 
 ## 2026-07-10
 
-- Summary: 启动长程 Loop 全量交付；新建 `feat/long-loop-full-delivery` 与 backlog（Wave A–H）；完成 A1–A3/B1/B2/B7——`MacSvnAppSession` DI、svn 环境门禁、工作副本管理页、变更页接线、设置页、App 启动引导
+- Summary: 长程 Loop 完成 Wave A + Wave B（P1 日常流 UI 全接线）：AppSession DI、环境门禁、WC 管理、变更+动作栏、提交（含历史/守护警告）、Diff、日志、设置
 - Affected: Sources/MacSvnApp/**, Sources/MacSvnDesktopApp/**, Tests/MacSvnAppTests/**, docs/superpowers/plans/2026-07-10-long-loop-backlog.md
-- Impact: App 可启动并管理 WC / 查看 status；下一轮 backlog 首项为 B3（Update/Cleanup/Revert 等动作栏）
+- Impact: P1 日常流可在 App 内操作；下一轮 backlog 首项为 C1（仓库浏览器 UI）
 
 ## 2026-07-10
 

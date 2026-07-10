@@ -40,10 +40,10 @@
 
 - [x] **B1** 工作副本页：列表 / 添加（文件夹选择）/ 移除确认 / 无效 WC 灰显
 - [x] **B2** 变更页：接 `ChangesViewModel`（刷新、筛选、搜索、树/平铺）
-- [ ] **B3** 工作副本动作：Update / Cleanup / Add / Delete / Revert（确认）接 `WorkingCopyActionsViewModel`
-- [ ] **B4** 提交页：接 `CommitViewModel` + 提交说明历史 + Commit Guard 警告展示
-- [ ] **B5** Diff 页：接 `DiffViewModel`（unified；二进制提示）
-- [ ] **B6** 日志页：接 `LogViewModel`（分页加载更多）
+- [x] **B3** 工作副本动作：Update / Cleanup / Add / Delete / Revert（确认）接 `WorkingCopyActionsViewModel`
+- [x] **B4** 提交页：接 `CommitViewModel` + 提交说明历史 + Commit Guard 警告展示
+- [x] **B5** Diff 页：接 `DiffViewModel`（unified；二进制提示）
+- [x] **B6** 日志页：接 `LogViewModel`（分页加载更多）
 - [x] **B7** 设置页：svn 路径、超时、日志批量、分支布局；保存后生效
 
 ### Wave C — P2 仓库 / 分支 UI
@@ -94,4 +94,5 @@
 
 | 时间 | 条目 | Commit | 验证 |
 |------|------|--------|------|
-| 2026-07-10 12:17 | A1/A2/A3/B1/B2/B7 | （本轮提交） | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:17 | A1/A2/A3/B1/B2/B7 | bf0cbe9 | `swift test --filter MacSvnApp` 6 passed |
+| 2026-07-10 12:19 | B3/B4/B5/B6 | （本轮提交） | `swift test --filter MacSvnApp` 6 passed |

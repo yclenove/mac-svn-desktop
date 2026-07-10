@@ -12,6 +12,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let supportDirectory: URL
     public let settingsStore: SettingsStore
     public let workspaceStore: WorkspaceStore
+    public let commitMessageHistoryStore: CommitMessageHistoryStore
     public let svnService: SvnService
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
@@ -20,6 +21,7 @@ public final class MacSvnAppSession: ObservableObject {
         supportDirectory: URL,
         settingsStore: SettingsStore,
         workspaceStore: WorkspaceStore,
+        commitMessageHistoryStore: CommitMessageHistoryStore,
         svnService: SvnService,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String
@@ -27,6 +29,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.supportDirectory = supportDirectory
         self.settingsStore = settingsStore
         self.workspaceStore = workspaceStore
+        self.commitMessageHistoryStore = commitMessageHistoryStore
         self.svnService = svnService
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
@@ -39,6 +42,9 @@ public final class MacSvnAppSession: ObservableObject {
 
         let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
         let workspaceStore = WorkspaceStore(fileURL: directory.appendingPathComponent("workspaces.json"))
+        let commitMessageHistoryStore = CommitMessageHistoryStore(
+            fileURL: directory.appendingPathComponent("commit-history.json")
+        )
 
         let settings = try await settingsStore.load()
         // 首次引导时落盘默认文件，保证 Application Support 目录可观测、可备份
@@ -66,6 +72,7 @@ public final class MacSvnAppSession: ObservableObject {
             supportDirectory: directory,
             settingsStore: settingsStore,
             workspaceStore: workspaceStore,
+            commitMessageHistoryStore: commitMessageHistoryStore,
             svnService: svnService,
             svnExecutablePath: svnPath
         )

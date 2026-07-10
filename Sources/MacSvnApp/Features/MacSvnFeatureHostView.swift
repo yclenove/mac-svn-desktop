@@ -26,6 +26,12 @@ public struct MacSvnFeatureHostView: View {
                 workspaceController: workspaceController,
                 statusProvider: session.svnService
             )
+        case .commit:
+            MacSvnCommitView(workspaceController: workspaceController, session: session)
+        case .diff:
+            MacSvnDiffView(workspaceController: workspaceController, svnService: session.svnService)
+        case .log:
+            MacSvnLogView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
         default:
