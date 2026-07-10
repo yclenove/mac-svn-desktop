@@ -94,6 +94,87 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.delete(paths: paths), currentDirectory: wc.path, stdin: nil)
     }
 
+    public func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        // Repair Move：源常为 missing（磁盘上无文件）。先把未版本目标挪回源路径，再 svn move。
+        let fileManager = FileManager.default
+        let sourceURL = wc.appendingPathComponent(source)
+        let destinationURL = wc.appendingPathComponent(destination)
+
+        guard fileManager.fileExists(atPath: destinationURL.path) else {
+            _ = try await run(
+                SvnCommandBuilder.workingCopyMove(source: source, destination: destination),
+                currentDirectory: wc.path,
+                stdin: nil
+            )
+            return
+        }
+
+        let asideURL = wc.appendingPathComponent(".svnstudio-repair-\(UUID().uuidString)")
+        do {
+            try fileManager.moveItem(at: destinationURL, to: asideURL)
+            // 恢复 missing 源，使 svn move 能在 WC 内调度历史保留的移动
+            if !fileManager.fileExists(atPath: sourceURL.path) {
+                try fileManager.moveItem(at: asideURL, to: sourceURL)
+            } else {
+                try fileManager.moveItem(at: asideURL, to: destinationURL)
+            }
+            _ = try await run(
+                SvnCommandBuilder.workingCopyMove(source: source, destination: destination),
+                currentDirectory: wc.path,
+                stdin: nil
+            )
+        } catch {
+            // 失败时尽量恢复用户文件到目标路径
+            if fileManager.fileExists(atPath: asideURL.path) {
+                try? fileManager.moveItem(at: asideURL, to: destinationURL)
+            } else if fileManager.fileExists(atPath: sourceURL.path),
+                      !fileManager.fileExists(atPath: destinationURL.path) {
+                try? fileManager.moveItem(at: sourceURL, to: destinationURL)
+            }
+            throw error
+        }
+    }
+
+    public func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        try await repairCopyWithExistingDestination(
+            wc: wc,
+            destination: destination,
+            command: SvnCommandBuilder.workingCopyCopy(source: source, destination: destination)
+        )
+    }
+
+    /// Repair Copy：目标未版本文件先挪开，执行 `svn copy`，再盖回用户内容（`svn copy` 无 `--force`）。
+    private func repairCopyWithExistingDestination(wc: URL, destination: String, command: SvnCommand) async throws {
+        let fileManager = FileManager.default
+        let destinationURL = wc.appendingPathComponent(destination)
+        var asideURL: URL?
+
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            let aside = wc.appendingPathComponent(".svnstudio-repair-\(UUID().uuidString)")
+            try fileManager.moveItem(at: destinationURL, to: aside)
+            asideURL = aside
+        }
+
+        do {
+            _ = try await run(command, currentDirectory: wc.path, stdin: nil)
+            if let asideURL {
+                if fileManager.fileExists(atPath: destinationURL.path) {
+                    try fileManager.removeItem(at: destinationURL)
+                }
+                try fileManager.moveItem(at: asideURL, to: destinationURL)
+            }
+        } catch {
+            if let asideURL, fileManager.fileExists(atPath: asideURL.path) {
+                if !fileManager.fileExists(atPath: destinationURL.path) {
+                    try? fileManager.moveItem(at: asideURL, to: destinationURL)
+                } else {
+                    try? fileManager.removeItem(at: asideURL)
+                }
+            }
+            throw error
+        }
+    }
+
     public func revert(wc: URL, paths: [String], recursive: Bool) async throws {
         _ = try await run(SvnCommandBuilder.revert(paths: paths, recursive: recursive), currentDirectory: wc.path, stdin: nil)
     }

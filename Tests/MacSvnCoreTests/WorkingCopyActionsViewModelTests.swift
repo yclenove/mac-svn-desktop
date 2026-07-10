@@ -169,6 +169,93 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.wcLocked)))
         XCTAssertTrue(statusRequests.isEmpty)
     }
+
+    @MainActor
+    func testRepairMovePairsMissingAndUnversionedThenRefreshes() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([
+            FileStatus(path: "new.txt", itemStatus: .added, revision: nil, isTreeConflict: false)
+        ]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+        let statuses = [
+            FileStatus(path: "old.txt", itemStatus: .missing, revision: Revision(1), isTreeConflict: false),
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+
+        await viewModel.repairMove(selectedPaths: ["old.txt", "new.txt"], statuses: statuses)
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(.repairMove))
+        XCTAssertEqual(viewModel.refreshedStatuses.map(\.path), ["new.txt"])
+        XCTAssertEqual(actionCalls, [
+            ActionCall(
+                operation: .repairMove,
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["old.txt", "new.txt"],
+                revision: nil,
+                setDepth: nil,
+                recursive: false
+            )
+        ])
+    }
+
+    @MainActor
+    func testRepairCopyPairsVersionedAndUnversionedThenRefreshes() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+        let statuses = [
+            FileStatus(path: "foo.txt", itemStatus: .modified, revision: Revision(2), isTreeConflict: false),
+            FileStatus(path: "foo-copy.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+
+        await viewModel.repairCopy(selectedPaths: ["foo.txt", "foo-copy.txt"], statuses: statuses)
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(.repairCopy))
+        XCTAssertEqual(actionCalls, [
+            ActionCall(
+                operation: .repairCopy,
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["foo.txt", "foo-copy.txt"],
+                revision: nil,
+                setDepth: nil,
+                recursive: false
+            )
+        ])
+    }
+
+    @MainActor
+    func testRepairMoveRejectsInvalidPairWithoutCallingProvider() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+        let statuses = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false),
+            FileStatus(path: "b.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+
+        await viewModel.repairMove(selectedPaths: ["a.txt", "b.txt"], statuses: statuses)
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(
+            viewModel.state,
+            .error(RepairMoveCopyPairing.ValidationError.invalidMovePair.localizedDescription)
+        )
+        XCTAssertTrue(actionCalls.isEmpty)
+    }
 }
 
 private struct ActionCall: Equatable, Sendable {
@@ -185,6 +272,8 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
     private let updateError: SvnError?
     private let addError: SvnError?
     private let deleteError: SvnError?
+    private let repairMoveError: SvnError?
+    private let repairCopyError: SvnError?
     private let revertError: SvnError?
     private let cleanupError: SvnError?
     private var calls: [ActionCall] = []
@@ -194,6 +283,8 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         updateError: SvnError? = nil,
         addError: SvnError? = nil,
         deleteError: SvnError? = nil,
+        repairMoveError: SvnError? = nil,
+        repairCopyError: SvnError? = nil,
         revertError: SvnError? = nil,
         cleanupError: SvnError? = nil
     ) {
@@ -201,6 +292,8 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         self.updateError = updateError
         self.addError = addError
         self.deleteError = deleteError
+        self.repairMoveError = repairMoveError
+        self.repairCopyError = repairCopyError
         self.revertError = revertError
         self.cleanupError = cleanupError
     }
@@ -236,6 +329,34 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         calls.append(ActionCall(operation: .delete, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: false))
         if let deleteError {
             throw deleteError
+        }
+    }
+
+    func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        calls.append(ActionCall(
+            operation: .repairMove,
+            wc: wc,
+            paths: [source, destination],
+            revision: nil,
+            setDepth: nil,
+            recursive: false
+        ))
+        if let repairMoveError {
+            throw repairMoveError
+        }
+    }
+
+    func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        calls.append(ActionCall(
+            operation: .repairCopy,
+            wc: wc,
+            paths: [source, destination],
+            revision: nil,
+            setDepth: nil,
+            recursive: false
+        ))
+        if let repairCopyError {
+            throw repairCopyError
         }
     }
 

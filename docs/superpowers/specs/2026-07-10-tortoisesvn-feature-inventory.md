@@ -87,7 +87,7 @@
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | 🟡 | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | 🟡 | T2 |
-| 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | 🟡 远端对照+颜色已齐；Repair 待 T1.3 | T1 |
+| 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
 | 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | 🟡 | T2 |
@@ -124,7 +124,7 @@
 | 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ❌ | T3 |
 | 43 | Import in Place | DUG 就地导入 | 向导 | ❌ | T2 |
 | 44 | Remove from version control | 导出式去 `.svn` | 确认 | ❌ | T2 |
-| 45 | Repair Move / Repair Copy | CFM 内修复 | 配对选择 | ❌ | T1 |
+| 45 | Repair Move / Repair Copy | CFM 内修复 | 配对选择 | ✅ | T1 |
 | 46 | Filename case conflict repair | DUG rename 章 | 修复向导 | ❌ | T2 |
 
 ---
@@ -149,7 +149,7 @@
 - [x] 本地 `status -v`  
 - [x] **Check Repository** → `status -u`  
 - [x] 颜色：仅本地 / 仅远端 / 双方 / 冲突  
-- [ ] Repair Move / Repair Copy  
+- [x] Repair Move / Repair Copy  
 - [ ] Changelist 列与分组（可与 T3 同期）  
 - [x] 列宽/可见列持久化  
 - [ ] 显示未修改 / 忽略项（可配）  

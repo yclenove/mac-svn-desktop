@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.3：CFM Repair Move/Copy（配对校验 + WC 内 `svn move/copy`；目标已存在时先挪开/回填 missing 源）
+- Affected: RepairMoveCopyPairing.swift, SvnCommandBuilder/Backend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*（含集成）, docs/*
+- Impact: inventory #45 ✅；#8 CFM 核心（本地/远端/颜色/Repair）齐 → ✅
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.2：CFM Check Repository（`status -u -v`）+ 本地/远端/双方/冲突行高亮；解析 `repos-status`；远端状态列
 - Affected: StatusXMLParser, SvnCommandBuilder, SvnBackend/Cli/Service, ChangesViewModel, MacSvnChangesView, CFMChangeHighlight, FileStatus.remoteItemStatus, Tests/*, docs/*
 - Impact: #8 远端对照与颜色齐；Repair Move/Copy 仍待 T1.3（#8 保持 🟡）

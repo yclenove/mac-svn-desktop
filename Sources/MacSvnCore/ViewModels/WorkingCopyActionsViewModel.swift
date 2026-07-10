@@ -5,6 +5,8 @@ public protocol WorkingCopyActionProviding: Sendable {
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
+    func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
+    func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
     func cleanup(wc: URL) async throws
 }
@@ -13,6 +15,8 @@ public enum WorkingCopyOperation: Equatable, Sendable {
     case update
     case add
     case delete
+    case repairMove
+    case repairCopy
     case revert
     case cleanup
 }
@@ -85,6 +89,16 @@ public final class WorkingCopyActionsViewModel {
         }
     }
 
+    /// CFM Repair Move：先配对校验，再 `svn move --force`，成功后刷新 status。
+    public func repairMove(selectedPaths: Set<String>, statuses: [FileStatus]) async {
+        await performRepair(kind: .move, selectedPaths: selectedPaths, statuses: statuses)
+    }
+
+    /// CFM Repair Copy：先配对校验，再 `svn copy --force`，成功后刷新 status。
+    public func repairCopy(selectedPaths: Set<String>, statuses: [FileStatus]) async {
+        await performRepair(kind: .copy, selectedPaths: selectedPaths, statuses: statuses)
+    }
+
     public func revert(paths: [String], recursive: Bool = false, confirmed: Bool) async {
         guard validateSelectedPaths(paths) else {
             return
@@ -103,6 +117,35 @@ public final class WorkingCopyActionsViewModel {
     public func cleanup() async {
         await perform(.cleanup) {
             try await actionProvider.cleanup(wc: workingCopy)
+        }
+    }
+
+    private func performRepair(
+        kind: RepairMoveCopyKind,
+        selectedPaths: Set<String>,
+        statuses: [FileStatus]
+    ) async {
+        switch RepairMoveCopyPairing.resolve(kind: kind, selectedPaths: selectedPaths, statuses: statuses) {
+        case .failure(let error):
+            state = .error(error.localizedDescription)
+        case .success(let pair):
+            let operation: WorkingCopyOperation = kind == .move ? .repairMove : .repairCopy
+            await perform(operation) {
+                switch kind {
+                case .move:
+                    try await actionProvider.moveInWorkingCopy(
+                        wc: workingCopy,
+                        source: pair.sourcePath,
+                        destination: pair.destinationPath
+                    )
+                case .copy:
+                    try await actionProvider.copyInWorkingCopy(
+                        wc: workingCopy,
+                        source: pair.sourcePath,
+                        destination: pair.destinationPath
+                    )
+                }
+            }
         }
     }
 

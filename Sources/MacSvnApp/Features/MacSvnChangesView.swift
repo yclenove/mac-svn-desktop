@@ -223,6 +223,16 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
+            Button("修复移动") {
+                Task { await runRepairMove() }
+            }
+            .disabled(!canRepairMove || actionsVM?.isRunning == true)
+
+            Button("修复复制") {
+                Task { await runRepairCopy() }
+            }
+            .disabled(!canRepairCopy || actionsVM?.isRunning == true)
+
             Button("调整深度…") {
                 showSetDepth = true
             }
@@ -257,6 +267,26 @@ public struct MacSvnChangesView: View {
     private var conflictCount: Int? {
         guard let changesVM, case .loaded = changesVM.state else { return nil }
         return changesVM.visibleFlatEntries.filter { $0.itemStatus == .conflicted || $0.isTreeConflict }.count
+    }
+
+    /// 当前多选是否满足 Repair Move 配对（missing + unversioned）。
+    private var canRepairMove: Bool {
+        guard let changesVM else { return false }
+        return RepairMoveCopyPairing.canRepair(
+            kind: .move,
+            selectedPaths: selectedPaths,
+            statuses: changesVM.entries
+        )
+    }
+
+    /// 当前多选是否满足 Repair Copy 配对（已版本化 + unversioned）。
+    private var canRepairCopy: Bool {
+        guard let changesVM else { return false }
+        return RepairMoveCopyPairing.canRepair(
+            kind: .copy,
+            selectedPaths: selectedPaths,
+            statuses: changesVM.entries
+        )
     }
 
     @ViewBuilder
@@ -295,6 +325,17 @@ public struct MacSvnChangesView: View {
                                 )
                         }
                     }
+                }
+                .contextMenu {
+                    Button("修复移动") {
+                        Task { await runRepairMove() }
+                    }
+                    .disabled(!canRepairMove)
+
+                    Button("修复复制") {
+                        Task { await runRepairCopy() }
+                    }
+                    .disabled(!canRepairCopy)
                 }
             }
         } else {
@@ -499,6 +540,24 @@ public struct MacSvnChangesView: View {
         await syncAfterAction(actionsVM, changesVM)
     }
 
+    private func runRepairMove() async {
+        guard let actionsVM, let changesVM else { return }
+        await actionsVM.repairMove(selectedPaths: selectedPaths, statuses: changesVM.entries)
+        await syncAfterAction(actionsVM, changesVM)
+        if case .completed(.repairMove) = actionsVM.state {
+            statusBanner = "已修复移动"
+        }
+    }
+
+    private func runRepairCopy() async {
+        guard let actionsVM, let changesVM else { return }
+        await actionsVM.repairCopy(selectedPaths: selectedPaths, statuses: changesVM.entries)
+        await syncAfterAction(actionsVM, changesVM)
+        if case .completed(.repairCopy) = actionsVM.state {
+            statusBanner = "已修复复制"
+        }
+    }
+
     private func runRevert(confirmed: Bool) async {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.revert(paths: Array(selectedPaths), confirmed: confirmed)
@@ -536,6 +595,8 @@ public struct MacSvnChangesView: View {
         case .update: return "更新"
         case .add: return "添加"
         case .delete: return "删除"
+        case .repairMove: return "修复移动"
+        case .repairCopy: return "修复复制"
         case .revert: return "还原"
         case .cleanup: return "清理"
         }

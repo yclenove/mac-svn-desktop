@@ -1035,6 +1035,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("delete")
     }
 
+    func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("moveInWorkingCopy")
+    }
+
+    func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("copyInWorkingCopy")
+    }
+
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {
         record("revert")
     }

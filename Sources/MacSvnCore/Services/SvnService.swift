@@ -295,6 +295,18 @@ public actor SvnService {
         }
     }
 
+    public func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        try await withWriteLock(wc: wc, operation: "repairMove") {
+            try await backend.moveInWorkingCopy(wc: wc, source: source, destination: destination)
+        }
+    }
+
+    public func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        try await withWriteLock(wc: wc, operation: "repairCopy") {
+            try await backend.copyInWorkingCopy(wc: wc, source: source, destination: destination)
+        }
+    }
+
     public func revert(wc: URL, paths: [String], recursive: Bool = false) async throws {
         try await withWriteLock(wc: wc, operation: "revert") {
             try await backend.revert(wc: wc, paths: paths, recursive: recursive)

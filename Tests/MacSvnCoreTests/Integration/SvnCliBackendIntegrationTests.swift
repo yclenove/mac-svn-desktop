@@ -764,6 +764,58 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statusesByPath["src/main.txt"], .deleted)
     }
 
+    func testRepairMoveAfterExternalRenameSchedulesHistoryPreservingMove() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        let oldURL = fixture.workingCopy.appendingPathComponent("README.txt")
+        let newURL = fixture.workingCopy.appendingPathComponent("README-renamed.txt")
+        try FileManager.default.moveItem(at: oldURL, to: newURL)
+
+        let before = try await fixture.backend.status(wc: fixture.workingCopy)
+        let beforeByPath = Dictionary(uniqueKeysWithValues: before.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(beforeByPath["README.txt"], .missing)
+        XCTAssertEqual(beforeByPath["README-renamed.txt"], .unversioned)
+
+        try await fixture.backend.moveInWorkingCopy(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "README-renamed.txt"
+        )
+
+        let after = try await fixture.backend.status(wc: fixture.workingCopy)
+        let afterByPath = Dictionary(uniqueKeysWithValues: after.map { ($0.path, $0.itemStatus) })
+        // svn move 后源路径通常为 deleted（调度删除），目标为 added（带 copy-from 历史）
+        XCTAssertTrue(
+            afterByPath["README.txt"] == nil || afterByPath["README.txt"] == .deleted,
+            "source should be gone or deleted, got \(String(describing: afterByPath["README.txt"]))"
+        )
+        XCTAssertEqual(afterByPath["README-renamed.txt"], .added)
+    }
+
+    func testRepairCopyAfterExternalCopySchedulesHistoryPreservingCopy() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        let sourceURL = fixture.workingCopy.appendingPathComponent("README.txt")
+        let copyURL = fixture.workingCopy.appendingPathComponent("README-copy.txt")
+        try FileManager.default.copyItem(at: sourceURL, to: copyURL)
+
+        let before = try await fixture.backend.status(wc: fixture.workingCopy)
+        let beforeByPath = Dictionary(uniqueKeysWithValues: before.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(beforeByPath["README-copy.txt"], .unversioned)
+
+        try await fixture.backend.copyInWorkingCopy(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "README-copy.txt"
+        )
+
+        let after = try await fixture.backend.status(wc: fixture.workingCopy)
+        let afterByPath = Dictionary(uniqueKeysWithValues: after.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(afterByPath["README-copy.txt"], .added)
+    }
+
     func testCommitWithChineseMessageIsReadBackFromLog() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

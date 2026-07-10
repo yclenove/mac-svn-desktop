@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T12:49:35Z",
+  "generated_at": "2026-07-10T13:13:15Z",
   "total": 114,
-  "done": 0,
-  "partial": 52,
-  "missing": 62,
-  "coverage": 0.0,
-  "coverage_percent": 0.0,
+  "done": 2,
+  "partial": 51,
+  "missing": 61,
+  "coverage": 0.017544,
+  "coverage_percent": 1.75,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 0,
-      "partial": 23,
-      "missing": 23
+      "done": 2,
+      "partial": 22,
+      "missing": 22
     },
     "log": {
       "total": 20,
@@ -289,8 +289,8 @@
       "key": "cmd.08",
       "section": "command",
       "title": "Check for Modifications",
-      "raw_status": "🟡 远端对照+颜色已齐；Repair 待 T1.3",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.09",
@@ -548,8 +548,8 @@
       "key": "cmd.45",
       "section": "command",
       "title": "Repair Move / Repair Copy",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.46",

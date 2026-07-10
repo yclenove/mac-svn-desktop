@@ -111,6 +111,22 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])
     }
 
+    func testWorkingCopyMoveSchedulesWithoutCommitMessage() {
+        let command = SvnCommandBuilder.workingCopyMove(source: "old.txt", destination: "new.txt")
+        XCTAssertEqual(
+            command.arguments,
+            ["move", "--non-interactive", "old.txt", "new.txt"]
+        )
+    }
+
+    func testWorkingCopyCopySchedulesWithoutCommitMessage() {
+        let command = SvnCommandBuilder.workingCopyCopy(source: "a.txt", destination: "a-copy.txt")
+        XCTAssertEqual(
+            command.arguments,
+            ["copy", "--non-interactive", "a.txt", "a-copy.txt"]
+        )
+    }
+
     func testDeleteUsesNonInteractiveAndPaths() {
         let command = SvnCommandBuilder.delete(paths: ["old.txt"])
         XCTAssertEqual(command.arguments, ["delete", "--non-interactive", "old.txt"])
