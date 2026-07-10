@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-10T14:48:32Z",
+  "generated_at": "2026-07-10T14:53:09Z",
   "total": 114,
-  "done": 13,
-  "partial": 42,
+  "done": 19,
+  "partial": 36,
   "missing": 59,
-  "coverage": 0.114035,
-  "coverage_percent": 11.4,
+  "coverage": 0.166667,
+  "coverage_percent": 16.67,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 1,
-      "partial": 20,
+      "done": 7,
+      "partial": 14,
       "missing": 7
     },
     "command": {
@@ -51,7 +51,7 @@
       "key": "D02",
       "section": "domain",
       "title": "Context Menus / Drag-Drop",
-      "raw_status": "🟡",
+      "raw_status": "🟡 CFM/⌘K 齐；Finder 拖拽 T4",
       "status": "partial"
     },
     {
@@ -79,15 +79,15 @@
       "key": "D06",
       "section": "domain",
       "title": "Commit",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "D07",
       "section": "domain",
       "title": "Update",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "D08",
@@ -107,8 +107,8 @@
       "key": "D10",
       "section": "domain",
       "title": "Diff",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ T1 核心；EOL/文件夹 T2",
+      "status": "done"
     },
     {
       "key": "D11",
@@ -135,22 +135,22 @@
       "key": "D14",
       "section": "domain",
       "title": "Add / Ignore",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 文件名/通配；global-ignores T5",
+      "status": "done"
     },
     {
       "key": "D15",
       "section": "domain",
       "title": "Copy/Move/Rename/Delete",
-      "raw_status": "❌/🟡",
-      "status": "partial"
+      "raw_status": "✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2",
+      "status": "done"
     },
     {
       "key": "D16",
       "section": "domain",
       "title": "Revert / Cleanup",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "D17",

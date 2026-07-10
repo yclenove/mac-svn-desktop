@@ -46,21 +46,21 @@
 | 域 ID | DUG 章节 | 必须覆盖的能力要点 | Studio | 波次 |
 |-------|----------|-------------------|--------|------|
 | D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | 🟡 | T4 |
-| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 | T1/T4 |
+| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K 齐；Finder 拖拽 T4 | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ❌ | T2 |
 | D05 | Checkout | depth、revision、ignore-externals、pristines | 🟡 | T2 |
-| D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | 🟡 | T1 |
-| D07 | Update | 统一 HEAD 修订、冲突列表入口 | 🟡 | T1 |
+| D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | ✅ | T1 |
+| D07 | Update | 统一 HEAD 修订、冲突列表入口 | ✅ | T1 |
 | D08 | Conflicts | 文件/属性/树冲突、编辑、resolved | 🟡 | T2 |
 | D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | ✅ | T1 |
-| D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | 🟡 | T1/T2 |
+| D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
 | D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 | T2/T3 |
-| D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | 🟡 | T1 |
-| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ❌/🟡 | T1/T2 |
-| D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | 🟡 | T1 |
+| D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
+| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2 | T1/T2 |
+| D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | 🟡 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ❌ | T3 |
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | 🟡 | T2 |
@@ -297,7 +297,7 @@
 | 波次 | 清掉什么 |
 |------|----------|
 | T0 | 命令 ID 骨架对齐本表 #/L#/S#；性能门禁 |
-| T1 | #2–5,8,13–14,17–18,29,32,36,45 + Commit/CFM/Diff 对话框 |
+| T1 | #2,4,5,8,13–14,17–18,29,32,36,45 + Commit/CFM/Diff 对话框（#3 属 T2） |
 | T2 | 检出更新进阶、日志 L 大部、锁、分支合并、导出导入补丁属性、Repo 写 |
 | T3 | 修订图、Changelist、Externals、官方 Shelve、reintegrate、日志高级 L |
 | T4 | Overlay 全状态 + Cache + 菜单设置 |

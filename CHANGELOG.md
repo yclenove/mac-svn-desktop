@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop **闸门 G1（T1.12）**：确认 T1 命令 #2,4,5,8,13–14,17–18,29,32,36,45 均为 ✅；更新 domain D06/D07/D10/D14–D16；H-tortoise T1 全勾；澄清 #3 属 T2
+- Affected: docs/superpowers/specs/*, docs/acceptance/*, docs/superpowers/plans/*, CHANGELOG.md
+- Impact: **G1 通过**，进入 Wave T2；§4.1 进阶项 / global-ignores / Finder 拖拽仍开
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.11：CFM 右键改为 `SvnCommandCatalog.dailyCFMCommands`；⌘K 可搜索并分发同一日常命令子集
 - Affected: SvnCommandCatalog.swift, CommandPaletteSearchEngine.swift, MacSvnCommandPaletteView, MacSvnChangesView, Tests/*, docs/*
 - Impact: 右键与 ⌘K 同源；下一闸门 G1（T1.12）

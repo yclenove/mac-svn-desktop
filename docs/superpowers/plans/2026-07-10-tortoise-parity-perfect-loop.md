@@ -100,7 +100,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 | 闸门 | 何时 | 通过标准 |
 |------|------|----------|
 | G0 | T0 末 | 命令 ID 全齐可枚举；覆盖率脚本可跑；性能规范有测试或静态检查说明；空闲 CPU 正常 |
-| G1 | T1 末 | inventory #2–5,8,13–14,17–18,29,32,36,45 及 Commit/CFM 对话框清单 → ✅ |
+| G1 | T1 末 | inventory **#2,4,5,8,13–14,17–18,29,32,36,45**（不含 #3 Update to revision，属 T2）及 Commit/CFM 对话框 T1 必选项 → ✅ |
 | G2 | T2 末 | 检出/日志 L 大部/锁/分支合并/导出导入补丁/Repo 写等对应行 → ✅ |
 | G3 | T3 末 | 修订图/Changelist/Externals/官方 Shelve/扩展命令等 → ✅ |
 | G4 | T4 末 | Overlay 全状态 + Cache 三模式 + Finder 菜单 → ✅ |
@@ -134,7 +134,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T1.9** Ignore 文件/通配（#32）
 - [x] **T1.10** SVN Copy / Move 向导（#36）
 - [x] **T1.11** 变更树右键 = Catalog 日常子集；⌘K 可搜到
-- [ ] **T1.12** **闸门 G1**：更新 inventory 对应行 → ✅；H-tortoise T1 节手工勾选；`swift test` 全绿
+- [x] **T1.12** **闸门 G1**：更新 inventory 对应行 → ✅；H-tortoise T1 节手工勾选；`swift test` 全绿
 
 ### Wave T2 — 进阶日常 + 仓库
 
@@ -240,6 +240,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.9 | 7021266 | Ignore 文件名/扩展名通配 + svn:ignore 合并写入 | #32 ✅ | global-ignores 仍属 S01/T5 |
 | 2026-07-10 | T1.10 | 3f4a472 | Copy/Move 目标路径校验 + svn copy/move 向导 | #36 ✅ | Finder 拖拽引导仍开 |
 | 2026-07-10 | T1.11 | 3803f1c | CFM 右键=Catalog 日常子集；⌘K 可搜 svnCommand | 入口齐 | G1 待 T1.12 |
+| 2026-07-10 | T1.12 / G1 | （提交后回填） | G1：T1 命令行全 ✅；domain D06/07/10/14–16；H-T1 全勾；全测绿 | G1 通过 | 进入 T2.1；#3 仍 T2 |
 
 ---
 
