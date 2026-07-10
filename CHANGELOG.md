@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 修复长程 Loop「续不上」根因：废弃无限 while 心跳，改为每轮结束 one-shot sleep+WAKE 并重新挂 notify；协议写入 SRS backlog
+- Affected: docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md
+- Impact: 终端刷 WAKE 但代理空闲的问题有明确修复路径；下一功能项仍为 U3
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop U2：历史迁移后展示 revision 对账报告；不一致时阻断进入同步；源分析保留 `sourceRevisions` 供对账
 - Affected: Sources/MacSvnCore/Models/GitMigrationModels.swift, Services/GitMigrationSourceAnalyzer.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, Tests/MacSvnCoreTests/GitMigrationSourceAnalyzerTests.swift
 - Impact: FR-GM-04 / NFR-14 可验收；下一未勾项 U3 AI Release Notes

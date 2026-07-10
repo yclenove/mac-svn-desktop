@@ -74,7 +74,24 @@
 7. Core 已有能力优先 **App 接线**；没有 Core 再补服务/VM。
 8. 全部 `[x]` 后：全量测试、更新 README 功能矩阵、停止 loop。
 
-**建议唤醒间隔：** 3–5 分钟（实现轮次重，不必 2 分钟空转）。
+### 唤醒协议（强制，2026-07-10 根因修复）
+
+**禁止** `while true; do sleep N; echo WAKE; done` 无限心跳。
+
+原因：无限循环只往终端写行；会话空闲或上下文摘要后，`notify_on_output` 订阅会失效，终端里继续刷 WAKE 但**代理不会被拉起**——表现为「停了十几二十分钟」。
+
+**正确做法（每轮结束必须执行）：**
+
+1. 本轮功能做完并 push 后，用 **一次性** Shell（`block_until_ms: 0` + `notify_on_output`）挂下一枪：
+   ```bash
+   sleep 120
+   echo 'AGENT_LOOP_WAKE_macsvn_srs_gap {"prompt":"Continue MacSVN SRS-gap long-loop on feat/srs-gap-full-delivery: read docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, implement first unchecked item with TDD, swift test, commit, push, update backlog+CHANGELOG; then re-arm one-shot wake (sleep 120 + echo AGENT_LOOP_WAKE_macsvn_srs_gap). Do not use while-true loops."}'
+   ```
+2. 唤醒后：读最新 WAKE 行里的 `prompt` → 干活 → **再挂下一发 one-shot**（重新建立订阅）。
+3. 若发现仍有 `while true` 的旧进程：先 `pkill -f AGENT_LOOP_WAKE_macsvn_srs_gap` 再挂 one-shot。
+4. 用户说停止：杀掉 sleeper，**不要**再挂下一发。
+
+**建议间隔：** 120 秒（实现轮次重时可在本轮末尾改成 180–300）。
 
 ---
 
@@ -143,26 +160,18 @@
 
 | 时间 | 条目 | 阻塞 | 处理 |
 |------|------|------|------|
-| （空） | | | |
+| 2026-07-10 14:11 | 唤醒链路 | 无限 `while` 心跳终端有 WAKE 但代理不续跑 | 改为每轮结束 one-shot `sleep+echo` + `notify_on_output`；已杀旧进程；协议写入本文「唤醒协议」 |
 
 ---
 
 ## 启动 Loop 命令（参考）
 
-在仓库根目录：
+在仓库根目录切到 `feat/srs-gap-full-delivery` 后，由 **Cursor Agent 在每轮结束** 挂下一发（不要手写 while）：
 
 ```bash
-# 建议分支
-git checkout feat/long-loop-full-delivery
-git pull
-git checkout -b feat/srs-gap-full-delivery
-git push -u origin HEAD
-
-# 心跳（示例：每 180 秒）；实现代理读取本文件第一个 [ ]
-while true; do
-  sleep 180
-  echo 'AGENT_LOOP_WAKE_macsvn_srs_gap {"prompt":"Continue MacSVN SRS-gap long-loop on feat/srs-gap-full-delivery: read docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, implement first unchecked item with TDD, swift test, commit, push, update backlog+CHANGELOG; do not stop until all items done."}'
-done
+# 一次性唤醒（必须由 Agent Shell 以 block_until_ms=0 + notify_on_output 启动）
+sleep 120
+echo 'AGENT_LOOP_WAKE_macsvn_srs_gap {"prompt":"Continue MacSVN SRS-gap long-loop on feat/srs-gap-full-delivery: read docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md, implement first unchecked item with TDD, swift test, commit, push, update backlog+CHANGELOG; then re-arm one-shot wake. Do not use while-true."}'
 ```
 
-停止条件：本文件全部 `[x]` 或用户明确要求 kill loop。
+停止条件：本文件全部 `[x]`，或用户明确要求停止（杀掉 sleeper 且不再挂下一发）。
