@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop U1：Git 迁移 Authors 页接入 AI 批量推断（邮箱域名规则）与「AI 待复核」标记；编辑/确认后清除待复核
+- Affected: Sources/MacSvnCore/Services/AIAuthorMappingInferrer.swift, ViewModels/GitMigrationAuthorMappingViewModel.swift, Sources/MacSvnApp/Features/MacSvnGitMigrationView.swift, MacSvnAppSession.swift, Tests/**
+- Impact: FR-GM-03 AI 路径可验收；下一未勾项 U2 revision 对账报告
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop 续跑 T4–T6：仓库浏览器远端写（mkdir/删/复制/移动+提交说明）、分支页 `svn:mergeinfo`、属性冲突双方对比与 Mine/Theirs resolve；心跳仍在但会话空闲未续跑，已人工续上
 - Affected: Sources/MacSvnApp/Features/MacSvnRepoBrowserView.swift, MacSvnBranchesView.swift, MacSvnConflictWorkspaceView.swift, Sources/MacSvnCore/ViewModels/PropertyConflictViewModel.swift, Tests/MacSvnCoreTests/PropertyConflictViewModelTests.swift
 - Impact: Wave T 全部勾完；下一未勾项为 U1（Git 迁移 authors AI）

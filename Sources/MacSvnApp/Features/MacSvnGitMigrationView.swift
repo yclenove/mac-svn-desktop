@@ -20,6 +20,7 @@ public struct MacSvnGitMigrationView: View {
     @State private var migrateVM: GitMigrationViewModel?
     @State private var syncVM: GitMigrationSyncViewModel?
     @State private var cleanupPlan: GitMigrationCleanupPlan?
+    @State private var authorEmailDomain = "example.com"
 
     private enum Step: String, CaseIterable, Identifiable {
         case analyze = "1.源分析"
@@ -121,9 +122,42 @@ public struct MacSvnGitMigrationView: View {
                     .foregroundStyle(.secondary)
             } else if let authorVM {
                 Text("覆盖 \(authorVM.coverage.coveredCount)/\(authorVM.coverage.totalCount)")
+                if !authorVM.aiPendingReviewUsernames.isEmpty {
+                    Text("AI 推断待复核：\(authorVM.aiPendingReviewUsernames.count) 人（编辑单元格即视为已复核）")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                HStack {
+                    TextField("公司邮箱域名", text: $authorEmailDomain)
+                        .textFieldStyle(.roundedBorder)
+                    Button(authorVM.state == .inferring ? "推断中…" : "AI 批量推断") {
+                        Task {
+                            let privacy = await session.currentAIPrivacy()
+                            await authorVM.inferWithAI(
+                                emailDomain: authorEmailDomain,
+                                privacySettings: privacy,
+                                inferrer: session.aiAuthorMappingInferrer
+                            )
+                            if case .error(let message) = authorVM.state {
+                                statusText = "AI 推断失败：\(message)"
+                            } else {
+                                statusText = "AI 已填充 \(authorVM.aiPendingReviewUsernames.count) 条，请人工复核"
+                            }
+                        }
+                    }
+                    .disabled(authorVM.state == .inferring || authorVM.mappings.isEmpty)
+                }
                 ForEach(authorVM.mappings, id: \.svnUsername) { mapping in
                     HStack {
                         Text(mapping.svnUsername).frame(width: 120, alignment: .leading)
+                        if authorVM.aiPendingReviewUsernames.contains(mapping.svnUsername) {
+                            Text("AI")
+                                .font(.caption2.weight(.bold))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.orange.opacity(0.2))
+                                .foregroundStyle(.orange)
+                        }
                         TextField(
                             "Git Name",
                             text: Binding(
@@ -138,6 +172,11 @@ public struct MacSvnGitMigrationView: View {
                                 set: { authorVM.updateMapping(svnUsername: mapping.svnUsername, gitName: mapping.gitName, gitEmail: $0) }
                             )
                         )
+                        if authorVM.aiPendingReviewUsernames.contains(mapping.svnUsername) {
+                            Button("确认") {
+                                authorVM.markAISuggestionReviewed(svnUsername: mapping.svnUsername)
+                            }
+                        }
                     }
                 }
                 if !authorVM.canStartMigration, mode == .historyPreserving {
