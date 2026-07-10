@@ -9,12 +9,42 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* MacSvnDesktopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* MacSvnDesktopApp.swift */; };
 		A10000000000000000000002 /* MacSvnApp in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000001 /* MacSvnApp */; };
+		A10000000000000000000003 /* MacSvnFinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* MacSvnFinderSync.swift */; };
+		A10000000000000000000004 /* MacSvnCore in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000002 /* MacSvnCore */; };
+		A10000000000000000000005 /* MacSVNFinderSync.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* MacSVNFinderSync.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A11000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A80000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A60000000000000000000002;
+			remoteInfo = MacSVNFinderSync;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A12000000000000000000001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000005 /* MacSVNFinderSync.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* MacSvnDesktopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnDesktopApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000003 /* MacSVN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacSVN.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000004 /* MacSvnFinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnFinderSync.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* MacSVNFinderSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacSVNFinderSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000006 /* FinderSyncInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -23,6 +53,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000002 /* MacSvnApp in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000004 /* MacSvnCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -58,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				A50000000000000000000006 /* MacSVN */,
+				A50000000000000000000007 /* FinderSync */,
 			);
 			path = Packaging;
 			sourceTree = "<group>";
@@ -70,10 +109,20 @@
 			path = MacSVN;
 			sourceTree = "<group>";
 		};
+		A50000000000000000000007 /* FinderSync */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000004 /* MacSvnFinderSync.swift */,
+				A20000000000000000000006 /* FinderSyncInfo.plist */,
+			);
+			path = FinderSync;
+			sourceTree = "<group>";
+		};
 		A50000000000000000000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000003 /* MacSVN.app */,
+				A20000000000000000000005 /* MacSVNFinderSync.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -88,10 +137,12 @@
 				A40000000000000000000002 /* Sources */,
 				A40000000000000000000001 /* Frameworks */,
 				A40000000000000000000003 /* Resources */,
+				A12000000000000000000001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A13000000000000000000001 /* PBXTargetDependency */,
 			);
 			name = MacSVN;
 			packageProductDependencies = (
@@ -100,6 +151,26 @@
 			productName = MacSVN;
 			productReference = A20000000000000000000003 /* MacSVN.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A60000000000000000000002 /* MacSVNFinderSync */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000004 /* Build configuration list for PBXNativeTarget "MacSVNFinderSync" */;
+			buildPhases = (
+				A40000000000000000000005 /* Sources */,
+				A40000000000000000000004 /* Frameworks */,
+				A40000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacSVNFinderSync;
+			packageProductDependencies = (
+				A30000000000000000000002 /* MacSvnCore */,
+			);
+			productName = MacSVNFinderSync;
+			productReference = A20000000000000000000005 /* MacSVNFinderSync.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -112,6 +183,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					A60000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					A60000000000000000000002 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -134,12 +208,20 @@
 			projectRoot = "";
 			targets = (
 				A60000000000000000000001 /* MacSVN */,
+				A60000000000000000000002 /* MacSVNFinderSync */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A40000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -157,7 +239,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A40000000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000003 /* MacSvnFinderSync.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A13000000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A60000000000000000000002 /* MacSVNFinderSync */;
+			targetProxy = A11000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A70000000000000000000011 /* Debug */ = {
@@ -236,6 +334,58 @@
 			};
 			name = Release;
 		};
+		A70000000000000000000031 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Packaging/FinderSync/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.FinderSync;
+				PRODUCT_NAME = MacSVNFinderSync;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A70000000000000000000032 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Packaging/FinderSync/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.FinderSync;
+				PRODUCT_NAME = MacSVNFinderSync;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -257,6 +407,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A70000000000000000000004 /* Build configuration list for PBXNativeTarget "MacSVNFinderSync" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000000000000000000031 /* Debug */,
+				A70000000000000000000032 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -270,6 +429,10 @@
 		A30000000000000000000001 /* MacSvnApp */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MacSvnApp;
+		};
+		A30000000000000000000002 /* MacSvnCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MacSvnCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

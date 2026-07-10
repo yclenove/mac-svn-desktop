@@ -32,10 +32,11 @@ xcodebuild -project MacSVN.xcodeproj -scheme MacSVN -configuration Release \
 - 本地 Swift Package（`.`）产品依赖：`MacSvnApp`（进而带上 `MacSvnCore`）
 - `Packaging/MacSVN/Info.plist`：Bundle ID `com.yclenove.MacSVN`、URL scheme `macsvn://`
 
-扩展 target（V2/V3）在本工程上追加，步骤见：
+扩展 target（V2/V3）在本工程上追加：
 
-- `docs/extensions/FinderSync/README.md`
-- `docs/extensions/QuickLook/README.md`
+- Finder Sync：`MacSVNFinderSync`（已嵌入）；见 `docs/extensions/FinderSync/`
+- Quick Look：见 `docs/extensions/QuickLook/README.md`
+
 
 ## 验收标准（V1）
 

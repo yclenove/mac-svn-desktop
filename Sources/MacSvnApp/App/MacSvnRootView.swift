@@ -19,7 +19,8 @@ public struct MacSvnRootView: View {
         _workspaceController = StateObject(
             wrappedValue: MacSvnWorkspaceController(
                 workspaceStore: session.workspaceStore,
-                infoProvider: session.svnService
+                infoProvider: session.svnService,
+                supportDirectory: session.supportDirectory
             )
         )
     }

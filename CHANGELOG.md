@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: SRS 缺口 Loop V2：MacSVN.xcodeproj 增加 Finder Sync 扩展并嵌入 PlugIns；主应用导出 WC 根目录；角标+右键 macsvn 深链；verify-finder-sync-appex 通过
+- Affected: Packaging/FinderSync/**, MacSVN.xcodeproj, Sources/MacSvnCore/Services/FinderSync*.swift, MacSvnWorkspaceController.swift, MacSvnAppSession.swift, scripts/verify-finder-sync-appex.sh, docs/extensions/FinderSync/**
+- Impact: FR-EX-05 可安装形态可验收；下一未勾项 V3 Quick Look `.appex`
+
+## 2026-07-10
+
 - Summary: SRS 缺口 Loop V1：新增 MacSVN.xcodeproj 包装工程（嵌入本地 SwiftPM）与 `scripts/build-macos-app.sh`；两条路径均可产出并通过 `verify-macos-app.sh`
 - Affected: MacSVN.xcodeproj/**, Packaging/MacSVN/Info.plist, scripts/build-macos-app.sh, scripts/verify-macos-app.sh, docs/packaging/README.md, README.md, docs/extensions/FinderSync/README.md
 - Impact: 可构建 `MacSVN.app`；下一未勾项 V2 Finder Sync `.appex`
