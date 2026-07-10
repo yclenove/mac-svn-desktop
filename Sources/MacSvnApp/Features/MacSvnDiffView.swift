@@ -107,14 +107,20 @@ public struct MacSvnDiffView: View {
                 Task { await loadExternalPath(newValue) }
             } else {
                 selectedPath = nil
-                viewModel = nil
+                // 保留 viewModel 实例，仅清空展示，避免反复重建 Observable
+                viewModel?.clearDisplay()
             }
         }
         .task {
-            await reloadPaths()
-            await consumeNavigatorIntent()
-            if embedded, let externalSelectedPath {
-                await loadExternalPath(externalSelectedPath)
+            if embedded {
+                await ensureViewModel()
+                await consumeNavigatorIntent()
+                if let externalSelectedPath {
+                    await loadExternalPath(externalSelectedPath)
+                }
+            } else {
+                await reloadPaths()
+                await consumeNavigatorIntent()
             }
         }
         .onChange(of: navigator.pendingDiffPath) { _, _ in
@@ -126,11 +132,26 @@ public struct MacSvnDiffView: View {
     }
 
     private func loadExternalPath(_ path: String) async {
+        await ensureViewModel()
+        if selectedPath == path, viewModel?.state == .loaded {
+            return
+        }
         if !paths.contains(path) {
             paths.insert(path, at: 0)
         }
         selectedPath = path
         await loadDiff(path: path)
+    }
+
+    private func ensureViewModel() async {
+        guard let record = workspaceController.selectedRecord, record.isValid else {
+            viewModel = nil
+            return
+        }
+        if viewModel == nil {
+            let wc = URL(fileURLWithPath: record.localPath)
+            viewModel = DiffViewModel(workingCopy: wc, diffProvider: session.svnService)
+        }
     }
 
     @ViewBuilder
@@ -144,23 +165,10 @@ public struct MacSvnDiffView: View {
             case .error(let message):
                 ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
             case .loaded:
-                if mode == .unified {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(viewModel.lines) { line in
-                                Text(line.text)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(color(for: line.kind))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(background(for: line.kind))
-                            }
-                        }
-                        .padding(12)
-                    }
-                } else {
+                if !embedded, mode == .sideBySide, !viewModel.sideBySideRows.isEmpty, viewModel.sideBySideRows.count < 2_000 {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 4) {
-                            ForEach(Array(viewModel.sideBySideRows.enumerated()), id: \.offset) { _, row in
+                            ForEach(viewModel.sideBySideRows) { row in
                                 HStack(alignment: .top, spacing: 8) {
                                     Text(row.left?.text ?? "")
                                         .font(.system(.caption, design: .monospaced))
@@ -177,11 +185,40 @@ public struct MacSvnDiffView: View {
                         }
                         .padding(12)
                     }
+                } else if !embedded, mode == .unified, !viewModel.lines.isEmpty, viewModel.lines.count < 2_000 {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(viewModel.lines) { line in
+                                Text(line.text)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(color(for: line.kind))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(background(for: line.kind))
+                            }
+                        }
+                        .padding(12)
+                    }
+                } else {
+                    // 嵌入工作区 / 超大 Diff：单块文本，避免 AttributeGraph 死循环
+                    ScrollView([.vertical, .horizontal]) {
+                        Text(displayDiffText(viewModel.diffText))
+                            .font(.system(.caption, design: .monospaced))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(12)
+                    }
                 }
             }
         } else {
             ContentUnavailableView("选择文件", systemImage: "doc.text.magnifyingglass", description: Text("从左侧选择变更文件查看 diff"))
         }
+    }
+
+    private func displayDiffText(_ raw: String) -> String {
+        let maxChars = 200_000
+        guard raw.count > maxChars else { return raw }
+        let idx = raw.index(raw.startIndex, offsetBy: maxChars)
+        return String(raw[..<idx]) + "\n\n… Diff 过长，已截断显示前 \(maxChars) 字符。请用外部 Diff 工具查看全文。"
     }
 
     private func reloadPaths() async {

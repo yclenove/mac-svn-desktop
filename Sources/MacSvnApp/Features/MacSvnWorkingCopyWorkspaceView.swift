@@ -1,14 +1,14 @@
 import SwiftUI
 import MacSvnCore
 
-/// 变更工作区：变更树 + Diff + 提交面板同屏（Wave U2）。
+/// 变更工作区：变更树 + Diff + 提交面板同屏。
+/// 注意：避免嵌套 VSplitView+HSplitView + 海量子 View，否则 macOS SwiftUI 易陷入 AttributeGraph 死循环（CPU 100%）。
 public struct MacSvnWorkingCopyWorkspaceView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
 
     @State private var focusedDiffPath: String?
-    /// 供变更树与深链共同驱动的选中路径。
     @State private var seededSelection: Set<String> = []
 
     public init(
@@ -22,8 +22,8 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
     }
 
     public var body: some View {
-        VSplitView {
-            HSplitView {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
                 MacSvnChangesView(
                     workspaceController: workspaceController,
                     statusProvider: session.svnService,
@@ -32,11 +32,13 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
                     embedded: true,
                     initialSelectedPaths: seededSelection,
                     onFocusedPathChange: { path in
+                        guard path != focusedDiffPath else { return }
                         focusedDiffPath = path
                     }
                 )
-                .frame(minWidth: 280)
-                .id(seededSelection) // 深链注入选中时重建，确保 List selection 生效
+                .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
+
+                Divider()
 
                 MacSvnDiffView(
                     workspaceController: workspaceController,
@@ -45,16 +47,18 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
                     embedded: true,
                     externalSelectedPath: $focusedDiffPath
                 )
-                .frame(minWidth: 320)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(minHeight: 280)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
 
             MacSvnCommitView(
                 workspaceController: workspaceController,
                 session: session,
                 embedded: true
             )
-            .frame(minHeight: 180)
+            .frame(minHeight: 160, idealHeight: 200, maxHeight: 260)
         }
         .task {
             applyPendingDiffPathSeed()
@@ -67,6 +71,8 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
     private func applyPendingDiffPathSeed() {
         guard let path = navigator.pendingDiffPath else { return }
         seededSelection = [path]
-        focusedDiffPath = path
+        if focusedDiffPath != path {
+            focusedDiffPath = path
+        }
     }
 }

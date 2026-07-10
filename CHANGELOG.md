@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: 修复变更工作区卡死（嵌套 SplitView + 逐行 Diff 导致 AttributeGraph 100% CPU）；历史页改为左列表右详情可点开查看；Diff 嵌入模式改单块文本渲染
+- Affected: MacSvnWorkingCopyWorkspaceView.swift, MacSvnDiffView.swift, DiffViewModel.swift, MacSvnLogView.swift
+- Impact: 应用应可正常响应；历史可点选修订看说明与变更路径
+
+## 2026-07-10
+
 - Summary: UI/UX Working-Copy Centric 重构（U1–U4）：侧栏改为 WC 列表；变更+Diff+提交同屏；Mode 顶栏收纳高级/工具；⌘K 全覆盖；冲突「返回变更」；IA 规格与文档收口
 - Affected: Sources/MacSvnApp/App/MacSvnRootView.swift, MacSvnWorkspaceMode.swift, MacSvnAppNavigator.swift, Features/MacSvnWorkingCopy*.swift, MacSvnChangesView/CommitView/DiffView/CommandPalette/Conflict/Log, Tests/**, docs/superpowers/specs/2026-07-10-ui-ux-ia-design.md, docs/superpowers/plans/2026-07-10-ui-ux-ia-refactor.md, README.md, docs/**
 - Impact: 日常提交无需在 5 个平级页间跳转；符合 FR-WC-02；请 `swift run MacSvnDesktopApp` 或重打包 `dist/SVNStudio.app` 体验

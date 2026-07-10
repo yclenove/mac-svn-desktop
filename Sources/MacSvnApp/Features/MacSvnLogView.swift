@@ -1,7 +1,7 @@
 import SwiftUI
 import MacSvnCore
 
-/// 日志页：过滤 + 从条目发起 Diff / Update -r / 还原。
+/// 历史页：左侧修订列表，右侧详情（说明 / 变更路径 / 操作）。
 public struct MacSvnLogView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
@@ -12,6 +12,7 @@ public struct MacSvnLogView: View {
     @State private var authorFilter = ""
     @State private var messageFilter = ""
     @State private var statusText: String?
+    @State private var selectedRevision: Int?
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -26,15 +27,15 @@ public struct MacSvnLogView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("日志")
-                    .font(.largeTitle.weight(.semibold))
+                Text("历史")
+                    .font(.title2.weight(.semibold))
                 Spacer()
                 Button("AI Release Notes") {
                     guard let viewModel else { return }
                     let entries = filteredEntries(viewModel.entries)
                     navigator.pendingReleaseNotesEntries = entries
-                    navigator.selectedRoute = .releaseNotes
-                    navigator.lastAutomationMessage = "从日志带入 \(entries.count) 条生成 Release Notes"
+                    navigator.selectRoute(.releaseNotes)
+                    navigator.lastAutomationMessage = "从历史带入 \(entries.count) 条生成 Release Notes"
                 }
                 .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
                 Button("刷新") { Task { await reload() } }
@@ -43,7 +44,7 @@ public struct MacSvnLogView: View {
                 }
                 .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
             }
-            .padding(24)
+            .padding(16)
 
             HStack {
                 TextField("作者过滤", text: $authorFilter)
@@ -53,19 +54,20 @@ public struct MacSvnLogView: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 220)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 16)
             .padding(.bottom, 8)
 
             if let statusText {
-                Text(statusText).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24)
+                Text(statusText).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16)
             }
             if let errorText {
-                Text(errorText).foregroundStyle(.red).padding(.horizontal, 24)
+                Text(errorText).foregroundStyle(.red).padding(.horizontal, 16)
             }
 
             content
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
+            selectedRevision = nil
             Task { await reload() }
         }
         .task { await reload() }
@@ -82,38 +84,35 @@ public struct MacSvnLogView: View {
             case .error(let message):
                 ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
             case .loaded, .loadingMore:
-                List(filteredEntries(viewModel.entries), id: \.revision.value) { entry in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("r\(entry.revision.value)").font(.headline.monospaced())
-                            Text(entry.author.isEmpty ? "unknown" : entry.author).foregroundStyle(.secondary)
-                            Spacer()
-                            Text(entry.date?.formatted() ?? "").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Text(entry.message).font(.body)
-                        if !entry.changedPaths.isEmpty {
-                            Text(entry.changedPaths.prefix(8).map(\.path).joined(separator: ", "))
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(2)
-                        }
-                        HStack {
-                            Button("查看 Diff") {
-                                navigator.pendingDiffRevision = entry.revision
-                                navigator.selectMode(.changes)
-                                navigator.lastAutomationMessage = "从历史打开 Diff：r\(entry.revision.value)"
+                let entries = filteredEntries(viewModel.entries)
+                HStack(spacing: 0) {
+                    List(selection: $selectedRevision) {
+                        ForEach(entries, id: \.revision.value) { entry in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("r\(entry.revision.value)")
+                                        .font(.headline.monospaced())
+                                    Text(entry.author.isEmpty ? "unknown" : entry.author)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Text(entry.message)
+                                    .font(.caption)
+                                    .lineLimit(2)
+                                Text(entry.date?.formatted() ?? "")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
-                            Button("更新到此版本") {
-                                Task { await updateTo(entry.revision) }
-                            }
-                            Button("还原首个变更文件") {
-                                Task { await revertFirstPath(of: entry) }
-                            }
-                            .disabled(entry.changedPaths.isEmpty)
+                            .tag(entry.revision.value)
+                            .padding(.vertical, 2)
                         }
-                        .buttonStyle(.borderless)
                     }
-                    .padding(.vertical, 4)
+                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 360)
+
+                    Divider()
+
+                    detailPane(entries: entries)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 if viewModel.state == .loadingMore {
                     ProgressView().padding()
@@ -121,6 +120,86 @@ public struct MacSvnLogView: View {
             }
         } else {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func detailPane(entries: [LogEntry]) -> some View {
+        if let selectedRevision,
+           let entry = entries.first(where: { $0.revision.value == selectedRevision }) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("r\(entry.revision.value)")
+                            .font(.title2.monospaced().weight(.semibold))
+                        Spacer()
+                        Text(entry.date?.formatted() ?? "")
+                            .foregroundStyle(.secondary)
+                    }
+                    LabeledContent("作者", value: entry.author.isEmpty ? "unknown" : entry.author)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("提交说明")
+                            .font(.headline)
+                        Text(entry.message.isEmpty ? "（无说明）" : entry.message)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("变更路径（\(entry.changedPaths.count)）")
+                            .font(.headline)
+                        if entry.changedPaths.isEmpty {
+                            Text("此批次未带路径明细（可刷新或加载 verbose 日志）")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(entry.changedPaths.enumerated()), id: \.offset) { _, change in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text(change.action.rawValue)
+                                        .font(.caption.monospaced())
+                                        .frame(width: 16, alignment: .leading)
+                                        .foregroundStyle(.secondary)
+                                    Text(change.path)
+                                        .font(.system(.body, design: .monospaced))
+                                        .textSelection(.enabled)
+                                    Spacer()
+                                    Button("Diff") {
+                                        navigator.pendingDiffPath = change.path
+                                        navigator.pendingDiffRevision = entry.revision
+                                        navigator.selectMode(.changes)
+                                        navigator.lastAutomationMessage = "查看 r\(entry.revision.value) · \(change.path)"
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Button("在变更区查看 Diff") {
+                            navigator.pendingDiffRevision = entry.revision
+                            if let first = entry.changedPaths.first?.path {
+                                navigator.pendingDiffPath = first
+                            }
+                            navigator.selectMode(.changes)
+                        }
+                        Button("更新到此版本") {
+                            Task { await updateTo(entry.revision) }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+        } else {
+            ContentUnavailableView(
+                "选择一条修订",
+                systemImage: "clock.arrow.circlepath",
+                description: Text("在左侧点击某次提交，查看说明与变更文件详情")
+            )
         }
     }
 
@@ -150,6 +229,9 @@ public struct MacSvnLogView: View {
         viewModel = vm
         let from = Revision(record.revision?.value ?? 1)
         await vm.loadInitial(from: from)
+        if selectedRevision == nil {
+            selectedRevision = vm.entries.first?.revision.value
+        }
     }
 
     private func updateTo(_ revision: Revision) async {
@@ -163,31 +245,9 @@ public struct MacSvnLogView: View {
         await actions.update(revision: revision)
         if case .updateCompleted = actions.state {
             statusText = "已更新到 r\(revision.value)"
-            navigator.selectedRoute = .changes
+            navigator.selectMode(.changes)
         } else if case .error(let message) = actions.state {
             errorText = message
-        }
-    }
-
-    private func revertFirstPath(of entry: LogEntry) async {
-        guard let record = workspaceController.selectedRecord,
-              let path = entry.changedPaths.first?.path
-        else { return }
-        let wc = URL(fileURLWithPath: record.localPath)
-        do {
-            // 用 cat + 写回过于危险；此处走 svn merge -c -REV 的简化：update 文件到前一版本不可用时提示
-            _ = try await session.svnService.diff(
-                wc: wc,
-                target: path,
-                r1: Revision(max(0, entry.revision.value - 1)),
-                r2: entry.revision
-            )
-            navigator.pendingDiffPath = path
-            navigator.pendingDiffRevision = entry.revision
-            navigator.selectMode(.changes)
-            statusText = "已在变更工作区打开 r\(entry.revision.value) 对 \(path) 的 Diff"
-        } catch {
-            errorText = error.localizedDescription
         }
     }
 }

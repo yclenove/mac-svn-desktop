@@ -157,8 +157,14 @@ public final class DiffViewModel {
                 return
             }
 
-            lines = Self.parseLines(rawDiff)
-            sideBySideRows = Self.parseSideBySideRows(rawDiff)
+            // 大 Diff 跳过逐行解析，避免 UI 侧构建海量子视图
+            if rawDiff.count > 200_000 {
+                lines = []
+                sideBySideRows = []
+            } else {
+                lines = Self.parseLines(rawDiff)
+                sideBySideRows = Self.parseSideBySideRows(rawDiff)
+            }
             state = .loaded
         } catch {
             diffText = ""
@@ -166,6 +172,15 @@ public final class DiffViewModel {
             sideBySideRows = []
             state = .error(String(describing: error))
         }
+    }
+
+    /// 清空展示但不销毁实例（嵌入工作区切换选中时用）。
+    public func clearDisplay() {
+        diffText = ""
+        lines = []
+        sideBySideRows = []
+        state = .idle
+        externalDiffState = .idle
     }
 
     public func openExternalDiff(
