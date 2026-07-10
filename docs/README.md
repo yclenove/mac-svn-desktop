@@ -20,6 +20,7 @@
 | [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |
+| [acceptance/H-tortoise-parity.md](acceptance/H-tortoise-parity.md) | Tortoise 全量对标手工验收（按 T0–T5/GP 分节） | 骨架 |
 
 ## 阅读顺序
 

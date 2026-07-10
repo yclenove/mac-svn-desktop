@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.6：新增 `docs/acceptance/H-tortoise-parity.md`（T0–T5/GP 分节空勾清单）
+- Affected: docs/acceptance/H-tortoise-parity.md, docs/README.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
+- Impact: 后续各 Wave 出门以本清单 + inventory ✅ 双轨验收
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.5：新增 `scripts/parity-coverage.py` 解析 inventory 状态列，输出 `docs/acceptance/parity-coverage.json`（✅/总数）；含 fixture 单测
 - Affected: scripts/parity-coverage.py, scripts/tests/test_parity_coverage.py, docs/acceptance/parity-coverage.json, docs/README.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: 当前基线 0/114（0%）；后续每波更新 inventory 后重跑脚本即可跟踪 PERFECT
