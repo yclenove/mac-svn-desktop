@@ -235,7 +235,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.4 | d91dfef | CommitSelection+keepLocks+unversioned add+Diff/Revert | #4 ✅ | 说明历史已有；§4.1 进阶项仍开 |
 | 2026-07-10 | T1.5 | b92abb7 | UpdateRevisionPolicy + repositoryHeadRevision + 多选更新 | #2 ✅ | 多路径先钉 HEAD 再 -r |
 | 2026-07-10 | T1.6 | e8d8067 | diffAgainstBase / diffBetweenPaths + 外置 Diff UI | #5 ✅ | EOL/空白进阶仍开 |
-| 2026-07-10 | T1.7 | （提交后回填） | Add 勾选 / Delete 确认 / Revert 递归+Diff / Cleanup 选项 | #14,#17,#18,#29 ✅ | 壳层刷新仍属 #16 外 |
+| 2026-07-10 | T1.7 | 097bf1f | Add 勾选 / Delete 确认 / Revert 递归+Diff / Cleanup 选项 | #14,#17,#18,#29 ✅ | 壳层刷新仍属 #16 外 |
 
 ---
 
