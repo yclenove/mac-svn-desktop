@@ -6,6 +6,8 @@ public struct MacSvnDiffView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
+    private let embedded: Bool
+    @Binding private var externalSelectedPath: String?
 
     @State private var paths: [String] = []
     @State private var selectedPath: String?
@@ -24,18 +26,22 @@ public struct MacSvnDiffView: View {
     public init(
         workspaceController: MacSvnWorkspaceController,
         session: MacSvnAppSession,
-        navigator: MacSvnAppNavigator
+        navigator: MacSvnAppNavigator,
+        embedded: Bool = false,
+        externalSelectedPath: Binding<String?> = .constant(nil)
     ) {
         self.workspaceController = workspaceController
         self.session = session
         self.navigator = navigator
+        self.embedded = embedded
+        _externalSelectedPath = externalSelectedPath
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Diff")
-                    .font(.largeTitle.weight(.semibold))
+                Text(embedded ? "差异" : "Diff")
+                    .font(embedded ? .headline : .largeTitle.weight(.semibold))
                 Spacer()
                 Picker("", selection: $mode) {
                     ForEach(DiffMode.allCases) { item in
@@ -44,29 +50,38 @@ public struct MacSvnDiffView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 220)
-                TextField("r1", text: $r1Text)
-                    .frame(width: 72)
-                    .textFieldStyle(.roundedBorder)
-                TextField("r2", text: $r2Text)
-                    .frame(width: 72)
-                    .textFieldStyle(.roundedBorder)
-                Button("按 revision 加载") {
-                    Task { await reloadSelected() }
-                }
-                Button("刷新文件列表") {
-                    Task { await reloadPaths() }
+                if !embedded {
+                    TextField("r1", text: $r1Text)
+                        .frame(width: 72)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("r2", text: $r2Text)
+                        .frame(width: 72)
+                        .textFieldStyle(.roundedBorder)
+                    Button("按 revision 加载") {
+                        Task { await reloadSelected() }
+                    }
+                    Button("刷新文件列表") {
+                        Task { await reloadPaths() }
+                    }
+                } else {
+                    Button("刷新") {
+                        Task { await reloadSelected() }
+                    }
                 }
             }
-            .padding(24)
+            .padding(embedded ? 12 : 24)
 
             if let errorText {
                 Text(errorText)
                     .foregroundStyle(.red)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, embedded ? 12 : 24)
             }
 
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
+            } else if embedded {
+                diffContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HSplitView {
                     List(paths, id: \.self, selection: $selectedPath) { path in
@@ -86,9 +101,21 @@ public struct MacSvnDiffView: View {
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadPaths() }
         }
+        .onChange(of: externalSelectedPath) { _, newValue in
+            guard embedded else { return }
+            if let newValue {
+                Task { await loadExternalPath(newValue) }
+            } else {
+                selectedPath = nil
+                viewModel = nil
+            }
+        }
         .task {
             await reloadPaths()
             await consumeNavigatorIntent()
+            if embedded, let externalSelectedPath {
+                await loadExternalPath(externalSelectedPath)
+            }
         }
         .onChange(of: navigator.pendingDiffPath) { _, _ in
             Task { await consumeNavigatorIntent() }
@@ -96,6 +123,14 @@ public struct MacSvnDiffView: View {
         .onChange(of: navigator.pendingDiffRevision) { _, _ in
             Task { await consumeNavigatorIntent() }
         }
+    }
+
+    private func loadExternalPath(_ path: String) async {
+        if !paths.contains(path) {
+            paths.insert(path, at: 0)
+        }
+        selectedPath = path
+        await loadDiff(path: path)
     }
 
     @ViewBuilder

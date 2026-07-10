@@ -44,7 +44,7 @@ final class MacSvnFinderSync: FIFinderSync {
     }
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
-        let menu = NSMenu(title: "MacSVN")
+        let menu = NSMenu(title: ProductBranding.displayName)
         let targetURL = FIFinderSyncController.default().targetedURL()
             ?? FIFinderSyncController.default().selectedItemURLs()?.first
         let path = targetURL?.path ?? ""
@@ -107,14 +107,14 @@ final class MacSvnFinderSync: FIFinderSync {
 
     private func loadRoots() -> [String] {
         let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacSVN", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
         return (try? FinderSyncRootsExporter.load(from: fileURL)) ?? []
     }
 
     private func watchRootsFile() {
         let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacSVN", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
         let path = fileURL.path
         guard FileManager.default.fileExists(atPath: path) else { return }

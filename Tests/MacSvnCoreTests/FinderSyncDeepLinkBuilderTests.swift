@@ -7,7 +7,7 @@ final class FinderSyncDeepLinkBuilderTests: XCTestCase {
         let path = "/Users/me/wc/Sources/App.swift"
 
         let open = try XCTUnwrap(builder.url(for: .update, path: path))
-        XCTAssertEqual(open.scheme, "macsvn")
+        XCTAssertEqual(open.scheme, ProductBranding.urlScheme)
         XCTAssertEqual(open.host, "open")
         XCTAssertEqual(URLComponents(url: open, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "path" }?.value, path)
         XCTAssertEqual(URLComponents(url: open, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value, "update")

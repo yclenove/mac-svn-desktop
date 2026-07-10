@@ -11,6 +11,8 @@
 | [specs/2026-07-08-mac-svn-desktop-design.md](specs/2026-07-08-mac-svn-desktop-design.md) | 原始决策记录（产品档位、技术选型过程） | 归档 |
 | [superpowers/plans/2026-07-10-long-loop-backlog.md](superpowers/plans/2026-07-10-long-loop-backlog.md) | 长程 Loop 一：主路径 UI 接线（Wave A–H，已完成） | 完成 |
 | [superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md) | 长程 Loop 二：SRS 缺口补齐（验收/体验/扩展/发布） | 完成 |
+| [superpowers/specs/2026-07-10-ui-ux-ia-design.md](superpowers/specs/2026-07-10-ui-ux-ia-design.md) | UI/UX 信息架构：WC 侧栏 + WorkspaceMode + 变更工作区 | 已落地 |
+| [superpowers/plans/2026-07-10-ui-ux-ia-refactor.md](superpowers/plans/2026-07-10-ui-ux-ia-refactor.md) | UI/UX IA 重构实现计划（U1–U4） | 已落地 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |
 
 ## 阅读顺序
@@ -18,4 +20,4 @@
 - 了解产品做什么：01 → 02
 - 参与开发：03 → 04（先看第 2 节 `SvnBackend` 协议）
 - 参与测试：01 第 6 节验收标准 → 05
-- 继续长程交付：先看已完成的 UI 接线 backlog，再执行 [SRS 缺口 Loop](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)
+- 继续长程交付：UI/UX 见 [IA 规格](superpowers/specs/2026-07-10-ui-ux-ia-design.md)；历史 Loop 见 [SRS 缺口 Loop](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)

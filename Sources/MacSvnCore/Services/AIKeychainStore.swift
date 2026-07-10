@@ -88,8 +88,8 @@ public struct SystemKeychainAccessor: KeychainAccessing, Sendable {
 }
 
 public actor AIKeychainStore: AIAPIKeyStoring {
-    private static let refPrefix = "macsvn.ai-provider."
-    private let service = "MacSVN.AIProvider"
+    private static let refPrefix = ProductBranding.keychainRefPrefix
+    private let service = ProductBranding.keychainService
     private let keychain: any KeychainAccessing
 
     public init(keychain: any KeychainAccessing = SystemKeychainAccessor()) {

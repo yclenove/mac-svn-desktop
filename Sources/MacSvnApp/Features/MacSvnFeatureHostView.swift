@@ -42,7 +42,14 @@ public struct MacSvnFeatureHostView: View {
         case .branches:
             MacSvnBranchesView(workspaceController: workspaceController, session: session)
         case .merge:
-            MacSvnConflictWorkspaceView(workspaceController: workspaceController, session: session)
+            MacSvnConflictWorkspaceView(
+                workspaceController: workspaceController,
+                session: session,
+                onReturnToChanges: {
+                    navigator.selectMode(.changes)
+                    navigator.lastAutomationMessage = "已返回变更工作区"
+                }
+            )
         case .blame:
             MacSvnBlameView(workspaceController: workspaceController, session: session)
         case .properties:

@@ -5,6 +5,7 @@ import MacSvnCore
 public struct MacSvnConflictWorkspaceView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     private let session: MacSvnAppSession
+    private let onReturnToChanges: (() -> Void)?
 
     @State private var tab: Tab = .conflicts
     @State private var listVM: ConflictListViewModel?
@@ -21,9 +22,14 @@ public struct MacSvnConflictWorkspaceView: View {
         var id: String { rawValue }
     }
 
-    public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
+    public init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        onReturnToChanges: (() -> Void)? = nil
+    ) {
         self.workspaceController = workspaceController
         self.session = session
+        self.onReturnToChanges = onReturnToChanges
     }
 
     public var body: some View {
@@ -50,6 +56,9 @@ public struct MacSvnConflictWorkspaceView: View {
                 .frame(maxWidth: 280)
                 Button("刷新冲突") {
                     Task { await reloadConflicts() }
+                }
+                Button("返回变更") {
+                    onReturnToChanges?()
                 }
             }
             .padding(24)

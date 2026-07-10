@@ -5,20 +5,26 @@ import MacSvnCore
 public struct MacSvnCommitView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     private let session: MacSvnAppSession
+    private let embedded: Bool
 
     @State private var viewModel: CommitViewModel?
     @State private var statusText: String?
 
-    public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
+    public init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        embedded: Bool = false
+    ) {
         self.workspaceController = workspaceController
         self.session = session
+        self.embedded = embedded
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("提交")
-                    .font(.largeTitle.weight(.semibold))
+                    .font(embedded ? .headline : .largeTitle.weight(.semibold))
                 Spacer()
                 Button("AI 生成说明") {
                     Task { await runAICommitMessage() }
@@ -37,13 +43,13 @@ public struct MacSvnCommitView: View {
                 .keyboardShortcut(.defaultAction)
                 .disabled(viewModel?.canCommit != true)
             }
-            .padding(24)
+            .padding(embedded ? 12 : 24)
 
             if let statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, embedded ? 12 : 24)
             }
 
             content

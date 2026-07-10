@@ -7,6 +7,12 @@ public struct MacSvnChangesView: View {
     private let svnService: SvnService
     private let navigator: MacSvnAppNavigator?
     private let session: MacSvnAppSession?
+    /// 嵌入变更工作区时隐藏大标题、收紧边距。
+    private let embedded: Bool
+    /// 深链 / ⌘K 注入的初始选中。
+    private let initialSelectedPaths: Set<String>
+    /// 选中变化时回调主路径（供同屏 Diff）。
+    private let onFocusedPathChange: ((String?) -> Void)?
 
     @State private var changesVM: ChangesViewModel?
     @State private var actionsVM: WorkingCopyActionsViewModel?
@@ -30,12 +36,19 @@ public struct MacSvnChangesView: View {
         workspaceController: MacSvnWorkspaceController,
         statusProvider: SvnService,
         navigator: MacSvnAppNavigator? = nil,
-        session: MacSvnAppSession? = nil
+        session: MacSvnAppSession? = nil,
+        embedded: Bool = false,
+        initialSelectedPaths: Set<String> = [],
+        onFocusedPathChange: ((String?) -> Void)? = nil
     ) {
         self.workspaceController = workspaceController
         self.svnService = statusProvider
         self.navigator = navigator
         self.session = session
+        self.embedded = embedded
+        self.initialSelectedPaths = initialSelectedPaths
+        self.onFocusedPathChange = onFocusedPathChange
+        _selectedPaths = State(initialValue: initialSelectedPaths)
     }
 
     public var body: some View {
@@ -96,14 +109,19 @@ public struct MacSvnChangesView: View {
 
     private var header: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("变更")
-                    .font(.largeTitle.weight(.semibold))
-                if let path = workspaceController.selectedRecord?.localPath {
-                    Text(path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            if !embedded {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("变更")
+                        .font(.largeTitle.weight(.semibold))
+                    if let path = workspaceController.selectedRecord?.localPath {
+                        Text(path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+            } else {
+                Text("变更")
+                    .font(.headline)
             }
             Spacer()
             Picker("筛选", selection: $filterMode) {
@@ -112,52 +130,55 @@ public struct MacSvnChangesView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 280)
+            .frame(maxWidth: embedded ? 220 : 280)
             Picker("视图", selection: $displayMode) {
                 Text("平铺").tag(ChangesDisplayMode.flat)
                 Text("树").tag(ChangesDisplayMode.tree)
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 160)
+            .frame(maxWidth: 140)
             .onChange(of: displayMode) { _, newValue in
                 changesVM?.displayMode = newValue
             }
             TextField("搜索文件名", text: $searchText)
                 .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 220)
+                .frame(maxWidth: embedded ? 140 : 220)
             Button("刷新") {
                 Task { await changesVM?.refresh() }
             }
             .disabled(changesVM == nil || actionsVM?.isRunning == true)
         }
-        .padding(24)
+        .padding(embedded ? 12 : 24)
         .onChange(of: filterMode) { _, _ in applyFilters() }
         .onChange(of: searchText) { _, _ in applyFilters() }
+        .onChange(of: selectedPaths) { _, newValue in
+            onFocusedPathChange?(newValue.sorted().first)
+        }
     }
 
     private var actionBar: some View {
         HStack(spacing: 10) {
-            Button("Update") {
+            Button("更新") {
                 Task { await runUpdate() }
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
-            Button("Cleanup") {
+            Button("清理") {
                 Task { await runCleanup() }
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
-            Button("Add") {
+            Button("添加") {
                 Task { await runAdd() }
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
-            Button("Delete") {
+            Button("删除") {
                 Task { await runDelete() }
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
-            Button("Revert…") {
+            Button("还原…") {
                 confirmRevert = true
             }
             .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
@@ -172,6 +193,13 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.isEmpty || session == nil)
 
+            if let conflictCount = conflictCount, conflictCount > 0 {
+                Button("解决冲突 (\(conflictCount))") {
+                    navigator?.selectMode(.conflicts)
+                }
+                .tint(.red)
+            }
+
             if actionsVM?.isRunning == true {
                 ProgressView()
                     .controlSize(.small)
@@ -182,8 +210,13 @@ public struct MacSvnChangesView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 12)
+        .padding(.horizontal, embedded ? 12 : 24)
+        .padding(.bottom, embedded ? 8 : 12)
+    }
+
+    private var conflictCount: Int? {
+        guard let changesVM, case .loaded = changesVM.state else { return nil }
+        return changesVM.visibleFlatEntries.filter { $0.itemStatus == .conflicted || $0.isTreeConflict }.count
     }
 
     @ViewBuilder
@@ -192,7 +225,7 @@ public struct MacSvnChangesView: View {
             ContentUnavailableView(
                 "未选择工作副本",
                 systemImage: "externaldrive",
-                description: Text("请先在「工作副本」中添加并选中目录")
+                description: Text("请先在左侧列表添加并选中工作副本")
             )
         } else if let changesVM {
             switch changesVM.state {
@@ -280,7 +313,12 @@ public struct MacSvnChangesView: View {
         )
         changesVM = changes
         actionsVM = actions
-        selectedPaths = []
+        if !initialSelectedPaths.isEmpty {
+            selectedPaths = initialSelectedPaths
+            onFocusedPathChange?(initialSelectedPaths.sorted().first)
+        } else {
+            selectedPaths = []
+        }
         applyFilters()
         await changes.refresh()
     }
@@ -375,12 +413,12 @@ public struct MacSvnChangesView: View {
     ) async {
         switch actionsVM.state {
         case .updateCompleted(let summary):
-            statusBanner = "Update 完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
+            statusBanner = "更新完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
             await changesVM.refresh()
             selectedPaths = []
             if summary.conflicted > 0 {
-                navigator?.selectedRoute = .merge
-                navigator?.lastAutomationMessage = "Update 产生 \(summary.conflicted) 个冲突，已跳转冲突页"
+                navigator?.selectMode(.conflicts)
+                navigator?.lastAutomationMessage = "更新产生 \(summary.conflicted) 个冲突，已切换到冲突工作区"
             }
         case .completed(let op):
             statusBanner = "\(label(for: op)) 完成"
@@ -397,11 +435,11 @@ public struct MacSvnChangesView: View {
 
     private func label(for operation: WorkingCopyOperation) -> String {
         switch operation {
-        case .update: return "Update"
-        case .add: return "Add"
-        case .delete: return "Delete"
-        case .revert: return "Revert"
-        case .cleanup: return "Cleanup"
+        case .update: return "更新"
+        case .add: return "添加"
+        case .delete: return "删除"
+        case .revert: return "还原"
+        case .cleanup: return "清理"
         }
     }
 

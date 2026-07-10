@@ -25,7 +25,7 @@ public struct QuickLookPreviewTextBuilder: Sendable {
             return "文件不存在：\n\(standardized.path)"
         }
         if isDirectory.boolValue {
-            return "目录不支持 Diff 预览。请在 MacSVN 中打开工作副本。"
+            return "目录不支持 Diff 预览。请在 \(ProductBranding.displayName) 中打开工作副本。"
         }
 
         guard let workingCopy = Self.locateWorkingCopy(containing: standardized, preferredRoots: preferredRoots) else {
@@ -44,14 +44,14 @@ public struct QuickLookPreviewTextBuilder: Sendable {
         case .ok(let diff):
             let trimmed = diff.trimmingCharacters(in: .whitespacesAndNewlines)
             if Self.isBinaryDiff(diff) {
-                return "二进制文件，请在 MacSVN Diff 页查看：\n\(standardized.path)"
+                return "二进制文件，请在 \(ProductBranding.displayName) Diff 页查看：\n\(standardized.path)"
             }
             if trimmed.isEmpty {
                 return "工作副本相对基线无文本差异（或文件未改动）。\n\(target)"
             }
-            return "MacSVN Diff — \(target)\n\n\(diff)"
+            return "\(ProductBranding.displayName) Diff — \(target)\n\n\(diff)"
         case .failed(let message):
-            return "无法生成 SVN Diff 预览：\(message)\n请在 MacSVN Diff 页打开：\n\(standardized.path)"
+            return "无法生成 SVN Diff 预览：\(message)\n请在 \(ProductBranding.displayName) Diff 页打开：\n\(standardized.path)"
         }
     }
 
@@ -108,7 +108,7 @@ public struct QuickLookPreviewTextBuilder: Sendable {
             lines.append("· 版本侧：\(side)")
         }
         lines.append("")
-        lines.append("请在 MacSVN 冲突页完成三路合并。")
+        lines.append("请在 \(ProductBranding.displayName) 冲突页完成三路合并。")
         return lines.joined(separator: "\n")
     }
 

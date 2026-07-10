@@ -2,9 +2,21 @@
 
 ## 2026-07-10
 
+- Summary: UI/UX Working-Copy Centric 重构（U1–U4）：侧栏改为 WC 列表；变更+Diff+提交同屏；Mode 顶栏收纳高级/工具；⌘K 全覆盖；冲突「返回变更」；IA 规格与文档收口
+- Affected: Sources/MacSvnApp/App/MacSvnRootView.swift, MacSvnWorkspaceMode.swift, MacSvnAppNavigator.swift, Features/MacSvnWorkingCopy*.swift, MacSvnChangesView/CommitView/DiffView/CommandPalette/Conflict/Log, Tests/**, docs/superpowers/specs/2026-07-10-ui-ux-ia-design.md, docs/superpowers/plans/2026-07-10-ui-ux-ia-refactor.md, README.md, docs/**
+- Impact: 日常提交无需在 5 个平级页间跳转；符合 FR-WC-02；请 `swift run MacSvnDesktopApp` 或重打包 `dist/SVNStudio.app` 体验
+
+## 2026-07-10
+
+- Summary: 产品彻底换皮为 **SVN Studio**：显示名 / Bundle ID `dev.yclenove.svnstudio` / `svnstudio://` / Application Support `SVNStudio` / Keychain 前缀；包装产物 `SVNStudio.app`；文档与脚本同步
+- Affected: Sources/MacSvnCore/ProductBranding.swift, Packaging/SVNStudio/**, MacSVN.xcodeproj, scripts/**, README.md, docs/packaging/**, docs/extensions/**, docs/acceptance/H1-manual-checklist.md, Tests/**
+- Impact: 与旧商业 macSvn / 旧 MacSVN 品牌隔离；旧 `~/Library/Application Support/MacSVN` 与 Keychain **不自动迁移**，需重新配置 AI Provider；请打开 `dist/SVNStudio.app`
+
+## 2026-07-10
+
 - Summary: 修复启动后通知授权回调在后台队列触碰 MainActor 导致的 SIGILL 崩溃（`requestNotificationPermission` 改为 `nonisolated`）
 - Affected: Sources/MacSvnApp/Features/MacSvnMenuBarController.swift
-- Impact: 点击「添加工作副本」等路径不再因通知权限回调崩溃；请重新打开 `dist/MacSVN.app`
+- Impact: 点击「添加工作副本」等路径不再因通知权限回调崩溃；请重新打开 `dist/SVNStudio.app`
 
 ## 2026-07-10
 

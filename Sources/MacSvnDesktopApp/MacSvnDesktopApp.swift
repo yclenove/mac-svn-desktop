@@ -7,11 +7,11 @@ struct MacSvnDesktopApplication: App {
     @StateObject private var bootstrap = MacSvnBootstrapModel()
 
     var body: some Scene {
-        WindowGroup("MacSVN") {
+        WindowGroup(ProductBranding.displayName) {
             Group {
                 switch bootstrap.phase {
                 case .loading:
-                    ProgressView("正在启动 MacSVN…")
+                    ProgressView("正在启动 \(ProductBranding.displayName)…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .ready(let session, let navigator, let menuBar):
                     MacSvnEnvironmentGateView(session: session, navigator: navigator)
@@ -50,7 +50,7 @@ struct MacSvnDesktopApplication: App {
                     navigator: navigator
                 )
             } else {
-                Text("MacSVN 启动中…")
+                Text("\(ProductBranding.displayName) 启动中…")
             }
         } label: {
             if case .ready(_, _, let menuBar) = bootstrap.phase {
@@ -98,8 +98,8 @@ struct MacSvnMenuBarExtraContent: View {
         Button("立即刷新") {
             Task { await menuBar.refresh() }
         }
-        Button("打开工作副本") {
-            navigator.selectedRoute = .workspace
+        Button("打开变更工作区") {
+            navigator.selectMode(.changes)
         }
         if let error = menuBar.lastError {
             Text(error)
@@ -151,7 +151,7 @@ final class MacSvnBootstrapModel: ObservableObject {
         guard !didConsumeLaunchArguments else { return }
         didConsumeLaunchArguments = true
 
-        // 跳过可执行路径本身，解析伴生 CLI：macsvn open|status|commit-ui …
+        // 跳过可执行路径本身，解析伴生 CLI：svnstudio open|status|commit-ui …
         let args = Array(CommandLine.arguments.dropFirst())
         guard let first = args.first, !first.hasPrefix("-") else { return }
         do {

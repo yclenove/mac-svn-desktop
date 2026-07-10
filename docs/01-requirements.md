@@ -6,7 +6,7 @@
 | 编写日期 | 2026-07-09 |
 | 编写人 | 杨超 |
 | 状态 | 已评审（决策记录见 `docs/specs/2026-07-08-mac-svn-desktop-design.md`） |
-| 产品名称 | MacSVN（仓库名 `mac-svn-desktop`） |
+| 产品名称 | SVN Studio（仓库目录 `mac-svn-desktop`；Swift 模块仍为 MacSvn*） |
 
 ## 1. 引言
 
@@ -210,7 +210,7 @@
 | FR-EX-04 | 命令面板（⌘K）：模糊搜索动作/文件/日志，自然语言输入无缝转 AI | P6 |
 | FR-EX-05 | Finder Sync 扩展：文件状态角标 + 右键 SVN 菜单（对标 TortoiseSVN 体验） | P6 |
 | FR-EX-06 | 团队活动视图：提交热力图、作者排行、活跃路径、锁定看板（本地聚合 log 数据） | P6 |
-| FR-EX-07 | `macsvn://` URL Scheme 深链 + 轻量 CLI 伴生命令 | P5 |
+| FR-EX-07 | `svnstudio://` URL Scheme 深链 + 轻量 CLI 伴生命令 | P5 |
 | FR-EX-08 | Quick Look 插件：空格预览显示相对基线的 diff | P6 |
 
 ## 4. 非功能需求

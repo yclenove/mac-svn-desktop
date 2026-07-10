@@ -1,8 +1,8 @@
-# Mac SVN Desktop
+# SVN Studio
 
-面向 macOS 的开源 Subversion（SVN）桌面客户端，目标对标商业客户端（Versions / Cornerstone）：工作副本管理、提交/更新、差异对比、日志、分支/标签、**内置三路合并**、**仓库浏览器**、blame 与锁定。
+面向 macOS 的开源 Subversion（SVN）桌面客户端（产品名 **SVN Studio**，仓库目录仍为 `mac-svn-desktop`），目标对标商业客户端（Versions / Cornerstone）：工作副本管理、提交/更新、差异对比、日志、分支/标签、**内置三路合并**、**仓库浏览器**、blame 与锁定。
 
-> 当前阶段：**长程交付分支 `feat/long-loop-full-delivery` 已接线 P1–P6 UI**（文档见 [docs 文档索引](docs/README.md)；验收清单见 [H1](docs/acceptance/H1-manual-checklist.md)）
+> 当前阶段：SRS 缺口 Loop 已收口并合入 `main`（文档见 [docs 文档索引](docs/README.md)；验收清单见 [H1](docs/acceptance/H1-manual-checklist.md)）
 
 ## 为什么做
 
@@ -66,11 +66,18 @@ cd mac-svn-desktop
 swift run MacSvnDesktopApp
 ```
 
+### 日常使用（UI 重构后）
+
+1. 左侧添加 / 选中工作副本  
+2. 默认「变更」工作区：看 status → 点文件看 Diff → 底部写说明并提交  
+3. 顶栏切换：历史 / 浏览 / 分支 / 冲突；「更多」「工具」收纳高级能力  
+4. ⌘K 搜索命令与页面  
+
 打包为可双击 `.app`（Xcode 包装工程或 SwiftPM 脚本，见 [docs/packaging](docs/packaging/README.md)）：
 
 ```bash
-./scripts/build-macos-app.sh          # → dist/MacSVN.app
-# 或 open MacSVN.xcodeproj → scheme MacSVN
+./scripts/build-macos-app.sh          # → dist/SVNStudio.app
+# 或 open MacSVN.xcodeproj → scheme SVNStudio
 ```
 
 测试：
@@ -93,10 +100,10 @@ swift test
 | 冲突列表 + 内置三路合并 + 树冲突 | ✅ 可验收 |
 | Blame / 属性 / 锁定 / 搁置 | ✅ 可验收 |
 | Git 迁移向导 + 增量同步 | ✅ 可验收 |
-| 菜单栏角标 / FSEvents 近实时 / `macsvn://` / CLI | ✅ 可验收 |
+| 菜单栏角标 / FSEvents 近实时 / `svnstudio://` / CLI | ✅ 可验收 |
 | AI Provider（Keychain）/ Chat 写工具 / 提交·冲突·Blame·RN AI | ✅ 可验收 |
 | 命令面板 ⌘K（含无匹配转 Chat）/ 团队热力图 | ✅ 可验收 |
-| Finder Sync / Quick Look `.appex` | ✅ 可验收（嵌入 `MacSVN.app`） |
+| Finder Sync / Quick Look `.appex` | ✅ 可验收（嵌入 `SVNStudio.app`） |
 | `.app` 包装 / 签名公证流程 | ✅ 可验收（公证需 Developer 账号执行） |
 
 > 当前主干：`main` — SRS 缺口 Loop 已收口（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
@@ -110,7 +117,7 @@ export ARK_API_KEY='你的密钥'   # 勿提交到 git
 ./scripts/seed-volcengine-ark.sh
 ```
 
-默认写入 `~/Library/Application Support/MacSVN/ai-providers.json`，API Key 仅进 Keychain。
+默认写入 `~/Library/Application Support/SVNStudio/ai-providers.json`，API Key 仅进 Keychain。
 
 ## 工程结构
 

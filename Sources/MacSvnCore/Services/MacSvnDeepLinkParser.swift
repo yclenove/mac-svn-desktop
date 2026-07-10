@@ -4,7 +4,7 @@ public struct MacSvnDeepLinkParser: Sendable {
     public init() {}
 
     public func parse(_ url: URL) throws -> MacSvnDeepLinkAction {
-        guard url.scheme?.lowercased() == "macsvn" else {
+        guard url.scheme?.lowercased() == ProductBranding.urlScheme else {
             throw MacSvnDeepLinkParserError.invalidScheme(url.scheme)
         }
         guard let route = url.host?.lowercased(), !route.isEmpty else {

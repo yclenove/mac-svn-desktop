@@ -274,7 +274,7 @@ public final class MacSvnAppSession: ObservableObject {
         try defaultJSON.data(using: .utf8)?.write(to: url, options: .atomic)
     }
 
-    /// 默认 Application Support 目录：`~/Library/Application Support/MacSVN/`
+    /// 默认 Application Support 目录：`~/Library/Application Support/SVNStudio/`
     public static func defaultSupportDirectory() throws -> URL {
         try resolveSupportDirectory(nil)
     }
@@ -283,14 +283,7 @@ public final class MacSvnAppSession: ObservableObject {
         if let override {
             return override
         }
-
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        return base.appendingPathComponent("MacSVN", isDirectory: true)
+        return try ProductBranding.supportDirectoryURL
     }
 
     /// 解析 svn 可执行路径：用户配置非空时始终优先（即使当前不可执行，交由环境门禁提示）；

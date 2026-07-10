@@ -4,24 +4,27 @@ import MacSvnCore
 
 @MainActor
 final class MacSvnAppNavigatorTests: XCTestCase {
-    func testDeepLinkOpenSetsWorkspaceAndPendingPath() {
+    func testDeepLinkOpenSetsChangesAndPendingPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .settings)
         navigator.handle(deepLink: .open(path: "/tmp/wc"))
 
-        XCTAssertEqual(navigator.selectedRoute, .workspace)
+        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertEqual(navigator.selectedMode, .changes)
         XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc")
         XCTAssertEqual(navigator.consumePendingOpenPath(), "/tmp/wc")
         XCTAssertNil(navigator.pendingOpenPath)
     }
 
-    func testDeepLinkLogAndDiffSwitchRoutes() {
+    func testDeepLinkLogAndDiffSwitchModes() {
         let navigator = MacSvnAppNavigator()
         navigator.handle(deepLink: .log(target: .path("/repo"), revision: nil))
         XCTAssertEqual(navigator.selectedRoute, .log)
+        XCTAssertEqual(navigator.selectedMode, .history)
         XCTAssertEqual(navigator.pendingOpenPath, "/repo")
 
         navigator.handle(deepLink: .diff(target: .repositoryURL("https://svn.example/r"), range: nil))
-        XCTAssertEqual(navigator.selectedRoute, .diff)
+        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertEqual(navigator.selectedMode, .changes)
     }
 
     func testCLICommitUICarriesMessage() {
@@ -29,6 +32,7 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         navigator.handle(cli: .commitUI(path: "/wc", initialMessage: "fix: demo"))
 
         XCTAssertEqual(navigator.selectedRoute, .commit)
+        XCTAssertEqual(navigator.selectedMode, .changes)
         XCTAssertEqual(navigator.pendingOpenPath, "/wc")
         XCTAssertEqual(navigator.consumePendingCommitMessage(), "fix: demo")
         XCTAssertNil(navigator.pendingCommitMessage)
@@ -39,6 +43,14 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         navigator.handle(cli: .status(path: "/wc"))
         XCTAssertEqual(navigator.selectedRoute, .changes)
         XCTAssertEqual(navigator.pendingOpenPath, "/wc")
+    }
+
+    func testNavigateToModeUpdatesRoute() {
+        let navigator = MacSvnAppNavigator()
+        navigator.selectMode(.conflicts)
+        XCTAssertEqual(navigator.selectedRoute, .merge)
+        navigator.selectMode(.history)
+        XCTAssertEqual(navigator.selectedRoute, .log)
     }
 
     func testCommandPaletteHandoffCarriesQueryToAIChat() {
@@ -57,5 +69,12 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         navigator.handoffCommandPaletteQueryToAIChat("   ")
         XCTAssertEqual(navigator.selectedRoute, .changes)
         XCTAssertNil(navigator.pendingAIChatQuery)
+    }
+
+    func testDismissAutomationBanner() {
+        let navigator = MacSvnAppNavigator()
+        navigator.lastAutomationMessage = "hello"
+        navigator.dismissAutomationBanner()
+        XCTAssertNil(navigator.lastAutomationMessage)
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import MacSvnCore
 
-/// 全局导航与自动化入口：深链 / CLI 伴生命令落到侧边栏路由与 WC 打开意图。
+/// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
     @Published public var selectedRoute: MacSvnAppRoute
@@ -15,27 +15,44 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingAIChatQuery: String?
     @Published public var lastAutomationMessage: String?
 
-    public init(selectedRoute: MacSvnAppRoute = .workspace) {
+    public var selectedMode: MacSvnWorkspaceMode {
+        MacSvnWorkspaceMode(route: selectedRoute)
+    }
+
+    public init(selectedRoute: MacSvnAppRoute = .changes) {
         self.selectedRoute = selectedRoute
+    }
+
+    public func selectMode(_ mode: MacSvnWorkspaceMode) {
+        selectedRoute = mode.primaryRoute
+    }
+
+    public func selectRoute(_ route: MacSvnAppRoute) {
+        selectedRoute = route
+    }
+
+    public func dismissAutomationBanner() {
+        lastAutomationMessage = nil
     }
 
     public func handle(deepLink action: MacSvnDeepLinkAction) {
         switch action {
         case .open(let path):
             pendingOpenPath = path
-            selectedRoute = .workspace
+            selectedRoute = .changes
             lastAutomationMessage = "深链打开：\(path)"
         case .log(let target, _):
             apply(target: target)
             selectedRoute = .log
-            lastAutomationMessage = "深链跳转日志"
+            lastAutomationMessage = "深链跳转历史"
         case .diff(let target, let range):
             apply(target: target)
             if case .path(let path) = target {
                 pendingDiffPath = path
             }
             pendingDiffRevision = range?.end
-            selectedRoute = .diff
+            // Diff 归入变更工作区，路径经 pendingDiffPath 注入
+            selectedRoute = .changes
             lastAutomationMessage = "深链跳转 Diff"
         }
     }
@@ -44,7 +61,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         switch command {
         case .open(let path):
             pendingOpenPath = path
-            selectedRoute = .workspace
+            selectedRoute = .changes
             lastAutomationMessage = "CLI open：\(path)"
         case .status(let path):
             pendingOpenPath = path

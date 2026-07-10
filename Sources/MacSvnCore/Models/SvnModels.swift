@@ -519,6 +519,21 @@ public enum CommandPaletteActionID: String, Codable, Equatable, Hashable, Sendab
     case update
     case switchBranch
     case openWorkingCopy
+    case goChanges
+    case goHistory
+    case goBrowser
+    case goBranches
+    case goConflicts
+    case goBlame
+    case goProperties
+    case goLocks
+    case goShelve
+    case goGitMigration
+    case goTeamActivity
+    case goAIAssistant
+    case goReleaseNotes
+    case goSettings
+    case goDiff
 }
 
 public struct CommandPaletteAction: Equatable, Sendable {

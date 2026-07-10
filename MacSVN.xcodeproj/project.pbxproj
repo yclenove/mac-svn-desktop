@@ -11,10 +11,10 @@
 		A10000000000000000000002 /* MacSvnApp in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000001 /* MacSvnApp */; };
 		A10000000000000000000003 /* MacSvnFinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* MacSvnFinderSync.swift */; };
 		A10000000000000000000004 /* MacSvnCore in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000002 /* MacSvnCore */; };
-		A10000000000000000000005 /* MacSVNFinderSync.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* MacSVNFinderSync.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000005 /* SVNStudioFinderSync.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* SVNStudioFinderSync.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000006 /* MacSvnQuickLookPreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* MacSvnQuickLookPreviewProvider.swift */; };
 		A10000000000000000000007 /* MacSvnCore in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000003 /* MacSvnCore */; };
-		A10000000000000000000008 /* MacSVNQuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* MacSVNQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000008 /* SVNStudioQuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* SVNStudioQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,14 +23,14 @@
 			containerPortal = A80000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A60000000000000000000002;
-			remoteInfo = MacSVNFinderSync;
+			remoteInfo = SVNStudioFinderSync;
 		};
 		A11000000000000000000002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A80000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A60000000000000000000003;
-			remoteInfo = MacSVNQuickLook;
+			remoteInfo = SVNStudioQuickLook;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -41,8 +41,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A10000000000000000000005 /* MacSVNFinderSync.appex in Embed Foundation Extensions */,
-				A10000000000000000000008 /* MacSVNQuickLook.appex in Embed Foundation Extensions */,
+				A10000000000000000000005 /* SVNStudioFinderSync.appex in Embed Foundation Extensions */,
+				A10000000000000000000008 /* SVNStudioQuickLook.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -52,12 +52,12 @@
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* MacSvnDesktopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnDesktopApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A20000000000000000000003 /* MacSVN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacSVN.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000003 /* SVNStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SVNStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000004 /* MacSvnFinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnFinderSync.swift; sourceTree = "<group>"; };
-		A20000000000000000000005 /* MacSVNFinderSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacSVNFinderSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000005 /* SVNStudioFinderSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SVNStudioFinderSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000006 /* FinderSyncInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000007 /* MacSvnQuickLookPreviewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnQuickLookPreviewProvider.swift; sourceTree = "<group>"; };
-		A20000000000000000000008 /* MacSVNQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MacSVNQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000008 /* SVNStudioQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SVNStudioQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000009 /* QuickLookInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -117,19 +117,19 @@
 		A50000000000000000000003 /* Packaging */ = {
 			isa = PBXGroup;
 			children = (
-				A50000000000000000000006 /* MacSVN */,
+				A50000000000000000000006 /* SVNStudio */,
 				A50000000000000000000007 /* FinderSync */,
 				A50000000000000000000008 /* QuickLook */,
 			);
 			path = Packaging;
 			sourceTree = "<group>";
 		};
-		A50000000000000000000006 /* MacSVN */ = {
+		A50000000000000000000006 /* SVNStudio */ = {
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000002 /* Info.plist */,
 			);
-			path = MacSVN;
+			path = SVNStudio;
 			sourceTree = "<group>";
 		};
 		A50000000000000000000007 /* FinderSync */ = {
@@ -153,9 +153,9 @@
 		A50000000000000000000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000003 /* MacSVN.app */,
-				A20000000000000000000005 /* MacSVNFinderSync.appex */,
-				A20000000000000000000008 /* MacSVNQuickLook.appex */,
+				A20000000000000000000003 /* SVNStudio.app */,
+				A20000000000000000000005 /* SVNStudioFinderSync.appex */,
+				A20000000000000000000008 /* SVNStudioQuickLook.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -163,7 +163,7 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A60000000000000000000001 /* MacSVN */ = {
+		A60000000000000000000001 /* SVNStudio */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A70000000000000000000003 /* Build configuration list for PBXNativeTarget "MacSVN" */;
 			buildPhases = (
@@ -178,15 +178,15 @@
 				A13000000000000000000001 /* PBXTargetDependency */,
 				A13000000000000000000002 /* PBXTargetDependency */,
 			);
-			name = MacSVN;
+			name = SVNStudio;
 			packageProductDependencies = (
 				A30000000000000000000001 /* MacSvnApp */,
 			);
-			productName = MacSVN;
-			productReference = A20000000000000000000003 /* MacSVN.app */;
+			productName = SVNStudio;
+			productReference = A20000000000000000000003 /* SVNStudio.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A60000000000000000000002 /* MacSVNFinderSync */ = {
+		A60000000000000000000002 /* SVNStudioFinderSync */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A70000000000000000000004 /* Build configuration list for PBXNativeTarget "MacSVNFinderSync" */;
 			buildPhases = (
@@ -198,15 +198,15 @@
 			);
 			dependencies = (
 			);
-			name = MacSVNFinderSync;
+			name = SVNStudioFinderSync;
 			packageProductDependencies = (
 				A30000000000000000000002 /* MacSvnCore */,
 			);
-			productName = MacSVNFinderSync;
-			productReference = A20000000000000000000005 /* MacSVNFinderSync.appex */;
+			productName = SVNStudioFinderSync;
+			productReference = A20000000000000000000005 /* SVNStudioFinderSync.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		A60000000000000000000003 /* MacSVNQuickLook */ = {
+		A60000000000000000000003 /* SVNStudioQuickLook */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A70000000000000000000005 /* Build configuration list for PBXNativeTarget "MacSVNQuickLook" */;
 			buildPhases = (
@@ -218,12 +218,12 @@
 			);
 			dependencies = (
 			);
-			name = MacSVNQuickLook;
+			name = SVNStudioQuickLook;
 			packageProductDependencies = (
 				A30000000000000000000003 /* MacSvnCore */,
 			);
-			productName = MacSVNQuickLook;
-			productReference = A20000000000000000000008 /* MacSVNQuickLook.appex */;
+			productName = SVNStudioQuickLook;
+			productReference = A20000000000000000000008 /* SVNStudioQuickLook.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -264,9 +264,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A60000000000000000000001 /* MacSVN */,
-				A60000000000000000000002 /* MacSVNFinderSync */,
-				A60000000000000000000003 /* MacSVNQuickLook */,
+				A60000000000000000000001 /* SVNStudio */,
+				A60000000000000000000002 /* SVNStudioFinderSync */,
+				A60000000000000000000003 /* SVNStudioQuickLook */,
 			);
 		};
 /* End PBXProject section */
@@ -325,12 +325,12 @@
 /* Begin PBXTargetDependency section */
 		A13000000000000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A60000000000000000000002 /* MacSVNFinderSync */;
+			target = A60000000000000000000002 /* SVNStudioFinderSync */;
 			targetProxy = A11000000000000000000001 /* PBXContainerItemProxy */;
 		};
 		A13000000000000000000002 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A60000000000000000000003 /* MacSVNQuickLook */;
+			target = A60000000000000000000003 /* SVNStudioQuickLook */;
 			targetProxy = A11000000000000000000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -377,14 +377,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Packaging/MacSVN/Info.plist;
+				INFOPLIST_FILE = Packaging/SVNStudio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN;
-				PRODUCT_NAME = MacSVN;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio;
+				PRODUCT_NAME = SVNStudio;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -399,14 +399,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Packaging/MacSVN/Info.plist;
+				INFOPLIST_FILE = Packaging/SVNStudio/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN;
-				PRODUCT_NAME = MacSVN;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio;
+				PRODUCT_NAME = SVNStudio;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -430,8 +430,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.FinderSync;
-				PRODUCT_NAME = MacSVNFinderSync;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio.FinderSync;
+				PRODUCT_NAME = SVNStudioFinderSync;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -456,8 +456,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.FinderSync;
-				PRODUCT_NAME = MacSVNFinderSync;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio.FinderSync;
+				PRODUCT_NAME = SVNStudioFinderSync;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -482,8 +482,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.QuickLook;
-				PRODUCT_NAME = MacSVNQuickLook;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio.QuickLook;
+				PRODUCT_NAME = SVNStudioQuickLook;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -508,8 +508,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yclenove.MacSVN.QuickLook;
-				PRODUCT_NAME = MacSVNQuickLook;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yclenove.svnstudio.QuickLook;
+				PRODUCT_NAME = SVNStudioQuickLook;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;

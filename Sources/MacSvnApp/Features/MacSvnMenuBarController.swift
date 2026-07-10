@@ -148,7 +148,7 @@ public final class MacSvnMenuBarController: ObservableObject {
             lastNotifiedKeys.insert(key)
 
             let content = UNMutableNotificationContent()
-            content.title = "MacSVN"
+            content.title = ProductBranding.displayName
             content.body = summary
             let request = UNNotificationRequest(
                 identifier: key,

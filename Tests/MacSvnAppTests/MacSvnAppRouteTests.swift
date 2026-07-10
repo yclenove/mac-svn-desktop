@@ -50,6 +50,7 @@ final class MacSvnAppRouteTests: XCTestCase {
     func testSidebarModelGroupsRoutesInWorkflowOrder() {
         let model = MacSvnSidebarModel(routes: MacSvnAppRoute.allCases)
 
+        // 遗留 SidebarModel 仍可用于命令目录；默认选中改为变更工作区心智
         XCTAssertEqual(model.defaultSelection, .workspace)
         XCTAssertEqual(model.sections.map(\.section), [
             .dailyWork,

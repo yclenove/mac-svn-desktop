@@ -1,12 +1,13 @@
 import SwiftUI
 import MacSvnCore
+import AppKit
 
 public struct MacSvnRootView: View {
     @ObservedObject private var session: MacSvnAppSession
     @ObservedObject private var navigator: MacSvnAppNavigator
     @StateObject private var workspaceController: MacSvnWorkspaceController
-    private let sidebarModel: MacSvnSidebarModel
     @State private var showCommandPalette = false
+    @State private var confirmRemove = false
 
     public init(
         session: MacSvnAppSession,
@@ -15,7 +16,8 @@ public struct MacSvnRootView: View {
     ) {
         self.session = session
         self.navigator = navigator
-        self.sidebarModel = sidebarModel
+        // sidebarModel 保留参数以兼容旧调用方；新壳不再使用功能侧栏
+        _ = sidebarModel
         _workspaceController = StateObject(
             wrappedValue: MacSvnWorkspaceController(
                 workspaceStore: session.workspaceStore,
@@ -27,31 +29,14 @@ public struct MacSvnRootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(selection: Binding(
-                get: { navigator.selectedRoute },
-                set: { navigator.selectedRoute = $0 ?? sidebarModel.defaultSelection }
-            )) {
-                ForEach(sidebarModel.sections) { sidebarSection in
-                    Section(sidebarSection.section.title) {
-                        ForEach(sidebarSection.routes) { route in
-                            Label(route.title, systemImage: route.systemImage)
-                                .tag(route)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("MacSVN")
+            workingCopySidebar
+                .navigationTitle(ProductBranding.displayName)
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
                 if let message = navigator.lastAutomationMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 8)
+                    automationBanner(message)
                 }
-                MacSvnFeatureHostView(
-                    route: navigator.selectedRoute,
+                MacSvnWorkingCopyShellView(
                     session: session,
                     workspaceController: workspaceController,
                     navigator: navigator
@@ -61,6 +46,11 @@ public struct MacSvnRootView: View {
         .task {
             await workspaceController.reload()
             await consumePendingOpenIfNeeded()
+            // 首次进入默认落在变更工作区
+            if MacSvnWorkspaceMode(route: navigator.selectedRoute) == .changes,
+               navigator.selectedRoute == .workspace {
+                navigator.selectMode(.changes)
+            }
         }
         .onChange(of: navigator.pendingOpenPath) { _, _ in
             Task { await consumePendingOpenIfNeeded() }
@@ -80,6 +70,141 @@ public struct MacSvnRootView: View {
                 .frame(width: 0, height: 0)
                 .accessibilityHidden(true)
         }
+        .confirmationDialog(
+            "仅从列表移除记录，不会删除磁盘文件。确认移除？",
+            isPresented: $confirmRemove,
+            titleVisibility: .visible
+        ) {
+            Button("移除", role: .destructive) {
+                Task { await workspaceController.removeSelected() }
+            }
+            Button("取消", role: .cancel) {}
+        }
+    }
+
+    private var workingCopySidebar: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("工作副本")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    workspaceController.presentAddPanel()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help("添加工作副本")
+                Button {
+                    confirmRemove = true
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .disabled(workspaceController.selectedID == nil)
+                .help("移除选中工作副本")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            if let errorMessage = workspaceController.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 12)
+            }
+
+            List(selection: $workspaceController.selectedID) {
+                ForEach(workspaceController.records) { record in
+                    sidebarRow(record)
+                        .tag(record.id)
+                }
+            }
+            .listStyle(.sidebar)
+            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                handleDrop(providers)
+            }
+
+            Text("拖入目录可添加")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 8)
+        }
+    }
+
+    private func sidebarRow(_ record: WorkingCopyRecord) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(record.name)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1)
+                if record.isValid == false {
+                    Text("无效")
+                        .font(.caption2)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.25))
+                        .clipShape(Capsule())
+                }
+            }
+            Text(shortPath(record.localPath))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            HStack(spacing: 6) {
+                if let revision = record.revision {
+                    Text("r\(revision.value)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Text(record.repoURL)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 2)
+        .opacity(record.isValid == false ? 0.55 : 1)
+    }
+
+    private func automationBanner(_ message: String) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(Color.accentColor)
+            Text(message)
+                .font(.callout)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                navigator.dismissAutomationBanner()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("关闭提示")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.accentColor.opacity(0.08))
+    }
+
+    private func shortPath(_ path: String) -> String {
+        if path.hasPrefix(NSHomeDirectory()) {
+            return "~" + path.dropFirst(NSHomeDirectory().count)
+        }
+        return path
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var accepted = false
+        for provider in providers {
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url, url.isFileURL else { return }
+                Task { @MainActor in
+                    await workspaceController.addWorkingCopy(at: url)
+                }
+            }
+            accepted = true
+        }
+        return accepted
     }
 
     private func consumePendingOpenIfNeeded() async {
@@ -107,9 +232,6 @@ public struct MacSvnRoutePlaceholderView: View {
                 Text(route.subtitle)
                     .font(.title3)
                     .foregroundStyle(.secondary)
-                Text("功能页接线中（长程 Loop 将按 backlog 逐项替换占位）")
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -123,8 +245,8 @@ public struct MacSvnSettingsPlaceholderView: View {
 
     public var body: some View {
         Form {
-            LabeledContent("应用", value: "MacSVN")
-            LabeledContent("配置", value: "请从主窗口打开「设置」路由")
+            LabeledContent("应用", value: ProductBranding.displayName)
+            LabeledContent("配置", value: "请从「工具 → 设置」打开")
         }
         .padding()
         .frame(width: 420)

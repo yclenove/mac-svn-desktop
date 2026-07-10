@@ -164,7 +164,7 @@ public final class AIAssistantChatViewModel {
             let system = AILLMMessage(
                 role: .system,
                 content: """
-                你是 MacSVN 助手。回答简洁，优先中文。可建议用户使用 status/diff/log/blame 等本地指令。
+                你是 \(ProductBranding.displayName) 助手。回答简洁，优先中文。可建议用户使用 status/diff/log/blame 等本地指令。
                 当前工作副本：\(workingCopyPath ?? "未选择")
                 """
             )

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Developer ID 签名 + 公证 + staple 骨架（V4 / NFR-10）。
-# 默认读取环境变量；MACSVN_DRY_RUN=1 时只打印将执行的命令。
+# 默认读取环境变量；SVNSTUDIO_DRY_RUN=1（或兼容 MACSVN_DRY_RUN=1）时只打印将执行的命令。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-DRY_RUN="${MACSVN_DRY_RUN:-0}"
-APP_PATH="${MACSVN_APP_PATH:-}"
-IDENTITY="${MACSVN_SIGN_IDENTITY:-}"
-DIST_DIR="${MACSVN_DIST_DIR:-$ROOT/dist/release}"
-BUNDLE_ID="${MACSVN_BUNDLE_ID:-com.yclenove.MacSVN}"
+DRY_RUN="${SVNSTUDIO_DRY_RUN:-${MACSVN_DRY_RUN:-0}}"
+APP_PATH="${SVNSTUDIO_APP_PATH:-${MACSVN_APP_PATH:-}}"
+IDENTITY="${SVNSTUDIO_SIGN_IDENTITY:-${MACSVN_SIGN_IDENTITY:-}}"
+DIST_DIR="${SVNSTUDIO_DIST_DIR:-${MACSVN_DIST_DIR:-$ROOT/dist/release}}"
+BUNDLE_ID="${SVNSTUDIO_BUNDLE_ID:-${MACSVN_BUNDLE_ID:-dev.yclenove.svnstudio}}"
 
 run() {
   if [[ "$DRY_RUN" == "1" ]]; then
@@ -23,23 +23,23 @@ run() {
 
 echo "==> 前置检查"
 if [[ "$DRY_RUN" == "1" ]]; then
-  MACSVN_DRY_RUN=1 "$ROOT/scripts/verify-signing-prereqs.sh"
+  SVNSTUDIO_DRY_RUN=1 "$ROOT/scripts/verify-signing-prereqs.sh"
 else
   "$ROOT/scripts/verify-signing-prereqs.sh"
 fi
 
 if [[ -z "$APP_PATH" ]]; then
-  echo "error: 请设置 MACSVN_APP_PATH 指向待签名的 MacSVN.app" >&2
+  echo "error: 请设置 SVNSTUDIO_APP_PATH 指向待签名的 SVNStudio.app" >&2
   exit 2
 fi
 if [[ -z "$IDENTITY" ]]; then
-  echo "error: 请设置 MACSVN_SIGN_IDENTITY" >&2
+  echo "error: 请设置 SVNSTUDIO_SIGN_IDENTITY" >&2
   exit 2
 fi
 
 mkdir -p "$DIST_DIR"
-STAGED_APP="$DIST_DIR/MacSVN.app"
-ZIP_PATH="$DIST_DIR/MacSVN.zip"
+STAGED_APP="$DIST_DIR/SVNStudio.app"
+ZIP_PATH="$DIST_DIR/SVNStudio.zip"
 
 echo "==> 同步应用到 $STAGED_APP"
 if [[ "$DRY_RUN" == "1" ]]; then
@@ -52,8 +52,8 @@ fi
 echo "==> codesign（Hardened Runtime，deep）"
 # 先签扩展，再签主包；--deep 作为兜底
 ENTITLEMENTS_ARGS=()
-if [[ -f "$ROOT/Packaging/MacSVN/MacSVN.entitlements" ]]; then
-  ENTITLEMENTS_ARGS=(--entitlements "$ROOT/Packaging/MacSVN/MacSVN.entitlements")
+if [[ -f "$ROOT/Packaging/SVNStudio/SVNStudio.entitlements" ]]; then
+  ENTITLEMENTS_ARGS=(--entitlements "$ROOT/Packaging/SVNStudio/SVNStudio.entitlements")
 fi
 
 sign_one() {
@@ -68,13 +68,13 @@ sign_one() {
 }
 
 if [[ "$DRY_RUN" == "1" ]]; then
-  echo "[dry-run] codesign FinderSync / QuickLook / MacSVN.app with identity=$IDENTITY"
+  echo "[dry-run] codesign FinderSync / QuickLook / SVNStudio.app with identity=$IDENTITY"
 else
-  if [[ -d "$STAGED_APP/Contents/PlugIns/MacSVNFinderSync.appex" ]]; then
-    sign_one "$STAGED_APP/Contents/PlugIns/MacSVNFinderSync.appex"
+  if [[ -d "$STAGED_APP/Contents/PlugIns/SVNStudioFinderSync.appex" ]]; then
+    sign_one "$STAGED_APP/Contents/PlugIns/SVNStudioFinderSync.appex"
   fi
-  if [[ -d "$STAGED_APP/Contents/PlugIns/MacSVNQuickLook.appex" ]]; then
-    sign_one "$STAGED_APP/Contents/PlugIns/MacSVNQuickLook.appex"
+  if [[ -d "$STAGED_APP/Contents/PlugIns/SVNStudioQuickLook.appex" ]]; then
+    sign_one "$STAGED_APP/Contents/PlugIns/SVNStudioQuickLook.appex"
   fi
   sign_one "$STAGED_APP"
   codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
@@ -89,21 +89,17 @@ else
 fi
 
 echo "==> notarytool submit"
-NOTARY_ARGS=(
-  xcrun notarytool submit "$ZIP_PATH"
-  --key-id "${MACSVN_NOTARY_KEY_ID:-KEY_ID}"
-  --issuer "${MACSVN_NOTARY_ISSUER_ID:-ISSUER_ID}"
-  --key "${MACSVN_NOTARY_KEY_PATH:-/path/to/AuthKey.p8}"
-  --wait
-)
+NOTARY_KEY_ID="${SVNSTUDIO_NOTARY_KEY_ID:-${MACSVN_NOTARY_KEY_ID:-KEY_ID}}"
+NOTARY_ISSUER="${SVNSTUDIO_NOTARY_ISSUER_ID:-${MACSVN_NOTARY_ISSUER_ID:-ISSUER_ID}}"
+NOTARY_KEY_PATH="${SVNSTUDIO_NOTARY_KEY_PATH:-${MACSVN_NOTARY_KEY_PATH:-/path/to/AuthKey.p8}}"
 
 if [[ "$DRY_RUN" == "1" ]]; then
-  echo "[dry-run] ${NOTARY_ARGS[*]}"
+  echo "[dry-run] xcrun notarytool submit \"$ZIP_PATH\" --key-id $NOTARY_KEY_ID --issuer $NOTARY_ISSUER --key $NOTARY_KEY_PATH --wait"
 else
   xcrun notarytool submit "$ZIP_PATH" \
-    --key-id "$MACSVN_NOTARY_KEY_ID" \
-    --issuer "$MACSVN_NOTARY_ISSUER_ID" \
-    --key "$MACSVN_NOTARY_KEY_PATH" \
+    --key-id "${SVNSTUDIO_NOTARY_KEY_ID:-$MACSVN_NOTARY_KEY_ID}" \
+    --issuer "${SVNSTUDIO_NOTARY_ISSUER_ID:-$MACSVN_NOTARY_ISSUER_ID}" \
+    --key "${SVNSTUDIO_NOTARY_KEY_PATH:-$MACSVN_NOTARY_KEY_PATH}" \
     --wait
 fi
 

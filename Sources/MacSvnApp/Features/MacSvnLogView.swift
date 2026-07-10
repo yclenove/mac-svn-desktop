@@ -100,8 +100,8 @@ public struct MacSvnLogView: View {
                         HStack {
                             Button("查看 Diff") {
                                 navigator.pendingDiffRevision = entry.revision
-                                navigator.selectedRoute = .diff
-                                navigator.lastAutomationMessage = "从日志打开 Diff：r\(entry.revision.value)"
+                                navigator.selectMode(.changes)
+                                navigator.lastAutomationMessage = "从历史打开 Diff：r\(entry.revision.value)"
                             }
                             Button("更新到此版本") {
                                 Task { await updateTo(entry.revision) }
@@ -184,8 +184,8 @@ public struct MacSvnLogView: View {
             )
             navigator.pendingDiffPath = path
             navigator.pendingDiffRevision = entry.revision
-            navigator.selectedRoute = .diff
-            statusText = "已打开 r\(entry.revision.value) 对 \(path) 的 Diff；还原请在变更页使用 Revert 或手工合并"
+            navigator.selectMode(.changes)
+            statusText = "已在变更工作区打开 r\(entry.revision.value) 对 \(path) 的 Diff"
         } catch {
             errorText = error.localizedDescription
         }

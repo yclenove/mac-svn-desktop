@@ -1,6 +1,6 @@
 import Foundation
 
-/// 将 Finder Sync 菜单动作映射为 `macsvn://` 深链（FR-EX-05）。
+/// 将 Finder Sync 菜单动作映射为产品深链（FR-EX-05）。
 public struct FinderSyncDeepLinkBuilder: Sendable {
     public init() {}
 
@@ -8,7 +8,7 @@ public struct FinderSyncDeepLinkBuilder: Sendable {
         guard !path.isEmpty else { return nil }
 
         var components = URLComponents()
-        components.scheme = "macsvn"
+        components.scheme = ProductBranding.urlScheme
 
         switch action {
         case .diff:
