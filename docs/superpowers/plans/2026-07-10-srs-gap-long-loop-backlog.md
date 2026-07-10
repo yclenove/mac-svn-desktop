@@ -166,7 +166,7 @@
 | 2026-07-10 15:07 | V2 | 9c0f765 | Finder Sync appex 嵌入；roots 导出；深链 Builder；verify 通过 |
 | 2026-07-10 15:14 | V3 | 86bfc5d | Quick Look appex 嵌入；PreviewTextBuilder；verify 通过 |
 | 2026-07-10 15:18 | V4 | cf00d54 | 签名公证文档+脚本 DRY_RUN；H1 干净机冒烟清单 |
-| 2026-07-10 15:25 | V5 | （本轮） | 全量 502 tests；appex 冒烟；合入 main；矩阵可验收 |
+| 2026-07-10 15:25 | V5 | ef4fea8 | 全量 502 tests；appex 冒烟；合入 main；矩阵可验收 |
 
 ## 阻塞日志
 
