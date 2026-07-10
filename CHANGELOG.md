@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T2.3：Show Log 右键 L01/L02/L04–L08（与 WC/上一修订比较、统一 Diff、另存/打开、Blame、Browse）；L03 仍属 T3
+- Affected: LogContextActionPolicy, MacSvnLogView, MacSvnDiffView, MacSvnBlameView, MacSvnRepoBrowserView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: inventory L01–L08(除L03) ✅；下一 T2.4（L09–L12/L14）
+
+## 2026-07-10
+
 - Summary: T2.2 审计修复：LogViewModel 加载世代防重入；刷新校验选中修订；路径过滤无命中提示；嵌入 Diff 修订后到时重载
 - Affected: LogViewModel.swift, MacSvnLogView.swift, MacSvnDiffView.swift, CHANGELOG.md
 - Impact: 消除 stop-on-copy 并发错乱与历史→Diff 常显示 BASE 的竞态

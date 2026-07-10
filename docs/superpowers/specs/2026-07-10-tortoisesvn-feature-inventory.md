@@ -57,7 +57,7 @@
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
-| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions ✅；统计/离线/右键 T2.3+ | T2/T3 |
+| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L08(除L03) ✅；统计/离线/L09+ 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2 | T1/T2 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
@@ -86,7 +86,7 @@
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | ✅ | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
-| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions；右键 L01+ 仍开 | T2 |
+| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L08(除L03)；L09+ 仍开 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
@@ -196,14 +196,14 @@
 
 | L# | 动作 | 说明 | Studio | 波次 |
 |----|------|------|--------|------|
-| L01 | Compare with working copy | 与 WC 比 | ❌ | T2 |
-| L02 | Compare with previous revision | 与前一修订比 | ❌ | T2 |
+| L01 | Compare with working copy | 与 WC 比 | ✅ | T2 |
+| L02 | Compare with previous revision | 与前一修订比 | ✅ | T2 |
 | L03 | Compare and blame with BASE/previous | Blame 差异 | ❌ | T3 |
-| L04 | Show changes as unified diff | 含 Shift 选项（EOL/空白） | ❌ | T2 |
-| L05 | Save revision to… | 另存历史文件 | ❌ | T2 |
-| L06 | Open / Open with… | 打开历史内容 | ❌ | T2 |
-| L07 | Blame… | 到该修订 | 🟡 | T2 |
-| L08 | Browse repository | 打开该 URL@rev | ❌ | T2 |
+| L04 | Show changes as unified diff | 含 Shift 选项（EOL/空白） | ✅ 统一 Diff 面板；EOL/空白进阶仍开 | T2 |
+| L05 | Save revision to… | 另存历史文件 | ✅ | T2 |
+| L06 | Open / Open with… | 打开历史内容 | ✅ 系统默认打开；Open with… 进阶仍开 | T2 |
+| L07 | Blame… | 到该修订 | ✅ 跳转 Blame 并注入路径 | T2 |
+| L08 | Browse repository | 打开该 URL@rev | ✅ | T2 |
 | L09 | Create branch/tag from revision | 从修订打分支 | ❌ | T2 |
 | L10 | Update item to revision | 更新到该修订 | ❌ | T2 |
 | L11 | Revert to this revision | 反向合并到该点（WC） | ❌ | T2 |

@@ -7,6 +7,14 @@ public enum SvnCommandPerformResult: Equatable, Sendable {
     case unimplemented(SvnCommandID)
 }
 
+/// 历史页注入 Diff 时的对比模式（L01 / L02）。
+public enum PendingDiffCompareKind: Equatable, Sendable {
+    /// 与上一修订：`r(n-1):r(n)`
+    case previous
+    /// 与工作副本：`r(n)` vs WC（r2 留空）
+    case workingCopy
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -15,6 +23,13 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingCommitMessage: String?
     @Published public var pendingDiffPath: String?
     @Published public var pendingDiffRevision: Revision?
+    /// 历史页 Diff 对比模式：与上一修订 / 与工作副本（L01/L02）。
+    @Published public var pendingDiffCompareKind: PendingDiffCompareKind = .previous
+    /// 历史 → Blame（L07）。
+    @Published public var pendingBlamePath: String?
+    /// 历史 → 仓库浏览器 URL（L08）。
+    @Published public var pendingBrowseURL: String?
+    @Published public var pendingBrowseRevision: Revision?
     /// 从日志页带入 Release Notes 页的候选条目。
     @Published public var pendingReleaseNotesEntries: [LogEntry]?
     /// ⌘K 无结构化命中时带入 AI Chat 的自然语言 query（FR-EX-04）。
@@ -190,6 +205,30 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingDiffRevision() -> Revision? {
         let value = pendingDiffRevision
         pendingDiffRevision = nil
+        return value
+    }
+
+    public func consumePendingDiffCompareKind() -> PendingDiffCompareKind {
+        let value = pendingDiffCompareKind
+        pendingDiffCompareKind = .previous
+        return value
+    }
+
+    public func consumePendingBlamePath() -> String? {
+        let value = pendingBlamePath
+        pendingBlamePath = nil
+        return value
+    }
+
+    public func consumePendingBrowseURL() -> String? {
+        let value = pendingBrowseURL
+        pendingBrowseURL = nil
+        return value
+    }
+
+    public func consumePendingBrowseRevision() -> Revision? {
+        let value = pendingBrowseRevision
+        pendingBrowseRevision = nil
         return value
     }
 

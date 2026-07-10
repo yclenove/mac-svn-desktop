@@ -6,6 +6,7 @@ import AppKit
 public struct MacSvnRepoBrowserView: View {
     private let session: MacSvnAppSession
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var navigator: MacSvnAppNavigator
 
     @State private var browserVM: RepoBrowserViewModel?
     @State private var checkoutVM: CheckoutViewModel?
@@ -33,9 +34,14 @@ public struct MacSvnRepoBrowserView: View {
         var id: String { rawValue }
     }
 
-    public init(session: MacSvnAppSession, workspaceController: MacSvnWorkspaceController) {
+    public init(
+        session: MacSvnAppSession,
+        workspaceController: MacSvnWorkspaceController,
+        navigator: MacSvnAppNavigator
+    ) {
         self.session = session
         self.workspaceController = workspaceController
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -51,6 +57,9 @@ public struct MacSvnRepoBrowserView: View {
             }
         }
         .task { await bootstrap() }
+        .onChange(of: navigator.pendingBrowseURL) { _, _ in
+            Task { await consumePendingBrowse() }
+        }
         .sheet(isPresented: $showRemoteWriteSheet) {
             remoteWriteSheet
         }
@@ -338,6 +347,19 @@ public struct MacSvnRepoBrowserView: View {
             rootURL = first
             await openRoot()
         }
+        await consumePendingBrowse()
+    }
+
+    /// 消费历史页 L08 注入的仓库 URL（及可选修订）。
+    private func consumePendingBrowse() async {
+        guard let url = navigator.consumePendingBrowseURL() else { return }
+        let rev = navigator.consumePendingBrowseRevision()
+        rootURL = url
+        if let rev {
+            checkoutRevisionText = String(rev.value)
+        }
+        statusText = rev.map { "来自历史：\(url) @ r\($0.value)" } ?? "来自历史：\(url)"
+        await openRoot()
     }
 
     private func openRoot() async {

@@ -348,8 +348,15 @@ public struct MacSvnDiffView: View {
     private func consumeNavigatorIntent() async {
         var revisionApplied = false
         if let rev = navigator.consumePendingDiffRevision() {
-            r1Text = String(max(0, rev.value - 1))
-            r2Text = String(rev.value)
+            let kind = navigator.consumePendingDiffCompareKind()
+            switch kind {
+            case .previous:
+                r1Text = String(max(0, rev.value - 1))
+                r2Text = String(rev.value)
+            case .workingCopy:
+                r1Text = String(rev.value)
+                r2Text = ""
+            }
             revisionApplied = true
         }
         // 嵌入模式由 WorkingCopyWorkspace 消费 pendingDiffPath 并经 externalSelectedPath 注入

@@ -42,7 +42,7 @@ public struct MacSvnFeatureHostView: View {
         case .log:
             MacSvnLogView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .repositoryBrowser:
-            MacSvnRepoBrowserView(session: session, workspaceController: workspaceController)
+            MacSvnRepoBrowserView(session: session, workspaceController: workspaceController, navigator: navigator)
         case .branches:
             MacSvnBranchesView(workspaceController: workspaceController, session: session)
         case .merge:
@@ -55,7 +55,7 @@ public struct MacSvnFeatureHostView: View {
                 }
             )
         case .blame:
-            MacSvnBlameView(workspaceController: workspaceController, session: session)
+            MacSvnBlameView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .properties:
             MacSvnPropertiesView(workspaceController: workspaceController, session: session)
         case .locks:

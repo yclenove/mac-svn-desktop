@@ -3,6 +3,7 @@ import MacSvnCore
 
 public struct MacSvnBlameView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
 
     @State private var paths: [String] = []
@@ -13,9 +14,14 @@ public struct MacSvnBlameView: View {
     @State private var rangeEndText = "1"
     @State private var statusText: String?
 
-    public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
+    public init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator
+    ) {
         self.workspaceController = workspaceController
         self.session = session
+        self.navigator = navigator
     }
 
     public var body: some View {
@@ -52,9 +58,13 @@ public struct MacSvnBlameView: View {
         .task {
             evolutionVM = AIBlameEvolutionViewModel(explainer: session.aiBlameEvolutionExplainer)
             await reloadPaths()
+            await consumePendingBlame()
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadPaths() }
+        }
+        .onChange(of: navigator.pendingBlamePath) { _, _ in
+            Task { await consumePendingBlame() }
         }
     }
 
@@ -186,6 +196,17 @@ public struct MacSvnBlameView: View {
             svnService: session.svnService,
             wc: URL(fileURLWithPath: record.localPath)
         )
+    }
+
+    /// 消费历史页 L07 注入的 Blame 路径。
+    private func consumePendingBlame() async {
+        guard let path = navigator.consumePendingBlamePath() else { return }
+        if !paths.contains(path) {
+            paths.insert(path, at: 0)
+        }
+        selected = [path]
+        statusText = "来自历史：\(path)"
+        await loadBlame()
     }
 
     private func loadBlame() async {

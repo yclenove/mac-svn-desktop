@@ -1,9 +1,11 @@
 import SwiftUI
+import AppKit
 import MacSvnCore
 
 /// 历史页：左侧修订列表，右侧详情（说明 / 变更路径 / 操作）。
 ///
-/// T2.2：作者/说明/路径过滤、`--stop-on-copy`、Next / Show All、Actions 列（L18–L20）。
+/// T2.2：过滤 / stop-on-copy / Next·All / Actions。
+/// T2.3：变更路径右键 L01–L08（L03 属 T3，菜单不提供）。
 public struct MacSvnLogView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
@@ -17,6 +19,10 @@ public struct MacSvnLogView: View {
     @State private var stopOnCopy = false
     @State private var statusText: String?
     @State private var selectedRevision: Int?
+    /// 当前 WC 的 `svn info` URL，供路径归一化与 Browse。
+    @State private var workingCopyURL: String = ""
+    @State private var unifiedDiffText: String?
+    @State private var showUnifiedDiffSheet = false
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -101,6 +107,24 @@ public struct MacSvnLogView: View {
             Task { await reload() }
         }
         .task { await reload() }
+        .sheet(isPresented: $showUnifiedDiffSheet) {
+            NavigationStack {
+                ScrollView {
+                    Text(unifiedDiffText ?? "")
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                }
+                .navigationTitle("统一 Diff")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("关闭") { showUnifiedDiffSheet = false }
+                    }
+                }
+            }
+            .frame(minWidth: 640, minHeight: 420)
+        }
     }
 
     @ViewBuilder
@@ -142,6 +166,13 @@ public struct MacSvnLogView: View {
                             }
                             .tag(entry.revision.value)
                             .padding(.vertical, 2)
+                            .contextMenu {
+                                if let first = entry.changedPaths.first {
+                                    logPathContextMenu(path: first.path, revision: entry.revision)
+                                } else {
+                                    Text("无变更路径，无法执行文件级动作")
+                                }
+                            }
                         }
                     }
                     .frame(minWidth: 280, idealWidth: 320, maxWidth: 400)
@@ -210,15 +241,20 @@ public struct MacSvnLogView: View {
                                         .textSelection(.enabled)
                                     Spacer()
                                     Button("Diff") {
-                                        // 先写修订再写路径，降低嵌入 Diff 先按 BASE 加载的竞态窗口
-                                        navigator.pendingDiffRevision = entry.revision
-                                        navigator.pendingDiffPath = change.path
-                                        navigator.selectMode(.changes)
-                                        navigator.lastAutomationMessage = "查看 r\(entry.revision.value) · \(change.path)"
+                                        Task {
+                                            await performLogAction(
+                                                .logCompareWithPrevious,
+                                                changedPath: change.path,
+                                                revision: entry.revision
+                                            )
+                                        }
                                     }
                                     .buttonStyle(.borderless)
                                 }
                                 .padding(.vertical, 2)
+                                .contextMenu {
+                                    logPathContextMenu(path: change.path, revision: entry.revision)
+                                }
                             }
                         }
                     }
@@ -226,9 +262,13 @@ public struct MacSvnLogView: View {
                     HStack {
                         Button("在变更区查看 Diff") {
                             guard let first = entry.changedPaths.first?.path else { return }
-                            navigator.pendingDiffRevision = entry.revision
-                            navigator.pendingDiffPath = first
-                            navigator.selectMode(.changes)
+                            Task {
+                                await performLogAction(
+                                    .logCompareWithPrevious,
+                                    changedPath: first,
+                                    revision: entry.revision
+                                )
+                            }
                         }
                         .disabled(entry.changedPaths.isEmpty)
                         Button("更新到此版本") {
@@ -244,6 +284,15 @@ public struct MacSvnLogView: View {
                 systemImage: "clock.arrow.circlepath",
                 description: Text("在左侧点击某次提交，查看说明与变更文件详情")
             )
+        }
+    }
+
+    @ViewBuilder
+    private func logPathContextMenu(path: String, revision: Revision) -> some View {
+        ForEach(LogContextActionPolicy.t2ActionIDs, id: \.rawValue) { command in
+            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+                Task { await performLogAction(command, changedPath: path, revision: revision) }
+            }
         }
     }
 
@@ -267,10 +316,17 @@ public struct MacSvnLogView: View {
     private func reload() async {
         guard let record = workspaceController.selectedRecord, record.isValid else {
             viewModel = nil
+            workingCopyURL = ""
             return
         }
         let settings = await session.settingsStore.settings()
         let wc = URL(fileURLWithPath: record.localPath)
+        do {
+            let info = try await session.svnService.info(wc: wc, target: "")
+            workingCopyURL = info.url
+        } catch {
+            workingCopyURL = record.repoURL ?? ""
+        }
         let vm = LogViewModel(
             workingCopy: wc,
             target: "",
@@ -313,6 +369,131 @@ public struct MacSvnLogView: View {
             navigator.selectMode(.changes)
         } else if case .error(let message) = actions.state {
             errorText = message
+        }
+    }
+
+    /// 执行 T2.3 日志右键动作（L01/L02/L04–L08）。
+    private func performLogAction(
+        _ command: SvnCommandID,
+        changedPath: String,
+        revision: Revision
+    ) async {
+        errorText = nil
+        guard !workingCopyURL.isEmpty else {
+            errorText = "无法解析工作副本 URL，请刷新后重试"
+            return
+        }
+        guard let intent = LogContextActionPolicy.intent(
+            command: command,
+            changedPath: changedPath,
+            revision: revision,
+            workingCopyURL: workingCopyURL
+        ) else {
+            errorText = "不支持的日志动作"
+            return
+        }
+
+        switch intent {
+        case .compareWithWorkingCopy(let path, let rev):
+            navigator.pendingDiffCompareKind = .workingCopy
+            navigator.pendingDiffRevision = rev
+            navigator.pendingDiffPath = path
+            navigator.selectMode(.changes)
+            statusText = "与工作副本比较：\(path) @ r\(rev.value)"
+            navigator.lastAutomationMessage = statusText
+
+        case .compareWithPrevious(let path, let rev):
+            navigator.pendingDiffCompareKind = .previous
+            navigator.pendingDiffRevision = rev
+            navigator.pendingDiffPath = path
+            navigator.selectMode(.changes)
+            statusText = "与上一修订比较：\(path) @ r\(rev.value)"
+            navigator.lastAutomationMessage = statusText
+
+        case .showUnifiedDiff(let path, let rev):
+            await showUnifiedDiff(path: path, revision: rev)
+
+        case .saveRevision(let path, let rev):
+            await saveRevision(path: path, revision: rev)
+
+        case .openRevision(let path, let rev):
+            await openRevision(path: path, revision: rev)
+
+        case .blame(let path, let rev):
+            navigator.pendingBlamePath = path
+            navigator.selectMode(.blame)
+            statusText = "Blame \(path)（日志 r\(rev.value)）"
+            navigator.lastAutomationMessage = statusText
+
+        case .browseRepository(_, let rev, let url):
+            navigator.pendingBrowseURL = url
+            navigator.pendingBrowseRevision = rev
+            navigator.selectMode(.browser)
+            statusText = "浏览 \(url) @ r\(rev.value)"
+            navigator.lastAutomationMessage = statusText
+        }
+    }
+
+    private func showUnifiedDiff(path: String, revision: Revision) async {
+        guard let record = workspaceController.selectedRecord else { return }
+        let wc = URL(fileURLWithPath: record.localPath)
+        let previous = Revision(max(0, revision.value - 1))
+        do {
+            let text = try await session.svnService.diff(
+                wc: wc,
+                target: path,
+                r1: previous,
+                r2: revision
+            )
+            unifiedDiffText = text.isEmpty ? "（无差异）" : text
+            showUnifiedDiffSheet = true
+            statusText = "统一 Diff：\(path) r\(previous.value):r\(revision.value)"
+        } catch {
+            errorText = String(describing: error)
+        }
+    }
+
+    private func materializeRevisionData(path: String, revision: Revision) async throws -> (Data, String) {
+        guard let record = workspaceController.selectedRecord else {
+            throw SvnError.other(code: nil, stderr: "noWorkingCopy")
+        }
+        let wc = URL(fileURLWithPath: record.localPath)
+        let info = try await session.svnService.info(wc: wc, target: path)
+        let data = try await session.svnService.cat(
+            url: info.url,
+            revision: revision,
+            sizeLimit: 20 * 1024 * 1024,
+            auth: nil
+        )
+        return (data, URL(fileURLWithPath: path).lastPathComponent)
+    }
+
+    private func saveRevision(path: String, revision: Revision) async {
+        do {
+            let (data, basename) = try await materializeRevisionData(path: path, revision: revision)
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = basename
+            panel.canCreateDirectories = true
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try data.write(to: url, options: .atomic)
+            statusText = "已另存 r\(revision.value) → \(url.path)"
+        } catch {
+            errorText = String(describing: error)
+        }
+    }
+
+    private func openRevision(path: String, revision: Revision) async {
+        do {
+            let (data, basename) = try await materializeRevisionData(path: path, revision: revision)
+            let dir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("MacSvnLogOpen", isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent("r\(revision.value)-\(basename)")
+            try data.write(to: file, options: .atomic)
+            NSWorkspace.shared.open(file)
+            statusText = "已打开 r\(revision.value) · \(basename)"
+        } catch {
+            errorText = String(describing: error)
         }
     }
 }
