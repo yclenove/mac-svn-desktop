@@ -250,6 +250,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T2.5 | ea8cd77 | 日志复制到剪贴板 L17 | L17 ✅ | L15–L16→T3.10 |
 | 2026-07-10 | T2.6 | 4f25cc2 | Edit Conflicts + Resolved；属性/树入口 | #11/#12、D08 ✅ | 下一 T2.7 Lock |
 | 2026-07-10 | T2.7 | a877356 | Lock/Unlock/Break lock + CFM 入口 | #19–21、D21 ✅ | needs-lock→T4；下一 T2.8 |
+| 2026-07-11 | 交接 | 425cba7 | Cursor→Codex 长程说明书 | 无功能变更 | 下一刀仍 T2.8；见 codex-tortoise-parity-long-loop.md |
 
 ---
 

@@ -219,7 +219,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 
 | 时间 | 条目 | commit | 备注 |
 |------|------|--------|------|
-| 2026-07-11 | 交接 | （本文提交后回填） | Cursor→Codex；下一刀 T2.8；覆盖率 45/114 |
+| 2026-07-11 | 交接 | 425cba7 | Cursor→Codex；下一刀 T2.8；覆盖率 45/114 |
 
 ---
 
