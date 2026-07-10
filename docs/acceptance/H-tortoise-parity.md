@@ -42,7 +42,7 @@
 - [x] Diff：BASE、双文件、外置查看器入口（#5）
 - [x] Add / Delete / Revert（勾选）/ Cleanup（#14,#17,#18,#29）
 - [x] Rename（#13）
-- [ ] Ignore 文件/通配（#32）
+- [x] Ignore 文件/通配（#32）
 - [ ] SVN Copy / Move 向导（#36）
 - [ ] 变更树右键 + ⌘K 可达日常命令子集
 - [ ] **G1**：inventory T1 范围全 ✅；本节全部勾选；`swift test` 绿

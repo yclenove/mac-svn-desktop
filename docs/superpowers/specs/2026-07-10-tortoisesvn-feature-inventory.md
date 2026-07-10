@@ -111,7 +111,7 @@
 | 29 | Add | 递归扫描可添加 | 勾选列表 | ✅ | T1 |
 | 30 | Import | `import -m PATH URL` | 说明 | ❌ | T2 |
 | 31 | Blame | `blame` + `log` tip | 修订范围、悬停 | 🟡 | T2 |
-| 32 | Add to Ignore List | `propget/propset svn:ignore` | 文件名/通配 | 🟡 | T1 |
+| 32 | Add to Ignore List | `propget/propset svn:ignore` | 文件名/通配 | ✅ | T1 |
 | 33 | Create Patch | `diff > patch` | 路径勾选 | ❌ | T2 |
 | 34 | Apply Patch | TortoiseMerge 级应用 | 冲突处理 | ❌ | T2 |
 | 35 | Properties | 属性 CRUD + 模板 | svn:/tsvn: 编辑器 | 🟡 | T2 |

@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T1.9：Ignore 对话框——按文件名 / 按扩展名通配写入父目录 `svn:ignore`（去重合并）
+- Affected: IgnorePatternPolicy.swift, MacSvnChangesView, Tests/*, docs/*
+- Impact: inventory #32 ✅；global-ignores 仍属设置 S01/T5
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.8：Rename 同目录改名——新名校验（空/同名/分隔符/目标冲突）+ `svn rename` + CFM 对话框/右键
 - Affected: RenameValidationPolicy.swift, SvnCommandBuilder/Backend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*, docs/*
 - Impact: inventory #13 ✅；大小写冲突修复仍属 #46；跨目录移动属 #36

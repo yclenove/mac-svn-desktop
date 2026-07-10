@@ -26,7 +26,9 @@ public struct MacSvnChangesView: View {
     @State private var showCleanupSheet = false
     @State private var showRevertSheet = false
     @State private var showRenameSheet = false
+    @State private var showIgnoreSheet = false
     @State private var renameNewName = ""
+    @State private var ignoreKind: IgnorePatternKind = .exactFilename
     @State private var addSelectedPaths: Set<String> = []
     @State private var revertRecursive = false
     @State private var cleanupOptions = SvnCleanupOptions()
@@ -127,6 +129,9 @@ public struct MacSvnChangesView: View {
         }
         .sheet(isPresented: $showRenameSheet) {
             renameSheet
+        }
+        .sheet(isPresented: $showIgnoreSheet) {
+            ignoreSheet
         }
         .sheet(isPresented: $showSetDepth) {
             VStack(alignment: .leading, spacing: 16) {
@@ -278,10 +283,11 @@ public struct MacSvnChangesView: View {
             }
             .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
-            Button("忽略选中") {
-                Task { await ignoreSelected() }
+            Button("忽略选中…") {
+                ignoreKind = .exactFilename
+                showIgnoreSheet = true
             }
-            .disabled(selectedPaths.isEmpty || session == nil)
+            .disabled(selectedPaths.isEmpty || session == nil || actionsVM?.isRunning == true)
 
             if let conflictCount = conflictCount, conflictCount > 0 {
                 Button("解决冲突 (\(conflictCount))") {
@@ -372,6 +378,12 @@ public struct MacSvnChangesView: View {
                         showRenameSheet = true
                     }
                     .disabled(selectedPaths.count != 1)
+
+                    Button("忽略…") {
+                        ignoreKind = .exactFilename
+                        showIgnoreSheet = true
+                    }
+                    .disabled(selectedPaths.isEmpty || session == nil)
 
                     Button("修复移动") {
                         Task { await runRepairMove() }
@@ -495,10 +507,12 @@ public struct MacSvnChangesView: View {
         showCleanupSheet = false
         showRevertSheet = false
         showRenameSheet = false
+        showIgnoreSheet = false
         confirmDelete = false
         confirmRevert = false
         addSelectedPaths = []
         renameNewName = ""
+        ignoreKind = .exactFilename
         revertRecursive = false
         cleanupOptions = .default
     }
@@ -554,35 +568,86 @@ public struct MacSvnChangesView: View {
         }
     }
 
-    /// 将选中路径的 basename 追加到父目录 `svn:ignore`（FR-ST-05）。
+    /// 将选中路径按文件名或扩展名通配追加到父目录 `svn:ignore`（#32）。
     private func ignoreSelected() async {
         guard let session, let record = workspaceController.selectedRecord, let changesVM else { return }
+        let paths = Array(selectedPaths).sorted()
+        let plans = IgnorePatternPolicy.plans(relativePaths: paths, kind: ignoreKind)
+        guard !plans.isEmpty else {
+            statusBanner = ignoreKind == .extensionWildcard
+                ? "选中项无法生成扩展名通配（无扩展名或隐藏文件）"
+                : "没有可忽略的路径"
+            return
+        }
+
         let wc = URL(fileURLWithPath: record.localPath)
         do {
-            for path in selectedPaths {
-                let url = URL(fileURLWithPath: path, relativeTo: wc)
-                let parentRel = url.deletingLastPathComponent().relativePath
-                let target = parentRel.isEmpty || parentRel == "." ? "." : parentRel
-                let pattern = url.lastPathComponent
-                let existing = try await session.svnService.propertyValue(wc: wc, target: target, name: "svn:ignore")
-                var lines = (existing?.value ?? "")
-                    .split(separator: "\n", omittingEmptySubsequences: false)
-                    .map(String.init)
-                if !lines.contains(pattern) {
-                    if lines.last == "" { lines.removeLast() }
-                    lines.append(pattern)
-                }
-                let value = lines.joined(separator: "\n") + "\n"
-                let vm = PropertyViewModel(workingCopy: wc, target: target, provider: session.svnService)
+            for plan in plans {
+                let existing = try await session.svnService.propertyValue(
+                    wc: wc,
+                    target: plan.target,
+                    name: "svn:ignore"
+                )
+                let value = IgnorePatternPolicy.mergeIgnoreProperty(
+                    existing: existing?.value,
+                    patterns: plan.patterns
+                )
+                let vm = PropertyViewModel(workingCopy: wc, target: plan.target, provider: session.svnService)
                 await vm.load()
                 await vm.save(name: "svn:ignore", value: value)
             }
-            statusBanner = "已写入 svn:ignore"
-            await changesVM.refresh()
+            let preview = plans.flatMap(\.patterns).joined(separator: ", ")
+            statusBanner = "已写入 svn:ignore：\(preview)"
+            await refreshAfterMutation(changesVM)
             selectedPaths = []
         } catch {
             statusBanner = "忽略失败：\(error.localizedDescription)"
         }
+    }
+
+    private var ignoreSheet: some View {
+        let plans = IgnorePatternPolicy.plans(
+            relativePaths: Array(selectedPaths),
+            kind: ignoreKind
+        )
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("添加到忽略列表")
+                .font(.headline)
+            Picker("模式", selection: $ignoreKind) {
+                ForEach(IgnorePatternKind.allCases, id: \.self) { kind in
+                    Text(kind.displayName).tag(kind)
+                }
+            }
+            .pickerStyle(.radioGroup)
+            if plans.isEmpty {
+                Text("当前选择无法生成忽略模式。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("将写入：")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(plans, id: \.target) { plan in
+                    Text("\(plan.target)：\(plan.patterns.joined(separator: ", "))")
+                        .font(.caption.monospaced())
+                }
+            }
+            Text("写入各父目录的 svn:ignore（非 global-ignores，后者见设置 T5）。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("取消") { showIgnoreSheet = false }
+                Spacer()
+                Button("写入忽略") {
+                    showIgnoreSheet = false
+                    Task { await ignoreSelected() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(plans.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 460)
     }
 
     private func runCleanup() async {

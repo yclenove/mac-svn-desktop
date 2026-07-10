@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-10T14:16:56Z",
+  "generated_at": "2026-07-10T14:36:19Z",
   "total": 114,
-  "done": 11,
-  "partial": 43,
+  "done": 12,
+  "partial": 42,
   "missing": 60,
-  "coverage": 0.096491,
-  "coverage_percent": 9.65,
+  "coverage": 0.105263,
+  "coverage_percent": 10.53,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,8 +16,8 @@
     },
     "command": {
       "total": 46,
-      "done": 10,
-      "partial": 15,
+      "done": 11,
+      "partial": 14,
       "missing": 21
     },
     "log": {
@@ -457,8 +457,8 @@
       "key": "cmd.32",
       "section": "command",
       "title": "Add to Ignore List",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.33",
