@@ -12,6 +12,7 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var treeVM: TreeConflictViewModel?
     @State private var statusText: String?
     @State private var conflictBadgeCount = 0
+    @State private var privacySettings = AIPrivacySettings()
 
     private enum Tab: String, CaseIterable, Identifiable {
         case conflicts = "冲突列表"
@@ -66,7 +67,10 @@ public struct MacSvnConflictWorkspaceView: View {
                 MacSvnMergeWizardView(workspaceController: workspaceController, session: session)
             }
         }
-        .task { await reloadConflicts() }
+        .task {
+            privacySettings = await session.currentAIPrivacy()
+            await reloadConflicts()
+        }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadConflicts() }
         }
@@ -120,7 +124,11 @@ public struct MacSvnConflictWorkspaceView: View {
         if let conflict = listVM?.selectedConflict {
             switch conflict.kind {
             case .text:
-                MacSvnMergeEditorPane(editorVM: editorVM, statusText: $statusText) {
+                MacSvnMergeEditorPane(
+                    editorVM: editorVM,
+                    privacySettings: privacySettings,
+                    statusText: $statusText
+                ) {
                     Task { await reloadConflicts() }
                 }
             case .tree:
@@ -150,7 +158,10 @@ public struct MacSvnConflictWorkspaceView: View {
         let wc = URL(fileURLWithPath: record.localPath)
         let list = ConflictListViewModel(workingCopy: wc, provider: session.conflictService)
         listVM = list
-        editorVM = MergeEditorViewModel(provider: session.conflictService)
+        editorVM = MergeEditorViewModel(
+            provider: session.conflictService,
+            aiConflictAssistant: session.aiConflictAssistant
+        )
         await list.refresh()
         conflictBadgeCount = list.summary.total
         if case .error(let message) = list.state {
@@ -201,6 +212,7 @@ public struct MacSvnConflictWorkspaceView: View {
 
 private struct MacSvnMergeEditorPane: View {
     let editorVM: MergeEditorViewModel?
+    let privacySettings: AIPrivacySettings
     @Binding var statusText: String?
     let onSaved: () -> Void
 
@@ -214,6 +226,27 @@ private struct MacSvnMergeEditorPane: View {
                     Button("采用 Mine") { editorVM.resolveCurrent(.takeMine) }
                     Button("采用 Theirs") { editorVM.resolveCurrent(.takeTheirs) }
                     Button("双方(Mine先)") { editorVM.resolveCurrent(.takeBoth(mineFirst: true)) }
+                    Divider()
+                    Button("AI 建议当前") {
+                        Task {
+                            await editorVM.requestAIResolutionForCurrentConflict(privacySettings: privacySettings)
+                            if case .error(let message) = editorVM.aiConflictAssistState {
+                                statusText = message
+                            } else {
+                                statusText = "AI 冲突建议已应用（当前块）"
+                            }
+                        }
+                    }
+                    Button("AI 预览全部") {
+                        Task {
+                            await editorVM.requestAIResolutionPreviewForAllConflicts(privacySettings: privacySettings)
+                            if case .error(let message) = editorVM.aiConflictAssistState {
+                                statusText = message
+                            } else {
+                                statusText = "AI 冲突预览完成"
+                            }
+                        }
+                    }
                     Divider()
                     Button("整文件 Mine") { Task { await editorVM.resolveWholeFileMine(); handleSaveState(editorVM) } }
                     Button("整文件 Theirs") { Task { await editorVM.resolveWholeFileTheirs(); handleSaveState(editorVM) } }

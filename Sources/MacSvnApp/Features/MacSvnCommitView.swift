@@ -20,6 +20,14 @@ public struct MacSvnCommitView: View {
                 Text("提交")
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
+                Button("AI 生成说明") {
+                    Task { await runAICommitMessage() }
+                }
+                .disabled(viewModel == nil)
+                Button("AI 预检") {
+                    Task { await runAIReview() }
+                }
+                .disabled(viewModel == nil)
                 Button("刷新候选") {
                     Task { await reloadCandidates() }
                 }
@@ -122,6 +130,8 @@ public struct MacSvnCommitView: View {
                             .foregroundStyle(.red)
                     }
 
+                    aiStatusSection(viewModel)
+
                     Spacer()
                 }
                 .padding()
@@ -130,6 +140,31 @@ public struct MacSvnCommitView: View {
         } else {
             ProgressView("加载变更…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func aiStatusSection(_ viewModel: CommitViewModel) -> some View {
+        if case .generating = viewModel.aiCommitMessageState {
+            ProgressView("AI 正在生成提交说明…")
+        }
+        if case .error(let message) = viewModel.aiCommitMessageState {
+            Text("AI 说明失败：\(message)").foregroundStyle(.red).font(.caption)
+        }
+        if case .reviewing = viewModel.aiPreCommitReviewState {
+            ProgressView("AI 预检中…")
+        }
+        if case .reviewed(let result) = viewModel.aiPreCommitReviewState {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AI 预检：\(result.summary)").font(.headline)
+                ForEach(Array(result.findings.prefix(8).enumerated()), id: \.offset) { _, finding in
+                    Text("• [\(finding.severity.rawValue)] \(finding.message)")
+                        .font(.caption)
+                }
+            }
+        }
+        if case .error(let message) = viewModel.aiPreCommitReviewState {
+            Text("AI 预检失败：\(message)").foregroundStyle(.red).font(.caption)
         }
     }
 
@@ -146,6 +181,8 @@ public struct MacSvnCommitView: View {
                 statuses: statuses,
                 commitProvider: session.svnService,
                 statusProvider: session.svnService,
+                aiCommitMessageGenerator: session.aiCommitMessageGenerator,
+                aiPreCommitReviewer: session.aiPreCommitReviewer,
                 commitMessageHistoryProvider: session.commitMessageHistoryStore
             )
             viewModel = vm
@@ -162,6 +199,24 @@ public struct MacSvnCommitView: View {
         await viewModel.commit(auth: nil, skipGuardWarnings: skipWarnings)
         if case .committed(let revision) = viewModel.state {
             statusText = "提交成功 r\(revision.value)"
+        }
+    }
+
+    private func runAICommitMessage() async {
+        guard let viewModel else { return }
+        let privacy = await session.currentAIPrivacy()
+        await viewModel.generateAICommitMessage(privacySettings: privacy)
+        if case .generated = viewModel.aiCommitMessageState {
+            statusText = "AI 提交说明已填入"
+        }
+    }
+
+    private func runAIReview() async {
+        guard let viewModel else { return }
+        let privacy = await session.currentAIPrivacy()
+        await viewModel.runAIPreCommitReview(privacySettings: privacy)
+        if case .reviewed = viewModel.aiPreCommitReviewState {
+            statusText = "AI 预检完成"
         }
     }
 }

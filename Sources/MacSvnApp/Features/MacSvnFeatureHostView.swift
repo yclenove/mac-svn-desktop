@@ -48,10 +48,12 @@ public struct MacSvnFeatureHostView: View {
             MacSvnShelveView(workspaceController: workspaceController, session: session)
         case .gitMigration:
             MacSvnGitMigrationView(workspaceController: workspaceController, session: session)
+        case .teamActivity:
+            MacSvnTeamActivityView(workspaceController: workspaceController, session: session)
+        case .aiAssistant:
+            MacSvnAIAssistantView(workspaceController: workspaceController, session: session)
         case .settings:
             MacSvnSettingsView(session: session)
-        default:
-            MacSvnRoutePlaceholderView(route: route)
         }
     }
 }

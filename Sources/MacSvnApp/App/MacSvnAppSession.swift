@@ -25,6 +25,15 @@ public final class MacSvnAppSession: ObservableObject {
     public let gitMigrationSyncService: GitMigrationSyncService
     public let menuBarStatusSnapshotter: MenuBarStatusSnapshotter
     public let menuBarPollIntervalMinutes: Int
+    public let aiProviderStore: AIProviderStore
+    public let aiKeychainStore: AIKeychainStore
+    public let llmClient: LLMHTTPClient
+    public let aiProviderConnectivityTester: AIProviderConnectivityTester
+    public let aiCommitMessageGenerator: AICommitMessageGenerator
+    public let aiPreCommitReviewer: AIPreCommitReviewer
+    public let aiConflictAssistant: AIConflictAssistant
+    public let aiToolRegistry: AISVNToolRegistry
+    public let aiToolAuditStore: AIToolAuditStore
 
     public init(
         supportDirectory: URL,
@@ -42,7 +51,16 @@ public final class MacSvnAppSession: ObservableObject {
         gitMigrationService: GitMigrationService,
         gitMigrationSyncService: GitMigrationSyncService,
         menuBarStatusSnapshotter: MenuBarStatusSnapshotter,
-        menuBarPollIntervalMinutes: Int = 10
+        menuBarPollIntervalMinutes: Int = 10,
+        aiProviderStore: AIProviderStore,
+        aiKeychainStore: AIKeychainStore,
+        llmClient: LLMHTTPClient,
+        aiProviderConnectivityTester: AIProviderConnectivityTester,
+        aiCommitMessageGenerator: AICommitMessageGenerator,
+        aiPreCommitReviewer: AIPreCommitReviewer,
+        aiConflictAssistant: AIConflictAssistant,
+        aiToolRegistry: AISVNToolRegistry,
+        aiToolAuditStore: AIToolAuditStore
     ) {
         self.supportDirectory = supportDirectory
         self.settingsStore = settingsStore
@@ -60,6 +78,20 @@ public final class MacSvnAppSession: ObservableObject {
         self.gitMigrationSyncService = gitMigrationSyncService
         self.menuBarStatusSnapshotter = menuBarStatusSnapshotter
         self.menuBarPollIntervalMinutes = menuBarPollIntervalMinutes
+        self.aiProviderStore = aiProviderStore
+        self.aiKeychainStore = aiKeychainStore
+        self.llmClient = llmClient
+        self.aiProviderConnectivityTester = aiProviderConnectivityTester
+        self.aiCommitMessageGenerator = aiCommitMessageGenerator
+        self.aiPreCommitReviewer = aiPreCommitReviewer
+        self.aiConflictAssistant = aiConflictAssistant
+        self.aiToolRegistry = aiToolRegistry
+        self.aiToolAuditStore = aiToolAuditStore
+    }
+
+    /// 当前设置中的 AI 隐私策略（供提交/冲突 AI 调用读取）。
+    public func currentAIPrivacy() async -> AIPrivacySettings {
+        await settingsStore.settings().aiPrivacy
     }
 
     /// 从 support 目录引导会话：加载设置、创建后端与服务、确保持久化文件存在。
@@ -149,6 +181,34 @@ public final class MacSvnAppSession: ObservableObject {
             configuration: menuBarConfiguration
         )
 
+        let aiProviderStore = AIProviderStore(
+            fileURL: directory.appendingPathComponent("ai-providers.json")
+        )
+        let aiKeychainStore = AIKeychainStore()
+        let llmClient = LLMHTTPClient(apiKeyStore: aiKeychainStore)
+        let aiProviderConnectivityTester = AIProviderConnectivityTester(llmClient: llmClient)
+        let aiCommitMessageGenerator = AICommitMessageGenerator(
+            providerManager: aiProviderStore,
+            diffProvider: svnService,
+            llmClient: llmClient
+        )
+        let aiPreCommitReviewer = AIPreCommitReviewer(
+            providerManager: aiProviderStore,
+            diffProvider: svnService,
+            llmClient: llmClient
+        )
+        let aiConflictAssistant = AIConflictAssistant(
+            providerManager: aiProviderStore,
+            llmClient: llmClient
+        )
+        let aiToolAuditStore = AIToolAuditStore(
+            fileURL: directory.appendingPathComponent("ai-tool-audit.json")
+        )
+        let aiToolRegistry = AISVNToolRegistry(
+            service: svnService,
+            auditStore: aiToolAuditStore
+        )
+
         return MacSvnAppSession(
             supportDirectory: directory,
             settingsStore: settingsStore,
@@ -164,7 +224,16 @@ public final class MacSvnAppSession: ObservableObject {
             gitMigrationService: gitMigrationService,
             gitMigrationSyncService: gitMigrationSyncService,
             menuBarStatusSnapshotter: menuBarStatusSnapshotter,
-            menuBarPollIntervalMinutes: menuBarConfiguration.pollIntervalMinutes
+            menuBarPollIntervalMinutes: menuBarConfiguration.pollIntervalMinutes,
+            aiProviderStore: aiProviderStore,
+            aiKeychainStore: aiKeychainStore,
+            llmClient: llmClient,
+            aiProviderConnectivityTester: aiProviderConnectivityTester,
+            aiCommitMessageGenerator: aiCommitMessageGenerator,
+            aiPreCommitReviewer: aiPreCommitReviewer,
+            aiConflictAssistant: aiConflictAssistant,
+            aiToolRegistry: aiToolRegistry,
+            aiToolAuditStore: aiToolAuditStore
         )
     }
 

@@ -916,6 +916,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var externalDiffTool: ExternalDiffToolConfiguration?
     /// 为 true 时，提交守护将冲突标记残留等规则升级为硬阻断（不可跳过警告提交）
     public var commitGuardHardBlockConflictMarkers: Bool
+    /// AI 隐私：脱敏开关与自定义规则（随设置持久化）
+    public var aiPrivacy: AIPrivacySettings
 
     public init(
         svnPath: String? = nil,
@@ -923,7 +925,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         branchLayout: BranchLayout = BranchLayout(),
         processTimeout: TimeInterval = 120,
         externalDiffTool: ExternalDiffToolConfiguration? = nil,
-        commitGuardHardBlockConflictMarkers: Bool = false
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings()
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
@@ -931,6 +934,39 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.processTimeout = processTimeout
         self.externalDiffTool = externalDiffTool
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
+        self.aiPrivacy = aiPrivacy
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case svnPath
+        case logBatchSize
+        case branchLayout
+        case processTimeout
+        case externalDiffTool
+        case commitGuardHardBlockConflictMarkers
+        case aiPrivacy
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        svnPath = try container.decodeIfPresent(String.self, forKey: .svnPath)
+        logBatchSize = try container.decodeIfPresent(Int.self, forKey: .logBatchSize) ?? 100
+        branchLayout = try container.decodeIfPresent(BranchLayout.self, forKey: .branchLayout) ?? BranchLayout()
+        processTimeout = try container.decodeIfPresent(TimeInterval.self, forKey: .processTimeout) ?? 120
+        externalDiffTool = try container.decodeIfPresent(ExternalDiffToolConfiguration.self, forKey: .externalDiffTool)
+        commitGuardHardBlockConflictMarkers = try container.decodeIfPresent(Bool.self, forKey: .commitGuardHardBlockConflictMarkers) ?? false
+        aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(svnPath, forKey: .svnPath)
+        try container.encode(logBatchSize, forKey: .logBatchSize)
+        try container.encode(branchLayout, forKey: .branchLayout)
+        try container.encode(processTimeout, forKey: .processTimeout)
+        try container.encodeIfPresent(externalDiffTool, forKey: .externalDiffTool)
+        try container.encode(commitGuardHardBlockConflictMarkers, forKey: .commitGuardHardBlockConflictMarkers)
+        try container.encode(aiPrivacy, forKey: .aiPrivacy)
     }
 }
 

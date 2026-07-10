@@ -6,6 +6,7 @@ public struct MacSvnRootView: View {
     @ObservedObject private var navigator: MacSvnAppNavigator
     @StateObject private var workspaceController: MacSvnWorkspaceController
     private let sidebarModel: MacSvnSidebarModel
+    @State private var showCommandPalette = false
 
     public init(
         session: MacSvnAppSession,
@@ -61,6 +62,21 @@ public struct MacSvnRootView: View {
         }
         .onChange(of: navigator.pendingOpenPath) { _, _ in
             Task { await consumePendingOpenIfNeeded() }
+        }
+        .sheet(isPresented: $showCommandPalette) {
+            MacSvnCommandPaletteView(
+                navigator: navigator,
+                workspaceController: workspaceController,
+                session: session,
+                isPresented: $showCommandPalette
+            )
+        }
+        .background {
+            Button("") { showCommandPalette = true }
+                .keyboardShortcut("k", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .accessibilityHidden(true)
         }
     }
 

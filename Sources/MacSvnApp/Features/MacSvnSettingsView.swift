@@ -9,6 +9,7 @@ public struct MacSvnSettingsView: View {
     @State private var processTimeout: Double = 120
     @State private var hardBlockConflictMarkers = false
     @State private var statusText: String?
+    @State private var showAISettings = false
 
     public init(session: MacSvnAppSession) {
         self.session = session
@@ -25,6 +26,11 @@ public struct MacSvnSettingsView: View {
                 Stepper("进程超时 \(Int(processTimeout)) 秒", value: $processTimeout, in: 30...600, step: 30)
                 Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
             }
+            Section("AI") {
+                Button("打开 AI Provider / 隐私 / 连通性测试…") {
+                    showAISettings = true
+                }
+            }
             if let statusText {
                 Text(statusText)
                     .foregroundStyle(.secondary)
@@ -38,6 +44,10 @@ public struct MacSvnSettingsView: View {
         .padding()
         .navigationTitle("设置")
         .task { await load() }
+        .sheet(isPresented: $showAISettings) {
+            MacSvnAIProviderSettingsView(session: session)
+                .frame(minWidth: 640, minHeight: 520)
+        }
     }
 
     private func load() async {

@@ -75,20 +75,20 @@
 
 ### Wave G — P6 AI + 生态
 
-- [ ] **G1** AI Provider 设置页（Keychain、连通性测试、脱敏开关）
-- [ ] **G2** AI 助手 Chat 面板（tool 确认门 + 审计展示）
-- [ ] **G3** 提交页接入 AI 生成说明 / AI 预检
-- [ ] **G4** 合并编辑器接入 AI 冲突建议
-- [ ] **G5** 命令面板 ⌘K
-- [ ] **G6** 团队活动页
-- [ ] **G7** Finder Sync 扩展 target（角标 + 右键菜单）
-- [ ] **G8** Quick Look 预览扩展 target
+- [x] **G1** AI Provider 设置页（Keychain、连通性测试、脱敏开关）
+- [x] **G2** AI 助手 Chat 面板（tool 确认门 + 审计展示）
+- [x] **G3** 提交页接入 AI 生成说明 / AI 预检
+- [x] **G4** 合并编辑器接入 AI 冲突建议
+- [x] **G5** 命令面板 ⌘K
+- [x] **G6** 团队活动页
+- [x] **G7** Finder Sync 扩展 target（角标 + 右键菜单）
+- [x] **G8** Quick Look 预览扩展 target
 
 ### Wave H — 验收与收口
 
-- [ ] **H1** 手工验收脚本/清单：真实 WC 走通 P1 日常流（中文 commit）
-- [ ] **H2** README 更新：如何运行 `swift run MacSvnDesktopApp`、功能矩阵勾选
-- [ ] **H3** 全量 `swift test` + 推送 + 准备合并 `main` 的说明
+- [x] **H1** 手工验收脚本/清单：真实 WC 走通 P1 日常流（中文 commit）
+- [x] **H2** README 更新：如何运行 `swift run MacSvnDesktopApp`、功能矩阵勾选
+- [x] **H3** 全量 `swift test` + 推送 + 准备合并 `main` 的说明
 
 ## 进度日志
 
@@ -99,4 +99,6 @@
 | 2026-07-10 12:23 | C1/C2/C3/C4 | 7d1240b | `swift test --filter MacSvnApp` 6 passed |
 | 2026-07-10 12:25 | D1/D2/D3 | 14f43a8 | `swift test --filter MacSvnApp` 6 passed |
 | 2026-07-10 12:26 | E1–E5 | （本轮提交） | `swift test --filter MacSvnApp|SettingsStore` 9 passed |
-| 2026-07-10 12:36 | F1/F2/F3 | （本轮提交） | `swift test --filter MacSvnApp` 10 passed |
+| 2026-07-10 12:36 | F1/F2/F3 | f36d134 | `swift test --filter MacSvnApp` 10 passed |
+| 2026-07-10 12:41 | G1–G8 + H1/H2 | （本轮提交） | `swift test --filter MacSvnApp\|AIAssistantChat\|SettingsStore` 14 passed |
+| 2026-07-10 12:43 | H3 | （本轮提交） | 全量 `swift test` **472 passed**；可 FF 合入 `main` |
