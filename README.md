@@ -94,7 +94,7 @@ swift test
 | 菜单栏角标 / `macsvn://` 深链 / CLI 伴生 | ✅ |
 | AI Provider（Keychain）/ Chat / 提交 AI / 冲突 AI | ✅ |
 | 命令面板 ⌘K / 团队动态 | ✅ |
-| Finder Sync / Quick Look | Finder Sync ✅ 已嵌入 `.appex`；Quick Look 骨架见 `docs/extensions/` |
+| Finder Sync / Quick Look | ✅ 均已嵌入 `.appex`（见 `docs/extensions/`） |
 
 > 当前分支：`feat/srs-gap-full-delivery` — **SRS 缺口补齐中**（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
 

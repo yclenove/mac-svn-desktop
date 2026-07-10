@@ -35,7 +35,7 @@ xcodebuild -project MacSVN.xcodeproj -scheme MacSVN -configuration Release \
 扩展 target（V2/V3）在本工程上追加：
 
 - Finder Sync：`MacSVNFinderSync`（已嵌入）；见 `docs/extensions/FinderSync/`
-- Quick Look：见 `docs/extensions/QuickLook/README.md`
+- Quick Look：`MacSVNQuickLook`（已嵌入）；见 `docs/extensions/QuickLook/`
 
 
 ## 验收标准（V1）
