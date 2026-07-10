@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: fix(T1.3)：Repair Copy 失败路径禁止删除 aside；写操作失败也刷新 CFM；成功刷新保留 Check Repository；D09 ✅
+- Affected: SvnCliBackend.swift, MacSvnChangesView.swift, inventory D09, parity-coverage.json
+- Impact: 避免用户未版本文件被误删；失败后列表与磁盘一致；远端高亮不因 Repair 回退
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T1.3：CFM Repair Move/Copy（配对校验 + WC 内 `svn move/copy`；目标已存在时先挪开/回填 missing 源）
 - Affected: RepairMoveCopyPairing.swift, SvnCommandBuilder/Backend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, Tests/*（含集成）, docs/*
 - Impact: inventory #45 ✅；#8 CFM 核心（本地/远端/颜色/Repair）齐 → ✅
