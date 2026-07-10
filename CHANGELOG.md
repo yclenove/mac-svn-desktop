@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- Summary: Tortoise 完美 Loop T0.7 / **闸门 G0 通过**：全量 `swift test` 529 绿；parity-coverage 脚本与 fixture 测绿；T0 波次收口，进入 T1
+- Affected: docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md, docs/acceptance/H-tortoise-parity.md, docs/acceptance/parity-coverage.json, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md
+- Impact: 骨架与门禁就绪；下一枪 T1.1 CFM 本地 status
+
+## 2026-07-10
+
 - Summary: Tortoise 完美 Loop T0.6：新增 `docs/acceptance/H-tortoise-parity.md`（T0–T5/GP 分节空勾清单）
 - Affected: docs/acceptance/H-tortoise-parity.md, docs/README.md, docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
 - Impact: 后续各 Wave 出门以本清单 + inventory ✅ 双轨验收

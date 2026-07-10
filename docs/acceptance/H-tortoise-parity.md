@@ -22,13 +22,13 @@
 
 ## T0 — 门禁与骨架
 
-- [ ] T0.1：大 Diff / 变更工作区不卡死；嵌入 Diff 为单块文本
-- [ ] T0.2：`SvnCommandCatalog` 可枚举 #1–46 + L01–L20（单测或调试打印）
-- [ ] T0.3：`Navigator.perform` 对未接线命令提示「未实现」，不假装成功
-- [ ] T0.4：长耗时操作可取消（或单测证明取消 → `SvnError.cancelled`）
-- [ ] T0.5：`python3 scripts/parity-coverage.py` 成功写出 JSON
-- [ ] T0.6：本清单文件存在且按 Wave 分节
-- [ ] **G0**：全量 `swift test` 绿；覆盖率脚本跑通
+- [x] T0.1：大 Diff / 变更工作区不卡死；嵌入 Diff 为单块文本
+- [x] T0.2：`SvnCommandCatalog` 可枚举 #1–46 + L01–L20（单测或调试打印）
+- [x] T0.3：`Navigator.perform` 对未接线命令提示「未实现」，不假装成功
+- [x] T0.4：长耗时操作可取消（或单测证明取消 → `SvnError.cancelled`）
+- [x] T0.5：`python3 scripts/parity-coverage.py` 成功写出 JSON
+- [x] T0.6：本清单文件存在且按 Wave 分节
+- [x] **G0**：全量 `swift test` 绿；覆盖率脚本跑通
 
 ---
 
@@ -126,4 +126,4 @@
 
 | 日期 | 验收人 | Wave | 结果 | 备注 |
 |------|--------|------|------|------|
-| | | | | |
+| 2026-07-10 | agent | T0/G0 | 通过 | `swift test` 529 绿；parity-coverage 0/114 基线；自动化门禁项已勾 |

@@ -32,13 +32,13 @@
 
 ### T0 — 门禁与骨架（先做）
 
-- [ ] 固化布局/Diff 性能规范（防 AttributeGraph 再发）
-- [ ] 落地 `SvnCommandCatalog`（全命令 ID，与 inventory `#` 对齐）
-- [ ] 统一 `Navigator.perform(command:paths:options:)`
-- [ ] 可取消 `svn` 任务模型
-- [ ] 自动化：inventory 覆盖率报表（已实现命令 / 总数）
+- [x] 固化布局/Diff 性能规范（防 AttributeGraph 再发）
+- [x] 落地 `SvnCommandCatalog`（全命令 ID，与 inventory `#` 对齐）
+- [x] 统一 `Navigator.perform(command:paths:options:)`
+- [x] 可取消 `svn` 任务模型
+- [x] 自动化：inventory 覆盖率报表（已实现命令 / 总数）
 
-**出门标准：** 空闲 CPU 正常；命令表可枚举 ≥ inventory 全量 ID（实现可先 stub 弹「未实现」但 **ID 必须齐**）。
+**出门标准：** ✅ G0 已通过（2026-07-10：`swift test` 529；coverage 脚本可跑；基线 0/114）。
 
 ### T1 — 日常闭环（小乌龟每天用的）
 
