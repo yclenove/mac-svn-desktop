@@ -233,7 +233,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T1.2 | 4621639 | CFMChangeHighlight* + status -u + repos-status | #8 仍 🟡（远端/颜色齐；Repair 待 T1.3） | Check Repository + 行高亮 |
 | 2026-07-10 | T1.3 | d84b794 | RepairMoveCopyPairing + WC move/copy + CFM 菜单 | #45 ✅；#8 ✅ | Repair Move/Copy 集成测绿 |
 | 2026-07-10 | T1.4 | d91dfef | CommitSelection+keepLocks+unversioned add+Diff/Revert | #4 ✅ | 说明历史已有；§4.1 进阶项仍开 |
-| 2026-07-10 | T1.5 | （提交后回填） | UpdateRevisionPolicy + repositoryHeadRevision + 多选更新 | #2 ✅ | 多路径先钉 HEAD 再 -r |
+| 2026-07-10 | T1.5 | b92abb7 | UpdateRevisionPolicy + repositoryHeadRevision + 多选更新 | #2 ✅ | 多路径先钉 HEAD 再 -r |
 
 ---
 
