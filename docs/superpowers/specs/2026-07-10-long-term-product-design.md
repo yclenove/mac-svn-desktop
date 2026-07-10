@@ -4,15 +4,18 @@
 |----|------|
 | 日期 | 2026-07-10 |
 | 产品 | SVN Studio |
-| 状态 | 草案（配合长期路线图） |
+| 状态 | 草案（配合长期路线图；**全量对标小乌龟**） |
 | 路线图 | `docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md` |
+| 能力基线（验收真相） | `docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md`（v2） |
+| 完美 Loop（执行队列） | `docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md` |
 | 关联 | SRS、HLD、IA 规格、Finder/QuickLook 扩展说明 |
 
 ## 1. 设计目标与约束
 
 ### 1.1 目标
 
-在 **Working-Copy Centric** 壳层之上，把日常 SVN 体验提升到接近 **TortoiseSVN（小乌龟）** 的顺手程度，并保持 macOS 原生交互；冲突三路合并与 AI/Git 迁移作为差异化，不抢主路径。
+在 **Working-Copy Centric** 壳层之上，实现与 **TortoiseSVN（小乌龟）命令/对话框/设置/Overlay 矩阵等价** 的完整客户端（见 inventory v2）；平台只换壳，不砍能力。  
+冲突三路合并、AI、Git 迁移为差异化（T6），**不计入**「小乌龟完成度」，也不得挤占 T0–T5 主路径。
 
 ### 1.2 硬约束
 
@@ -252,6 +255,6 @@ Keychain：`SVNStudio.AIProvider`（已定）。
 
 ## 10. 下一步
 
-1. 你确认路线图波次顺序（默认 L0→L1→…）  
+1. 你确认路线图波次顺序（默认 **T0→T1→…T5**；验收以 inventory v2 为准）  
 2. 确认后拆 **L0 实现计划**（writing-plans 粒度）并开工  
 3. 每波结束更新本详设「实现状态」表（可另附）  

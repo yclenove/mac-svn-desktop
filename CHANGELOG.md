@@ -2,9 +2,21 @@
 
 ## 2026-07-10
 
+- Summary: 新增 Tortoise 全量对标「完美 Loop」规划：T0–T5 原子 backlog、G0–G5/PERFECT 闸门、one-shot 唤醒协议、停止条件=inventory 100%+无 stub+全测+H1
+- Affected: docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, docs/README.md
+- Impact: 说「开始 loop」即从 T0.1 在 `feat/tortoise-parity-perfect-loop` 上执行，直到 PERFECT 才停
+
+## 2026-07-10
+
+- Summary: 深入挖掘 TortoiseSVN 能力并升为验收基线 v2：DUG 28 域、命令 #1–46、日志右键 L01–L20、设置 S01–S13、Overlay 全状态；路线图改为 T0–T6 全量对标（小乌龟有的必须有）
+- Affected: docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, docs/superpowers/specs/2026-07-10-long-term-product-design.md, docs/README.md
+- Impact: 后续交付以 inventory 状态列 ✅ 为完成标准；默认开工 T0→T1；差异化 AI/Git 不计入小乌龟完成度
+
+## 2026-07-10
+
 - Summary: 新增长期迭代路线图（L0–L8）与长期产品开发详设（TortoiseSVN 映射、性能规范、模块设计）
 - Affected: docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, docs/superpowers/specs/2026-07-10-long-term-product-design.md, docs/README.md
-- Impact: 后续按 L0 稳定门禁 → L1 Finder 小乌龟 → L2–L4 深度 → L5 视觉 推进；待确认波次顺序后开工
+- Impact: 已被同日 T0–T6 / inventory v2 覆盖；保留条目作历史痕迹
 
 ## 2026-07-10
 

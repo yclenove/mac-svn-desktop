@@ -13,8 +13,10 @@
 | [superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md](superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md) | 长程 Loop 二：SRS 缺口补齐（验收/体验/扩展/发布） | 完成 |
 | [superpowers/specs/2026-07-10-ui-ux-ia-design.md](superpowers/specs/2026-07-10-ui-ux-ia-design.md) | UI/UX 信息架构：WC 侧栏 + WorkspaceMode + 变更工作区 | 已落地 |
 | [superpowers/plans/2026-07-10-ui-ux-ia-refactor.md](superpowers/plans/2026-07-10-ui-ux-ia-refactor.md) | UI/UX IA 重构实现计划（U1–U4） | 已落地 |
-| [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 L0–L8（稳定→小乌龟→深度→视觉→分发） | 草案 |
-| [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（Tortoise 映射、模块、性能规范、风险） | 草案 |
+| [superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md) | **小乌龟全量能力清单 v2**（DUG 域、命令#、日志右键 L#、设置 S#、Overlay；验收唯一真相） | 基线 |
+| [superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) | **完美 Loop**：T0–T5 原子 backlog + 唤醒协议 + PERFECT 停止条件（一直 loop 到 inventory 100%） | 执行中待开工 |
+| [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
+| [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 真实 WC 手工验收清单 | 待跑通 |
 
 ## 阅读顺序
@@ -22,4 +24,4 @@
 - 了解产品做什么：01 → 02
 - 参与开发：03 → 04（先看第 2 节 `SvnBackend` 协议）
 - 参与测试：01 第 6 节验收标准 → 05
-- 继续长程交付：先看 [长期路线图](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) 与 [长期详设](superpowers/specs/2026-07-10-long-term-product-design.md)；UI/UX 见 [IA 规格](superpowers/specs/2026-07-10-ui-ux-ia-design.md)
+- 继续长程交付（小乌龟完美 Loop）：[完美 Loop 规划](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) ← 每轮执行入口；真相 [能力清单 v2](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)；战略 [路线图 T0–T6](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md)；[长期详设](superpowers/specs/2026-07-10-long-term-product-design.md)；UI/UX 见 [IA 规格](superpowers/specs/2026-07-10-ui-ux-ia-design.md)

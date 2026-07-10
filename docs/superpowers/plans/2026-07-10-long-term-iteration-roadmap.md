@@ -1,156 +1,133 @@
-# SVN Studio 长期迭代路线图
+# SVN Studio 长期迭代路线图（TortoiseSVN 全量对标）
 
 | 项 | 内容 |
 |----|------|
 | 日期 | 2026-07-10 |
-| 产品 | SVN Studio |
-| 状态 | 草案（待你确认优先级微调） |
-| 上游 | SRS `docs/01-requirements.md`、IA `docs/superpowers/specs/2026-07-10-ui-ux-ia-design.md` |
-| 详设 | `docs/superpowers/specs/2026-07-10-long-term-product-design.md` |
+| 状态 | **强制目标：小乌龟有的，Studio 必须有** |
+| 能力基线 | [`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) |
+| 详设 | [`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md) |
+| 前序 | IA U1–U4 已落地；卡死修复已合入 |
 
-## 1. 现状基线（2026-07-10）
+## 1. 北极星
 
-已完成：
+> 在 macOS 上提供与 **TortoiseSVN 命令矩阵等价** 的完整客户端：Finder 集成 + 全套对话框选项 + 设置体系；平台差异只换壳，不砍能力。
 
-- Working-Copy Centric 壳层（WC 侧栏 + Mode 顶栏 + 变更同屏）
-- SVN Studio 品牌标识（Bundle ID / scheme / Support 目录）
-- Finder Sync / Quick Look 可嵌入形态（体验仍偏薄）
-- 历史左列表右详情（初版）
-- 变更工作区卡死修复（AttributeGraph 死循环）
+验收不以「能提交」为准，而以 **inventory 每一行 ✅** 为准。
 
-未达标（相对 TortoiseSVN / 商业客户端心智）：
+## 2. 总览波次（T 系列 = Tortoise Parity）
 
-- Finder 右键深度与角标可靠性不足
-- Diff 着色/外置工具/大文件体验弱
-- 修订图、路径级历史、Repo Browser 远端写操作弱
-- 无独立 App Icon / 启动与空态视觉体系
-- 大 WC 性能与可取消任务未系统验收（NFR-01/03）
+| 波次 | 主题 | 覆盖 inventory | 预估 |
+|------|------|----------------|------|
+| **T0** | 性能门禁 + 命令目录骨架 | 横切 | 1 周 |
+| **T1** | 日常 Top：CFM/Commit/Update/Diff/Add/Delete/Revert/Rename/Ignore/Copy-Move | #2–5,8,13–18,29,32,36 | 3–4 周 |
+| **T2** | 日志/冲突/锁/分支切换合并/检出导出导入/补丁/属性/Relocate | #1,3,6部分,7,10–12,19–24,26–27,30–31,33–35,41 | 4–5 周 |
+| **T3** | 修订图、Changelist、Externals、Shelve 官方、扩展菜单命令、Create Repo、高级合并 | #6,9,25,28,37–40,42 + 扩展菜单 | 4–5 周 |
+| **T4** | Finder 叠图全状态 + 缓存策略 + 属性页等价 + 设置全页 | Overlay 全表 + Settings | 3–4 周 |
+| **T5** | 钩子/Bugtraq/外置工具链/视觉品牌/分发公证 | 设置高级 + L5/L7 | 2–3 周 |
+| **T6** | 差异化（AI/Git 迁移） | 非小乌龟，不阻塞 T0–T5 | 持续 |
 
-## 2. 产品北极星
+旧 L0–L8 映射：L0→T0；L1∪L2→T1+T4；L3→T2/T3；L4→T2；L5/L7→T5；L6→T2；L8→T6。
 
-> **macOS 上「能天天用」的 SVN 客户端**：日常改-提-更不卡；Finder 里像小乌龟一样顺手；冲突/历史/仓库浏览达到商业客户端可用水位；AI/Git 迁移是加分项而非主路径噪音。
+## 3. 波次详单
 
-对标优先级：
+### T0 — 门禁与骨架（先做）
 
-1. **TortoiseSVN 日常路径**（Explorer 集成 + 提交/更新/日志/diff）
-2. **Versions / Cornerstone 桌面工作区深度**
-3. **本产品差异化**（内置三路合并、AI、Git 迁移）
+- [ ] 固化布局/Diff 性能规范（防 AttributeGraph 再发）
+- [ ] 落地 `SvnCommandCatalog`（全命令 ID，与 inventory `#` 对齐）
+- [ ] 统一 `Navigator.perform(command:paths:options:)`
+- [ ] 可取消 `svn` 任务模型
+- [ ] 自动化：inventory 覆盖率报表（已实现命令 / 总数）
 
-## 3. 默认波次顺序（推荐）
+**出门标准：** 空闲 CPU 正常；命令表可枚举 ≥ inventory 全量 ID（实现可先 stub 弹「未实现」但 **ID 必须齐**）。
 
-> 若你要调整，只改波次顺序，不改每波验收口径。
+### T1 — 日常闭环（小乌龟每天用的）
 
-| 波次 | 主题 | 目标体感 | 预估 |
-|------|------|----------|------|
-| **L0** | 稳定与性能门禁 | 不再卡死；大 Diff/大 WC 可预期 | 0.5–1 周 |
-| **L1** | Finder「小乌龟」体验 | 角标准、右键全、唤起主程序稳 | 2–3 周 |
-| **L2** | 变更/提交/Diff 深度 | 双击 Diff 着色、外置工具、提交体验接近小乌龟 | 2 周 |
-| **L3** | 历史与修订图 | 路径过滤、双修订对比、修订图 | 2–3 周 |
-| **L4** | 仓库浏览器与分支合并 | 远端浏览/检出/mkdir 等；Merge 向导打磨 | 2–3 周 |
-| **L5** | 视觉品牌 | Icon、空态、关于页、窗口气质 | 1–1.5 周 |
-| **L6** | 冲突/属性/锁定/搁置打磨 | 对标小乌龟冲突与锁工作流 | 2 周 |
-| **L7** | 分发与自动更新 | 签名公证、Sparkle、干净机验收 | 1–2 周 |
-| **L8** | AI / Git 迁移增强 | 在主路径稳定后加分 | 持续 |
+必须达到对话框级，而非仅按钮：
 
-## 4. 各波交付清单
+- [ ] **Check for Modifications**：本地 status、Check Repository(`-u`)、颜色规则、列配置、Repair Move/Copy
+- [ ] **Commit**：勾选、未版本勾选→add、Keep locks、说明历史、单项 Diff/Revert
+- [ ] **Update**：统一 revision 更新策略
+- [ ] **Diff**：BASE Diff、双文件 Diff、外置查看器入口
+- [ ] **Add / Delete / Revert / Cleanup / Rename**
+- [ ] **Ignore**（文件/通配）
+- [ ] **SVN Copy / Move**（应用内 + 尽量 Finder 拖拽引导）
+- [ ] 变更树右键 = 命令目录子集
 
-### L0 — 稳定与性能门禁（强制先做）
+**出门标准：** inventory 对应行全部从 ❌/弱 升为 ✅（手工清单可勾）。
 
-- [ ] 变更工作区布局规范固化：禁止嵌套 `VSplitView`+`HSplitView`+海量行级子视图
-- [ ] Diff：嵌入模式单块文本；独立模式行级着色仅限行数阈值内
-- [ ] `svn status/log/diff` 可取消（`Task` 取消 + 进程终止）
-- [ ] 性能冒烟：1 万文件 WC status、大 Diff 打开不卡 UI
-- [ ] 回归：历史详情、冲突跳转、⌘K、深链
+### T2 — 进阶日常 + 仓库
 
-**验收：** 连续使用 30 分钟无 CPU 打满；Activity Monitor 空闲 < 5%。
+- [ ] Checkout / Update to revision（depth、ignore-externals）
+- [ ] Show Log 完整：过滤、stop-on-copy、文件列表动作（Diff/Blame/另存/打开）
+- [ ] Edit Conflicts + Resolved 打磨
+- [ ] Lock / Unlock / Break lock
+- [ ] Branch-Tag / Switch / Merge（含 dry-run）
+- [ ] Export / Import / Relocate
+- [ ] Create Patch / Apply Patch
+- [ ] Properties 模板与编辑
+- [ ] Blame 体验（悬停日志）
+- [ ] Repo Browser 远端写操作（mkdir/delete/copy/move/rename）+ 高危确认
+- [ ] Diff with URL（可放 T2 末或 T3）
 
-### L1 — Finder 对标 TortoiseSVN
+### T3 — 小乌龟「专业」能力
 
-- [ ] Finder Sync 角标覆盖：M/A/D/C/?/正常（缓存 + 节流）
-- [ ] 右键菜单完整：更新、提交、还原、清理、日志、Diff、冲突、忽略、锁定…
-- [ ] 多选路径批量动作
-- [ ] 主程序未启动时深链拉起 + 选中 WC
-- [ ] 扩展启用引导页（系统设置路径）
+- [ ] Revision Graph（可配 trunk/branches/tags 模式）
+- [ ] Change Lists
+- [ ] Externals 编辑与更新行为
+- [ ] 官方 `svn shelve` 对齐（保留现有本地 shelve 为兼容层或迁移）
+- [ ] Merge reintegrate、日志「合并所选修订」
+- [ ] Create Repository Here
+- [ ] Delete keep local / Delete unversioned
+- [ ] Compare revisions / Blame differences / 高级日志动作
 
-**验收：** 在真实 WC 内右键完成「更新→改文件→提交」闭环，无需先开主窗口找菜单。
+### T4 — Shell 集成完整度（对标 Explorer Integration）
 
-### L2 — 变更 / 提交 / Diff 深度
+- [ ] Overlay **全状态**（含 needs-lock、locked、ignored、unversioned、depth、externals、switched、nested）
+- [ ] Status Cache 三模式等价（Default/Shell/None）
+- [ ] 包含/排除路径
+- [ ] Finder 右键：普通菜单 +「更多命令」（≡ Shift 扩展菜单）
+- [ ] 多选批量
+- [ ] 属性页等价（文件信息扩展或专用面板）：revision、作者、URL、锁、属性摘要
 
-- [ ] 双击文件打开 Diff（着色 Unified；可选外置工具）
-- [ ] 提交面板：默认勾选、冲突阻断、说明历史、拖入附件路径（可选）
-- [ ] 变更树右键菜单（与 Finder 菜单同源命令表）
-- [ ] 进度条/可取消 Update·Commit
-- [ ] 忽略模式 UI（`svn:ignore`）
+### T5 — 设置、钩子、品牌、分发
 
-**验收：** 不离开变更工作区完成小乌龟最常用 80% 操作。
+- [ ] 设置信息架构对齐小乌龟分类（通用/叠图/网络/外部工具/钩子/Bugtraq/保存数据/颜色）
+- [ ] 客户端钩子（至少 pre-commit / post-update 脚本）
+- [ ] Bugtraq / issue 正则（提交说明）
+- [ ] 清认证缓存
+- [ ] App Icon / 空态 / 关于页
+- [ ] Developer ID 公证 + 干净机冒烟
 
-### L3 — 历史与修订图
+### T6 — 差异化（不计入小乌龟完成度）
 
-- [ ] 路径级日志（选中文件/目录只看相关历史）
-- [ ] 日期范围过滤；双修订 Diff
-- [ ] 修订图（Revision Graph）MVP：trunk/branches 节点与复制关系
-- [ ] 「还原此文件到 rN」安全确认流
+- AI、Git 迁移、团队热力图等按反馈增强。
 
-**验收：** 对单文件能回答「谁改的、改了什么、如何回到某版」。
+## 4. 跟踪方式
 
-### L4 — 仓库浏览器与分支
+1. **唯一真相：** `tortoisesvn-feature-inventory.md` 状态列  
+2. 每波结束更新：❌→🟡→✅，并附验证证据（测试名 / H1 条目）  
+3. 覆盖率公式：`✅ / (全部必须行)` → 目标 **100%**  
+4. 禁止用「主路径能用」关闭波次  
 
-- [ ] Repo Browser：懒加载树、元数据、cat 预览、收藏
-- [ ] Checkout / 浅检出向导
-- [ ] 远端 mkdir/delete/copy（高危确认）
-- [ ] 分支创建/切换警告未提交变更
-- [ ] Merge 向导 dry-run 预览打磨
+## 5. 风险（全量对标特有）
 
-**验收：** 未检出即可浏览远端并完成一次浅检出。
-
-### L5 — 视觉品牌
-
-- [ ] App Icon（多尺寸）+ Dock 识别度
-- [ ] 空态插画（零 WC / 无变更 / 无冲突）
-- [ ] 关于页 / 启动门禁视觉统一
-- [ ] 窗口最小尺寸与密度规范（不追求营销落地页）
-
-**验收：** 去掉菜单栏文字后仍能辨认是 SVN Studio。
-
-### L6 — 冲突与高级 SVN
-
-- [ ] 三路合并交互打磨（块导航、未保存警告）
-- [ ] 树冲突/属性冲突引导文案
-- [ ] 锁定看板与夺锁确认
-- [ ] 搁置与安全快照默认策略
-
-### L7 — 分发
-
-- [ ] Developer ID + notarize + staple 实跑
-- [ ] Sparkle 自动更新（或等价）
-- [ ] 干净机 H1 冒烟清单全绿
-
-### L8 — 差异化增强
-
-- [ ] AI / Git 迁移按反馈增量，不阻塞 L0–L7
-
-## 5. 明确不做（长期仍排除或降级）
-
-- Windows/Linux 客户端
-- 自研 libsvn 替换（除非 CLI 性能触顶且有专项）
-- 完整复刻 Tortoise 每一个冷门命令（按使用频率裁剪）
-- 营销网站级动效与多主题皮肤商店
-
-## 6. 度量
-
-| 指标 | 目标 |
+| 风险 | 缓解 |
 |------|------|
-| 主线程卡死事件 | 0（发布构建） |
-| 日常提交路径点击数 | ≤ 变更工作区内完成 |
-| Finder 右键覆盖率 | ≥ 小乌龟日常 Top 10 动作 |
-| H1 清单 | 每波更新并抽检 |
+| macOS Finder Sync 能力 < Explorer | 主窗口补齐 100% 命令；Finder 尽力；缺口用 Services/拖拽向导补 |
+| 工作量巨大 | T0 先齐命令 ID；按 T1→T5 切片，但范围不砍 |
+| svn shelve 与现有本地搁置冲突 | T3 专设迁移方案 |
+| 修订图性能 | 异步 + 限深度 + 取消 |
 
-## 7. 文档与分支约定
+## 6. 执行载体（完美 Loop）
 
-- 详设：`docs/superpowers/specs/2026-07-10-long-term-product-design.md`
-- 每波开工前可再拆 `docs/superpowers/plans/YYYY-MM-DD-L{n}-*.md`
-- 建议长期分支策略：`feat/L{n}-*` → `main`；禁止在未过 L0 门禁时合入重 UI
+原则已定为 **全量必须有**。日常执行不靠本文件勾选，而靠：
 
-## 8. 待你确认的一点
+**[`2026-07-10-tortoise-parity-perfect-loop.md`](2026-07-10-tortoise-parity-perfect-loop.md)**
 
-默认顺序 **L0 → L1 → L2 → L3 → …**。若你希望「先做 Icon 视觉（L5）」或「先做修订图（L3）」，回复调整即可，详设模块可复用。
+- 每轮只做第一个 `[ ]`，挂 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` one-shot 唤醒  
+- **停止条件**：该文件 §2 PERFECT（inventory 100% ✅ + 无 stub + 全量测试 + H1 + 文档收口）  
+- 开工：切 `feat/tortoise-parity-perfect-loop`，从 **T0.1** 开始  
+
+## 7. 你需要确认的一点
+
+若同意完美 Loop：直接说「开始 loop」或「从 T0 开工」即可进入编码；无需再拆一层空计划。
