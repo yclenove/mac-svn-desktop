@@ -40,7 +40,7 @@ public final class MacSvnMenuBarController: ObservableObject {
     public func start() {
         guard pollTask == nil else { return }
         if requestsNotificationPermission {
-            requestNotificationPermission()
+            Self.requestNotificationPermission()
         }
         pollTask = Task { [weak self] in
             while let self, !Task.isCancelled {
@@ -129,8 +129,12 @@ public final class MacSvnMenuBarController: ObservableObject {
         }
     }
 
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    /// 通知授权回调跑在系统后台队列。若在 `@MainActor` 方法内写闭包，Swift 6 会把闭包标成 MainActor，
+    /// 回调时触发 `dispatch_assert_queue` → `EXC_BAD_INSTRUCTION`（本机崩溃报告已证实）。
+    nonisolated private static func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+            // 仅申请权限，不触碰 MainActor 状态
+        }
     }
 
     private func postNotificationsIfNeeded(_ snapshot: MenuBarStatusSnapshot) {
@@ -151,6 +155,7 @@ public final class MacSvnMenuBarController: ObservableObject {
                 content: content,
                 trigger: nil
             )
+            // completionHandler 必须为 nil 或 nonisolated；勿在此写 MainActor 闭包
             UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
         }
     }
