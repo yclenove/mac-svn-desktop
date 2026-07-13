@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-13T14:58:53Z",
+  "generated_at": "2026-07-13T15:25:02Z",
   "total": 114,
   "done": 100,
   "partial": 7,
@@ -51,7 +51,7 @@
       "key": "D02",
       "section": "domain",
       "title": "Context Menus / Drag-Drop",
-      "raw_status": "🟡 CFM/⌘K 齐；Finder 拖拽 T4",
+      "raw_status": "🟡 CFM/⌘K 齐；Finder 普通+扩展菜单 ✅；Finder 拖拽 T4",
       "status": "partial"
     },
     {

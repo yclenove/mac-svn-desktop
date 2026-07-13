@@ -46,7 +46,7 @@
 | 域 ID | DUG 章节 | 必须覆盖的能力要点 | Studio | 波次 |
 |-------|----------|-------------------|--------|------|
 | D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | 🟡 全状态采集/映射与目录递归聚合 ✅；属性页状态待 T4.6 | T4 |
-| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K 齐；Finder 拖拽 T4 | T1/T4 |
+| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K 齐；Finder 普通+扩展菜单 ✅；Finder 拖拽 T4 | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
 | D05 | Checkout | depth、revision、ignore-externals、pristines | ✅ depth/rev/omit-ext；pristines 进阶仍开 | T2 |

@@ -1,6 +1,6 @@
 # SVN Studio Finder Sync 扩展（FR-EX-05）
 
-在 Finder 中为 SVN 工作副本显示角标，并提供右键菜单（Update / Commit / Diff / Log 等），通过 `svnstudio://` 深链唤起主应用。
+在 Finder 中为 SVN 工作副本显示角标，并提供普通右键菜单与「更多命令…」扩展菜单，通过 `svnstudio://` 深链唤起主应用。
 
 ## 工程
 
@@ -22,11 +22,10 @@
 
 ## 深链
 
-- 更新 → `svnstudio://open?path=…&action=update`
-- 提交 → `svnstudio://open?path=…&action=commit`
-- 日志 → `svnstudio://log?path=…`
-- Diff → `svnstudio://diff?path=…`
-- 还原 / 解决冲突 → `svnstudio://open?path=…&action=…`
+- Finder 普通菜单与「更多命令…」均使用统一命令路由：`svnstudio://command?path=…&command=cmd.…`
+- 普通菜单包括更新、提交、日志、Diff、还原、解决冲突。
+- 扩展菜单包括添加、删除，以及 Catalog 标记的 Shift 扩展命令（Diff with URL、删除保留本地、删除未版本项、打断锁、重新整合合并）。
+- 深链命令通过 `SvnCommandID` 校验后交给主应用既有 `perform(command:paths:)` 执行。
 
 ## 构建与校验
 
@@ -50,3 +49,4 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] 工作副本根与目录按角标优先级递归聚合；同一 WC 并发刷新合并为一个采集任务
 - [x] Status Cache Default / Shell / None；设置持久化、v1 配置迁移、原子热更新与旧任务隔离
 - [x] 包含/排除卷与路径（exclude 优先）；18 类角标可在设置中选择并影响目录聚合
+- [x] Finder 普通菜单与「更多命令…」扩展菜单；菜单命令共用 `SvnCommandCatalog`，并通过统一 command 深链唤起主应用

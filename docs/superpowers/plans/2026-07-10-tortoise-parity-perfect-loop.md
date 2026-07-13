@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T4.4** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T4.5** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T3 + G0/G1/G2/G3 ✅；T4.1–T4.3 ✅；**下一 T4.4**；覆盖率 **100/114（87.72%）** |
+| 当前状态（2026-07-13） | T0–T3 + G0/G1/G2/G3 ✅；T4.1–T4.4 ✅；**下一 T4.5**；覆盖率 **100/114（87.72%）** |
 
 ---
 
@@ -176,7 +176,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T4.1** Overlay 全状态映射表落地（Normal/Modified/Conflicted/Added/Deleted/Missing/Locked/needs-lock/Ignored/Unversioned/depth/nested/externals/switched/mergeinfo）
 - [x] **T4.2** Status Cache 三模式：Default / Shell / None（S08）
 - [x] **T4.3** 包含/排除路径；可选角标种类
-- [ ] **T4.4** Finder 右键：普通菜单 +「更多命令…」（≡ Shift 扩展）
+- [x] **T4.4** Finder 右键：普通菜单 +「更多命令…」（≡ Shift 扩展）
 - [ ] **T4.5** 多选批量命令
 - [ ] **T4.6** 属性页等价：revision/作者/URL/锁/属性摘要（文件信息或应用内面板）
 - [ ] **T4.7** Context Menu 设置：提升项、needs-lock 提升 Lock、隐藏未版本路径（S02）
@@ -274,6 +274,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T4.1 | 304d2b6 | 全状态结构化采集/角标映射；current/BASE 属性差集识别 mergeinfo-only；根/目录递归聚合；并发刷新合并；Finder Sync target/appex 校验；全量 810 绿 | Overlay 5 行 ✅、Ignored/Unversioned 🟡；D01 保持 🟡 | 覆盖率 97/114；下一 T4.2 |
 | 2026-07-13 | T4.2 | 9e4cd78 | Default 整棵 WC/8s、Shell 请求目标/2s、None 禁用采集但保留菜单；设置持久化、v1 迁移、原子热更新；generation 丢弃旧并发结果；Finder Sync target/appex 校验；全量 822 绿 | S08 与 Overlay 第 7 行升为 🟡；路径/可选角标待 T4.3 | 覆盖率 97/114；下一 T4.3 |
 | 2026-07-13 | T4.3 | 5fa45f5 | Finder 包含/排除卷与路径、exclude 优先；18 类角标可选；配置 v3；include 子树监视目录；Finder Sync target/appex 校验；全量 836 绿 | S08、Overlay 第 4/7 行升为 ✅；D01 保持 🟡 | 覆盖率 100/114；下一 T4.4 |
+| 2026-07-13 | T4.4 | 011a7b2 | Finder 普通菜单与「更多命令…」扩展菜单；统一 `SvnCommandID` / `svnstudio://command` 深链；普通命令与 5 个 Catalog 扩展命令复用 Navigator 执行；Finder Sync target/appex 校验；全量 839 绿 | H-T4.4 ✅；D02 保持 🟡（Finder 拖拽待 T4）；S02 保持 ❌（T4.7） | 覆盖率 100/114；下一 T4.5 |
 
 ---
 
