@@ -858,6 +858,26 @@ public enum ShelveKind: String, Codable, Equatable, Sendable {
     case safety
 }
 
+/// Subversion experimental shelving implementation selected through `SVN_EXPERIMENTAL_COMMANDS`.
+public enum SvnShelvingVersion: String, Codable, CaseIterable, Equatable, Sendable {
+    case v2
+    case v3
+
+    public var environmentValue: String {
+        switch self {
+        case .v2: "shelf2"
+        case .v3: "shelf3"
+        }
+    }
+
+    public var displayName: String {
+        switch self {
+        case .v2: "V2"
+        case .v3: "V3"
+        }
+    }
+}
+
 public struct ShelveSnapshot: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public let wcPath: String
@@ -1016,6 +1036,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var progressAutoCloseMode: ProgressAutoCloseMode
     /// Revision Graph 分类路径、节点颜色与复制颜色混合策略。
     public var revisionGraph: RevisionGraphSettings
+    /// 官方 SVN experimental shelving CLI 版本。
+    public var shelvingVersion: SvnShelvingVersion
 
     public init(
         svnPath: String? = nil,
@@ -1039,6 +1061,33 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.cfmColumns = cfmColumns
         self.progressAutoCloseMode = progressAutoCloseMode
         self.revisionGraph = revisionGraph
+        self.shelvingVersion = .v3
+    }
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        revisionGraph: RevisionGraphSettings,
+        shelvingVersion: SvnShelvingVersion
+    ) {
+        self.svnPath = svnPath
+        self.logBatchSize = logBatchSize
+        self.branchLayout = branchLayout
+        self.processTimeout = processTimeout
+        self.externalDiffTool = externalDiffTool
+        self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
+        self.aiPrivacy = aiPrivacy
+        self.cfmColumns = cfmColumns
+        self.progressAutoCloseMode = progressAutoCloseMode
+        self.revisionGraph = revisionGraph
+        self.shelvingVersion = shelvingVersion
     }
 
     public init(
@@ -1066,6 +1115,33 @@ public struct AppSettings: Codable, Equatable, Sendable {
         )
     }
 
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        shelvingVersion: SvnShelvingVersion
+    ) {
+        self.init(
+            svnPath: svnPath,
+            logBatchSize: logBatchSize,
+            branchLayout: branchLayout,
+            processTimeout: processTimeout,
+            externalDiffTool: externalDiffTool,
+            commitGuardHardBlockConflictMarkers: commitGuardHardBlockConflictMarkers,
+            aiPrivacy: aiPrivacy,
+            cfmColumns: cfmColumns,
+            progressAutoCloseMode: progressAutoCloseMode,
+            revisionGraph: RevisionGraphSettings(),
+            shelvingVersion: shelvingVersion
+        )
+    }
+
     private enum CodingKeys: String, CodingKey {
         case svnPath
         case logBatchSize
@@ -1077,6 +1153,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case cfmColumns
         case progressAutoCloseMode
         case revisionGraph
+        case shelvingVersion
     }
 
     public init(from decoder: Decoder) throws {
@@ -1091,6 +1168,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
         progressAutoCloseMode = try container.decodeIfPresent(ProgressAutoCloseMode.self, forKey: .progressAutoCloseMode) ?? .noConflicts
         revisionGraph = try container.decodeIfPresent(RevisionGraphSettings.self, forKey: .revisionGraph) ?? RevisionGraphSettings()
+        shelvingVersion = try container.decodeIfPresent(SvnShelvingVersion.self, forKey: .shelvingVersion) ?? .v3
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1105,6 +1183,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(cfmColumns, forKey: .cfmColumns)
         try container.encode(progressAutoCloseMode, forKey: .progressAutoCloseMode)
         try container.encode(revisionGraph, forKey: .revisionGraph)
+        try container.encode(shelvingVersion, forKey: .shelvingVersion)
     }
 }
 

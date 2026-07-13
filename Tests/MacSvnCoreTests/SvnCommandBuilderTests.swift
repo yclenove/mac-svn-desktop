@@ -621,4 +621,40 @@ final class SvnCommandBuilderTests: XCTestCase {
             ["unlock", "--non-interactive", "--force", "README.txt"]
         )
     }
+
+    func testExperimentalShelvingCommandsUseStableArgumentBoundaries() {
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalShelve(
+                name: "demo",
+                paths: ["file.txt"],
+                message: "临时搁置",
+                keepLocal: true
+            ).arguments,
+            ["x-shelve", "--keep-local", "--encoding", "UTF-8", "-m", "临时搁置", "--", "demo", "file.txt"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalUnshelve(name: "demo", version: 2, drop: false).arguments,
+            ["x-unshelve", "--", "demo", "2"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalUnshelve(name: "demo", version: nil, drop: true).arguments,
+            ["x-unshelve", "--drop", "--", "demo"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalShelfList().arguments,
+            ["x-shelf-list", "--verbose", "."]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalShelfDiff(name: "demo", version: 3).arguments,
+            ["x-shelf-diff", "--", "demo", "3"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalShelfLog(name: "demo").arguments,
+            ["x-shelf-log", "--", "demo"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.experimentalShelfDrop(name: "demo").arguments,
+            ["x-shelf-drop", "--", "demo", "."]
+        )
+    }
 }

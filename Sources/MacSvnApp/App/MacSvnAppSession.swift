@@ -160,9 +160,16 @@ public final class MacSvnAppSession: ObservableObject {
         )
         let shelveRoot = directory.appendingPathComponent("shelves", isDirectory: true)
         try FileManager.default.createDirectory(at: shelveRoot, withIntermediateDirectories: true)
+        let officialShelving = SvnExperimentalShelvingClient(
+            svnExecutable: svnPath,
+            runner: ProcessRunner(),
+            timeout: settings.processTimeout,
+            version: settings.shelvingVersion
+        )
         let shelveService = ShelveService(
             store: ShelveStore(rootDirectory: shelveRoot),
-            svn: svnService
+            svn: svnService,
+            official: officialShelving
         )
 
         let processRunner = ProcessRunner()

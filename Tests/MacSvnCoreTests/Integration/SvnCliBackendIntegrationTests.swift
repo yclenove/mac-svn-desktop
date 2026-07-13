@@ -3,6 +3,55 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testExperimentalShelvingV2AndV3RoundTripThroughRealWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let file = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        for version in SvnShelvingVersion.allCases {
+            let marker = "shelved-\(version.rawValue)\n"
+            try ("hello\n" + marker).write(to: file, atomically: true, encoding: .utf8)
+            let client = SvnExperimentalShelvingClient(
+                svnExecutable: fixture.svnExecutable,
+                runner: ProcessRunner(),
+                timeout: 30,
+                version: version
+            )
+            let name = "roundtrip-\(version.rawValue)"
+
+            let availability = await client.availability(wc: fixture.workingCopy)
+            XCTAssertEqual(availability, .available(version))
+            try await client.shelve(
+                wc: fixture.workingCopy,
+                name: name,
+                paths: ["README.txt"],
+                message: "real \(version.displayName)",
+                keepLocal: false
+            )
+            XCTAssertEqual(try String(contentsOf: file), "hello\n")
+
+            let shelves = try await client.list(wc: fixture.workingCopy)
+            XCTAssertEqual(shelves.first(where: { $0.name == name })?.latestVersion, 1)
+            let diff = try await client.diff(
+                wc: fixture.workingCopy,
+                name: name,
+                version: 1
+            )
+            XCTAssertTrue(diff.contains(marker.trimmingCharacters(in: .newlines)))
+
+            try await client.unshelve(
+                wc: fixture.workingCopy,
+                name: name,
+                version: 1,
+                drop: true
+            )
+            XCTAssertEqual(try String(contentsOf: file), "hello\n" + marker)
+            let remaining = try await client.list(wc: fixture.workingCopy)
+            XCTAssertFalse(remaining.contains { $0.name == name })
+            try await fixture.backend.revert(wc: fixture.workingCopy, paths: ["README.txt"], recursive: false)
+        }
+    }
+
     func testDirectoryAndFileExternalsRoundTripAndMaterializeOnUpdate() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

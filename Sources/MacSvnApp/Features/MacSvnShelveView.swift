@@ -16,6 +16,8 @@ public struct MacSvnShelveView: View {
     @State private var showPatchSheet = false
     @State private var patchOperation: PatchOperation = .create
     @State private var patchPath = ""
+    @State private var message = ""
+    @State private var keepLocalChanges = false
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -30,34 +32,38 @@ public struct MacSvnShelveView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("本地搁置")
+                Text("搁置")
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
-                TextField("搁置名称", text: $name)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 180)
-                Button("Shelve") {
-                    Task {
-                        await viewModel?.shelve(name: name, paths: Array(selected))
-                        statusText = "已搁置"
-                        await reloadPaths()
-                    }
-                }
-                .disabled(selected.isEmpty || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Button("安全快照") {
-                    Task {
-                        await viewModel?.createSafetySnapshot(name: name.isEmpty ? "safety" : name, paths: Array(selected))
-                        statusText = "已创建安全快照"
-                    }
-                }
-                .disabled(selected.isEmpty)
                 Menu("Patch") {
                     Button("创建 Patch") { presentPatch(.create) }
                     Button("应用 Patch") { presentPatch(.apply) }
                 }
-                Button("刷新") { Task { await viewModel?.load() } }
+                Button("刷新") { Task { await refreshShelves() } }
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+
+            HStack(spacing: 12) {
+                TextField("搁置名称", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 150, maxWidth: 220)
+                TextField("说明（可选）", text: $message)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 180, maxWidth: 300)
+                Toggle("保留本地改动", isOn: $keepLocalChanges)
+                    .toggleStyle(.checkbox)
+                Button("官方 Shelve") { Task { await createOfficialShelf() } }
+                    .disabled(!isOfficialAvailable || !canCreateShelf)
+                Menu("本地快照") {
+                    Button("Shelve 到本地") { Task { await createLocalShelf() } }
+                        .disabled(!canCreateShelf)
+                    Button("创建安全快照") { Task { await createSafetySnapshot() } }
+                        .disabled(selected.isEmpty)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
 
             if let statusText {
                 Text(statusText).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24)
@@ -74,40 +80,57 @@ public struct MacSvnShelveView: View {
                     .frame(minWidth: 220)
 
                     VStack(alignment: .leading) {
-                        List(viewModel?.snapshots ?? []) { snapshot in
+                        HStack {
+                            Text("官方 Shelves").font(.headline)
+                            Spacer()
+                            officialAvailabilityView
+                        }
+                        .padding(.horizontal, 8)
+
+                        List(viewModel?.officialShelves ?? []) { shelf in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(snapshot.name).font(.headline)
-                                Text("\(snapshot.kind.rawValue) · \(snapshot.paths.count) 文件")
+                                Text(shelf.name).font(.headline)
+                                Text("V\(shelf.latestVersion) · \(shelf.pathCount) 个路径 · \(shelf.ageSummary)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                if let message = shelf.message, !message.isEmpty {
+                                    Text(message).font(.caption).lineLimit(2)
+                                }
                                 HStack {
-                                    Button("预览") {
-                                        Task { await viewModel?.preview(snapshot) }
-                                    }
-                                    Button("恢复") {
-                                        Task {
-                                            await viewModel?.restore(snapshot)
-                                            statusText = "已恢复 \(snapshot.name)"
-                                            await reloadPaths()
-                                        }
-                                    }
-                                    Button("删除", role: .destructive) {
-                                        Task { await viewModel?.delete(snapshot) }
-                                    }
+                                    Button("Diff") { Task { await previewOfficialShelf(shelf) } }
+                                    Button("Log") { Task { await showOfficialLog(shelf) } }
+                                    Button("Unshelve") { Task { await unshelve(shelf, drop: false) } }
+                                    Button("Unshelve + Drop") { Task { await unshelve(shelf, drop: true) } }
+                                    Button("Drop", role: .destructive) { Task { await dropOfficialShelf(shelf) } }
                                 }
                             }
                             .padding(.vertical, 4)
                         }
-                        if !(viewModel?.previewText.isEmpty ?? true) {
-                            ScrollView {
-                                Text(viewModel?.previewText ?? "")
-                                    .font(.system(.caption, design: .monospaced))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(minHeight: 150)
+
+                        Divider()
+                        Text("本地 Patch 快照").font(.headline).padding(.horizontal, 8)
+                        List(viewModel?.snapshots ?? []) { snapshot in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(snapshot.name).font(.headline)
+                                Text("\(snapshot.kind.rawValue) · \(snapshot.paths.count) 个路径")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                HStack {
+                                    Button("预览") { Task { await previewLocalSnapshot(snapshot) } }
+                                    Button("恢复") { Task { await restoreLocalSnapshot(snapshot) } }
+                                    if snapshot.kind == .manual {
+                                        Button("迁移到官方") { Task { await migrate(snapshot) } }
+                                            .disabled(!isOfficialAvailable)
+                                    }
+                                    Button("删除", role: .destructive) { Task { await deleteLocalSnapshot(snapshot) } }
+                                }
                             }
-                            .frame(maxHeight: 180)
-                            .padding(8)
-                            .border(Color.secondary.opacity(0.2))
+                            .padding(.vertical, 4)
                         }
+                        .frame(minHeight: 150)
+
+                        shelfDetails
                     }
                     .frame(minWidth: 360)
                 }
@@ -122,6 +145,158 @@ public struct MacSvnShelveView: View {
         }
         .sheet(isPresented: $showPatchSheet) {
             patchSheet
+        }
+    }
+
+    private var canCreateShelf: Bool {
+        !selected.isEmpty && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var isOfficialAvailable: Bool {
+        guard case .available = viewModel?.officialAvailability else { return false }
+        return true
+    }
+
+    @ViewBuilder
+    private var officialAvailabilityView: some View {
+        switch viewModel?.officialAvailability {
+        case .available(let version):
+            Label(version.displayName, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        case .unavailable(let version, let reason):
+            Label("\(version.displayName) 不可用：\(reason)", systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        case nil:
+            ProgressView().controlSize(.small)
+        }
+    }
+
+    @ViewBuilder
+    private var shelfDetails: some View {
+        let localPreview = viewModel?.previewText ?? ""
+        let officialDiff = viewModel?.officialDiffText ?? ""
+        let officialLog = viewModel?.officialLogText ?? ""
+        if !localPreview.isEmpty || !officialDiff.isEmpty || !officialLog.isEmpty {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    detailBlock("官方 Diff", text: officialDiff)
+                    detailBlock("官方 Log", text: officialLog)
+                    detailBlock("本地 Patch", text: localPreview)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+            }
+            .frame(maxHeight: 220)
+            .border(Color.secondary.opacity(0.2))
+        }
+    }
+
+    @ViewBuilder
+    private func detailBlock(_ title: String, text: String) -> some View {
+        if !text.isEmpty {
+            Text(title).font(.caption.weight(.semibold))
+            Text(text)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+        }
+    }
+
+    private func refreshShelves() async {
+        await viewModel?.load()
+        if let error = viewModel?.officialError {
+            statusText = "官方 shelf 列表加载失败：\(error)"
+        }
+    }
+
+    private func createOfficialShelf() async {
+        await viewModel?.officialShelve(
+            name: name,
+            paths: Array(selected).sorted(),
+            message: message,
+            keepLocal: keepLocalChanges
+        )
+        if updateStatus(for: .officialShelve, success: "官方 Shelve 创建完成") {
+            await reloadPaths()
+        }
+    }
+
+    private func createLocalShelf() async {
+        await viewModel?.shelve(name: name, paths: Array(selected).sorted())
+        if updateStatus(for: .shelve, success: "本地搁置创建完成") {
+            await reloadPaths()
+        }
+    }
+
+    private func createSafetySnapshot() async {
+        let snapshotName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        await viewModel?.createSafetySnapshot(
+            name: snapshotName.isEmpty ? "safety" : snapshotName,
+            paths: Array(selected).sorted()
+        )
+        _ = updateStatus(for: .safetySnapshot, success: "安全快照创建完成")
+    }
+
+    private func previewOfficialShelf(_ shelf: SvnShelf) async {
+        await viewModel?.officialDiff(shelf)
+        _ = updateStatus(for: .officialDiff, success: "已加载 \(shelf.name) 的 Diff")
+    }
+
+    private func showOfficialLog(_ shelf: SvnShelf) async {
+        await viewModel?.officialLog(shelf)
+        _ = updateStatus(for: .officialLog, success: "已加载 \(shelf.name) 的版本记录")
+    }
+
+    private func unshelve(_ shelf: SvnShelf, drop: Bool) async {
+        await viewModel?.officialUnshelve(shelf, drop: drop)
+        let suffix = drop ? "并删除 shelf" : ""
+        if updateStatus(for: .officialUnshelve, success: "已恢复 \(shelf.name) \(suffix)") {
+            await reloadPaths()
+        }
+    }
+
+    private func dropOfficialShelf(_ shelf: SvnShelf) async {
+        await viewModel?.officialDrop(shelf)
+        _ = updateStatus(for: .officialDrop, success: "已删除官方 shelf \(shelf.name)")
+    }
+
+    private func previewLocalSnapshot(_ snapshot: ShelveSnapshot) async {
+        await viewModel?.preview(snapshot)
+        _ = updateStatus(for: .preview, success: "已加载 \(snapshot.name) 的本地 Patch")
+    }
+
+    private func restoreLocalSnapshot(_ snapshot: ShelveSnapshot) async {
+        await viewModel?.restore(snapshot)
+        if updateStatus(for: .restore, success: "已恢复 \(snapshot.name)") {
+            await reloadPaths()
+        }
+    }
+
+    private func deleteLocalSnapshot(_ snapshot: ShelveSnapshot) async {
+        await viewModel?.delete(snapshot)
+        _ = updateStatus(for: .delete, success: "已删除本地快照 \(snapshot.name)")
+    }
+
+    private func migrate(_ snapshot: ShelveSnapshot) async {
+        await viewModel?.migrateToOfficial(snapshot)
+        if updateStatus(for: .migrate, success: "已将 \(snapshot.name) 迁移到官方 shelf") {
+            await reloadPaths()
+        }
+    }
+
+    @discardableResult
+    private func updateStatus(for operation: ShelveOperation, success: String) -> Bool {
+        switch viewModel?.state {
+        case .completed(let completed) where completed == operation:
+            statusText = success
+            return true
+        case .error(let message):
+            statusText = "操作失败：\(message)"
+            return false
+        default:
+            return false
         }
     }
 

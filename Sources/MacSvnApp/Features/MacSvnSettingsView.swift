@@ -9,6 +9,7 @@ public struct MacSvnSettingsView: View {
     @State private var logBatchSize: Int = 100
     @State private var processTimeout: Double = 120
     @State private var progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
+    @State private var shelvingVersion: SvnShelvingVersion = .v3
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -35,6 +36,12 @@ public struct MacSvnSettingsView: View {
             Section("Subversion") {
                 TextField("svn 可执行路径", text: $svnPath)
                 LabeledContent("当前会话路径", value: session.svnExecutablePath)
+                Picker("官方 Shelve 实现", selection: $shelvingVersion) {
+                    ForEach(SvnShelvingVersion.allCases, id: \.rawValue) { version in
+                        Text(version.displayName).tag(version)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
             Section("行为") {
                 Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
@@ -101,6 +108,7 @@ public struct MacSvnSettingsView: View {
         logBatchSize = settings.logBatchSize
         processTimeout = settings.processTimeout
         progressAutoCloseMode = settings.progressAutoCloseMode
+        shelvingVersion = settings.shelvingVersion
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -125,6 +133,7 @@ public struct MacSvnSettingsView: View {
         settings.logBatchSize = logBatchSize
         settings.processTimeout = processTimeout
         settings.progressAutoCloseMode = progressAutoCloseMode
+        settings.shelvingVersion = shelvingVersion
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
         settings.revisionGraph = RevisionGraphSettings(
@@ -151,7 +160,7 @@ public struct MacSvnSettingsView: View {
         }
         do {
             try await session.settingsStore.update(settings)
-            statusText = "已保存。svn 路径与提交守护策略将在下次启动会话后完全生效。"
+            statusText = "已保存。svn 路径、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
         } catch {
             statusText = "保存失败：\(error.localizedDescription)"
         }

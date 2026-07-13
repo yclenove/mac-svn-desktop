@@ -76,6 +76,62 @@ final class ShelveViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .error(String(describing: SvnError.network(detail: "offline"))))
         XCTAssertEqual(viewModel.snapshots, [])
     }
+
+    @MainActor
+    func testLoadAndOfficialOperationsExposeShelfState() async {
+        let shelf = SvnShelf(
+            name: "official",
+            latestVersion: 3,
+            pathCount: 2,
+            ageSummary: "2 minutes ago",
+            message: "review"
+        )
+        let provider = FakeShelveProvider(
+            officialAvailability: .available(.v3),
+            officialShelves: [shelf],
+            officialDiffText: "diff",
+            officialLogText: "log"
+        )
+        let viewModel = ShelveViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            shelveProvider: provider
+        )
+
+        await viewModel.load()
+        await viewModel.officialDiff(shelf)
+        await viewModel.officialLog(shelf)
+        await viewModel.officialUnshelve(shelf, version: 3, drop: true)
+        await viewModel.officialDrop(shelf)
+
+        XCTAssertEqual(viewModel.officialAvailability, .available(.v3))
+        XCTAssertEqual(viewModel.officialShelves, [shelf])
+        XCTAssertEqual(viewModel.officialDiffText, "diff")
+        XCTAssertEqual(viewModel.officialLogText, "log")
+        XCTAssertEqual(viewModel.state, .completed(.officialDrop))
+        let calls = await provider.recordedOfficialCalls()
+        XCTAssertEqual(calls, [
+            "diff:official:3",
+            "log:official",
+            "unshelve:official:3:true",
+            "drop:official"
+        ])
+    }
+
+    @MainActor
+    func testMigrateLocalSnapshotUpdatesStateThroughProvider() async {
+        let snapshot = shelveSnapshot(name: "manual")
+        let provider = FakeShelveProvider()
+        let viewModel = ShelveViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            shelveProvider: provider
+        )
+
+        await viewModel.migrateToOfficial(snapshot)
+
+        XCTAssertEqual(viewModel.state, .completed(.migrate))
+        let migrated = await provider.recordedMigrationSnapshots()
+        XCTAssertEqual(migrated, [snapshot])
+    }
 }
 
 private struct ShelveCreateCall: Equatable, Sendable {
@@ -99,19 +155,33 @@ private actor FakeShelveProvider: ShelveProviding {
     private var safetyCalls: [ShelveCreateCall] = []
     private var restoreCalls: [ShelveRestoreCall] = []
     private var deleteCalls: [ShelveSnapshot] = []
+    private let officialAvailabilityResult: SvnShelvingAvailability
+    private let officialShelvesResult: [SvnShelf]
+    private let officialDiffText: String
+    private let officialLogText: String
+    private var officialCalls: [String] = []
+    private var migrationSnapshots: [ShelveSnapshot] = []
 
     init(
         snapshots: [ShelveSnapshot] = [],
         previewText: String = "",
         shelveResult: ShelveSnapshot? = nil,
         safetyResult: ShelveSnapshot? = nil,
-        loadError: Error? = nil
+        loadError: Error? = nil,
+        officialAvailability: SvnShelvingAvailability = .unavailable(.v3, reason: "not configured"),
+        officialShelves: [SvnShelf] = [],
+        officialDiffText: String = "",
+        officialLogText: String = ""
     ) {
         self.snapshots = snapshots
         self.previewText = previewText
         self.shelveResult = shelveResult
         self.safetyResult = safetyResult
         self.loadError = loadError
+        self.officialAvailabilityResult = officialAvailability
+        self.officialShelvesResult = officialShelves
+        self.officialDiffText = officialDiffText
+        self.officialLogText = officialLogText
     }
 
     func load() async throws -> [ShelveSnapshot] {
@@ -166,6 +236,48 @@ private actor FakeShelveProvider: ShelveProviding {
 
     func recordedDeleteCalls() -> [ShelveSnapshot] {
         deleteCalls
+    }
+
+    func officialAvailability(wc: URL) async -> SvnShelvingAvailability {
+        officialAvailabilityResult
+    }
+
+    func officialShelves(wc: URL) async throws -> [SvnShelf] {
+        officialShelvesResult
+    }
+
+    func officialShelve(wc: URL, name: String, paths: [String], message: String, keepLocal: Bool) async throws {}
+
+    func officialDiff(wc: URL, name: String, version: Int?) async throws -> String {
+        let versionText = version.map(String.init) ?? "nil"
+        officialCalls.append("diff:\(name):\(versionText)")
+        return officialDiffText
+    }
+
+    func officialLog(wc: URL, name: String) async throws -> String {
+        officialCalls.append("log:\(name)")
+        return officialLogText
+    }
+
+    func officialUnshelve(wc: URL, name: String, version: Int?, drop: Bool) async throws {
+        let versionText = version.map(String.init) ?? "nil"
+        officialCalls.append("unshelve:\(name):\(versionText):\(drop)")
+    }
+
+    func officialDrop(wc: URL, name: String) async throws {
+        officialCalls.append("drop:\(name)")
+    }
+
+    func recordedOfficialCalls() -> [String] {
+        officialCalls
+    }
+
+    func migrateToOfficial(_ snapshot: ShelveSnapshot) async throws {
+        migrationSnapshots.append(snapshot)
+    }
+
+    func recordedMigrationSnapshots() -> [ShelveSnapshot] {
+        migrationSnapshots
     }
 }
 

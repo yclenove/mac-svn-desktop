@@ -541,6 +541,57 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
+    public static func experimentalShelve(
+        name: String,
+        paths: [String],
+        message: String,
+        keepLocal: Bool
+    ) -> SvnCommand {
+        var arguments = ["x-shelve"]
+        if keepLocal {
+            arguments.append("--keep-local")
+        }
+        arguments += ["--encoding", "UTF-8", "-m", message, "--", name]
+        arguments += paths
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func experimentalUnshelve(
+        name: String,
+        version: Int?,
+        drop: Bool
+    ) -> SvnCommand {
+        var arguments = ["x-unshelve"]
+        if drop {
+            arguments.append("--drop")
+        }
+        arguments += ["--", name]
+        if let version {
+            arguments.append(String(version))
+        }
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func experimentalShelfList() -> SvnCommand {
+        SvnCommand(arguments: ["x-shelf-list", "--verbose", "."])
+    }
+
+    public static func experimentalShelfDiff(name: String, version: Int?) -> SvnCommand {
+        var arguments = ["x-shelf-diff", "--", name]
+        if let version {
+            arguments.append(String(version))
+        }
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func experimentalShelfLog(name: String) -> SvnCommand {
+        SvnCommand(arguments: ["x-shelf-log", "--", name])
+    }
+
+    public static func experimentalShelfDrop(name: String) -> SvnCommand {
+        SvnCommand(arguments: ["x-shelf-drop", "--", name, "."])
+    }
+
     private static func usesUTF8Encoding(forPropertyNamed name: String) -> Bool {
         let textProperties: Set<String> = [
             "svn:eol-style",

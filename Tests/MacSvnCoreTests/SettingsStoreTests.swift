@@ -67,6 +67,24 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.revisionGraph, graphSettings)
     }
 
+    func testShelvingVersionDefaultsPersistsAndDecodesLegacySettings() async throws {
+        XCTAssertEqual(AppSettings().shelvingVersion, .v3)
+
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.shelvingVersion = .v2
+        try await store.update(settings)
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.shelvingVersion, .v2)
+
+        let legacy = """
+        {"version":1,"settings":{"logBatchSize":100,"branchLayout":{"trunk":"trunk","branches":"branches","tags":"tags"},"processTimeout":120}}
+        """
+        let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.settings.shelvingVersion, .v3)
+    }
+
     func testResetRestoresDefaults() async throws {
         let root = temporaryRoot()
         let store = makeStore(root: root)

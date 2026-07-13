@@ -8,6 +8,7 @@ struct SvnIntegrationFixture {
     let repositoryURL: String
     let trunkURL: String
     let workingCopy: URL
+    let svnExecutable: String
     let backend: SvnCliBackend
 }
 
@@ -59,6 +60,7 @@ class SvnIntegrationTestCase: XCTestCase {
             repositoryURL: repository.fileURLString,
             trunkURL: repository.appendingPathComponent("trunk", isDirectory: true).fileURLString,
             workingCopy: workingCopy,
+            svnExecutable: tools.svn,
             backend: SvnCliBackend(svnExecutable: tools.svn, runner: ProcessRunner(), timeout: 30)
         )
     }

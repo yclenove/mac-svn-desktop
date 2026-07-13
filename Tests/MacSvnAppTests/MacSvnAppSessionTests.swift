@@ -48,4 +48,24 @@ final class MacSvnAppSessionTests: XCTestCase {
         XCTAssertEqual(settings.logBatchSize, 50)
         XCTAssertEqual(executablePath, "/opt/homebrew/bin/svn")
     }
+
+    func testBootstrapInjectsConfiguredShelvingVersionIntoOfficialClient() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let settingsURL = root.appendingPathComponent("settings.json")
+        let configured = AppSettings(svnPath: "/usr/bin/false", shelvingVersion: .v2)
+        let data = try JSONEncoder().encode(SettingsFile(settings: configured))
+        try data.write(to: settingsURL)
+
+        let session = try await MacSvnAppSession.bootstrap(supportDirectory: root)
+        let availability = await session.shelveService.officialAvailability(wc: root)
+
+        guard case .unavailable(let version, _) = availability else {
+            return XCTFail("Expected unavailable shelving client backed by /usr/bin/false")
+        }
+        XCTAssertEqual(version, .v2)
+    }
 }
