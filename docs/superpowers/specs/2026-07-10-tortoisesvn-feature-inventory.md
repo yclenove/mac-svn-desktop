@@ -64,7 +64,7 @@
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals | T3 |
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | ✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达 | T2 |
-| D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6 | T2/T3 |
+| D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/现代 complete merge（reintegrate）/dry-run/Unified Diff/mergeinfo/冲突回跳；日志单修订合并也已接入 | T2/T3 |
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
 | D22 | Patch | create/apply patch | ✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口 | T2 |
 | D23 | Blame | blame + blame differences | 🟡 Blame 修订范围/悬停日志 ✅；Blame differences 仍属 T3.9 | T2/T3 |
@@ -104,7 +104,7 @@
 | 22 | Branch/Tag | `copy` 三种源 | HEAD / 特定修订 / WC | ✅ 三源表单；peg 仅剥末尾 `@数字`；CFM/⌘K 可达 | T2 |
 | 23 | Switch | `switch [-r] URL` | 未提交警告 | ✅ 可选 revision；未提交变更二次确认并保留目标参数；CFM/⌘K 可达 | T2 |
 | 24 | Merge | `merge [--dry-run]` + unified 预览 | 范围/树、Test merge | ✅ 范围/两树、dry-run、Unified Diff、大文本门禁、冲突工作区回跳 | T2 |
-| 25 | Merge reintegrate | 🔷 | 确认 | ❌ | T3 |
+| 25 | Merge reintegrate | 🔷 | 确认 | ✅ 现代 SVN complete merge 语义；Merge 向导支持 dry-run/执行/冲突回跳；真实 WC 验证 | T3 |
 | 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ✅ URL/WC 导出、修订、`--ignore-externals`、UI | T2 |
 | 27 | Relocate | `switch --relocate` | From/To URL | ✅ From/To 校验、写锁、认证重试、UI | T2 |
 | 28 | Create Repository Here | `svnadmin create --fs-type fsfs` | 路径 | ❌ | T3 |
@@ -121,7 +121,7 @@
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证 | T3 |
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
 | 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开 | T2 |
-| 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ❌ | T3 |
+| 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ✅ `svn merge -c REV`；日志右键确认后合并到当前 WC | T3 |
 | 43 | Import in Place | DUG 就地导入 | 向导 | ✅ 导入后临时检出并原子替换目录内容 | T2 |
 | 44 | Remove from version control | 导出式去 `.svn` | 确认 | ✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件 | T2 |
 | 45 | Repair Move / Repair Copy | CFM 内修复 | 配对选择 | ✅ | T1 |
@@ -208,7 +208,7 @@
 | L10 | Update item to revision | 更新到该修订 | ✅ | T2 |
 | L11 | Revert to this revision | 反向合并到该点（WC） | ✅ | T2 |
 | L12 | Revert changes from this revision | 只撤销该修订 | ✅ | T2 |
-| L13 | Merge revision to… | 合并到另一 WC | ❌ | T3 |
+| L13 | Merge revision to… | 合并到另一 WC | ✅ 日志路径菜单、确认门控、`-c REV` 合并、冲突工作区回跳 | T3 |
 | L14 | Checkout… / Export… | 从日志检出/导出 | ✅ | T2 |
 | L15 | Edit author / log message | 改修订属性（需仓库钩子允许） | ❌ | T3 |
 | L16 | Show revision properties | 修订属性 | ❌ | T3 |

@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2 与 T3.1–T3.5，当前继续 T3.6。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2 与 T3.1–T3.6，当前继续 T3.7。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T3.6 Merge reintegrate + 日志 Merge revision to…（#25、#42、L13）
+当前第一个未完成项：T3.7 Create Repository Here（#28）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T3.5 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | `c4bf526`（T3.5 官方 Shelve）；前一功能 tip 为 `4658126` |
-| 覆盖率 | **78/114 = 68.42%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **749** 绿（2026-07-13；含真实 SVN Shelve V2/V3 往返、Externals、changelist、copy-edge / Revision Graph Diff 集成测） |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.5 ✅；下一 **T3.6** |
+| 工作区 | T3.6 实现与验收文档已更新，提交后应干净 |
+| 最近功能 tip | `240f71c`（T3.6 Merge）；前一功能 tip 为 `c4bf526` |
+| 覆盖率 | **81/114 = 71.05%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **755** 绿（2026-07-13；含真实 SVN reintegrate/单修订合并、Shelve V2/V3、Externals、changelist、copy-edge / Revision Graph Diff 集成测） |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.6 ✅；下一 **T3.7** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -66,6 +66,7 @@
 | **T3.3** | Change Lists（#38、D11） | ✅ |
 | **T3.4** | Externals 编辑与更新行为（#39、D18） | ✅ |
 | **T3.5** | 官方 `svn shelve` 对齐 + 本地搁置迁移（#37、D12、S05） | ✅ |
+| **T3.6** | Merge reintegrate + 日志 Merge revision to…（#25、#42、L13） | ✅ |
 | T3.* | 专业能力（含 L03/L13/L15–L16、reintegrate、Revision Graph…） | |
 | T4.* | Overlay / Finder / Status Cache | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
@@ -78,7 +79,7 @@
 | Branch/Tag `#22` | `BranchCopyViewModel` + `MacSvnBranchesView` 创建表单 | **三种 copy 源**：HEAD / 特定修订 / WC；现多用 `record.repoURL` |
 | Switch `#23` | `BranchSwitchViewModel` 未提交变更确认已有 | CFM/⌘K Catalog 入口；确认 UX 与 inventory 对齐 |
 | Merge `#24` | `MergeWizardViewModel` dry-run + `MacSvnMergeWizardView` | **两树合并**；**Unified Diff 预览**；冲突后进冲突工作区；Catalog 入口 |
-| Domain | D19/D20 仍 🟡 | 升 ✅ 时写清「平台等价」注释；reintegrate 仍属 T3.6 |
+| Domain | D19/D20 ✅ | 现代 complete merge 作为 reintegrate 的平台等价实现已在 T3.6 验证 |
 
 相关文件（优先改这些）：
 
@@ -109,7 +110,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.6**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.7**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -237,6 +238,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T3.3 | eb73ea1 | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；覆盖率 73/114；全量 730 绿；下一刀 T3.4 |
 | 2026-07-13 | T3.4 | 4658126 | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；覆盖率 75/114；全量 738 绿；下一刀 T3.5 |
 | 2026-07-13 | T3.5 | c4bf526 | 官方 `svn shelve` V2/V3、能力探测、双轨搁置 UI 与本地手工快照迁移；真实 SVN 往返；覆盖率 78/114；全量 749 绿；下一刀 T3.6 |
+| 2026-07-13 | T3.6 | 240f71c | 现代 complete merge reintegrate、日志 L13 `svn merge -c REV`、确认门控与冲突回跳；真实 SVN 往返；覆盖率 81/114；全量 755 绿；下一刀 T3.7 |
 
 ---
 

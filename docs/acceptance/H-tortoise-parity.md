@@ -77,7 +77,7 @@
 - [x] Change Lists（#38、D11）：status XML 归属；CFM 变更列表列/分组；选中路径移入/移出列表（含深度）；Commit 按列表选择并默认排除 `ignore-on-commit`；真实 SVN 往返验证
 - [x] Externals（#39、D18）：`svn:externals` 目录/文件定义编辑、operative/peg revision、注释保留、仓库 URL 拖拽预填；保存后可立即更新且不忽略 externals；真实 SVN 往返验证
 - [x] 官方 Shelve 对齐（#37）：设置支持 V2/V3；官方能力探测、Shelve/List/Diff/Log/Unshelve/Drop；本地手工 Patch 快照可迁移且官方失败不删除快照；真实 SVN V2/V3 往返验证
-- [ ] Merge reintegrate + 日志 Merge revision to…（#25,#42, L13）
+- [x] Merge reintegrate + 日志 Merge revision to…（#25,#42, L13）：现代 SVN complete merge 语义；Merge 向导 dry-run/执行/冲突回跳；日志右键 `-c REV` 合并确认；真实 WC 验证
 - [ ] Create Repository Here（#28）
 - [ ] Delete keep local / Delete unversioned（#15,#16）
 - [ ] Compare revisions / Blame differences（#40, L03）

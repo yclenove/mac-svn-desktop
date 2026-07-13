@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T11:23:06Z",
+  "generated_at": "2026-07-13T11:35:17Z",
   "total": 114,
-  "done": 78,
+  "done": 81,
   "partial": 12,
-  "missing": 24,
-  "coverage": 0.684211,
-  "coverage_percent": 68.42,
+  "missing": 21,
+  "coverage": 0.710526,
+  "coverage_percent": 71.05,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,15 +16,15 @@
     },
     "command": {
       "total": 46,
-      "done": 40,
+      "done": 42,
       "partial": 0,
-      "missing": 6
+      "missing": 4
     },
     "log": {
       "total": 20,
-      "done": 15,
+      "done": 16,
       "partial": 1,
-      "missing": 4
+      "missing": 3
     },
     "settings": {
       "total": 13,
@@ -177,7 +177,7 @@
       "key": "D20",
       "section": "domain",
       "title": "Merge",
-      "raw_status": "✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6",
+      "raw_status": "✅ 范围/两树/现代 complete merge（reintegrate）/dry-run/Unified Diff/mergeinfo/冲突回跳；日志单修订合并也已接入",
       "status": "done"
     },
     {
@@ -408,8 +408,8 @@
       "key": "cmd.25",
       "section": "command",
       "title": "Merge reintegrate",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 现代 SVN complete merge 语义；Merge 向导支持 dry-run/执行/冲突回跳；真实 WC 验证",
+      "status": "done"
     },
     {
       "key": "cmd.26",
@@ -527,8 +527,8 @@
       "key": "cmd.42",
       "section": "command",
       "title": "Merge revision to…",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `svn merge -c REV`；日志右键确认后合并到当前 WC",
+      "status": "done"
     },
     {
       "key": "cmd.43",
@@ -646,8 +646,8 @@
       "key": "L13",
       "section": "log",
       "title": "Merge revision to…",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 日志路径菜单、确认门控、`-c REV` 合并、冲突工作区回跳",
+      "status": "done"
     },
     {
       "key": "L14",

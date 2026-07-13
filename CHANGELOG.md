@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.6：Merge reintegrate 与日志 Merge revision to…（#25、#42、L13）
+- Affected: SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, MergeWizardViewModel, MacSvnMergeWizardView, LogContextActionPolicy, MacSvnLogView, Tests/*, docs/*
+- Impact: 适配 SVN 1.14 的现代 complete merge reintegrate 语义（不使用已废弃的 `--reintegrate`）；Merge 向导支持重新整合 dry-run/执行及冲突回跳；日志路径菜单新增 L13，使用 `svn merge -c REV` 合并到当前工作副本并提供高危确认；真实 SVN 验证；全量 755 绿；覆盖率 81/114；下一 T3.7
+
 - Summary: Tortoise 完美 Loop T3.5：官方 `svn shelve` 对齐与本地搁置迁移（#37、D12、S05）
 - Affected: SvnExperimentalShelvingClient, ShelveService, ShelveViewModel, MacSvnShelveView, MacSvnSettingsView, MacSvnAppSession, AppSettings, Tests/*, docs/*
 - Impact: 通过 `SVN_EXPERIMENTAL_COMMANDS=shelf2|shelf3` 接入官方 `x-shelve`、`x-shelf-list`、`x-shelf-diff`、`x-shelf-log`、`x-unshelve`、`x-shelf-drop`；设置支持 V2/V3（默认 V3）；搁置页提供官方与本地双轨能力，手工本地快照可迁移且官方失败保留快照，安全快照拒绝迁移；全量 749 绿；覆盖率 78/114；下一 T3.6
