@@ -33,7 +33,7 @@
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
 | 工作区 | T3.2 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | `（提交后回填）`（T3.2 Revision Graph）；前一功能 tip 为 `7e5b1e0` |
+| 最近功能 tip | `681268b`（T3.2 Revision Graph）；前一功能 tip 为 `7e5b1e0` |
 | 覆盖率 | **71/114 = 62.28%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **724** 绿（2026-07-13；含真实 SVN copy-edge / Revision Graph Diff 集成测） |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.2 ✅；下一 **T3.3** |
@@ -230,7 +230,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.14 | 5a418c9 | Progress Auto-close 四档策略、设置持久化、更新/本地成功操作完成提示接线；全量 688 绿；下一刀 T2.15/G2 |
 | 2026-07-13 | T2.15/G2 | 4d5fff6 | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
 | 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
-| 2026-07-13 | T3.2 | （提交后回填） | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、Log/Checkout/Blame/Diff；真实 SVN copy-edge/Diff；覆盖率 71/114；全量 724 绿；下一刀 T3.3 |
+| 2026-07-13 | T3.2 | 681268b | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、Log/Checkout/Blame/Diff；真实 SVN copy-edge/Diff；覆盖率 71/114；全量 724 绿；下一刀 T3.3 |
 
 ---
 
