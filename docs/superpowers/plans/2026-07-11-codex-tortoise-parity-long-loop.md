@@ -232,7 +232,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.15/G2 | 4d5fff6 | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
 | 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
 | 2026-07-13 | T3.2 | 681268b | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、Log/Checkout/Blame/Diff；真实 SVN copy-edge/Diff；覆盖率 71/114；全量 724 绿；下一刀 T3.3 |
-| 2026-07-13 | T3.3 | （提交后回填） | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；覆盖率 73/114；全量 730 绿；下一刀 T3.4 |
+| 2026-07-13 | T3.3 | eb73ea1 | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；覆盖率 73/114；全量 730 绿；下一刀 T3.4 |
 
 ---
 
