@@ -213,7 +213,7 @@
 | L15 | Edit author / log message | 改修订属性（需仓库钩子允许） | ✅ 日志右键/详情与 ⌘K；仅写变化的 `svn:author`/`svn:log`；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示与真实 SVN 往返 | T3 |
 | L16 | Show revision properties | 修订属性 | ✅ `proplist --revprop -r` 全量展示内置/自定义属性；Unicode XML 解析；日志右键/详情与 ⌘K 原子修订意图 | T3 |
 | L17 | Copy to clipboard | 复制日志摘要 | ✅ | T2 |
-| L18 | Filter / Statistics / Offline cache | 过滤、统计、离线 | 🟡 作者/说明/路径过滤 ✅；统计/离线 T3 | T2/T3 |
+| L18 | Filter / Statistics / Offline cache | 过滤、统计、离线 | ✅ 作者/说明/路径过滤；当前过滤结果统计；在线缓存、网络/认证/环境失败回退、强制离线读取；按仓库目标/stop-on-copy 隔离 | T2/T3 |
 | L19 | Actions 列图标 | M/A/D/R/Moved/Merged 等 | ✅ MADR 汇总；Moved/Merged 图标进阶仍开 | T2 |
 | L20 | stop-on-copy、Next 100、Show All | 拉取策略 | ✅ | T2 |
 
@@ -235,7 +235,7 @@
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 弱 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ❌ | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ❌ | T5 |
-| S13 | Log Cache | 日志缓存策略 | ❌ | T3 |
+| S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |
 
 ---
 

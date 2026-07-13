@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T13:08:19Z",
+  "generated_at": "2026-07-13T13:36:26Z",
   "total": 114,
-  "done": 89,
-  "partial": 11,
-  "missing": 14,
-  "coverage": 0.780702,
-  "coverage_percent": 78.07,
+  "done": 91,
+  "partial": 10,
+  "missing": 13,
+  "coverage": 0.798246,
+  "coverage_percent": 79.82,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -22,15 +22,15 @@
     },
     "log": {
       "total": 20,
-      "done": 19,
-      "partial": 1,
+      "done": 20,
+      "partial": 0,
       "missing": 0
     },
     "settings": {
       "total": 13,
-      "done": 2,
+      "done": 3,
       "partial": 4,
-      "missing": 7
+      "missing": 6
     },
     "overlay": {
       "total": 7,
@@ -681,8 +681,8 @@
       "key": "L18",
       "section": "log",
       "title": "Filter / Statistics / Offline cache",
-      "raw_status": "🟡 作者/说明/路径过滤 ✅；统计/离线 T3",
-      "status": "partial"
+      "raw_status": "✅ 作者/说明/路径过滤；当前过滤结果统计；在线缓存、网络/认证/环境失败回退、强制离线读取；按仓库目标/stop-on-copy 隔离",
+      "status": "done"
     },
     {
       "key": "L19",
@@ -786,8 +786,8 @@
       "key": "S13",
       "section": "settings",
       "title": "Log Cache",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化",
+      "status": "done"
     },
     {
       "key": "overlay.01",

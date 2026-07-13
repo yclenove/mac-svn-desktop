@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.11：日志统计 / 离线缓存（L18、S13）
+- Affected: LogStatisticsBuilder, LogCacheStore, LogViewModel, MacSvnLogView, MacSvnSettingsView, MacSvnAppSession, AppSettings, Tests/*, docs/*
+- Impact: 日志统计支持当前过滤结果的修订、作者、日期、动作汇总；在线日志按仓库目标与 stop-on-copy 隔离缓存，支持容量/保留期策略、全量清理、网络/认证/环境失败回退和强制离线读取；设置持久化日志缓存策略；真实应用目标编译通过；全量 798 绿；覆盖率 91/114；下一 T3.12/G3
+
 - Summary: Tortoise 完美 Loop T3.10：Edit author/message + revision properties（L15、L16）
 - Affected: RevisionPropertyViewModel, MacSvnLogView, MacSvnAppNavigator, SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, PropertyXMLParser, ProcessRunner, Tests/*, docs/*
 - Impact: 日志详情与右键可查看目标修订全部 revprops，并编辑 `svn:author` / `svn:log`；仅写变化属性，认证失败自动重试，写操作互斥；UTF-8 值通过 `0600` 临时文件传递，稳定支持中文且不暴露在 argv；仓库拒绝时展示 `pre-revprop-change` hook 提示；⌘K 原子注入修订/仓库；真实 SVN 验证无 hook 拒绝及作者/中文说明/自定义属性往返；全量 787 绿；覆盖率 89/114；下一 T3.11

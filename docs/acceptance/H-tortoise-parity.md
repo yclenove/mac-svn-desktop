@@ -52,7 +52,7 @@
 ## T2 — 进阶日常 + 仓库
 
 - [x] Checkout / Update to revision（depth、ignore-externals）（#1,#3）
-- [x] Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20；统计/离线仍属 T3）
+- [x] Show Log：过滤、stop-on-copy、Next/All、Actions 列（#7, L18–L20）
 - [x] 日志右键 L01–L08（除 L03→T3；L09–L12、L14、L17 见后续）
 - [x] 日志右键 L09–L12、L14
 - [x] 日志右键 L17（Copy clipboard）
@@ -82,7 +82,7 @@
 - [x] Delete keep local / Delete unversioned（#15,#16）：`svn delete --keep-local` 保留磁盘文件；未版本项提供预览勾选、二次确认，执行前重读 status 并拒绝绝对路径、WC 越界和版本化路径；CFM/⌘K 可达；真实 SVN 文件/目录往返验证
 - [x] Compare revisions / Blame differences（#40, L03）：双修订 blame 元数据与 `svn diff -r OLD:NEW` 行对齐，展示左右作者/日期/内容、增删改与归属变化；支持变化筛选、BASE 和日志 PREV:REV；CFM/⌘K/L03 可达；仓库 URL@peg 与真实 SVN 双提交往返验证
 - [x] 日志 Edit author/message + rev props（L15,L16）：查看全部修订属性；编辑作者/日志说明且仅写变化项；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示；日志右键/详情/⌘K 可达；真实 SVN 无 hook 拒绝与中文往返验证
-- [ ] 日志统计 / 离线缓存（L18 剩余, S13）
+- [x] 日志统计 / 离线缓存（L18、S13）：当前过滤结果统计；在线缓存按仓库目标与 stop-on-copy 隔离；容量/保留期策略、网络/认证/环境失败回退、强制离线读取、设置页清理
 - [ ] **G3**：inventory T3 全 ✅；本节勾选；全量测试绿
 
 ---

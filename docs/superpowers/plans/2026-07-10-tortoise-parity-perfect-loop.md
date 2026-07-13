@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T3.11** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T3.12/G3** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T2 + G0/G1/G2 ✅；T3.1–T3.10 ✅；**下一 T3.11**；覆盖率 **89/114（78.07%）** |
+| 当前状态（2026-07-13） | T0–T2 + G0/G1/G2 ✅；T3.1–T3.11 ✅；**下一 T3.12/G3**；覆盖率 **91/114（79.82%）** |
 
 ---
 
@@ -168,7 +168,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T3.8** Delete keep local / Delete unversioned（#15,#16）
 - [x] **T3.9** Compare revisions / Blame differences（#40, L03）
 - [x] **T3.10** 日志 Edit author/message + revision properties（L15,L16）
-- [ ] **T3.11** 日志统计 / 离线缓存（L18 剩余, S13）
+- [x] **T3.11** 日志统计 / 离线缓存（L18、S13）
 - [ ] **T3.12** **闸门 G3**：inventory T3 → ✅；H-tortoise T3；全量测试
 
 ### Wave T4 — Shell 集成
@@ -269,6 +269,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T3.8 | 86d65da | `svn delete --keep-local`；未版本预览勾选、二次 status/WC 边界复核、父子路径合并；CFM/⌘K 原子意图；真实 SVN 文件/目录往返；全量 771 绿 | #15/#16、D15、H-T3 ✅；覆盖率 84/114 | 下一 T3.9 |
 | 2026-07-13 | T3.9 | 5f519b9 | 双修订 blame+diff 行对齐；左右作者/日期/内容、变化汇总/筛选、BASE；L03 PREV:REV、仓库 URL@peg、CFM/⌘K；真实 SVN 双提交往返；全量 778 绿 | #40、L03、D23、H-T3 ✅；覆盖率 87/114 | 下一 T3.10 |
 | 2026-07-13 | T3.10 | c9c41ef | 全量 revprops 展示；作者/日志说明仅变化写入；认证重试/写锁；UTF-8 `0600` 临时值文件；hook 拒绝提示；日志右键/详情/⌘K；真实 SVN 无 hook 拒绝与中文/自定义属性往返；全量 787 绿 | L15、L16、H-T3 ✅；覆盖率 89/114 | 下一 T3.11 |
+| 2026-07-13 | T3.11 | 73cf430 | 日志统计作用于当前过滤结果；作者/日期/动作统计；日志缓存按仓库目标/stop-on-copy 隔离，支持容量/保留期、清理、网络/认证/环境失败回退与强制离线；设置持久化；全量 798 绿 | L18、S13、H-T3 ✅；覆盖率 91/114 | 下一 T3.12/G3 |
 
 ---
 
