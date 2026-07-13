@@ -989,6 +989,10 @@ public struct SvnInfo: Equatable, Sendable {
     public let revision: Revision?
     public let kind: String?
     public let conflicts: [ConflictInfo]
+    public let lastChangedRevision: Revision?
+    public let lastChangedAuthor: String?
+    public let lastChangedDate: Date?
+    public let lock: RemoteLockInfo?
 
     public init(
         path: String,
@@ -996,7 +1000,11 @@ public struct SvnInfo: Equatable, Sendable {
         repositoryRoot: String?,
         revision: Revision?,
         kind: String?,
-        conflicts: [ConflictInfo] = []
+        conflicts: [ConflictInfo] = [],
+        lastChangedRevision: Revision? = nil,
+        lastChangedAuthor: String? = nil,
+        lastChangedDate: Date? = nil,
+        lock: RemoteLockInfo? = nil
     ) {
         self.path = path
         self.url = url
@@ -1004,6 +1012,10 @@ public struct SvnInfo: Equatable, Sendable {
         self.revision = revision
         self.kind = kind
         self.conflicts = conflicts
+        self.lastChangedRevision = lastChangedRevision
+        self.lastChangedAuthor = lastChangedAuthor
+        self.lastChangedDate = lastChangedDate
+        self.lock = lock
     }
 }
 

@@ -98,11 +98,33 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("let items: [(SvnCommandID, String)]"))
         XCTAssertTrue(source.contains(".showLog"))
         XCTAssertTrue(source.contains("SvnCommandCatalog.extendedMenuCommands"))
+        XCTAssertTrue(source.contains(".properties"))
         XCTAssertTrue(source.contains("commandID"))
         XCTAssertTrue(source.contains("submenu"))
         XCTAssertTrue(source.contains("selectedItemURLs()"))
         XCTAssertTrue(source.contains(".map(\\.path)"))
         XCTAssertTrue(source.contains("paths: paths"))
+    }
+
+    func testPropertiesPageProvidesTortoiseEquivalentSVNInformationSummary() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnPropertiesView.swift")
+
+        XCTAssertTrue(source.contains("SVN 信息"))
+        XCTAssertTrue(source.contains("最后作者"))
+        XCTAssertTrue(source.contains("仓库 URL"))
+        XCTAssertTrue(source.contains("工作副本状态"))
+        XCTAssertTrue(source.contains("锁定"))
+        XCTAssertTrue(source.contains("属性摘要"))
+        XCTAssertTrue(source.contains("session.svnService.info"))
+        XCTAssertTrue(source.contains("session.svnService.status"))
+    }
+
+    func testPropertiesPageDiscardsStaleInformationLoadsAfterTargetChanges() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnPropertiesView.swift")
+
+        XCTAssertTrue(source.contains("@State private var loadGeneration"))
+        XCTAssertTrue(source.contains("loadGeneration += 1"))
+        XCTAssertTrue(source.contains("guard generation == loadGeneration else { return }"))
     }
 
     private static func readFinderSyncSource() throws -> String {

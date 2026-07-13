@@ -89,9 +89,13 @@ public final class MacSvnWorkspaceController: ObservableObject {
     /// 深链 / CLI 打开本地路径：已登记则选中，否则尝试添加为工作副本。
     public func openLocalPath(_ path: String) async {
         let normalized = (path as NSString).standardizingPath
-        if let existing = records.first(where: {
-            ($0.localPath as NSString).standardizingPath == normalized
-        }) {
+        let existing = records.compactMap { record -> (record: WorkingCopyRecord, path: String)? in
+            let workingCopyPath = (record.localPath as NSString).standardizingPath
+            let prefix = workingCopyPath.hasSuffix("/") ? workingCopyPath : workingCopyPath + "/"
+            guard normalized == workingCopyPath || normalized.hasPrefix(prefix) else { return nil }
+            return (record, workingCopyPath)
+        }.max { $0.path.count < $1.path.count }?.record
+        if let existing {
             selectedID = existing.id
             errorMessage = nil
             return

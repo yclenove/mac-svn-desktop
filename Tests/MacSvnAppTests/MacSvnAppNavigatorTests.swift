@@ -78,6 +78,19 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         )
     }
 
+    func testFinderPropertiesDeepLinkOpensAbsoluteWorkingCopyPathAndCarriesTarget() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .settings)
+
+        let result = navigator.handle(deepLink: .command(
+            command: .properties,
+            paths: ["/tmp/repo/README.txt"]
+        ))
+
+        XCTAssertEqual(result, .navigated(to: .properties))
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/repo/README.txt")
+        XCTAssertEqual(navigator.pendingPropertyPath, "/tmp/repo/README.txt")
+    }
+
     func testCLICommitUICarriesMessage() {
         let navigator = MacSvnAppNavigator()
         navigator.handle(cli: .commitUI(path: "/wc", initialMessage: "fix: demo"))

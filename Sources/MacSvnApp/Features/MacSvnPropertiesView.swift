@@ -9,6 +9,10 @@ public struct MacSvnPropertiesView: View {
     @State private var paths: [String] = ["."]
     @State private var selected: Set<String> = ["."]
     @State private var viewModel: PropertyViewModel?
+    @State private var itemInfo: SvnInfo?
+    @State private var itemStatus: ItemStatus?
+    @State private var infoError: String?
+    @State private var loadGeneration = 0
     @State private var name = ""
     @State private var value = ""
     @State private var statusText: String?
@@ -55,6 +59,7 @@ public struct MacSvnPropertiesView: View {
                         }
                     VStack(alignment: .leading, spacing: 12) {
                         if let statusText { Text(statusText).font(.caption).foregroundStyle(.secondary) }
+                        svnInfoPanel
                         List(viewModel?.properties ?? [], id: \.name) { prop in
                             VStack(alignment: .leading) {
                                 Text(prop.name).font(.headline)
@@ -138,6 +143,43 @@ public struct MacSvnPropertiesView: View {
         .sheet(isPresented: $showExternalsEditor) {
             externalsEditor
         }
+    }
+
+    private var svnInfoPanel: some View {
+        GroupBox("SVN 信息") {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
+                infoRow("修订", itemInfo?.revision.map { "r\($0.value)" } ?? "-")
+                infoRow("最后作者", itemInfo?.lastChangedAuthor ?? "-")
+                infoRow("仓库 URL", itemInfo?.url ?? "-")
+                infoRow("工作副本状态", itemStatus?.rawValue ?? "-")
+                infoRow("锁定", lockSummary)
+                infoRow("属性摘要", propertySummary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let infoError {
+                Text(infoError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func infoRow(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label).foregroundStyle(.secondary)
+            Text(value).textSelection(.enabled)
+        }
+    }
+
+    private var lockSummary: String {
+        guard let lock = itemInfo?.lock else { return "未锁定" }
+        let details = [lock.owner, lock.comment].compactMap { $0 }.filter { !$0.isEmpty }
+        return details.isEmpty ? "已锁定" : details.joined(separator: " · ")
+    }
+
+    private var propertySummary: String {
+        let names = (viewModel?.properties ?? []).map(\.name).sorted()
+        return names.isEmpty ? "无" : "\(names.count) 项：\(names.joined(separator: "、"))"
     }
 
     private var externalsEditor: some View {
@@ -227,6 +269,8 @@ public struct MacSvnPropertiesView: View {
     }
 
     private func loadProperties() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         guard let record = workspaceController.selectedRecord,
               let path = selected.first
         else { return }
@@ -236,7 +280,43 @@ public struct MacSvnPropertiesView: View {
             provider: session.svnService
         )
         viewModel = vm
+        let workingCopy = URL(fileURLWithPath: record.localPath)
+        async let infoRequest = session.svnService.info(
+            wc: workingCopy,
+            target: path
+        )
+        async let statusRequest = session.svnService.status(wc: workingCopy)
         await vm.load()
+        var loadedInfo: SvnInfo?
+        var loadedInfoError: String?
+        do {
+            loadedInfo = try await infoRequest
+        } catch {
+            loadedInfoError = "SVN 信息读取失败：\(error.localizedDescription)"
+        }
+        var loadedStatus: ItemStatus?
+        do {
+            let statusTarget = Self.relativeTarget(path, workingCopy: workingCopy)
+            loadedStatus = try await statusRequest.first { status in
+                status.path == path || status.path == statusTarget
+            }?.itemStatus
+        } catch {
+            loadedStatus = nil
+        }
+        guard generation == loadGeneration else { return }
+        itemInfo = loadedInfo
+        infoError = loadedInfoError
+        itemStatus = loadedStatus
+    }
+
+    private static func relativeTarget(_ path: String, workingCopy: URL) -> String {
+        guard (path as NSString).isAbsolutePath else { return path }
+        let rootPath = workingCopy.standardizedFileURL.path
+        let targetPath = URL(fileURLWithPath: path).standardizedFileURL.path
+        if targetPath == rootPath { return "." }
+        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard targetPath.hasPrefix(prefix) else { return path }
+        return String(targetPath.dropFirst(prefix.count))
     }
 
     private func consumePendingProperty() async {

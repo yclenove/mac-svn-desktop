@@ -84,6 +84,7 @@ final class MacSvnFinderSync: FIFinderSync {
         let extendedCommandIDs: [SvnCommandID] = [
             .add,
             .delete,
+            .properties,
         ] + SvnCommandCatalog.extendedMenuCommands.map(\.id)
         for commandID in extendedCommandIDs {
             guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }

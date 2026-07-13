@@ -616,6 +616,15 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertTrue(mineLocks.first?.isOwnedByWorkingCopy ?? false)
         XCTAssertTrue(mineLocks.first?.isRepositoryLocked ?? false)
 
+        let lockedInfo = try await fixture.backend.info(
+            wc: fixture.workingCopy,
+            target: "README.txt"
+        )
+        XCTAssertEqual(lockedInfo.lastChangedRevision, Revision(1))
+        XCTAssertFalse(lockedInfo.lastChangedAuthor?.isEmpty ?? true)
+        XCTAssertEqual(lockedInfo.lock?.owner, NSUserName())
+        XCTAssertEqual(lockedInfo.lock?.comment, "锁定：编辑中")
+
         try await service.unlock(wc: fixture.workingCopy, paths: ["README.txt"], force: false)
         let afterUnlock = try await service.locks(wc: fixture.workingCopy, targets: ["README.txt"])
         XCTAssertEqual(afterUnlock, [])

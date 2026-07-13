@@ -237,7 +237,9 @@ public final class MacSvnAppNavigator: ObservableObject {
         let canInferWorkingCopyPath = command != .diffWithURL || (
             paths.count >= 2 && (paths[0] as NSString).isAbsolutePath
         )
-        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand, !isChangelistCommand,
+        let inspectorHasAbsolutePath = isPathInspectorCommand
+            && paths.first.map { ($0 as NSString).isAbsolutePath } == true
+        if !isLockCommand, !isPatchCommand, (!isPathInspectorCommand || inspectorHasAbsolutePath), !isChangelistCommand,
            canInferWorkingCopyPath,
            let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
