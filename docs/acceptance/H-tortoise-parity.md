@@ -81,7 +81,7 @@
 - [x] Create Repository Here（#28）：仓库浏览器/⌘K 可达；目录选择后执行 `svnadmin create --fs-type fsfs`；真实仓库 format/db/conf 验证
 - [x] Delete keep local / Delete unversioned（#15,#16）：`svn delete --keep-local` 保留磁盘文件；未版本项提供预览勾选、二次确认，执行前重读 status 并拒绝绝对路径、WC 越界和版本化路径；CFM/⌘K 可达；真实 SVN 文件/目录往返验证
 - [x] Compare revisions / Blame differences（#40, L03）：双修订 blame 元数据与 `svn diff -r OLD:NEW` 行对齐，展示左右作者/日期/内容、增删改与归属变化；支持变化筛选、BASE 和日志 PREV:REV；CFM/⌘K/L03 可达；仓库 URL@peg 与真实 SVN 双提交往返验证
-- [ ] 日志 Edit author/message + rev props（L15,L16）
+- [x] 日志 Edit author/message + rev props（L15,L16）：查看全部修订属性；编辑作者/日志说明且仅写变化项；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示；日志右键/详情/⌘K 可达；真实 SVN 无 hook 拒绝与中文往返验证
 - [ ] 日志统计 / 离线缓存（L18 剩余, S13）
 - [ ] **G3**：inventory T3 全 ✅；本节勾选；全量测试绿
 

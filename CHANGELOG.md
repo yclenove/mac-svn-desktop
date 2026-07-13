@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.10：Edit author/message + revision properties（L15、L16）
+- Affected: RevisionPropertyViewModel, MacSvnLogView, MacSvnAppNavigator, SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, PropertyXMLParser, ProcessRunner, Tests/*, docs/*
+- Impact: 日志详情与右键可查看目标修订全部 revprops，并编辑 `svn:author` / `svn:log`；仅写变化属性，认证失败自动重试，写操作互斥；UTF-8 值通过 `0600` 临时文件传递，稳定支持中文且不暴露在 argv；仓库拒绝时展示 `pre-revprop-change` hook 提示；⌘K 原子注入修订/仓库；真实 SVN 验证无 hook 拒绝及作者/中文说明/自定义属性往返；全量 787 绿；覆盖率 89/114；下一 T3.11
+
 - Summary: Tortoise 完美 Loop T3.9：Compare revisions / Blame differences（#40、L03、D23）
 - Affected: BlameDifferenceViewModel, MacSvnBlameView, LogContextActionPolicy, MacSvnLogView, MacSvnAppNavigator, SvnCommandBuilder, SvnCommandCatalog, MacSvnChangesView, Tests/*, docs/*
 - Impact: 双修订分别读取 blame，并用 `svn diff -r OLD:NEW` 对齐左右内容与行号，展示作者/日期/修订、增删改和归属变化汇总；支持仅变化筛选、目标 BASE 与任意双修订；日志 L03 默认 PREV:REV，使用仓库 URL 与 `@peg` 保证历史路径解析；CFM/⌘K 可达；真实 SVN 双提交往返；全量 778 绿；覆盖率 87/114；下一 T3.10

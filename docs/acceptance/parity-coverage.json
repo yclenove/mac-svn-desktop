@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T12:41:23Z",
+  "generated_at": "2026-07-13T13:08:19Z",
   "total": 114,
-  "done": 87,
+  "done": 89,
   "partial": 11,
-  "missing": 16,
-  "coverage": 0.763158,
-  "coverage_percent": 76.32,
+  "missing": 14,
+  "coverage": 0.780702,
+  "coverage_percent": 78.07,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -22,9 +22,9 @@
     },
     "log": {
       "total": 20,
-      "done": 17,
+      "done": 19,
       "partial": 1,
-      "missing": 2
+      "missing": 0
     },
     "settings": {
       "total": 13,
@@ -128,7 +128,7 @@
       "key": "D13",
       "section": "domain",
       "title": "Show Log",
-      "raw_status": "🟡 过滤/stop/Next·All/Actions/L01–L14+L17 ✅；统计/离线/L15–L16 仍开",
+      "raw_status": "🟡 过滤/stop/Next·All/Actions/L01–L17 ✅；统计/离线仍开",
       "status": "partial"
     },
     {
@@ -282,7 +282,7 @@
       "key": "cmd.07",
       "section": "command",
       "title": "Show Log",
-      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L14+L17；L15–L16、统计/离线→T3",
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L17；统计/离线→T3",
       "status": "done"
     },
     {
@@ -660,15 +660,15 @@
       "key": "L15",
       "section": "log",
       "title": "Edit author / log message",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 日志右键/详情与 ⌘K；仅写变化的 `svn:author`/`svn:log`；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示与真实 SVN 往返",
+      "status": "done"
     },
     {
       "key": "L16",
       "section": "log",
       "title": "Show revision properties",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `proplist --revprop -r` 全量展示内置/自定义属性；Unicode XML 解析；日志右键/详情与 ⌘K 原子修订意图",
+      "status": "done"
     },
     {
       "key": "L17",
