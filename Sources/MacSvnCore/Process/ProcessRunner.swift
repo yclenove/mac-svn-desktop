@@ -213,8 +213,10 @@ private final class RunningProcessControl: @unchecked Sendable {
 
 private func processEnvironment() -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
-    environment["LC_ALL"] = "C"
-    environment["LANG"] = "C"
+    environment.removeValue(forKey: "LC_ALL")
+    environment["LANG"] = "en_US.UTF-8"
+    environment["LC_CTYPE"] = "en_US.UTF-8"
+    environment["LC_MESSAGES"] = "C"
 
     let extraPath = "/opt/homebrew/bin:/usr/local/bin"
     if let path = environment["PATH"], !path.isEmpty {

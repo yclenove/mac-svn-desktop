@@ -25,6 +25,12 @@ public struct MacSvnLogView: View {
     @State private var unifiedDiffText: String?
     @State private var showUnifiedDiffSheet = false
 
+    @State private var revisionPropertyViewModel: RevisionPropertyViewModel?
+    @State private var showRevisionPropertySheet = false
+    @State private var revisionPropertyEditMode = false
+    @State private var revisionAuthor = ""
+    @State private var revisionMessage = ""
+
     // T2.4 对话框状态
     @State private var showBranchSheet = false
     @State private var branchSourcePegURL = ""
@@ -128,6 +134,9 @@ public struct MacSvnLogView: View {
         .onChange(of: navigator.pendingRevisionGraphLog) { _, _ in
             Task { await reload() }
         }
+        .onChange(of: navigator.pendingRevisionPropertiesIntent) { _, _ in
+            Task { await consumePendingRevisionPropertiesIntent() }
+        }
         .task { await reload() }
         .sheet(isPresented: $showUnifiedDiffSheet) {
             NavigationStack {
@@ -155,6 +164,9 @@ public struct MacSvnLogView: View {
         }
         .sheet(isPresented: $showConfirmSheet) {
             confirmSheet
+        }
+        .sheet(isPresented: $showRevisionPropertySheet) {
+            revisionPropertySheet
         }
     }
 
@@ -348,6 +360,12 @@ public struct MacSvnLogView: View {
             Button("更新到此版本") {
                 Task { await updateTo(entry.revision) }
             }
+            Button("修订属性") {
+                Task { await openRevisionProperties(revision: entry.revision, edit: false) }
+            }
+            Button("编辑作者 / 说明") {
+                Task { await openRevisionProperties(revision: entry.revision, edit: true) }
+            }
             Button("复制摘要") {
                 copyLogEntryToClipboard(entry)
             }
@@ -372,6 +390,12 @@ public struct MacSvnLogView: View {
     @ViewBuilder
     private func logRevisionContextMenu(path: String, revision: Revision) -> some View {
         ForEach(LogContextActionPolicy.t2RevisionActionIDs, id: \.rawValue) { command in
+            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+                Task { await performLogAction(command, changedPath: path, revision: revision) }
+            }
+        }
+        Divider()
+        ForEach(LogContextActionPolicy.t3RevisionPropertyActionIDs, id: \.rawValue) { command in
             Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
@@ -475,6 +499,78 @@ public struct MacSvnLogView: View {
         .frame(minWidth: 420)
     }
 
+    @ViewBuilder
+    private var revisionPropertySheet: some View {
+        if let vm = revisionPropertyViewModel {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("r\(vm.revision.value) 修订属性")
+                        .font(.headline)
+                    Spacer()
+                    if vm.state == .loading || vm.state == .saving {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+                Text(vm.target)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+
+                if revisionPropertyEditMode {
+                    TextField("作者", text: $revisionAuthor)
+                        .textFieldStyle(.roundedBorder)
+                    Text("日志说明").font(.caption).foregroundStyle(.secondary)
+                    TextEditor(text: $revisionMessage)
+                        .font(.body)
+                        .frame(minHeight: 110)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.25))
+                        }
+                }
+
+                if case .error(let message) = vm.state {
+                    Text("仓库拒绝修订属性操作：\(message)\n请检查仓库 pre-revprop-change hook。")
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
+
+                List(vm.properties, id: \.name) { property in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(property.name).font(.caption.monospaced().weight(.semibold))
+                        Text(property.value.isEmpty ? "（空）" : property.value)
+                            .font(.body.monospaced())
+                            .textSelection(.enabled)
+                    }
+                    .padding(.vertical, 3)
+                }
+                .frame(minHeight: 220)
+
+                HStack {
+                    Button("刷新") { Task { await vm.load() } }
+                    Spacer()
+                    Button("关闭") { showRevisionPropertySheet = false }
+                    if revisionPropertyEditMode {
+                        Button("保存") { Task { await saveRevisionProperties(vm) } }
+                            .disabled(
+                                revisionAuthor.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    || vm.state == .saving
+                            )
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        Button("编辑") {
+                            revisionAuthor = vm.author
+                            revisionMessage = vm.message
+                            revisionPropertyEditMode = true
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .frame(minWidth: 560, minHeight: 480)
+        }
+    }
+
     private func filteredEntries(_ entries: [LogEntry]) -> [LogEntry] {
         entries.filter {
             LogFilterPolicy.matches(
@@ -525,6 +621,7 @@ public struct MacSvnLogView: View {
         } else {
             self.selectedRevision = vm.entries.first?.revision.value
         }
+        await consumePendingRevisionPropertiesIntent()
     }
 
     private func reloadPreservingFilters(viewModel: LogViewModel) async {
@@ -561,6 +658,13 @@ public struct MacSvnLogView: View {
         revision: Revision
     ) async {
         errorText = nil
+        if command == .logEditAuthorOrMessage || command == .logShowRevisionProperties {
+            await openRevisionProperties(
+                revision: revision,
+                edit: command == .logEditAuthorOrMessage
+            )
+            return
+        }
         guard !workingCopyURL.isEmpty else {
             errorText = "无法解析工作副本 URL，请刷新后重试"
             return
@@ -657,6 +761,60 @@ public struct MacSvnLogView: View {
             pendingConfirmDetail = "来源：\(sourceURL)\n将执行单修订合并（svn merge -c \(rev.value)），并可能产生冲突。"
             pendingConfirmAction = { await self.mergeRevisionTo(sourceURL: sourceURL, revision: rev) }
             showConfirmSheet = true
+        }
+    }
+
+    private func consumePendingRevisionPropertiesIntent() async {
+        guard let intent = navigator.consumePendingRevisionPropertiesIntent() else { return }
+        selectedRevision = intent.revision.value
+        await openRevisionProperties(
+            revision: intent.revision,
+            edit: intent.command == .logEditAuthorOrMessage,
+            target: intent.target
+        )
+    }
+
+    private func openRevisionProperties(
+        revision: Revision,
+        edit: Bool,
+        target explicitTarget: String? = nil
+    ) async {
+        guard let record = workspaceController.selectedRecord else {
+            errorText = "未选择工作副本"
+            return
+        }
+        let target = explicitTarget?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTarget = target?.isEmpty == false
+            ? target!
+            : (repositoryRoot.isEmpty ? workingCopyURL : repositoryRoot)
+        guard !resolvedTarget.isEmpty else {
+            errorText = "无法解析仓库 URL"
+            return
+        }
+
+        let vm = RevisionPropertyViewModel(
+            workingCopy: URL(fileURLWithPath: record.localPath),
+            target: resolvedTarget,
+            revision: revision,
+            provider: session.svnService
+        )
+        revisionPropertyViewModel = vm
+        revisionPropertyEditMode = edit
+        showRevisionPropertySheet = true
+        await vm.load()
+        revisionAuthor = vm.author
+        revisionMessage = vm.message
+    }
+
+    private func saveRevisionProperties(_ vm: RevisionPropertyViewModel) async {
+        await vm.save(author: revisionAuthor, message: revisionMessage)
+        guard vm.state == .loaded else { return }
+        revisionAuthor = vm.author
+        revisionMessage = vm.message
+        statusText = "已更新 r\(vm.revision.value) 的作者与日志说明"
+        navigator.lastAutomationMessage = statusText
+        if let viewModel {
+            await reloadPreservingFilters(viewModel: viewModel)
         }
     }
 

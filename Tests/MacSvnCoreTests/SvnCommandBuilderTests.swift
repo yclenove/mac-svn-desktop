@@ -638,6 +638,48 @@ final class SvnCommandBuilderTests: XCTestCase {
         )
     }
 
+    func testRevisionPropertyCommandsUseRevpropRevisionAuthAndStableValueBoundary() {
+        let auth = ["--username", "u", "--password-from-stdin"]
+
+        XCTAssertEqual(
+            SvnCommandBuilder.revisionProplist(
+                target: "file:///repo",
+                revision: Revision(7),
+                authArguments: auth
+            ).arguments,
+            [
+                "proplist", "--revprop", "--xml", "--verbose", "--non-interactive",
+                "-r", "7", "--username", "u", "--password-from-stdin", "file:///repo"
+            ]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.revisionPropset(
+                name: "svn:log",
+                valueFile: "/tmp/revprop-value",
+                target: "file:///repo",
+                revision: Revision(7),
+                authArguments: auth
+            ).arguments,
+            [
+                "propset", "--revprop", "--encoding", "UTF-8", "--non-interactive",
+                "-r", "7", "--username", "u", "--password-from-stdin",
+                "--file", "/tmp/revprop-value", "--", "svn:log", "file:///repo"
+            ]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.revisionPropset(
+                name: "custom:reviewed",
+                valueFile: "/tmp/revprop-value",
+                target: "file:///repo",
+                revision: Revision(7)
+            ).arguments,
+            [
+                "propset", "--revprop", "--non-interactive", "-r", "7",
+                "--file", "/tmp/revprop-value", "--", "custom:reviewed", "file:///repo"
+            ]
+        )
+    }
+
     func testLockCommandsUseNonInteractiveUtf8MessageForceAndTargets() {
         XCTAssertEqual(
             SvnCommandBuilder.lockStatus(targets: ["README.txt"]).arguments,

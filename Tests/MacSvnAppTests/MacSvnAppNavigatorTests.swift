@@ -370,6 +370,38 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertNil(navigator.consumePendingBlameIntent())
     }
 
+    func testRevisionPropertyCommandsCarryAtomicRevisionIntent() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+        let options = SvnCommandOptions(revision: Revision(7), url: "file:///repo")
+
+        XCTAssertEqual(
+            navigator.perform(command: .logShowRevisionProperties, options: options),
+            .navigated(to: .log)
+        )
+        XCTAssertEqual(
+            navigator.consumePendingRevisionPropertiesIntent(),
+            PendingRevisionPropertiesIntent(
+                command: .logShowRevisionProperties,
+                revision: Revision(7),
+                target: "file:///repo"
+            )
+        )
+
+        XCTAssertEqual(
+            navigator.perform(command: .logEditAuthorOrMessage, options: options),
+            .navigated(to: .log)
+        )
+        XCTAssertEqual(
+            navigator.consumePendingRevisionPropertiesIntent(),
+            PendingRevisionPropertiesIntent(
+                command: .logEditAuthorOrMessage,
+                revision: Revision(7),
+                target: "file:///repo"
+            )
+        )
+        XCTAssertNil(navigator.consumePendingRevisionPropertiesIntent())
+    }
+
     func testMergeConflictNavigationPreservesFirstConflictPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
 

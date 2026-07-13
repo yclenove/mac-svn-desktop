@@ -129,6 +129,45 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["properties", "propertyValue", "setProperty", "deleteProperty"])
     }
 
+    func testRevisionPropertyMethodsRetryAuthenticationForReadAndWrite() async throws {
+        let backend = MockSvnBackend()
+        backend.revisionPropertiesResult = [
+            SvnProperty(target: "r7", name: "svn:author", value: "yangchao")
+        ]
+        backend.revisionPropertiesErrors = [.authentication]
+        backend.setRevisionPropertyErrors = [.authentication]
+        let credential = Credential(username: "u", password: "p")
+        let provider = FakeCredentialProvider(credential: credential)
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let properties = try await service.revisionProperties(
+            wc: wc,
+            target: "https://svn.example/repo",
+            revision: Revision(7)
+        )
+        try await service.setRevisionProperty(
+            wc: wc,
+            target: "https://svn.example/repo",
+            revision: Revision(7),
+            name: "svn:log",
+            value: "new message"
+        )
+
+        XCTAssertEqual(properties, backend.revisionPropertiesResult)
+        XCTAssertEqual(backend.calls.map(\.name), [
+            "revisionProperties", "revisionProperties",
+            "setRevisionProperty", "setRevisionProperty"
+        ])
+        XCTAssertEqual(backend.revisionPropertiesCredentials, [nil, credential])
+        XCTAssertEqual(backend.setRevisionPropertyCredentials, [nil, credential])
+        let requestedScopes = await provider.recordedWorkingCopies()
+        XCTAssertEqual(requestedScopes, [
+            URL(string: "https://svn.example/repo")!,
+            URL(string: "https://svn.example/repo")!
+        ])
+    }
+
     func testLockMethodsForwardToBackendAndWritesUseLocks() async throws {
         let backend = MockSvnBackend()
         backend.locksResult = [
@@ -985,6 +1024,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedPatchFiles: [URL] = []
     private var recordedDiffWithURLCredentials: [Credential?] = []
     private var recordedRepositoryDiffCredentials: [Credential?] = []
+    private var recordedRevisionPropertiesCredentials: [Credential?] = []
+    private var recordedSetRevisionPropertyCredentials: [Credential?] = []
     var repositoryDiffResult = ""
     var repositoryDiffErrors: [SvnError] = []
 
@@ -1006,6 +1047,18 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         callsLock.lock()
         defer { callsLock.unlock() }
         return recordedRepositoryDiffCredentials
+    }
+
+    var revisionPropertiesCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedRevisionPropertiesCredentials
+    }
+
+    var setRevisionPropertyCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedSetRevisionPropertyCredentials
     }
 
     var updateCredentials: [Credential?] {
@@ -1205,6 +1258,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var blameResult: [BlameLine] = []
     var propertiesResult: [SvnProperty] = []
     var propertyValueResult: SvnProperty?
+    var revisionPropertiesResult: [SvnProperty] = []
+    var revisionPropertiesErrors: [SvnError] = []
+    var setRevisionPropertyErrors: [SvnError] = []
     var locksResult: [SvnLock] = []
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
@@ -1374,6 +1430,39 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     func deleteProperty(wc: URL, target: String, name: String) async throws {
         record("deleteProperty")
+    }
+
+    func revisionProperties(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        auth: Credential?
+    ) async throws -> [SvnProperty] {
+        let error = recordRevisionProperty(
+            name: "revisionProperties",
+            credentials: &recordedRevisionPropertiesCredentials,
+            errors: &revisionPropertiesErrors,
+            auth: auth
+        )
+        if let error { throw error }
+        return revisionPropertiesResult
+    }
+
+    func setRevisionProperty(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        name: String,
+        value: String,
+        auth: Credential?
+    ) async throws {
+        let error = recordRevisionProperty(
+            name: "setRevisionProperty",
+            credentials: &recordedSetRevisionPropertyCredentials,
+            errors: &setRevisionPropertyErrors,
+            auth: auth
+        )
+        if let error { throw error }
     }
 
     func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
@@ -1698,6 +1787,20 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     }
 
     private func recordRemoteWrite(
+        name: String,
+        credentials: inout [Credential?],
+        errors: inout [SvnError],
+        auth: Credential?
+    ) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: name))
+        credentials.append(auth)
+        let error = errors.isEmpty ? nil : errors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordRevisionProperty(
         name: String,
         credentials: inout [Credential?],
         errors: inout [SvnError],

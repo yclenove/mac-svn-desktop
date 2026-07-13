@@ -471,6 +471,55 @@ public struct SvnCliBackend: SvnBackend {
         )
     }
 
+    public func revisionProperties(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        auth: Credential?
+    ) async throws -> [SvnProperty] {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.revisionProplist(
+                target: target,
+                revision: revision,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: wc.path,
+            stdin: authArguments.stdin
+        )
+        return try PropertyXMLParser.parse(result.stdout)
+    }
+
+    public func setRevisionProperty(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        name: String,
+        value: String,
+        auth: Credential?
+    ) async throws {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let valueFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("svnstudio-revprop-\(UUID().uuidString)")
+        try Data(value.utf8).write(to: valueFile, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: valueFile.path
+        )
+        defer { try? FileManager.default.removeItem(at: valueFile) }
+        _ = try await run(
+            SvnCommandBuilder.revisionPropset(
+                name: name,
+                valueFile: valueFile.path,
+                target: target,
+                revision: revision,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: wc.path,
+            stdin: authArguments.stdin
+        )
+    }
+
     public func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
         let result = try await run(
             SvnCommandBuilder.lockStatus(targets: targets),

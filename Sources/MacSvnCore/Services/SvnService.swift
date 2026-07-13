@@ -139,6 +139,22 @@ public actor SvnService {
         try await backend.propertyValue(wc: wc, target: target, name: name)
     }
 
+    public func revisionProperties(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        auth: Credential? = nil
+    ) async throws -> [SvnProperty] {
+        try await retryingAuthentication(wc: credentialScope(for: target), initialAuth: auth) { auth in
+            try await backend.revisionProperties(
+                wc: wc,
+                target: target,
+                revision: revision,
+                auth: auth
+            )
+        }
+    }
+
     public func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
         try await backend.locks(wc: wc, targets: targets)
     }
@@ -790,6 +806,28 @@ public actor SvnService {
     public func deleteProperty(wc: URL, target: String, name: String) async throws {
         try await withWriteLock(wc: wc, operation: "deleteProperty") {
             try await backend.deleteProperty(wc: wc, target: target, name: name)
+        }
+    }
+
+    public func setRevisionProperty(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        name: String,
+        value: String,
+        auth: Credential? = nil
+    ) async throws {
+        try await withWriteLock(wc: wc, operation: "setRevisionProperty") {
+            try await retryingAuthentication(wc: credentialScope(for: target), initialAuth: auth) { auth in
+                try await backend.setRevisionProperty(
+                    wc: wc,
+                    target: target,
+                    revision: revision,
+                    name: name,
+                    value: value,
+                    auth: auth
+                )
+            }
         }
     }
 

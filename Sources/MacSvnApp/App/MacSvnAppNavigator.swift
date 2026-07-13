@@ -139,6 +139,18 @@ public struct PendingDeleteIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingRevisionPropertiesIntent: Equatable, Sendable {
+    public let command: SvnCommandID
+    public let revision: Revision
+    public let target: String?
+
+    public init(command: SvnCommandID, revision: Revision, target: String?) {
+        self.command = command
+        self.revision = revision
+        self.target = target
+    }
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -179,6 +191,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var pendingPatchIntent: PendingPatchIntent?
     @Published public var pendingDeleteIntent: PendingDeleteIntent?
+    @Published public var pendingRevisionPropertiesIntent: PendingRevisionPropertiesIntent?
     @Published public var pendingCreateRepository = false
     @Published public var lastAutomationMessage: String?
     /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
@@ -317,6 +330,15 @@ public final class MacSvnAppNavigator: ObservableObject {
                 fromRevision: fromRevision,
                 toRevision: toRevision,
                 mode: .differences
+            )
+        }
+
+        if (command == .logEditAuthorOrMessage || command == .logShowRevisionProperties),
+           let revision = options.revision {
+            pendingRevisionPropertiesIntent = PendingRevisionPropertiesIntent(
+                command: command,
+                revision: revision,
+                target: options.url
             )
         }
 
@@ -531,6 +553,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingDeleteIntent() -> PendingDeleteIntent? {
         let value = pendingDeleteIntent
         pendingDeleteIntent = nil
+        return value
+    }
+
+    public func consumePendingRevisionPropertiesIntent() -> PendingRevisionPropertiesIntent? {
+        let value = pendingRevisionPropertiesIntent
+        pendingRevisionPropertiesIntent = nil
         return value
     }
 

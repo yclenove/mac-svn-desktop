@@ -115,6 +115,12 @@ public enum LogContextActionPolicy: Sendable {
         .logMergeRevisionTo,
     ]
 
+    /// T3：读取修订属性，以及编辑作者和日志说明。
+    public static let t3RevisionPropertyActionIDs: [SvnCommandID] = [
+        .logEditAuthorOrMessage,
+        .logShowRevisionProperties,
+    ]
+
     /// 兼容旧名。
     public static var t2ActionIDs: [SvnCommandID] { t2FileActionIDs }
 

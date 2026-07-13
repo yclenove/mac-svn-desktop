@@ -348,6 +348,34 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["propdel", "--non-interactive", name, target])
     }
 
+    public static func revisionProplist(
+        target: String,
+        revision: Revision,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "proplist", "--revprop", "--xml", "--verbose", "--non-interactive",
+            "-r", revision.description
+        ] + authArguments + [target])
+    }
+
+    public static func revisionPropset(
+        name: String,
+        valueFile: String,
+        target: String,
+        revision: Revision,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["propset", "--revprop"]
+        if name == "svn:author" || name == "svn:log" {
+            arguments += ["--encoding", "UTF-8"]
+        }
+        arguments += ["--non-interactive", "-r", revision.description]
+        arguments += authArguments
+        arguments += ["--file", valueFile, "--", name, target]
+        return SvnCommand(arguments: arguments)
+    }
+
     public static func lock(paths: [String], message: String?, force: Bool) -> SvnCommand {
         var arguments = ["lock", "--encoding", "UTF-8", "--non-interactive"]
 

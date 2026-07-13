@@ -57,6 +57,8 @@ public protocol SvnBackend: Sendable {
     func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty?
     func setProperty(wc: URL, target: String, name: String, value: String) async throws
     func deleteProperty(wc: URL, target: String, name: String) async throws
+    func revisionProperties(wc: URL, target: String, revision: Revision, auth: Credential?) async throws -> [SvnProperty]
+    func setRevisionProperty(wc: URL, target: String, revision: Revision, name: String, value: String, auth: Credential?) async throws
     func locks(wc: URL, targets: [String]) async throws -> [SvnLock]
     func lock(wc: URL, paths: [String], message: String?, force: Bool) async throws
     func unlock(wc: URL, paths: [String], force: Bool) async throws
@@ -88,6 +90,26 @@ public protocol SvnBackend: Sendable {
 }
 
 public extension SvnBackend {
+    func revisionProperties(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        auth: Credential?
+    ) async throws -> [SvnProperty] {
+        throw SvnError.other(code: nil, stderr: "revisionPropertiesUnavailable")
+    }
+
+    func setRevisionProperty(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        name: String,
+        value: String,
+        auth: Credential?
+    ) async throws {
+        throw SvnError.other(code: nil, stderr: "revisionPropertiesUnavailable")
+    }
+
     func mergeReintegrate(wc: URL, source: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
         try await merge(wc: wc, source: source, range: nil, dryRun: dryRun, auth: auth)
     }

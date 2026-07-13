@@ -3,6 +3,67 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testRevisionPropertiesRequireHookThenRoundTripAuthorMessageAndCustomValue() async throws {
+        let fixture = try makeFixture()
+        let wc = fixture.workingCopy
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: wc)
+
+        do {
+            try await fixture.backend.setRevisionProperty(
+                wc: wc,
+                target: fixture.repositoryURL,
+                revision: Revision(1),
+                name: "svn:log",
+                value: "should be rejected",
+                auth: nil
+            )
+            XCTFail("Expected repository without pre-revprop-change hook to reject the write")
+        } catch {
+            XCTAssertTrue(String(describing: error).contains("pre-revprop-change"))
+        }
+
+        let hook = fixture.repository.appendingPathComponent("hooks/pre-revprop-change")
+        try "#!/bin/sh\nexit 0\n".write(to: hook, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path)
+
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "svn:author",
+            value: "new-author",
+            auth: nil
+        )
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "svn:log",
+            value: "修正后的日志说明",
+            auth: nil
+        )
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "custom:reviewed",
+            value: "yes",
+            auth: nil
+        )
+
+        let properties = try await fixture.backend.revisionProperties(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            auth: nil
+        )
+        let values = Dictionary(uniqueKeysWithValues: properties.map { ($0.name, $0.value) })
+        XCTAssertEqual(values["svn:author"], "new-author")
+        XCTAssertEqual(values["svn:log"], "修正后的日志说明")
+        XCTAssertEqual(values["custom:reviewed"], "yes")
+        XCTAssertNotNil(values["svn:date"])
+    }
+
     func testExperimentalShelvingV2AndV3RoundTripThroughRealWorkingCopy() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

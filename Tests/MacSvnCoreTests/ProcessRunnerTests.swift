@@ -33,6 +33,18 @@ final class ProcessRunnerTests: XCTestCase {
         XCTAssertEqual(String(data: result.stdout, encoding: .utf8), "hello stdin")
     }
 
+    func testRunUsesUTF8CharacterLocaleAndStableEnglishMessages() async throws {
+        let result = try await ProcessRunner().run(
+            executable: "/bin/sh",
+            arguments: ["-c", "printf '%s|%s' \"$LC_CTYPE\" \"$LC_MESSAGES\""],
+            stdin: nil,
+            currentDirectory: nil,
+            timeout: 5
+        )
+
+        XCTAssertEqual(String(decoding: result.stdout, as: UTF8.self), "en_US.UTF-8|C")
+    }
+
     func testRunDrainsStdoutAndStderrConcurrently() async throws {
         let runner = ProcessRunner()
 

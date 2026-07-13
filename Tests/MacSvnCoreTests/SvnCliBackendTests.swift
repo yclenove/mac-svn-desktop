@@ -251,6 +251,52 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
     }
 
+    func testRevisionPropertyReadAndWriteUseRevisionXMLAuthenticationAndWorkingDirectory() async throws {
+        let xml = """
+        <properties><revprops rev="7"><property name="svn:author">yangchao</property><property name="svn:log">初始说明</property></revprops></properties>
+        """
+        let runner = SequenceProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let auth = Credential(username: "u", password: "p")
+
+        let properties = try await backend.revisionProperties(
+            wc: wc,
+            target: "file:///repo",
+            revision: Revision(7),
+            auth: auth
+        )
+        try await backend.setRevisionProperty(
+            wc: wc,
+            target: "file:///repo",
+            revision: Revision(7),
+            name: "svn:log",
+            value: "修正说明",
+            auth: auth
+        )
+
+        XCTAssertEqual(properties, [
+            SvnProperty(target: "r7", name: "svn:author", value: "yangchao"),
+            SvnProperty(target: "r7", name: "svn:log", value: "初始说明")
+        ])
+        XCTAssertEqual(runner.calls[0].arguments, [
+            "proplist", "--revprop", "--xml", "--verbose", "--non-interactive",
+            "-r", "7", "--username", "u", "--password-from-stdin", "file:///repo"
+        ])
+        let writeArguments = runner.calls[1].arguments
+        XCTAssertEqual(Array(writeArguments.prefix(11)), [
+            "propset", "--revprop", "--encoding", "UTF-8", "--non-interactive",
+            "-r", "7", "--username", "u", "--password-from-stdin", "--file"
+        ])
+        XCTAssertTrue(writeArguments[11].contains("svnstudio-revprop-"))
+        XCTAssertEqual(Array(writeArguments.suffix(3)), ["--", "svn:log", "file:///repo"])
+        XCTAssertEqual(runner.calls.map(\.stdin), [Data("p\n".utf8), Data("p\n".utf8)])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
+    }
+
     func testLockStatusRunsInWorkingCopyAndParsesXml() async throws {
         let xml = """
         <status><target path="."><entry path="README.txt"><wc-status item="normal" revision="1"/><repos-status item="none"><lock><token>t</token><owner>u</owner></lock></repos-status></entry></target></status>
