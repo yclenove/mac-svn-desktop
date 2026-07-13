@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T2.15/G2 文档审计与提交收口中 |
-| 最近功能 tip | T2.15/G2：#41 核验、T2 inventory/H 清单与全量测试闸门 |
+| 工作区 | T2.15/G2 已提交，工作区应干净 |
+| 最近功能 tip | `4d5fff6` docs(T2.15/G2) #41 核验、T2 inventory/H 清单与全量测试闸门 |
 | 覆盖率 | **67/114 = 58.77%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **688** 绿（2026-07-13） |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅**（T2 全部通过，下一 **T3.1**） |
@@ -226,7 +226,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.12 | 4acd365 + 1f444a5 | Repo Browser 远端写与高危确认；pending 确认快照；`svn info --xml --depth immediates` 锁列；路径 URL 编码；全量 673 绿；下一刀 T2.13 |
 | 2026-07-13 | T2.13 | e646b1d | 大小写冲突修复策略、两步临时 SVN 改名、失败回滚、CFM/⌘K 向导；真实 SVN 提交验证；全量 683 绿；下一刀 T2.14 |
 | 2026-07-13 | T2.14 | 5a418c9 | Progress Auto-close 四档策略、设置持久化、更新/本地成功操作完成提示接线；全量 688 绿；下一刀 T2.15/G2 |
-| 2026-07-13 | T2.15/G2 | （提交后回填） | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
+| 2026-07-13 | T2.15/G2 | 4d5fff6 | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
 
 ---
 
