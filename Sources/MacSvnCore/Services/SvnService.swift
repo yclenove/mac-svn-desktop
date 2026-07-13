@@ -79,6 +79,20 @@ public actor SvnService {
         try await backend.blame(wc: wc, target: target)
     }
 
+    public func blame(
+        wc: URL,
+        target: String,
+        startRevision: Revision?,
+        endRevision: Revision?
+    ) async throws -> [BlameLine] {
+        try await backend.blame(
+            wc: wc,
+            target: target,
+            startRevision: startRevision,
+            endRevision: endRevision
+        )
+    }
+
     public func properties(wc: URL, target: String) async throws -> [SvnProperty] {
         try await backend.properties(wc: wc, target: target)
     }

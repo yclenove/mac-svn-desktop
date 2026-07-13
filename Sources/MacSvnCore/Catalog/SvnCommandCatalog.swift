@@ -182,7 +182,9 @@ public enum SvnCommandCatalog: Sendable {
         .breakLock,
         .branchTag,
         .switchBranch,
-        .merge
+        .merge,
+        .blame,
+        .properties
     ]
 
     public static var dailyCFMCommands: [SvnCommandDescriptor] {

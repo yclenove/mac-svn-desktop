@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T2.11** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T2.12** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.10 ✅；**下一 T2.11**；覆盖率 **60/114（52.63%）** |
+| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.11 ✅；**下一 T2.12**；覆盖率 **63/114（55.26%）** |
 
 ---
 
@@ -150,7 +150,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T2.8** Branch-Tag / Switch / Merge+dry-run（#22–24）
 - [x] **T2.9** Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
 - [x] **T2.10** Create Patch / Apply Patch（#33,#34）
-- [ ] **T2.11** Properties 模板与编辑（#35）；Blame 悬停日志（#31）
+- [x] **T2.11** Properties 模板与编辑（#35）；Blame 悬停日志（#31）
 - [ ] **T2.12** Repo Browser 远端写 + 高危确认 + 锁列（#10 + §4.5）
 - [ ] **T2.13** Filename case conflict repair（#46）
 - [ ] **T2.14** Progress Auto-close 策略（§4.7 基础）
@@ -254,6 +254,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T2.8 | c8a2ff0 | Branch/Switch/Merge 单测 + 真实 SVN 两树/Diff 集成测；全量 638 绿 | #22–24、D19/D20 ✅；§4.4 核心勾选 | reintegrate 仍属 T3.6；下一 T2.9 |
 | 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；命令、Service、UI、真实 SVN 集成测 | #26/#27/#30/#43/#44、D04/D26 ✅ | 就地导入通过临时检出原子替换；下一 T2.10 |
 | 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；路径策略、PatchViewModel、搁置页/⌘K、真实 SVN 往返与 `.rej` 测试 | #33/#34、D22 ✅ | 下一 T2.11 |
+| 2026-07-13 | T2.11 | （提交后回填） | Properties CRUD/模板/多行编辑；Blame `-r` 范围与悬停日志；CFM/⌘K 路径意图；真实 SVN 测试 | #31/#35、D17 ✅；D23 保持 🟡 | Blame differences→T3.9；下一 T2.12 |
 
 ---
 

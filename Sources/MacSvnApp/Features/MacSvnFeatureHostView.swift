@@ -58,7 +58,7 @@ public struct MacSvnFeatureHostView: View {
         case .blame:
             MacSvnBlameView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .properties:
-            MacSvnPropertiesView(workspaceController: workspaceController, session: session)
+            MacSvnPropertiesView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .locks:
             MacSvnLocksView(
                 workspaceController: workspaceController,

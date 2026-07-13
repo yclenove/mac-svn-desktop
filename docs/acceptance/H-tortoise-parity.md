@@ -62,7 +62,7 @@
 - [x] Branch-Tag / Switch / Merge+dry-run（#22–24）：三种 copy 源、Switch `-r`/未提交确认、范围/两树/dry-run/Unified Diff/冲突回跳
 - [x] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）：导出含忽略外部项、导入/就地导入、From/To 重新定位、安全移除 `.svn`
 - [x] Create / Apply Patch（#33,#34）：按勾选路径生成 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口
-- [ ] Properties + Blame 悬停（#35,#31）
+- [x] Properties + Blame 悬停（#35,#31）：属性 CRUD/模板/多行编辑；Blame 修订范围、行悬停 revision 日志
 - [ ] Repo Browser 远端写 + 高危确认（#10）
 - [ ] Filename case conflict repair（#46）
 - [ ] Progress Auto-close 基础策略（§4.7）

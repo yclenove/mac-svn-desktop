@@ -265,6 +265,28 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertNotNil(lines.first?.author)
     }
 
+    @MainActor
+    func testBlameHoverLoadsExactRevisionLogFromWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let viewModel = BlameViewModel(
+            workingCopy: fixture.workingCopy,
+            target: "README.txt",
+            provider: service,
+            logProvider: service,
+            rangeProvider: service
+        )
+
+        await viewModel.load(startRevision: Revision(1), endRevision: Revision(1))
+        let line = try XCTUnwrap(viewModel.lines.first)
+        await viewModel.loadRevisionDetails(for: line.lineNumber)
+
+        XCTAssertEqual(viewModel.hoveredLineNumber, line.lineNumber)
+        XCTAssertEqual(viewModel.hoveredLog?.revision, line.revision)
+        XCTAssertEqual(viewModel.hoveredLog?.message, "initial import")
+    }
+
     func testPropertiesSetListGetDeleteOnWorkingCopyFile() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

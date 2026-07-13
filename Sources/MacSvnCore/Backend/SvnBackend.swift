@@ -28,6 +28,7 @@ public protocol SvnBackend: Sendable {
     func diffAgainstBase(wc: URL, target: String) async throws -> String
     func applyPatch(wc: URL, patchFile: URL) async throws
     func blame(wc: URL, target: String) async throws -> [BlameLine]
+    func blame(wc: URL, target: String, startRevision: Revision?, endRevision: Revision?) async throws -> [BlameLine]
     func properties(wc: URL, target: String) async throws -> [SvnProperty]
     func propertyValue(wc: URL, target: String, name: String) async throws -> SvnProperty?
     func setProperty(wc: URL, target: String, name: String, value: String) async throws
@@ -59,4 +60,15 @@ public protocol SvnBackend: Sendable {
     func info(wc: URL, target: String) async throws -> SvnInfo
     /// 查询仓库 HEAD 修订号（`svn info -r HEAD`），供多路径统一更新钉住 revision。
     func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision
+}
+
+public extension SvnBackend {
+    func blame(
+        wc: URL,
+        target: String,
+        startRevision: Revision?,
+        endRevision: Revision?
+    ) async throws -> [BlameLine] {
+        try await blame(wc: wc, target: target)
+    }
 }

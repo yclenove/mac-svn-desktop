@@ -70,6 +70,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingLogDiff: PendingLogDiffIntent?
     /// 历史 → Blame（L07）。
     @Published public var pendingBlamePath: String?
+    /// CFM / ⌘K → 属性页预选路径（#35）。
+    @Published public var pendingPropertyPath: String?
     /// CFM / 更新后 → 冲突工作区预选路径（#11）。
     @Published public var pendingConflictPath: String?
     /// Catalog Merge 命令进入合并向导；与冲突回跳保持原子区分。
@@ -126,7 +128,9 @@ public final class MacSvnAppNavigator: ObservableObject {
         // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
-        if !isLockCommand, !isPatchCommand, let firstPath = paths.first, !firstPath.isEmpty {
+        let isPathInspectorCommand = command == .blame || command == .properties
+        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand,
+           let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
         }
         if paths.count >= 2, !paths[1].isEmpty {
@@ -172,6 +176,14 @@ public final class MacSvnAppNavigator: ObservableObject {
                 paths: paths,
                 patchFile: options.extras["patchFile"]
             )
+        }
+
+        if let path = paths.first, !path.isEmpty {
+            if command == .blame {
+                pendingBlamePath = path
+            } else if command == .properties {
+                pendingPropertyPath = path
+            }
         }
 
         // #19–#21：锁定命令注入路径与意图。
@@ -332,6 +344,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingBlamePath() -> String? {
         let value = pendingBlamePath
         pendingBlamePath = nil
+        return value
+    }
+
+    public func consumePendingPropertyPath() -> String? {
+        let value = pendingPropertyPath
+        pendingPropertyPath = nil
         return value
     }
 

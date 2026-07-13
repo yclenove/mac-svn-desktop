@@ -521,6 +521,18 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["blame", "--xml", "--non-interactive", "README.txt"])
     }
 
+    func testBlameCanUseRevisionRange() {
+        let command = SvnCommandBuilder.blame(
+            target: "README.txt",
+            startRevision: Revision(3),
+            endRevision: Revision(9)
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "blame", "--xml", "--non-interactive", "-r", "3:9", "README.txt"
+        ])
+    }
+
     func testPropertyCommandsUseXmlUtf8AndNonInteractive() {
         XCTAssertEqual(
             SvnCommandBuilder.proplist(target: "README.txt").arguments,

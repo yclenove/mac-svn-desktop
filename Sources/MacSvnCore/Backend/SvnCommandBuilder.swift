@@ -210,8 +210,21 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["patch", "--non-interactive", patchFile])
     }
 
-    public static func blame(target: String) -> SvnCommand {
-        SvnCommand(arguments: ["blame", "--xml", "--non-interactive", target])
+    public static func blame(
+        target: String,
+        startRevision: Revision? = nil,
+        endRevision: Revision? = nil
+    ) -> SvnCommand {
+        var arguments = ["blame", "--xml", "--non-interactive"]
+        if let startRevision, let endRevision {
+            arguments += ["-r", "\(startRevision):\(endRevision)"]
+        } else if let startRevision {
+            arguments += ["-r", "\(startRevision):HEAD"]
+        } else if let endRevision {
+            arguments += ["-r", "1:\(endRevision)"]
+        }
+        arguments.append(target)
+        return SvnCommand(arguments: arguments)
     }
 
     public static func proplist(target: String) -> SvnCommand {

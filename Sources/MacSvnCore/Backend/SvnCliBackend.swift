@@ -276,7 +276,24 @@ public struct SvnCliBackend: SvnBackend {
     }
 
     public func blame(wc: URL, target: String) async throws -> [BlameLine] {
-        let result = try await run(SvnCommandBuilder.blame(target: target), currentDirectory: wc.path, stdin: nil)
+        try await blame(wc: wc, target: target, startRevision: nil, endRevision: nil)
+    }
+
+    public func blame(
+        wc: URL,
+        target: String,
+        startRevision: Revision?,
+        endRevision: Revision?
+    ) async throws -> [BlameLine] {
+        let result = try await run(
+            SvnCommandBuilder.blame(
+                target: target,
+                startRevision: startRevision,
+                endRevision: endRevision
+            ),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
         return try BlameXMLParser.parse(result.stdout)
     }
 

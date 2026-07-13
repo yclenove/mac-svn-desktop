@@ -54,7 +54,7 @@ final class SvnCommandCatalogTests: XCTestCase {
         XCTAssertTrue(ids.isSuperset(of: [
             .update, .commit, .diff, .add, .delete, .revert, .cleanup,
             .rename, .addToIgnoreList, .copyMove, .repairMoveCopy,
-            .branchTag, .switchBranch, .merge
+            .branchTag, .switchBranch, .merge, .blame, .properties
         ]))
         let renameHits = SvnCommandCatalog.searchDailyCFM(query: "rename")
         XCTAssertEqual(renameHits.first?.id, .rename)

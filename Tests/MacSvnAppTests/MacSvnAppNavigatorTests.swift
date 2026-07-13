@@ -156,6 +156,18 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         )
     }
 
+    func testBlameAndPropertiesCarryRelativePathsWithoutOpeningWorkingCopy() {
+        let navigator = MacSvnAppNavigator()
+
+        XCTAssertEqual(navigator.perform(command: .blame, paths: ["README.txt"]), .navigated(to: .blame))
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(navigator.consumePendingBlamePath(), "README.txt")
+
+        XCTAssertEqual(navigator.perform(command: .properties, paths: ["src"]), .navigated(to: .properties))
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(navigator.consumePendingPropertyPath(), "src")
+    }
+
     func testMergeConflictNavigationPreservesFirstConflictPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
 

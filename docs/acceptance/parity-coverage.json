@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-13T03:22:40Z",
+  "generated_at": "2026-07-13T03:58:45Z",
   "total": 114,
-  "done": 60,
-  "partial": 19,
+  "done": 63,
+  "partial": 16,
   "missing": 35,
-  "coverage": 0.526316,
-  "coverage_percent": 52.63,
+  "coverage": 0.552632,
+  "coverage_percent": 55.26,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 15,
-      "partial": 9,
+      "done": 16,
+      "partial": 8,
       "missing": 4
     },
     "command": {
       "total": 46,
-      "done": 30,
-      "partial": 4,
+      "done": 32,
+      "partial": 2,
       "missing": 12
     },
     "log": {
@@ -156,8 +156,8 @@
       "key": "D17",
       "section": "domain",
       "title": "Properties",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板",
+      "status": "done"
     },
     {
       "key": "D18",
@@ -198,7 +198,7 @@
       "key": "D23",
       "section": "domain",
       "title": "Blame",
-      "raw_status": "🟡",
+      "raw_status": "🟡 Blame 修订范围/悬停日志 ✅；Blame differences 仍属 T3.9",
       "status": "partial"
     },
     {
@@ -450,8 +450,8 @@
       "key": "cmd.31",
       "section": "command",
       "title": "Blame",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ `-r X:Y`、行悬停 revision 日志、作者/日期/路径摘要",
+      "status": "done"
     },
     {
       "key": "cmd.32",
@@ -478,8 +478,8 @@
       "key": "cmd.35",
       "section": "command",
       "title": "Properties",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ CRUD、多行值、删除确认、文件/目录模板、CFM/⌘K 路径意图",
+      "status": "done"
     },
     {
       "key": "cmd.36",

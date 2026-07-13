@@ -12,6 +12,8 @@ public struct MacSvnBlameView: View {
     @State private var evolutionVM: AIBlameEvolutionViewModel?
     @State private var rangeStartText = "1"
     @State private var rangeEndText = "1"
+    @State private var blameStartRevisionText = ""
+    @State private var blameEndRevisionText = ""
     @State private var statusText: String?
 
     public init(
@@ -30,6 +32,12 @@ public struct MacSvnBlameView: View {
                 Text("Blame")
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
+                TextField("起始修订", text: $blameStartRevisionText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 100)
+                TextField("结束修订", text: $blameEndRevisionText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 100)
                 Button("加载") { Task { await loadBlame() } }
                     .disabled(selected.count != 1)
             }
@@ -77,30 +85,45 @@ public struct MacSvnBlameView: View {
             case .error(let message):
                 Text(message).foregroundStyle(.red).padding()
             case .loaded:
-                List(viewModel.lines, id: \.lineNumber) { line in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("\(line.lineNumber)")
-                            .font(.caption.monospaced())
-                            .frame(width: 40, alignment: .trailing)
-                        Text(line.revision.map { "r\($0.value)" } ?? "-")
-                            .font(.caption.monospaced())
-                            .frame(width: 70, alignment: .leading)
-                        Text(line.author ?? "")
-                            .font(.caption)
-                            .frame(width: 100, alignment: .leading)
-                        Spacer()
+                VStack(spacing: 0) {
+                    List(viewModel.lines, id: \.lineNumber) { line in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\(line.lineNumber)")
+                                .font(.caption.monospaced())
+                                .frame(width: 40, alignment: .trailing)
+                            Text(line.revision.map { "r\($0.value)" } ?? "-")
+                                .font(.caption.monospaced())
+                                .frame(width: 70, alignment: .leading)
+                            Text(line.author ?? "")
+                                .font(.caption)
+                                .frame(width: 100, alignment: .leading)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                        .background(
+                            isLineInSelectedRange(line.lineNumber)
+                                ? Color.accentColor.opacity(0.12)
+                                : Color.clear
+                        )
+                        .onHover { hovering in
+                            Task {
+                                if hovering {
+                                    await viewModel.loadRevisionDetails(for: line.lineNumber)
+                                } else {
+                                    viewModel.clearRevisionDetails(for: line.lineNumber)
+                                }
+                            }
+                        }
+                        .onTapGesture {
+                            viewModel.selectLine(line.lineNumber)
+                            rangeStartText = "\(line.lineNumber)"
+                            rangeEndText = "\(line.lineNumber)"
+                            applyRangeToEvolutionVM()
+                        }
                     }
-                    .contentShape(Rectangle())
-                    .background(
-                        isLineInSelectedRange(line.lineNumber)
-                            ? Color.accentColor.opacity(0.12)
-                            : Color.clear
-                    )
-                    .onTapGesture {
-                        viewModel.selectLine(line.lineNumber)
-                        rangeStartText = "\(line.lineNumber)"
-                        rangeEndText = "\(line.lineNumber)"
-                        applyRangeToEvolutionVM()
+                    if viewModel.hoveredLineNumber != nil {
+                        Divider()
+                        blameHoverLog(viewModel)
                     }
                 }
             default:
@@ -108,6 +131,38 @@ public struct MacSvnBlameView: View {
             }
         } else {
             ContentUnavailableView("选择文件后点击加载", systemImage: "doc.text.magnifyingglass")
+        }
+    }
+
+    @ViewBuilder
+    private func blameHoverLog(_ viewModel: BlameViewModel) -> some View {
+        if let entry = viewModel.hoveredLog {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("r\(entry.revision.value)").font(.caption.monospaced().weight(.semibold))
+                    Text(entry.author).font(.caption)
+                    if let date = entry.date {
+                        Text(date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                Text(entry.message.isEmpty ? "（无日志说明）" : entry.message)
+                    .font(.caption)
+                    .lineLimit(3)
+                    .textSelection(.enabled)
+                if !entry.changedPaths.isEmpty {
+                    Text(entry.changedPaths.prefix(4).map { "\($0.action.rawValue) \($0.path)" }.joined(separator: " · "))
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let error = viewModel.hoverLogError {
+            Text("日志加载失败：\(error)").font(.caption).foregroundStyle(.red).padding(10)
+        } else {
+            ProgressView("加载 revision 日志…").padding(10)
         }
     }
 
@@ -216,10 +271,13 @@ public struct MacSvnBlameView: View {
         let vm = BlameViewModel(
             workingCopy: URL(fileURLWithPath: record.localPath),
             target: path,
-            provider: session.svnService
+            provider: session.svnService,
+            logProvider: session.svnService,
+            rangeProvider: session.svnService
         )
         viewModel = vm
-        await vm.load()
+        guard let revisionRange = parsedBlameRevisionRange() else { return }
+        await vm.load(startRevision: revisionRange.start, endRevision: revisionRange.end)
         if case .loaded = vm.state, let first = vm.lines.first?.lineNumber, let last = vm.lines.last?.lineNumber {
             rangeStartText = "\(first)"
             rangeEndText = "\(min(first + 9, last))"
@@ -228,6 +286,23 @@ public struct MacSvnBlameView: View {
         } else if case .error(let message) = vm.state {
             statusText = message
         }
+    }
+
+    private func parsedBlameRevisionRange() -> (start: Revision?, end: Revision?)? {
+        let startText = blameStartRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let endText = blameEndRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let start = startText.isEmpty ? nil : Int(startText).flatMap { $0 > 0 ? Revision($0) : nil }
+        let end = endText.isEmpty ? nil : Int(endText).flatMap { $0 > 0 ? Revision($0) : nil }
+
+        if (!startText.isEmpty && start == nil) || (!endText.isEmpty && end == nil) {
+            statusText = "Blame 修订号必须是正整数"
+            return nil
+        }
+        if let start, let end, start.value > end.value {
+            statusText = "Blame 起始修订不能大于结束修订"
+            return nil
+        }
+        return (start, end)
     }
 
     private func runEvolutionExplain() async {

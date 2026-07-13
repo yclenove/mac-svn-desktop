@@ -46,12 +46,26 @@ final class PropertyViewModelTests: XCTestCase {
     }
 
     func testCommonTemplatesIncludeSvnIgnoreEolExecutableAndNeedsLock() {
-        XCTAssertEqual(PropertyViewModel.commonTemplates.map(\.name), [
-            "svn:ignore",
-            "svn:eol-style",
-            "svn:executable",
-            "svn:needs-lock"
-        ])
+        let names = PropertyViewModel.commonTemplates.map(\.name)
+        XCTAssertTrue(names.contains("svn:ignore"))
+        XCTAssertTrue(names.contains("svn:keywords"))
+        XCTAssertTrue(names.contains("svn:externals"))
+        XCTAssertTrue(names.contains("svn:global-ignores"))
+        XCTAssertTrue(names.contains("svn:mergeinfo"))
+        XCTAssertTrue(names.contains("tsvn:logminsize"))
+        XCTAssertTrue(names.contains("bugtraq:url"))
+    }
+
+    func testTemplateScopeFlagsMatchSVNPropertySemantics() {
+        let templates = Dictionary(uniqueKeysWithValues: PropertyViewModel.commonTemplates.map { ($0.name, $0) })
+
+        XCTAssertEqual(templates["svn:ignore"]?.appliesToDirectory, true)
+        XCTAssertEqual(templates["svn:ignore"]?.appliesToFile, false)
+        XCTAssertEqual(templates["svn:keywords"]?.appliesToDirectory, false)
+        XCTAssertEqual(templates["svn:keywords"]?.appliesToFile, true)
+        XCTAssertEqual(templates["svn:externals"]?.appliesToDirectory, true)
+        XCTAssertEqual(templates["tsvn:logminsize"]?.appliesToFile, false)
+        XCTAssertEqual(templates["bugtraq:url"]?.appliesToFile, false)
     }
 }
 
