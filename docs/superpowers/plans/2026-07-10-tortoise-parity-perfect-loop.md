@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T3.5** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T3.6** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T2 + G0/G1/G2 ✅；T3.1–T3.4 ✅；**下一 T3.5**；覆盖率 **75/114（65.79%）** |
+| 当前状态（2026-07-13） | T0–T2 + G0/G1/G2 ✅；T3.1–T3.5 ✅；**下一 T3.6**；覆盖率 **78/114（68.42%）** |
 
 ---
 
@@ -162,7 +162,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T3.2** Revision Graph 核心 + 设置 pattern（#9, S07, §4.6）
 - [x] **T3.3** Change Lists（#38, D11）
 - [x] **T3.4** Externals 编辑与更新行为（#39, D18）
-- [ ] **T3.5** 官方 `svn shelve` 对齐 + 本地搁置迁移方案落地（#37, S05 shelve 版本）
+- [x] **T3.5** 官方 `svn shelve` 对齐 + 本地搁置迁移方案落地（#37, S05 shelve 版本）
 - [ ] **T3.6** Merge reintegrate + 日志 Merge revision to…（#25,#42, L13）
 - [ ] **T3.7** Create Repository Here（#28）
 - [ ] **T3.8** Delete keep local / Delete unversioned（#15,#16）
@@ -263,6 +263,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T3.2 | 681268b | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、四类节点动作；真实 SVN copy-edge/Diff；全量 724 绿 | #9、D25、S07、§4.6 ✅；H-T3 对应项 ✅；覆盖率 71/114 | 下一 T3.3 |
 | 2026-07-13 | T3.3 | eb73ea1 | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；全量 730 绿 | #38、D11、§4.2 Changelist ✅；H-T3 对应项 ✅；覆盖率 73/114 | 下一 T3.4 |
 | 2026-07-13 | T3.4 | 4658126 | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；真实 SVN 往返；全量 738 绿 | #39、D18、H-T3 Externals ✅；覆盖率 75/114 | 下一 T3.5 |
+| 2026-07-13 | T3.5 | c4bf526 | 官方 `svn shelve` V2/V3：能力探测、列表/Diff/Log/Unshelve/Drop；设置持久化；官方与本地双轨 UI；手工快照迁移事务与失败保留；真实 SVN V2/V3 往返；全量 749 绿 | #37、D12、S05、H-T3 ✅；覆盖率 78/114 | 下一 T3.6 |
 
 ---
 

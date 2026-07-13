@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-13T10:26:31Z",
+  "generated_at": "2026-07-13T11:23:06Z",
   "total": 114,
-  "done": 75,
-  "partial": 14,
-  "missing": 25,
-  "coverage": 0.657895,
-  "coverage_percent": 65.79,
+  "done": 78,
+  "partial": 12,
+  "missing": 24,
+  "coverage": 0.684211,
+  "coverage_percent": 68.42,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 20,
-      "partial": 7,
+      "done": 21,
+      "partial": 6,
       "missing": 1
     },
     "command": {
       "total": 46,
-      "done": 39,
-      "partial": 1,
+      "done": 40,
+      "partial": 0,
       "missing": 6
     },
     "log": {
@@ -28,9 +28,9 @@
     },
     "settings": {
       "total": 13,
-      "done": 1,
+      "done": 2,
       "partial": 4,
-      "missing": 8
+      "missing": 7
     },
     "overlay": {
       "total": 7,
@@ -121,8 +121,8 @@
       "key": "D12",
       "section": "domain",
       "title": "Shelving",
-      "raw_status": "🟡 本地≠官方",
-      "status": "partial"
+      "raw_status": "✅ 官方 `x-shelve`/`x-unshelve`/list/diff/log/drop；能力探测；本地手工快照迁移且失败保留快照",
+      "status": "done"
     },
     {
       "key": "D13",
@@ -492,8 +492,8 @@
       "key": "cmd.37",
       "section": "command",
       "title": "Shelve / Unshelve",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "cmd.38",
@@ -730,8 +730,8 @@
       "key": "S05",
       "section": "settings",
       "title": "Dialogs 3",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移",
+      "status": "done"
     },
     {
       "key": "S06",

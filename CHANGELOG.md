@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.5：官方 `svn shelve` 对齐与本地搁置迁移（#37、D12、S05）
+- Affected: SvnExperimentalShelvingClient, ShelveService, ShelveViewModel, MacSvnShelveView, MacSvnSettingsView, MacSvnAppSession, AppSettings, Tests/*, docs/*
+- Impact: 通过 `SVN_EXPERIMENTAL_COMMANDS=shelf2|shelf3` 接入官方 `x-shelve`、`x-shelf-list`、`x-shelf-diff`、`x-shelf-log`、`x-unshelve`、`x-shelf-drop`；设置支持 V2/V3（默认 V3）；搁置页提供官方与本地双轨能力，手工本地快照可迁移且官方失败保留快照，安全快照拒绝迁移；全量 749 绿；覆盖率 78/114；下一 T3.6
+
 - Summary: Tortoise 完美 Loop T3.4：Externals 编辑与更新行为（#39、D18）
 - Affected: ExternalsPolicy, PropertyViewModel, MacSvnPropertiesView, MacSvnRepoBrowserView, MacSvnAppNavigator, SvnCommandBuilder, SvnCommandCatalog, Tests/*, docs/*
 - Impact: 新增 `svn:externals` 现代/旧式语法解析与结构化编辑器，支持目录/文件 external、operative/peg revision、注释保留和安全本地路径校验；仓库浏览器可拖拽 URL 预填；保存后可选择立即更新且明确不忽略 externals；真实 SVN 验证目录/文件 external materialize；全量 738 绿；覆盖率 75/114；下一 T3.5

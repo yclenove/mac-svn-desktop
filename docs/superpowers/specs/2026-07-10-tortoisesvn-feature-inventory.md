@@ -56,7 +56,7 @@
 | D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | ✅ | T1 |
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ✅ status XML 归属；CFM 列/分组与列表移入/移出；Commit 按列表选择并保留 `ignore-on-commit` 语义 | T3 |
-| D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
+| D12 | Shelving | 官方 svn shelve V2/V3 选项 | ✅ 官方 `x-shelve`/`x-unshelve`/list/diff/log/drop；能力探测；本地手工快照迁移且失败保留快照 | T3 |
 | D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local/清未版本仍开 | T1/T2 |
@@ -116,7 +116,7 @@
 | 34 | Apply Patch | TortoiseMerge 级应用 | 冲突处理 | ✅ `svn patch`、缺文件校验、新 `.rej` 路径报告、UI | T2 |
 | 35 | Properties | 属性 CRUD + 模板 | svn:/tsvn: 编辑器 | ✅ CRUD、多行值、删除确认、文件/目录模板、CFM/⌘K 路径意图 | T2 |
 | 36 | Copy / Move | `copy`/`move` | 目标路径 | ✅ | T1 |
-| 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置 | 🟡 | T3 |
+| 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置、官方列表/Diff/Log/Unshelve/Drop、手工快照迁移 | ✅ | T3 |
 | 38 | Change Lists | changelist 分组 | 提交按列表 | ✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证 | T3 |
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证 | T3 |
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
@@ -227,7 +227,7 @@
 | S02 | Context Menu | 主菜单/子菜单提升、needs-lock 时提升 Lock、隐藏未版本路径菜单、排除路径 | ❌ | T4 |
 | S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | ❌ | T5 |
 | S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | ❌ | T5 |
-| S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ❌ | T3/T5 |
+| S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
 | S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ❌ | T5 |
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | 弱 | T4 |
