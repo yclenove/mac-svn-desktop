@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-13T09:42:38Z",
+  "generated_at": "2026-07-13T10:17:00Z",
   "total": 114,
-  "done": 73,
+  "done": 75,
   "partial": 14,
-  "missing": 27,
-  "coverage": 0.640351,
-  "coverage_percent": 64.04,
+  "missing": 25,
+  "coverage": 0.657895,
+  "coverage_percent": 65.79,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 19,
+      "done": 20,
       "partial": 7,
-      "missing": 2
+      "missing": 1
     },
     "command": {
       "total": 46,
-      "done": 38,
+      "done": 39,
       "partial": 1,
-      "missing": 7
+      "missing": 6
     },
     "log": {
       "total": 20,
@@ -163,8 +163,8 @@
       "key": "D18",
       "section": "domain",
       "title": "Externals",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals",
+      "status": "done"
     },
     {
       "key": "D19",
@@ -506,8 +506,8 @@
       "key": "cmd.39",
       "section": "command",
       "title": "Externals",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证",
+      "status": "done"
     },
     {
       "key": "cmd.40",

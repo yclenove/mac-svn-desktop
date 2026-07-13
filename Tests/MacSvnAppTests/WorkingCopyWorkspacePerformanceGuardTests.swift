@@ -76,6 +76,18 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testExternalsEditorSerializesSaveAndShowsPartialSuccessFailure() throws {
+        let propertiesSource = try Self.readFeatureSource(named: "MacSvnPropertiesView.swift")
+        let repoBrowserSource = try Self.readFeatureSource(named: "MacSvnRepoBrowserView.swift")
+
+        XCTAssertTrue(propertiesSource.contains("@State private var isSavingExternals"))
+        XCTAssertTrue(propertiesSource.contains(".disabled(isSavingExternals)"))
+        XCTAssertTrue(propertiesSource.contains("externalStatusText"))
+        XCTAssertTrue(propertiesSource.contains("属性已保存，但更新外部项失败"))
+        XCTAssertTrue(propertiesSource.contains("SvnExternalsPolicy.targetURL("))
+        XCTAssertTrue(repoBrowserSource.contains(".draggable(remoteURL(for: entry))"))
+    }
+
     private static func readFeatureSource(named fileName: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         // Tests/MacSvnAppTests/... → 仓库根

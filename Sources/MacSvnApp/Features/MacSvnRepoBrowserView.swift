@@ -221,6 +221,7 @@ public struct MacSvnRepoBrowserView: View {
                             }
                         }
                     }
+                    .draggable(remoteURL(for: entry))
                 }
             }
         }
@@ -730,5 +731,12 @@ public struct MacSvnRepoBrowserView: View {
 
     private func join(_ base: String, _ path: String) -> String {
         base.hasSuffix("/") ? base + path : base + "/" + path
+    }
+
+    private func remoteURL(for entry: RemoteEntry) -> String {
+        guard let base = URL(string: rootURL) else {
+            return join(rootURL, entry.path)
+        }
+        return base.appendingPathComponent(entry.path, isDirectory: entry.kind == .directory).absoluteString
     }
 }

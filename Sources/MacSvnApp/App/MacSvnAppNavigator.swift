@@ -69,6 +69,14 @@ public struct PendingChangelistIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingExternalsIntent: Equatable, Sendable {
+    public let path: String?
+
+    public init(path: String?) {
+        self.path = path
+    }
+}
+
 public struct PendingTransferIntent: Equatable, Sendable {
     public let command: SvnCommandID
     public let path: String?
@@ -114,6 +122,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingBlameIntent: PendingBlameIntent?
     @Published public var pendingRevisionGraphLog: PendingRevisionGraphLogIntent?
     @Published public var pendingChangelistIntent: PendingChangelistIntent?
+    @Published public var pendingExternalsIntent: PendingExternalsIntent?
     /// CFM / ⌘K → 属性页预选路径（#35）。
     @Published public var pendingPropertyPath: String?
     /// CFM / 更新后 → 冲突工作区预选路径（#11）。
@@ -172,7 +181,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
-        let isPathInspectorCommand = command == .blame || command == .properties
+        let isPathInspectorCommand = command == .blame || command == .properties || command == .externals
         let isChangelistCommand = command == .changeLists
         let canInferWorkingCopyPath = command != .diffWithURL || (
             paths.count >= 2 && (paths[0] as NSString).isAbsolutePath
@@ -225,6 +234,10 @@ public final class MacSvnAppNavigator: ObservableObject {
 
         if command == .changeLists {
             pendingChangelistIntent = PendingChangelistIntent(paths: paths.filter { !$0.isEmpty })
+        }
+
+        if command == .externals {
+            pendingExternalsIntent = PendingExternalsIntent(path: paths.first(where: { !$0.isEmpty }))
         }
 
         if [.checkout, .export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
@@ -442,6 +455,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingChangelistIntent() -> PendingChangelistIntent? {
         let value = pendingChangelistIntent
         pendingChangelistIntent = nil
+        return value
+    }
+
+    public func consumePendingExternalsIntent() -> PendingExternalsIntent? {
+        let value = pendingExternalsIntent
+        pendingExternalsIntent = nil
         return value
     }
 

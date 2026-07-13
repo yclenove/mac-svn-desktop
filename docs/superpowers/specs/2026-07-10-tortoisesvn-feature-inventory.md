@@ -62,7 +62,7 @@
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local/清未版本仍开 | T1/T2 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板 | T2/T5 |
-| D18 | Externals | 文件夹/文件 externals、拖拽创建 | ❌ | T3 |
+| D18 | Externals | 文件夹/文件 externals、拖拽创建 | ✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals | T3 |
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | ✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达 | T2 |
 | D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6 | T2/T3 |
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
@@ -118,7 +118,7 @@
 | 36 | Copy / Move | `copy`/`move` | 目标路径 | ✅ | T1 |
 | 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置 | 🟡 | T3 |
 | 38 | Change Lists | changelist 分组 | 提交按列表 | ✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证 | T3 |
-| 39 | Externals | `svn:externals` | 编辑器、更新行为 | ❌ | T3 |
+| 39 | Externals | `svn:externals` | 编辑器、更新行为 | ✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证 | T3 |
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
 | 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开 | T2 |
 | 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ❌ | T3 |

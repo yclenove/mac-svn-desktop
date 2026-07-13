@@ -75,7 +75,7 @@
 - [x] Diff with URL（#6）：URL+revision 表单（留空为 HEAD）；peg revision 与 `svn+ssh://user@host`；认证 stdin/重试；Unified/左右分栏；真实 SVN 跨 URL 验证
 - [x] Revision Graph（#9）：trunk/branches/tags glob pattern 与分类颜色/copy 混色持久化；标签/未分类/已删除剪枝；拓扑/时间线与分页/All；节点 Log/Checkout/Blame/Diff；真实 SVN copy-edge 与跨位置 Diff 验证
 - [x] Change Lists（#38、D11）：status XML 归属；CFM 变更列表列/分组；选中路径移入/移出列表（含深度）；Commit 按列表选择并默认排除 `ignore-on-commit`；真实 SVN 往返验证
-- [ ] Externals（#39）
+- [x] Externals（#39、D18）：`svn:externals` 目录/文件定义编辑、operative/peg revision、注释保留、仓库 URL 拖拽预填；保存后可立即更新且不忽略 externals；真实 SVN 往返验证
 - [ ] 官方 Shelve 对齐（#37）
 - [ ] Merge reintegrate + 日志 Merge revision to…（#25,#42, L13）
 - [ ] Create Repository Here（#28）

@@ -245,7 +245,7 @@ final class SvnCliBackendTests: XCTestCase {
         try await backend.deleteProperty(wc: wc, target: "README.txt", name: "custom:reviewer")
 
         XCTAssertEqual(runner.calls.map(\.arguments), [
-            ["propset", "--non-interactive", "custom:reviewer", "杨超", "README.txt"],
+            ["propset", "--non-interactive", "--", "custom:reviewer", "杨超", "README.txt"],
             ["propdel", "--non-interactive", "custom:reviewer", "README.txt"]
         ])
         XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])

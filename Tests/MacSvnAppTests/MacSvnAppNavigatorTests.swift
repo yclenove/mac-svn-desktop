@@ -18,6 +18,16 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertNil(navigator.pendingChangelistIntent)
     }
 
+    func testExternalsCommandNavigatesToPropertiesWithAtomicIntent() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+
+        let result = navigator.perform(command: .externals, paths: ["vendor"])
+
+        XCTAssertEqual(result, .navigated(to: .properties))
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(navigator.consumePendingExternalsIntent(), PendingExternalsIntent(path: "vendor"))
+    }
+
     func testDeepLinkOpenSetsChangesAndPendingPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .settings)
         navigator.handle(deepLink: .open(path: "/tmp/wc"))

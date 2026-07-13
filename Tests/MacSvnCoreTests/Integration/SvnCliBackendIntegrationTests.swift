@@ -3,6 +3,52 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testDirectoryAndFileExternalsRoundTripAndMaterializeOnUpdate() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let value = SvnExternalsDocument(definitions: [
+            SvnExternalDefinition(
+                revision: Revision(1),
+                url: "^/branches/feature-one",
+                pegRevision: Revision(1),
+                localPath: "external-feature"
+            ),
+            SvnExternalDefinition(
+                revision: Revision(1),
+                url: "^/trunk/README.txt",
+                pegRevision: Revision(1),
+                localPath: "external-readme.txt"
+            )
+        ]).render()
+
+        try await service.setProperty(
+            wc: fixture.workingCopy,
+            target: ".",
+            name: "svn:externals",
+            value: value
+        )
+        let property = try await fixture.backend.propertyValue(
+            wc: fixture.workingCopy,
+            target: ".",
+            name: "svn:externals"
+        )
+        let document = try SvnExternalsDocument(text: try XCTUnwrap(property?.value))
+        XCTAssertEqual(document.definitions.map(\.localPath), [
+            "external-feature", "external-readme.txt"
+        ])
+
+        _ = try await service.update(wc: fixture.workingCopy, paths: ["."], ignoreExternals: false)
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("external-feature/README.txt")),
+            "branch seed\n"
+        )
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("external-readme.txt")),
+            "hello\n"
+        )
+    }
+
     func testChangelistAssignmentAndRemovalRoundTripThroughStatusXML() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.4：Externals 编辑与更新行为（#39、D18）
+- Affected: ExternalsPolicy, PropertyViewModel, MacSvnPropertiesView, MacSvnRepoBrowserView, MacSvnAppNavigator, SvnCommandBuilder, SvnCommandCatalog, Tests/*, docs/*
+- Impact: 新增 `svn:externals` 现代/旧式语法解析与结构化编辑器，支持目录/文件 external、operative/peg revision、注释保留和安全本地路径校验；仓库浏览器可拖拽 URL 预填；保存后可选择立即更新且明确不忽略 externals；真实 SVN 验证目录/文件 external materialize；全量 738 绿；覆盖率 75/114；下一 T3.5
+
 - Summary: Tortoise 完美 Loop T3.3：Change Lists（#38、D11、CFM §4.2）
 - Affected: ChangelistPolicy, FileStatus/StatusXMLParser, SvnCommandBuilder/Backend/Service, ChangesViewModel, CommitViewModel, MacSvnChangesView, MacSvnCommitView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
 - Impact: 解析并展示 SVN changelist 归属；CFM 支持变更列表列、分组和按深度移入/移出；Commit 提供按列表选择并默认排除 `ignore-on-commit`；cmd.38 从 CFM/⌘K 可达且不会误打开相对路径；真实 SVN 往返验证；全量 730 绿；覆盖率 73/114；下一 T3.4

@@ -304,7 +304,8 @@ public enum SvnCommandBuilder {
             arguments += ["--encoding", "UTF-8"]
         }
 
-        arguments += ["--non-interactive", name, value, target]
+        // 属性值可能以 `-r` 等连字符开头；`--` 防止 SVN 把值误解析为选项。
+        arguments += ["--non-interactive", "--", name, value, target]
         return SvnCommand(arguments: arguments)
     }
 

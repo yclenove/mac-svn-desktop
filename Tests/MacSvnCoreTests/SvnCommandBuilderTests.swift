@@ -591,11 +591,11 @@ final class SvnCommandBuilderTests: XCTestCase {
         )
         XCTAssertEqual(
             SvnCommandBuilder.propset(name: "svn:eol-style", value: "native", target: "README.txt").arguments,
-            ["propset", "--encoding", "UTF-8", "--non-interactive", "svn:eol-style", "native", "README.txt"]
+            ["propset", "--encoding", "UTF-8", "--non-interactive", "--", "svn:eol-style", "native", "README.txt"]
         )
         XCTAssertEqual(
             SvnCommandBuilder.propset(name: "custom:reviewer", value: "杨超", target: "README.txt").arguments,
-            ["propset", "--non-interactive", "custom:reviewer", "杨超", "README.txt"]
+            ["propset", "--non-interactive", "--", "custom:reviewer", "杨超", "README.txt"]
         )
         XCTAssertEqual(
             SvnCommandBuilder.propdel(name: "svn:eol-style", target: "README.txt").arguments,
