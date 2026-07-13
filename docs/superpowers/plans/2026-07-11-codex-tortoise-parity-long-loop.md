@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2 与 T3.1–T3.7，当前继续 T3.8。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2 与 T3.1–T3.8，当前继续 T3.9。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T3.8 Delete keep local / Delete unversioned（#15、#16）
+当前第一个未完成项：T3.9 Compare revisions / Blame differences（#40、L03）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T3.7 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | `ab5f77a`（T3.7 Create Repository）；前一功能 tip 为 `240f71c` |
-| 覆盖率 | **82/114 = 71.93%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **761** 绿（2026-07-13；含真实 SVN FSFS 创建、reintegrate/单修订合并、Shelve V2/V3、Externals 等集成测） |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.7 ✅；下一 **T3.8** |
+| 工作区 | T3.8 实现与验收文档已更新，提交后应干净 |
+| 最近功能 tip | `86d65da`（T3.8 Delete keep local / Delete unversioned）；前一功能 tip 为 `ab5f77a` |
+| 覆盖率 | **84/114 = 73.68%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **771** 绿（2026-07-13；含真实 SVN keep-local、未版本文件/目录删除、FSFS 创建、合并、Shelve V2/V3、Externals 等集成测） |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.8 ✅；下一 **T3.9** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -68,6 +68,7 @@
 | **T3.5** | 官方 `svn shelve` 对齐 + 本地搁置迁移（#37、D12、S05） | ✅ |
 | **T3.6** | Merge reintegrate + 日志 Merge revision to…（#25、#42、L13） | ✅ |
 | **T3.7** | Create Repository Here（#28） | ✅ |
+| **T3.8** | Delete keep local / Delete unversioned（#15、#16） | ✅ |
 | T3.* | 专业能力（含 L03/L13/L15–L16、reintegrate、Revision Graph…） | |
 | T4.* | Overlay / Finder / Status Cache | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
@@ -111,7 +112,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.8**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.9**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -241,6 +242,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T3.5 | c4bf526 | 官方 `svn shelve` V2/V3、能力探测、双轨搁置 UI 与本地手工快照迁移；真实 SVN 往返；覆盖率 78/114；全量 749 绿；下一刀 T3.6 |
 | 2026-07-13 | T3.6 | 240f71c | 现代 complete merge reintegrate、日志 L13 `svn merge -c REV`、确认门控与冲突回跳；真实 SVN 往返；覆盖率 81/114；全量 755 绿；下一刀 T3.7 |
 | 2026-07-13 | T3.7 | ab5f77a | `svnadmin create --fs-type fsfs`、仓库浏览器/⌘K 入口、用户工具链路径与结构化错误码；真实仓库验证；覆盖率 82/114；全量 761 绿；下一刀 T3.8 |
+| 2026-07-13 | T3.8 | 86d65da | `svn delete --keep-local`；未版本预览勾选、二次 status/WC 边界复核、父子路径合并；CFM/⌘K 原子意图；真实 SVN 文件/目录往返；覆盖率 84/114；全量 771 绿；下一刀 T3.9 |
 
 ---
 

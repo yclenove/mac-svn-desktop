@@ -79,7 +79,7 @@
 - [x] 官方 Shelve 对齐（#37）：设置支持 V2/V3；官方能力探测、Shelve/List/Diff/Log/Unshelve/Drop；本地手工 Patch 快照可迁移且官方失败不删除快照；真实 SVN V2/V3 往返验证
 - [x] Merge reintegrate + 日志 Merge revision to…（#25,#42, L13）：现代 SVN complete merge 语义；Merge 向导 dry-run/执行/冲突回跳；日志右键 `-c REV` 合并确认；真实 WC 验证
 - [x] Create Repository Here（#28）：仓库浏览器/⌘K 可达；目录选择后执行 `svnadmin create --fs-type fsfs`；真实仓库 format/db/conf 验证
-- [ ] Delete keep local / Delete unversioned（#15,#16）
+- [x] Delete keep local / Delete unversioned（#15,#16）：`svn delete --keep-local` 保留磁盘文件；未版本项提供预览勾选、二次确认，执行前重读 status 并拒绝绝对路径、WC 越界和版本化路径；CFM/⌘K 可达；真实 SVN 文件/目录往返验证
 - [ ] Compare revisions / Blame differences（#40, L03）
 - [ ] 日志 Edit author/message + rev props（L15,L16）
 - [ ] 日志统计 / 离线缓存（L18 剩余, S13）

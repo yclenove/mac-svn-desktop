@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.8：Delete keep local / Delete unversioned（#15、#16）
+- Affected: UnversionedDeletionPolicy, SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, WorkingCopyActionsViewModel, MacSvnChangesView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: 支持 `svn delete --keep-local` 并二次确认；删除未版本项提供 status 候选预览和勾选，执行前重新读取 status、校验 WC 路径边界与未版本状态，父子路径合并避免重复删除；CFM/⌘K 使用一次性原子意图；真实 SVN 验证本地保留、文件/目录删除与版本文件不受影响；全量 771 绿；覆盖率 84/114；下一 T3.9
+
 - Summary: Tortoise 完美 Loop T3.7：Create Repository Here（#28）
 - Affected: SvnRepositoryCreator, CreateRepositoryViewModel, MacSvnRepoBrowserView, MacSvnAppNavigator, MacSvnAppSession, SvnErrorMapper, Tests/*, docs/*
 - Impact: 仓库浏览器与 ⌘K 支持选择目录并执行 `svnadmin create --fs-type fsfs`；`svnadmin` 跟随用户配置的 SVN 工具链并保留结构化错误码；创建成功后直接浏览 `file://` 仓库；真实 FSFS format/db/conf 验证；全量 761 绿；覆盖率 82/114；下一 T3.8

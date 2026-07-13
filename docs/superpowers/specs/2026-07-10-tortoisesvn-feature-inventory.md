@@ -59,7 +59,7 @@
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | ✅ 官方 `x-shelve`/`x-unshelve`/list/diff/log/drop；能力探测；本地手工快照迁移且失败保留快照 | T3 |
 | D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
-| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local/清未版本仍开 | T1/T2 |
+| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local 确认与未版本预览勾选/路径复核齐全 | T1/T2/T3 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals | T3 |
@@ -94,8 +94,8 @@
 | 12 | Resolved | `resolved` | 多选 | ✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除 | T2 |
 | 13 | Rename | `rename` | 新名校验 | ✅ | T1 |
 | 14 | Delete | `delete` | 确认 | ✅ | T1 |
-| 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T3 |
-| 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T3 |
+| 15 | Delete (keep local) | `delete --keep-local` | 确认 | ✅ CFM/⌘K 原子意图、二次确认；真实 SVN 验证调度 deleted 且本地文件保留 | T3 |
+| 16 | Delete unversioned | status 复核后删除本地项 | 预览列表 | ✅ 未版本候选预览/勾选；执行前二次 status、WC 边界与版本状态校验；文件/目录真实往返 | T3 |
 | 17 | Revert | `status`→勾选→`revert [-R]` | 勾选、单项 Diff | ✅ | T1 |
 | 18 | Cleanup | `cleanup` | 刷新壳层/断锁等选项 | ✅ | T1 |
 | 19 | Get Lock | `lock -m [--force]` | 注释、steal | ✅ 锁定页+CFM/⌘K；注释与夺锁确认 | T2 |
