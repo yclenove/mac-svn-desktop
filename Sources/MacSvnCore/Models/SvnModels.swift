@@ -524,7 +524,7 @@ public struct Credential: Equatable, Sendable {
     }
 }
 
-public struct LogEntry: Equatable, Sendable {
+public struct LogEntry: Codable, Equatable, Sendable {
     public let revision: Revision
     public let author: String
     public let date: Date?
@@ -540,7 +540,7 @@ public struct LogEntry: Equatable, Sendable {
     }
 }
 
-public struct ChangedPath: Equatable, Sendable {
+public struct ChangedPath: Codable, Equatable, Sendable {
     public let path: String
     public let action: ChangedPathAction
     public let kind: String?
@@ -556,7 +556,7 @@ public struct ChangedPath: Equatable, Sendable {
     }
 }
 
-public enum ChangedPathAction: String, Equatable, Sendable {
+public enum ChangedPathAction: String, Codable, Equatable, Hashable, Sendable {
     case added = "A"
     case modified = "M"
     case deleted = "D"
@@ -1038,6 +1038,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var revisionGraph: RevisionGraphSettings
     /// 官方 SVN experimental shelving CLI 版本。
     public var shelvingVersion: SvnShelvingVersion
+    /// S13：日志缓存启用、保留期和每目标容量。
+    public var logCachePolicy: LogCachePolicy
 
     public init(
         svnPath: String? = nil,
@@ -1062,6 +1064,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.progressAutoCloseMode = progressAutoCloseMode
         self.revisionGraph = revisionGraph
         self.shelvingVersion = .v3
+        self.logCachePolicy = LogCachePolicy()
     }
 
     public init(
@@ -1088,6 +1091,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.progressAutoCloseMode = progressAutoCloseMode
         self.revisionGraph = revisionGraph
         self.shelvingVersion = shelvingVersion
+        self.logCachePolicy = LogCachePolicy()
     }
 
     public init(
@@ -1154,6 +1158,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case progressAutoCloseMode
         case revisionGraph
         case shelvingVersion
+        case logCachePolicy
     }
 
     public init(from decoder: Decoder) throws {
@@ -1169,6 +1174,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         progressAutoCloseMode = try container.decodeIfPresent(ProgressAutoCloseMode.self, forKey: .progressAutoCloseMode) ?? .noConflicts
         revisionGraph = try container.decodeIfPresent(RevisionGraphSettings.self, forKey: .revisionGraph) ?? RevisionGraphSettings()
         shelvingVersion = try container.decodeIfPresent(SvnShelvingVersion.self, forKey: .shelvingVersion) ?? .v3
+        logCachePolicy = try container.decodeIfPresent(LogCachePolicy.self, forKey: .logCachePolicy) ?? LogCachePolicy()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1184,6 +1190,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(progressAutoCloseMode, forKey: .progressAutoCloseMode)
         try container.encode(revisionGraph, forKey: .revisionGraph)
         try container.encode(shelvingVersion, forKey: .shelvingVersion)
+        try container.encode(logCachePolicy, forKey: .logCachePolicy)
     }
 }
 

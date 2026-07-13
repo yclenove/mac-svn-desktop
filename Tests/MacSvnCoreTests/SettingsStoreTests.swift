@@ -23,6 +23,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(settings.branchLayout, BranchLayout())
         XCTAssertEqual(settings.processTimeout, 120)
         XCTAssertNil(settings.externalDiffTool)
+        XCTAssertEqual(settings.logCachePolicy, LogCachePolicy())
     }
 
     func testUpdatePersistsSettings() async throws {
@@ -83,6 +84,23 @@ final class SettingsStoreTests: XCTestCase {
         """
         let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
         XCTAssertEqual(decoded.settings.shelvingVersion, .v3)
+        XCTAssertEqual(decoded.settings.logCachePolicy, LogCachePolicy())
+    }
+
+    func testLogCachePolicyPersistsWithSettings() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.logCachePolicy = LogCachePolicy(
+            enabled: false,
+            retentionDays: 14,
+            maxEntriesPerTarget: 5_000
+        )
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.logCachePolicy, settings.logCachePolicy)
     }
 
     func testResetRestoresDefaults() async throws {

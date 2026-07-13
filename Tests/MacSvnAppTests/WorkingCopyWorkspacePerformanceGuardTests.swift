@@ -88,6 +88,17 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         XCTAssertTrue(repoBrowserSource.contains(".draggable(remoteURL(for: entry))"))
     }
 
+    func testLogOfflineModeSkipsInfoProbeAndStatisticsInterpolatesCount() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnLogView.swift")
+
+        XCTAssertTrue(
+            source.contains("if offlineMode {\n            workingCopyURL = record.repoURL"),
+            "强制离线加载必须在 svn info 前使用持久化工作副本 URL"
+        )
+        XCTAssertTrue(source.contains("Text(\"当前过滤结果：\\(statistics.totalRevisions) 条修订\")"))
+        XCTAssertFalse(source.contains("当前过滤结果：(statistics.totalRevisions)"))
+    }
+
     private static func readFeatureSource(named fileName: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         // Tests/MacSvnAppTests/... → 仓库根

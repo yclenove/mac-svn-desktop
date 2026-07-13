@@ -10,6 +10,9 @@ public struct MacSvnSettingsView: View {
     @State private var processTimeout: Double = 120
     @State private var progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
     @State private var shelvingVersion: SvnShelvingVersion = .v3
+    @State private var logCacheEnabled = true
+    @State private var logCacheRetentionDays = 90
+    @State private var logCacheMaxEntries = 20_000
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -53,6 +56,19 @@ public struct MacSvnSettingsView: View {
                     }
                 }
                 Text("更新/合并出现错误、冲突或合并增删时，进度提示会按策略保留。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("日志缓存") {
+                Toggle("启用日志缓存", isOn: $logCacheEnabled)
+                Stepper("保留 \(logCacheRetentionDays) 天", value: $logCacheRetentionDays, in: 1...365)
+                    .disabled(!logCacheEnabled)
+                Stepper("每个目标最多 \(logCacheMaxEntries) 条", value: $logCacheMaxEntries, in: 100...100_000, step: 100)
+                    .disabled(!logCacheEnabled)
+                Button("清理全部日志缓存") {
+                    Task { await clearLogCache() }
+                }
+                Text("在线日志会按仓库与目标隔离保存；网络不可用时可回退到最近缓存。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -109,6 +125,9 @@ public struct MacSvnSettingsView: View {
         processTimeout = settings.processTimeout
         progressAutoCloseMode = settings.progressAutoCloseMode
         shelvingVersion = settings.shelvingVersion
+        logCacheEnabled = settings.logCachePolicy.enabled
+        logCacheRetentionDays = settings.logCachePolicy.retentionDays
+        logCacheMaxEntries = settings.logCachePolicy.maxEntriesPerTarget
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -134,6 +153,11 @@ public struct MacSvnSettingsView: View {
         settings.processTimeout = processTimeout
         settings.progressAutoCloseMode = progressAutoCloseMode
         settings.shelvingVersion = shelvingVersion
+        settings.logCachePolicy = LogCachePolicy(
+            enabled: logCacheEnabled,
+            retentionDays: logCacheRetentionDays,
+            maxEntriesPerTarget: logCacheMaxEntries
+        )
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
         settings.revisionGraph = RevisionGraphSettings(
@@ -163,6 +187,15 @@ public struct MacSvnSettingsView: View {
             statusText = "已保存。svn 路径、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
         } catch {
             statusText = "保存失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func clearLogCache() async {
+        do {
+            try await session.logCacheStore.clearAll()
+            statusText = "日志缓存已清理。"
+        } catch {
+            statusText = "清理日志缓存失败：\(error.localizedDescription)"
         }
     }
 

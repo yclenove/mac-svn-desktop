@@ -137,6 +137,89 @@ final class LogViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.hasMore)
         XCTAssertEqual(calls.count, 3)
     }
+
+    @MainActor
+    func testOnlineLoadWritesCacheAndReportsLiveSource() async {
+        let entries = [logEntry(Revision(9))]
+        let provider = FakeLogProvider(results: [.success(entries)])
+        let cache = FakeLogCache()
+        let identity = LogCacheIdentity(repositoryRoot: "file:///repo", target: "trunk")
+        let viewModel = LogViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            target: "trunk",
+            batchSize: 10,
+            logProvider: provider,
+            logCache: cache,
+            cacheIdentity: identity,
+            cachePolicy: LogCachePolicy()
+        )
+
+        await viewModel.loadInitial(from: Revision(9))
+
+        XCTAssertEqual(viewModel.dataSource, .live)
+        let writes = await cache.recordedMerges()
+        XCTAssertEqual(writes.map(\.entries), [entries])
+        XCTAssertEqual(writes.first?.key, identity.key(stopOnCopy: false))
+    }
+
+    @MainActor
+    func testNetworkFailureFallsBackToCachedEntries() async {
+        let cached = [logEntry(Revision(7)), logEntry(Revision(6))]
+        let updatedAt = Date(timeIntervalSince1970: 100)
+        let provider = FakeLogProvider(results: [.failure(SvnError.network(detail: "offline"))])
+        let cache = FakeLogCache(snapshot: LogCacheSnapshot(
+            key: LogCacheKey(repositoryRoot: "file:///repo", target: "trunk", stopOnCopy: false),
+            updatedAt: updatedAt,
+            entries: cached
+        ))
+        let viewModel = LogViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            target: "trunk",
+            batchSize: 10,
+            logProvider: provider,
+            logCache: cache,
+            cacheIdentity: LogCacheIdentity(repositoryRoot: "file:///repo", target: "trunk"),
+            cachePolicy: LogCachePolicy()
+        )
+
+        await viewModel.loadInitial(from: Revision(9))
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.entries, cached)
+        XCTAssertEqual(
+            viewModel.dataSource,
+            .fallbackCache(updatedAt: updatedAt, reason: String(describing: SvnError.network(detail: "offline")))
+        )
+        XCTAssertFalse(viewModel.hasMore)
+    }
+
+    @MainActor
+    func testForcedOfflineReadsCacheWithoutCallingProvider() async {
+        let cached = [logEntry(Revision(4))]
+        let updatedAt = Date(timeIntervalSince1970: 200)
+        let provider = FakeLogProvider(results: [])
+        let key = LogCacheKey(repositoryRoot: "file:///repo", target: "branch", stopOnCopy: true)
+        let cache = FakeLogCache(snapshot: LogCacheSnapshot(key: key, updatedAt: updatedAt, entries: cached))
+        let viewModel = LogViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            target: "branch",
+            batchSize: 10,
+            logProvider: provider,
+            logCache: cache,
+            cacheIdentity: LogCacheIdentity(repositoryRoot: "file:///repo", target: "branch"),
+            cachePolicy: LogCachePolicy()
+        )
+        viewModel.stopOnCopy = true
+        viewModel.offlineMode = true
+
+        await viewModel.loadInitial(from: Revision(9))
+
+        let calls = await provider.recordedCalls()
+        XCTAssertEqual(calls, [])
+        XCTAssertEqual(viewModel.entries, cached)
+        XCTAssertEqual(viewModel.dataSource, .offlineCache(updatedAt: updatedAt))
+        XCTAssertFalse(viewModel.hasMore)
+    }
 }
 
 private struct LogCall: Equatable, Sendable {
@@ -183,6 +266,39 @@ private actor FakeLogProvider: LogProviding {
         }
 
         return try results.removeFirst().get()
+    }
+}
+
+private struct FakeLogCacheMerge: Equatable, Sendable {
+    let entries: [LogEntry]
+    let key: LogCacheKey
+}
+
+private actor FakeLogCache: LogCaching {
+    private let storedSnapshot: LogCacheSnapshot?
+    private var merges: [FakeLogCacheMerge] = []
+
+    init(snapshot: LogCacheSnapshot? = nil) {
+        self.storedSnapshot = snapshot
+    }
+
+    func recordedMerges() -> [FakeLogCacheMerge] { merges }
+
+    func snapshot(
+        for key: LogCacheKey,
+        policy: LogCachePolicy,
+        now: Date
+    ) async throws -> LogCacheSnapshot? {
+        storedSnapshot?.key == key ? storedSnapshot : nil
+    }
+
+    func merge(
+        entries: [LogEntry],
+        for key: LogCacheKey,
+        policy: LogCachePolicy,
+        now: Date
+    ) async throws {
+        merges.append(FakeLogCacheMerge(entries: entries, key: key))
     }
 }
 

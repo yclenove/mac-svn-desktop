@@ -17,6 +17,7 @@ public struct MacSvnLogView: View {
     @State private var messageFilter = ""
     @State private var pathFilter = ""
     @State private var stopOnCopy = false
+    @State private var offlineMode = false
     @State private var statusText: String?
     @State private var selectedRevision: Int?
     /// 当前 WC 的 `svn info` URL，供路径归一化与 Browse。
@@ -30,6 +31,7 @@ public struct MacSvnLogView: View {
     @State private var revisionPropertyEditMode = false
     @State private var revisionAuthor = ""
     @State private var revisionMessage = ""
+    @State private var showStatisticsSheet = false
 
     // T2.4 对话框状态
     @State private var showBranchSheet = false
@@ -61,62 +63,8 @@ public struct MacSvnLogView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("历史")
-                    .font(.title2.weight(.semibold))
-                Spacer()
-                Button("AI Release Notes") {
-                    guard let viewModel else { return }
-                    let entries = filteredEntries(viewModel.entries)
-                    navigator.pendingReleaseNotesEntries = entries
-                    navigator.selectRoute(.releaseNotes)
-                    navigator.lastAutomationMessage = "从历史带入 \(entries.count) 条生成 Release Notes"
-                }
-                .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
-                Button("刷新") { Task { await reload() } }
-                Button("Next") {
-                    Task { await viewModel?.loadMore() }
-                }
-                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
-                .help("再加载一批（Tortoise Next）")
-                Button("Show All") {
-                    Task { await viewModel?.loadAll() }
-                }
-                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
-                .help("循环拉取直至无更多（Tortoise Show All）")
-            }
-            .padding(16)
-
-            HStack(spacing: 8) {
-                TextField("作者过滤", text: $authorFilter)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 140)
-                TextField("说明关键字", text: $messageFilter)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 180)
-                TextField("路径过滤", text: $pathFilter)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 200)
-                Toggle("Stop on copy", isOn: $stopOnCopy)
-                    .toggleStyle(.checkbox)
-                    .help("svn log --stop-on-copy：在分支拷贝点停止")
-                    .onChange(of: stopOnCopy) { _, newValue in
-                        Task { await applyStopOnCopy(newValue) }
-                    }
-                if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
-                    let shown = filteredEntries(viewModel.entries).count
-                    Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if !pathFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, shown == 0, !viewModel.entries.isEmpty {
-                        Text("路径过滤无命中（需 verbose 路径明细）")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            logToolbar
+            logFilterBar
 
             if let statusText {
                 Text(statusText).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16)
@@ -168,6 +116,74 @@ public struct MacSvnLogView: View {
         .sheet(isPresented: $showRevisionPropertySheet) {
             revisionPropertySheet
         }
+        .sheet(isPresented: $showStatisticsSheet) {
+            statisticsSheet
+        }
+    }
+
+    @ViewBuilder
+    private var logToolbar: some View {
+        HStack {
+            Text("历史").font(.title2.weight(.semibold))
+            Spacer()
+            Button("AI Release Notes") {
+                guard let viewModel else { return }
+                let entries = filteredEntries(viewModel.entries)
+                navigator.pendingReleaseNotesEntries = entries
+                navigator.selectRoute(.releaseNotes)
+                navigator.lastAutomationMessage = "从历史带入 \(entries.count) 条生成 Release Notes"
+            }
+            .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
+            Button("刷新") { Task { await reload() } }
+            Button("Next") { Task { await viewModel?.loadMore() } }
+                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+                .help("再加载一批（Tortoise Next）")
+            Button("Show All") { Task { await viewModel?.loadAll() } }
+                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+                .help("循环拉取直至无更多（Tortoise Show All）")
+            Button("统计") { showStatisticsSheet = true }
+                .disabled(viewModel?.entries.isEmpty != false)
+        }
+        .padding(16)
+    }
+
+    @ViewBuilder
+    private var logFilterBar: some View {
+        HStack(spacing: 8) {
+            TextField("作者过滤", text: $authorFilter)
+                .textFieldStyle(.roundedBorder).frame(maxWidth: 140)
+            TextField("说明关键字", text: $messageFilter)
+                .textFieldStyle(.roundedBorder).frame(maxWidth: 180)
+            TextField("路径过滤", text: $pathFilter)
+                .textFieldStyle(.roundedBorder).frame(maxWidth: 200)
+            Toggle("Stop on copy", isOn: $stopOnCopy)
+                .toggleStyle(.checkbox)
+                .help("svn log --stop-on-copy：在分支拷贝点停止")
+                .onChange(of: stopOnCopy) { _, newValue in
+                    Task { await applyStopOnCopy(newValue) }
+                }
+            Toggle("离线", isOn: $offlineMode)
+                .toggleStyle(.checkbox)
+                .help("只读取已缓存日志，不访问仓库")
+                .onChange(of: offlineMode) { _, _ in
+                    Task { await reload() }
+                }
+            if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
+                let shown = filteredEntries(viewModel.entries).count
+                Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
+                    .font(.caption).foregroundStyle(.secondary)
+                if !pathFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   shown == 0, !viewModel.entries.isEmpty {
+                    Text("路径过滤无命中（需 verbose 路径明细）")
+                        .font(.caption2).foregroundStyle(.orange)
+                }
+                Text(logDataSourceLabel(viewModel.dataSource))
+                    .font(.caption2)
+                    .foregroundStyle(viewModel.dataSource == .live ? Color.secondary : Color.orange)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     @ViewBuilder
@@ -571,6 +587,85 @@ public struct MacSvnLogView: View {
         }
     }
 
+    @ViewBuilder
+    private var statisticsSheet: some View {
+        let entries = filteredEntries(viewModel?.entries ?? [])
+        let statistics = LogStatisticsBuilder.build(entries: entries)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("当前过滤结果：\(statistics.totalRevisions) 条修订")
+                        .font(.headline)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), alignment: .leading)], spacing: 12) {
+                        statisticValue("修订", value: "\(statistics.totalRevisions)")
+                        statisticValue("作者", value: "\(statistics.totalAuthors)")
+                        statisticValue("变更路径", value: "\(statistics.totalChangedPaths)")
+                        statisticValue("活跃天数", value: "\(statistics.activeDays)")
+                        statisticValue("日均提交", value: String(format: "%.2f", statistics.averageCommitsPerDay))
+                        statisticValue("周均提交", value: String(format: "%.2f", statistics.averageCommitsPerWeek))
+                    }
+
+                    Text("作者排名").font(.headline)
+                    ForEach(statistics.authors, id: \.author) { author in
+                        HStack(spacing: 8) {
+                            Text(author.author).lineLimit(1)
+                            ProgressView(value: author.percentage)
+                                .frame(maxWidth: .infinity)
+                            Text("\(author.commits)（\(Int(author.percentage * 100))%）")
+                                .font(.caption.monospaced())
+                                .frame(width: 110, alignment: .trailing)
+                        }
+                    }
+
+                    Text("按日活动").font(.headline)
+                    ForEach(statistics.activity.suffix(31), id: \.date) { day in
+                        HStack {
+                            Text(day.date.formatted(date: .abbreviated, time: .omitted))
+                                .frame(width: 110, alignment: .leading)
+                            ProgressView(value: Double(day.commits), total: Double(max(1, statistics.activity.map(\.commits).max() ?? 1)))
+                            Text("\(day.commits)").font(.caption.monospaced())
+                        }
+                    }
+
+                    Text("动作汇总").font(.headline)
+                    HStack {
+                        ForEach(statistics.actions, id: \.action) { action in
+                            Text("\(action.action.rawValue)：\(action.count)")
+                                .font(.caption.monospaced())
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("日志统计")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { showStatisticsSheet = false }
+                }
+            }
+        }
+        .frame(minWidth: 620, minHeight: 560)
+    }
+
+    private func statisticValue(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.title3.monospaced().weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func logDataSourceLabel(_ source: LogDataSource) -> String {
+        switch source {
+        case .live:
+            return "在线"
+        case .offlineCache(let updatedAt):
+            return "离线缓存 · \(updatedAt.formatted(date: .abbreviated, time: .shortened))"
+        case .fallbackCache(let updatedAt, _):
+            return "网络不可用，已回退缓存 · \(updatedAt.formatted(date: .abbreviated, time: .shortened))"
+        }
+    }
+
     private func filteredEntries(_ entries: [LogEntry]) -> [LogEntry] {
         entries.filter {
             LogFilterPolicy.matches(
@@ -597,21 +692,34 @@ public struct MacSvnLogView: View {
         let settings = await session.settingsStore.settings()
         let graphLogIntent = navigator.consumePendingRevisionGraphLog()
         let wc = URL(fileURLWithPath: record.localPath)
-        do {
-            let info = try await session.svnService.info(wc: wc, target: "")
-            workingCopyURL = info.url
-            repositoryRoot = info.repositoryRoot ?? info.url
-        } catch {
+        if offlineMode {
             workingCopyURL = record.repoURL
-            repositoryRoot = workingCopyURL
+            repositoryRoot = record.repoURL
+        } else {
+            do {
+                let info = try await session.svnService.info(wc: wc, target: "")
+                workingCopyURL = info.url
+                repositoryRoot = info.repositoryRoot ?? info.url
+            } catch {
+                workingCopyURL = record.repoURL
+                repositoryRoot = workingCopyURL
+            }
         }
+        let logTarget = graphLogIntent?.url ?? record.repoURL
         let vm = LogViewModel(
             workingCopy: wc,
             target: graphLogIntent?.url ?? "",
             batchSize: settings.logBatchSize,
-            logProvider: session.svnService
+            logProvider: session.svnService,
+            logCache: session.logCacheStore,
+            cacheIdentity: LogCacheIdentity(
+                repositoryRoot: record.repoURL,
+                target: logTarget
+            ),
+            cachePolicy: settings.logCachePolicy
         )
         vm.stopOnCopy = stopOnCopy
+        vm.offlineMode = offlineMode
         viewModel = vm
         let from = graphLogIntent?.revision ?? Revision(record.revision?.value ?? 1)
         await vm.loadInitial(from: from)

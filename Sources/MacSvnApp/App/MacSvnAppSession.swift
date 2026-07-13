@@ -18,6 +18,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let conflictService: ConflictService
     public let shelveService: ShelveService
     public let svnService: SvnService
+    public let logCacheStore: LogCacheStore
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
     public let repositoryCreator: SvnRepositoryCreator
@@ -49,6 +50,7 @@ public final class MacSvnAppSession: ObservableObject {
         conflictService: ConflictService,
         shelveService: ShelveService,
         svnService: SvnService,
+        logCacheStore: LogCacheStore? = nil,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String,
         repositoryCreator: SvnRepositoryCreator,
@@ -79,6 +81,9 @@ public final class MacSvnAppSession: ObservableObject {
         self.conflictService = conflictService
         self.shelveService = shelveService
         self.svnService = svnService
+        self.logCacheStore = logCacheStore ?? LogCacheStore(
+            fileURL: supportDirectory.appendingPathComponent("log-cache.json")
+        )
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
         self.repositoryCreator = repositoryCreator
@@ -118,6 +123,9 @@ public final class MacSvnAppSession: ObservableObject {
         )
         let repoBookmarkStore = RepoBookmarkStore(
             fileURL: directory.appendingPathComponent("bookmarks.json")
+        )
+        let logCacheStore = LogCacheStore(
+            fileURL: directory.appendingPathComponent("log-cache.json")
         )
 
         let settings = try await settingsStore.load()
@@ -263,6 +271,7 @@ public final class MacSvnAppSession: ObservableObject {
             conflictService: conflictService,
             shelveService: shelveService,
             svnService: svnService,
+            logCacheStore: logCacheStore,
             svnExecutablePath: svnPath,
             repositoryCreator: repositoryCreator,
             gitMigrationSourceAnalyzer: gitMigrationSourceAnalyzer,
