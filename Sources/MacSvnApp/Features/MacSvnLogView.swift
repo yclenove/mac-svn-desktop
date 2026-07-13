@@ -125,6 +125,9 @@ public struct MacSvnLogView: View {
             selectedRevision = nil
             Task { await reload() }
         }
+        .onChange(of: navigator.pendingRevisionGraphLog) { _, _ in
+            Task { await reload() }
+        }
         .task { await reload() }
         .sheet(isPresented: $showUnifiedDiffSheet) {
             NavigationStack {
@@ -490,24 +493,25 @@ public struct MacSvnLogView: View {
             return
         }
         let settings = await session.settingsStore.settings()
+        let graphLogIntent = navigator.consumePendingRevisionGraphLog()
         let wc = URL(fileURLWithPath: record.localPath)
         do {
             let info = try await session.svnService.info(wc: wc, target: "")
             workingCopyURL = info.url
             repositoryRoot = info.repositoryRoot ?? info.url
         } catch {
-            workingCopyURL = record.repoURL ?? ""
+            workingCopyURL = record.repoURL
             repositoryRoot = workingCopyURL
         }
         let vm = LogViewModel(
             workingCopy: wc,
-            target: "",
+            target: graphLogIntent?.url ?? "",
             batchSize: settings.logBatchSize,
             logProvider: session.svnService
         )
         vm.stopOnCopy = stopOnCopy
         viewModel = vm
-        let from = Revision(record.revision?.value ?? 1)
+        let from = graphLogIntent?.revision ?? Revision(record.revision?.value ?? 1)
         await vm.loadInitial(from: from)
         if let selectedRevision,
            vm.entries.contains(where: { $0.revision.value == selectedRevision }) {
@@ -588,7 +592,7 @@ public struct MacSvnLogView: View {
             await openRevision(path: path, revision: rev)
 
         case .blame(let path, let rev):
-            navigator.pendingBlamePath = path
+            navigator.pendingBlameIntent = PendingBlameIntent(path: path, revision: rev)
             navigator.selectMode(.blame)
             statusText = "Blame \(path)（日志 r\(rev.value)）"
             navigator.lastAutomationMessage = statusText

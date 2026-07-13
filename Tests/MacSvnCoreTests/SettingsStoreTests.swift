@@ -48,6 +48,25 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded, updated)
     }
 
+    func testRevisionGraphSettingsPersistWithAppSettings() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        let graphSettings = RevisionGraphSettings(
+            trunkPatterns: ["main/**"],
+            branchPatterns: ["work/*/**"],
+            tagPatterns: ["release/*/**"],
+            blendCopyColors: false,
+            palette: RevisionGraphPalette(trunkHex: "#111111")
+        )
+
+        var settings = AppSettings()
+        settings.revisionGraph = graphSettings
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.revisionGraph, graphSettings)
+    }
+
     func testResetRestoresDefaults() async throws {
         let root = temporaryRoot()
         let store = makeStore(root: root)

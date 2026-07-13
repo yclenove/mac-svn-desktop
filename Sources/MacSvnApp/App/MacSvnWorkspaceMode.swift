@@ -4,6 +4,7 @@ import Foundation
 public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     case changes
     case history
+    case revisionGraph
     case browser
     case branches
     case conflicts
@@ -26,7 +27,7 @@ public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, S
 
     /// 「更多」溢出（高级 SVN）。
     public static let advancedModes: [MacSvnWorkspaceMode] = [
-        .blame, .properties, .locks, .shelve
+        .revisionGraph, .blame, .properties, .locks, .shelve
     ]
 
     /// 「工具」菜单（附加能力 + 设置）。
@@ -38,6 +39,7 @@ public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, S
         switch self {
         case .changes: "变更"
         case .history: "历史"
+        case .revisionGraph: "修订图"
         case .browser: "浏览"
         case .branches: "分支"
         case .conflicts: "冲突"
@@ -57,6 +59,7 @@ public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, S
         switch self {
         case .changes: "list.bullet.rectangle"
         case .history: "clock.arrow.circlepath"
+        case .revisionGraph: "point.3.connected.trianglepath.dotted"
         case .browser: "network"
         case .branches: "point.topleft.down.curvedto.point.bottomright.up"
         case .conflicts: "arrow.triangle.merge"
@@ -79,6 +82,8 @@ public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, S
             self = .changes
         case .log:
             self = .history
+        case .revisionGraph:
+            self = .revisionGraph
         case .repositoryBrowser:
             self = .browser
         case .branches:
@@ -111,6 +116,7 @@ public enum MacSvnWorkspaceMode: String, CaseIterable, Identifiable, Hashable, S
         switch self {
         case .changes: .changes
         case .history: .log
+        case .revisionGraph: .revisionGraph
         case .browser: .repositoryBrowser
         case .branches: .branches
         case .conflicts: .merge

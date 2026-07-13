@@ -13,6 +13,7 @@ final class MacSvnAppRouteTests: XCTestCase {
             .commit,
             .diff,
             .log,
+            .revisionGraph,
             .repositoryBrowser,
             .branches,
             .merge,
@@ -32,6 +33,7 @@ final class MacSvnAppRouteTests: XCTestCase {
             "提交",
             "Diff",
             "日志",
+            "修订图",
             "仓库浏览器",
             "分支与标签",
             "冲突合并",
@@ -63,7 +65,7 @@ final class MacSvnAppRouteTests: XCTestCase {
         XCTAssertEqual(model.sections[0].routes, [.workspace, .changes, .commit, .diff, .log])
         XCTAssertEqual(model.sections[1].routes, [.repositoryBrowser, .branches])
         XCTAssertEqual(model.sections[2].routes, [.merge])
-        XCTAssertEqual(model.sections[3].routes, [.blame, .properties, .locks, .shelve])
+        XCTAssertEqual(model.sections[3].routes, [.revisionGraph, .blame, .properties, .locks, .shelve])
         XCTAssertEqual(model.sections[4].routes, [.gitMigration, .teamActivity, .aiAssistant, .releaseNotes])
         XCTAssertEqual(model.sections[5].routes, [.settings])
     }

@@ -201,6 +201,30 @@ public enum SvnCommandBuilder {
         ])
     }
 
+    /// 仓库两个位置的历史 Diff，使用独立 peg revision 保证跨分支复制可比较。
+    public static func repositoryDiff(
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        let oldPeg = LogChangedPathPolicy.pegURL(
+            workingCopyURL: LogContextActionPolicy.stripPegRevision(from: oldURL),
+            revision: oldRevision
+        )
+        let newPeg = LogChangedPathPolicy.pegURL(
+            workingCopyURL: LogContextActionPolicy.stripPegRevision(from: newURL),
+            revision: newRevision
+        )
+        return SvnCommand(arguments: [
+            "diff", "--non-interactive"
+        ] + authArguments + [
+            "--old", oldPeg,
+            "--new", newPeg
+        ])
+    }
+
     /// 工作副本目标与任意仓库 URL（可带 peg revision）的 Diff。
     public static func diffWithURL(
         url: String,

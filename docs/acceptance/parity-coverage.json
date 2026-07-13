@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-13T06:27:37Z",
+  "generated_at": "2026-07-13T09:15:46Z",
   "total": 114,
-  "done": 68,
+  "done": 71,
   "partial": 14,
-  "missing": 32,
-  "coverage": 0.596491,
-  "coverage_percent": 59.65,
+  "missing": 29,
+  "coverage": 0.622807,
+  "coverage_percent": 62.28,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 17,
+      "done": 18,
       "partial": 7,
-      "missing": 4
+      "missing": 3
     },
     "command": {
       "total": 46,
-      "done": 36,
+      "done": 37,
       "partial": 1,
-      "missing": 9
+      "missing": 8
     },
     "log": {
       "total": 20,
@@ -28,9 +28,9 @@
     },
     "settings": {
       "total": 13,
-      "done": 0,
+      "done": 1,
       "partial": 4,
-      "missing": 9
+      "missing": 8
     },
     "overlay": {
       "total": 7,
@@ -212,8 +212,8 @@
       "key": "D25",
       "section": "domain",
       "title": "Revision Graph",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作",
+      "status": "done"
     },
     {
       "key": "D26",
@@ -296,8 +296,8 @@
       "key": "cmd.09",
       "section": "command",
       "title": "Revision Graph",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ copy/history 边；拓扑 Canvas/时间线；分页/All；四类节点动作；真实 SVN copy-edge/Diff 验证",
+      "status": "done"
     },
     {
       "key": "cmd.10",
@@ -744,8 +744,8 @@
       "key": "S07",
       "section": "settings",
       "title": "Revision Graph",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化",
+      "status": "done"
     },
     {
       "key": "S08",

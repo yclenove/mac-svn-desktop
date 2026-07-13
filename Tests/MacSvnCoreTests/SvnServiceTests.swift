@@ -28,6 +28,29 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log", "info"])
     }
 
+    func testLogUsesAuthenticatedRemotePathWhenTargetIsURL() async throws {
+        let backend = MockSvnBackend()
+        backend.remoteLogResult = [
+            LogEntry(revision: Revision(4), author: "u", date: nil, message: "remote", changedPaths: [])
+        ]
+        backend.remoteLogErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let entries = try await service.log(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "https://svn.example/repo/branches/feature",
+            from: Revision(4),
+            batch: 10,
+            verbose: true,
+            stopOnCopy: false
+        )
+
+        XCTAssertEqual(entries, backend.remoteLogResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["remoteLog", "remoteLog"])
+        XCTAssertEqual(backend.remoteLogCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
     func testDiffWithURLPromptsForCredentialsAndRetriesOnce() async throws {
         let backend = MockSvnBackend()
         backend.diffWithURLResult = "@@ diff"
@@ -48,6 +71,29 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.diffWithURLCredentials, [nil, Credential(username: "u", password: "p")])
         let requestedScopes = await provider.recordedWorkingCopies()
         XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk/README.txt@7")!])
+    }
+
+    func testRepositoryDiffPromptsForCredentialsAndRetriesOnce() async throws {
+        let backend = MockSvnBackend()
+        backend.repositoryDiffResult = "@@ graph diff"
+        backend.repositoryDiffErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let diff = try await service.repositoryDiff(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            oldURL: "file:///repo/trunk",
+            oldRevision: Revision(4),
+            newURL: "file:///repo/branches/feature",
+            newRevision: Revision(9)
+        )
+
+        XCTAssertEqual(diff, "@@ graph diff")
+        XCTAssertEqual(backend.calls.map(\.name), ["repositoryDiff", "repositoryDiff"])
+        XCTAssertEqual(
+            backend.repositoryDiffCredentials,
+            [nil, Credential(username: "u", password: "p")]
+        )
     }
 
     func testBlameForwardsToBackend() async throws {
@@ -938,6 +984,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedResolveAccepts: [ResolveAccept] = []
     private var recordedPatchFiles: [URL] = []
     private var recordedDiffWithURLCredentials: [Credential?] = []
+    private var recordedRepositoryDiffCredentials: [Credential?] = []
+    var repositoryDiffResult = ""
+    var repositoryDiffErrors: [SvnError] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -951,6 +1000,12 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         callsLock.lock()
         defer { callsLock.unlock() }
         return recordedDiffWithURLCredentials
+    }
+
+    var repositoryDiffCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedRepositoryDiffCredentials
     }
 
     var updateCredentials: [Credential?] {
@@ -1512,6 +1567,33 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     func info(wc: URL, target: String) async throws -> SvnInfo {
         record("info")
         return infoResult
+    }
+
+    func repositoryDiff(
+        wc: URL,
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        auth: Credential?
+    ) async throws -> String {
+        _ = wc
+        _ = oldURL
+        _ = oldRevision
+        _ = newURL
+        _ = newRevision
+        let error = recordRepositoryDiff(auth: auth)
+        if let error { throw error }
+        return repositoryDiffResult
+    }
+
+    private func recordRepositoryDiff(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "repositoryDiff"))
+        recordedRepositoryDiffCredentials.append(auth)
+        let error = repositoryDiffErrors.isEmpty ? nil : repositoryDiffErrors.removeFirst()
+        callsLock.unlock()
+        return error
     }
 
     func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision {

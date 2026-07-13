@@ -4,6 +4,39 @@ import XCTest
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
     @MainActor
+    func testRevisionGraphBuildsCopyEdgeAndLoadsNodeDiffFromRealRepository() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: "\(fixture.repositoryURL)/branches/graph-copy",
+            message: "create graph branch"
+        )
+        let viewModel = RevisionGraphViewModel(
+            workingCopy: fixture.workingCopy,
+            batchSize: 50,
+            settings: RevisionGraphSettings(),
+            provider: service
+        )
+
+        await viewModel.loadInitial()
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        let branchNode = try XCTUnwrap(
+            viewModel.snapshot.nodes.first(where: { $0.path == "/branches/graph-copy" })
+        )
+        XCTAssertEqual(branchNode.sourcePath, "/trunk")
+        XCTAssertTrue(viewModel.snapshot.edges.contains {
+            $0.kind == .copy && $0.targetID == branchNode.id
+        })
+
+        await viewModel.loadDiff(for: branchNode.id)
+        XCTAssertEqual(viewModel.diffState, .loaded)
+        XCTAssertNotNil(viewModel.diffText)
+    }
+
+    @MainActor
     func testDiffWithURLComparesWorkingCopyAgainstBranchURLAtRevision() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

@@ -41,6 +41,8 @@ public struct MacSvnFeatureHostView: View {
             MacSvnDiffView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .log:
             MacSvnLogView(workspaceController: workspaceController, session: session, navigator: navigator)
+        case .revisionGraph:
+            MacSvnRevisionGraphView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .repositoryBrowser:
             MacSvnRepoBrowserView(session: session, workspaceController: workspaceController, navigator: navigator)
         case .branches:

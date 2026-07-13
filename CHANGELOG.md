@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.2：Revision Graph 核心与设置（#9、D25、S07、§4.6）
+- Affected: RevisionGraphModels/Builder/PathClassifier/NodeActionPolicy/ViewModel, SvnCommandBuilder/Backend/Service, MacSvnRevisionGraphView, MacSvnSettingsView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: 从仓库根 `svn log -v` 构建 history/copy 图，支持 trunk/branches/tags glob 分类、颜色与 copy 混色、标签/未分类/已删除剪枝、拓扑/时间线、分页/All；节点 Log/Checkout/Blame/Diff 经原子 intent 与认证重试接入现有工作流；真实 SVN 验证 copy-edge 和跨位置 Diff；覆盖率 71/114；全量 724 绿；下一 T3.3
+
 - Summary: Tortoise 完美 Loop T3.1：Diff with URL（#6）
 - Affected: DiffWithURLValidationPolicy, DiffViewModel, SvnCommandBuilder/Backend/Service, MacSvnDiffView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
 - Impact: 新增 URL+revision 比较表单；留空 revision 使用 HEAD，支持 URL 末尾 peg revision 与 `svn+ssh://user@host`；拒绝 URL 内嵌密码；认证密码仅经 stdin 并支持一次重试；原子导航 intent 可从 CFM/⌘K 预填；嵌入式左右分栏使用两列完整文本并保留大 Diff 回退与请求代次保护；真实 SVN 验证跨 URL 输出方向；全量 710 绿；下一 T3.2

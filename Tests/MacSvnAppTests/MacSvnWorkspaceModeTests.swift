@@ -15,6 +15,7 @@ final class MacSvnWorkspaceModeTests: XCTestCase {
         XCTAssertEqual(MacSvnWorkspaceMode(route: .commit), .changes)
         XCTAssertEqual(MacSvnWorkspaceMode(route: .diff), .changes)
         XCTAssertEqual(MacSvnWorkspaceMode(route: .log), .history)
+        XCTAssertEqual(MacSvnWorkspaceMode(route: .revisionGraph), .revisionGraph)
         XCTAssertEqual(MacSvnWorkspaceMode(route: .merge), .conflicts)
         XCTAssertEqual(MacSvnWorkspaceMode(route: .repositoryBrowser), .browser)
     }

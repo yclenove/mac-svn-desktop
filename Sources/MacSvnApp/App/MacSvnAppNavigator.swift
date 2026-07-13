@@ -41,6 +41,26 @@ public struct PendingDiffWithURLIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingRevisionGraphLogIntent: Equatable, Sendable {
+    public let url: String
+    public let revision: Revision
+
+    public init(url: String, revision: Revision) {
+        self.url = url
+        self.revision = revision
+    }
+}
+
+public struct PendingBlameIntent: Equatable, Sendable {
+    public let path: String
+    public let revision: Revision?
+
+    public init(path: String, revision: Revision?) {
+        self.path = path
+        self.revision = revision
+    }
+}
+
 public struct PendingTransferIntent: Equatable, Sendable {
     public let command: SvnCommandID
     public let path: String?
@@ -82,8 +102,9 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingDiffCompareKind: PendingDiffCompareKind = .previous
     /// 历史页原子 Diff 意图（优先于分字段 pendingDiff*）。
     @Published public var pendingLogDiff: PendingLogDiffIntent?
-    /// 历史 → Blame（L07）。
-    @Published public var pendingBlamePath: String?
+    /// 历史 / Revision Graph → Blame（L07 / #9）。
+    @Published public var pendingBlameIntent: PendingBlameIntent?
+    @Published public var pendingRevisionGraphLog: PendingRevisionGraphLogIntent?
     /// CFM / ⌘K → 属性页预选路径（#35）。
     @Published public var pendingPropertyPath: String?
     /// CFM / 更新后 → 冲突工作区预选路径（#11）。
@@ -191,7 +212,7 @@ public final class MacSvnAppNavigator: ObservableObject {
             pendingMergeWizard = true
         }
 
-        if [.export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
+        if [.checkout, .export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
             pendingTransferIntent = PendingTransferIntent(
                 command: command,
                 path: paths.first,
@@ -211,7 +232,7 @@ public final class MacSvnAppNavigator: ObservableObject {
 
         if let path = paths.first, !path.isEmpty {
             if command == .blame {
-                pendingBlamePath = path
+                pendingBlameIntent = PendingBlameIntent(path: path, revision: options.revision)
             } else if command == .properties {
                 pendingPropertyPath = path
             }
@@ -251,6 +272,8 @@ public final class MacSvnAppNavigator: ObservableObject {
             return .changes
         case .diff, .diffWithURL:
             return .diff
+        case .revisionGraph:
+            return .revisionGraph
         case .showLog, .saveRevisionOpen:
             return .log
         case .repoBrowser:
@@ -274,8 +297,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .export, .importToRepository, .importInPlace, .relocate,
              .removeFromVersionControl:
             return .repositoryBrowser
-        case .createRepositoryHere,
-             .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned:
+        case .createRepositoryHere, .changeLists, .deleteKeepLocal, .deleteUnversioned:
             return nil
         case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
              .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,
@@ -390,9 +412,15 @@ public final class MacSvnAppNavigator: ObservableObject {
         return value
     }
 
-    public func consumePendingBlamePath() -> String? {
-        let value = pendingBlamePath
-        pendingBlamePath = nil
+    public func consumePendingBlameIntent() -> PendingBlameIntent? {
+        let value = pendingBlameIntent
+        pendingBlameIntent = nil
+        return value
+    }
+
+    public func consumePendingRevisionGraphLog() -> PendingRevisionGraphLogIntent? {
+        let value = pendingRevisionGraphLog
+        pendingRevisionGraphLog = nil
         return value
     }
 

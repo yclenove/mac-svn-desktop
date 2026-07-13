@@ -412,6 +412,27 @@ public struct MacSvnRepoBrowserView: View {
 
     private func consumePendingTransfer() {
         guard let intent = navigator.consumePendingTransferIntent() else { return }
+        if intent.command == .checkout, let url = intent.url,
+           let parsedURL = URL(string: url) {
+            let name = parsedURL.lastPathComponent
+            guard !name.isEmpty else { return }
+            rootURL = parsedURL.deletingLastPathComponent().absoluteString
+            if let revision = intent.revision {
+                checkoutRevisionText = String(revision.value)
+            }
+            let entry = RemoteEntry(
+                name: name,
+                path: name,
+                kind: .directory,
+                size: nil,
+                revision: intent.revision,
+                author: nil,
+                date: nil
+            )
+            selectedEntry = entry
+            presentCheckout(for: entry)
+            return
+        }
         switch intent.command {
         case .export: transferKind = .export
         case .importToRepository: transferKind = .importProject

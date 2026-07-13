@@ -71,7 +71,7 @@ public struct MacSvnBlameView: View {
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadPaths() }
         }
-        .onChange(of: navigator.pendingBlamePath) { _, _ in
+        .onChange(of: navigator.pendingBlameIntent) { _, _ in
             Task { await consumePendingBlame() }
         }
     }
@@ -255,11 +255,15 @@ public struct MacSvnBlameView: View {
 
     /// 消费历史页 L07 注入的 Blame 路径。
     private func consumePendingBlame() async {
-        guard let path = navigator.consumePendingBlamePath() else { return }
+        guard let intent = navigator.consumePendingBlameIntent() else { return }
+        let path = intent.path
         if !paths.contains(path) {
             paths.insert(path, at: 0)
         }
         selected = [path]
+        if let revision = intent.revision {
+            blameEndRevisionText = "\(revision.value)"
+        }
         statusText = "来自历史：\(path)"
         await loadBlame()
     }

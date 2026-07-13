@@ -94,14 +94,52 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertTrue(navigator.lastAutomationMessage?.contains("提交") == true)
     }
 
-    func testPerformUnimplementedCommandDoesNotPretendSuccess() {
+    func testRevisionGraphCommandNavigatesToImplementedGraphPage() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
         let result = navigator.perform(command: .revisionGraph, paths: ["/tmp/wc"])
 
-        XCTAssertEqual(result, .unimplemented(.revisionGraph))
-        XCTAssertEqual(navigator.selectedRoute, .changes)
+        XCTAssertEqual(result, .navigated(to: .revisionGraph))
+        XCTAssertEqual(navigator.selectedRoute, .revisionGraph)
         XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc")
-        XCTAssertTrue(navigator.lastAutomationMessage?.hasPrefix("未实现：") == true)
+        XCTAssertTrue(navigator.lastAutomationMessage?.contains("修订图") == true)
+    }
+
+    func testRevisionGraphNodeHandoffsKeepLogBlameAndCheckoutParametersAtomic() {
+        let navigator = MacSvnAppNavigator()
+        let logIntent = PendingRevisionGraphLogIntent(
+            url: "https://svn.example/repo/branches/feature",
+            revision: Revision(9)
+        )
+        let blameIntent = PendingBlameIntent(
+            path: "https://svn.example/repo/branches/feature/App.swift",
+            revision: Revision(9)
+        )
+        navigator.pendingRevisionGraphLog = logIntent
+        navigator.pendingBlameIntent = blameIntent
+
+        XCTAssertEqual(navigator.consumePendingRevisionGraphLog(), logIntent)
+        XCTAssertNil(navigator.pendingRevisionGraphLog)
+        XCTAssertEqual(navigator.consumePendingBlameIntent(), blameIntent)
+        XCTAssertNil(navigator.pendingBlameIntent)
+
+        let result = navigator.perform(
+            command: .checkout,
+            options: SvnCommandOptions(
+                revision: Revision(9),
+                url: "https://svn.example/repo/branches/feature"
+            )
+        )
+        XCTAssertEqual(result, .navigated(to: .repositoryBrowser))
+        XCTAssertEqual(
+            navigator.consumePendingTransferIntent(),
+            PendingTransferIntent(
+                command: .checkout,
+                path: nil,
+                url: "https://svn.example/repo/branches/feature",
+                revision: Revision(9),
+                message: nil
+            )
+        )
     }
 
     func testFilenameCaseConflictRepairNavigatesToChanges() {
@@ -236,7 +274,10 @@ final class MacSvnAppNavigatorTests: XCTestCase {
 
         XCTAssertEqual(navigator.perform(command: .blame, paths: ["README.txt"]), .navigated(to: .blame))
         XCTAssertNil(navigator.pendingOpenPath)
-        XCTAssertEqual(navigator.consumePendingBlamePath(), "README.txt")
+        XCTAssertEqual(
+            navigator.consumePendingBlameIntent(),
+            PendingBlameIntent(path: "README.txt", revision: nil)
+        )
 
         XCTAssertEqual(navigator.perform(command: .properties, paths: ["src"]), .navigated(to: .properties))
         XCTAssertNil(navigator.pendingOpenPath)

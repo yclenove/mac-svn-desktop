@@ -314,6 +314,29 @@ public struct SvnCliBackend: SvnBackend {
         return String(decoding: result.stdout, as: UTF8.self)
     }
 
+    public func repositoryDiff(
+        wc: URL,
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        auth: Credential?
+    ) async throws -> String {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.repositoryDiff(
+                oldURL: normalizedRemoteURL(oldURL),
+                oldRevision: oldRevision,
+                newURL: normalizedRemoteURL(newURL),
+                newRevision: newRevision,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: wc.path,
+            stdin: authArguments.stdin
+        )
+        return String(decoding: result.stdout, as: UTF8.self)
+    }
+
     public func diffAgainstBase(wc: URL, target: String) async throws -> String {
         let result = try await run(
             SvnCommandBuilder.diffAgainstBase(target: target),

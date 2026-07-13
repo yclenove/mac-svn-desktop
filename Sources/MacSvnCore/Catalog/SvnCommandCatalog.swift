@@ -186,7 +186,8 @@ public enum SvnCommandCatalog: Sendable {
         .merge,
         .blame,
         .properties,
-        .repairFilenameCaseConflict
+        .repairFilenameCaseConflict,
+        .revisionGraph
     ]
 
     public static var dailyCFMCommands: [SvnCommandDescriptor] {

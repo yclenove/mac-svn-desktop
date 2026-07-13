@@ -73,7 +73,7 @@
 ## T3 — 专业能力
 
 - [x] Diff with URL（#6）：URL+revision 表单（留空为 HEAD）；peg revision 与 `svn+ssh://user@host`；认证 stdin/重试；Unified/左右分栏；真实 SVN 跨 URL 验证
-- [ ] Revision Graph（#9）
+- [x] Revision Graph（#9）：trunk/branches/tags glob pattern 与分类颜色/copy 混色持久化；标签/未分类/已删除剪枝；拓扑/时间线与分页/All；节点 Log/Checkout/Blame/Diff；真实 SVN copy-edge 与跨位置 Diff 验证
 - [ ] Change Lists（#38）
 - [ ] Externals（#39）
 - [ ] 官方 Shelve 对齐（#37）

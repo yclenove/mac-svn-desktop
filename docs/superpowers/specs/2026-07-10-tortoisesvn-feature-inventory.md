@@ -69,7 +69,7 @@
 | D22 | Patch | create/apply patch | ✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口 | T2 |
 | D23 | Blame | blame + blame differences | 🟡 Blame 修订范围/悬停日志 ✅；Blame differences 仍属 T3.9 | T2/T3 |
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | ✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created | T2 |
-| D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ❌ | T3 |
+| D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作 | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
 | D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ❌ | T5 |
 | D28 | Settings 全页 | 见 §6 | ❌/弱 | T4/T5 |
@@ -88,7 +88,7 @@
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ✅ URL+revision 表单；peg revision、svn+ssh user@host、认证重试；Unified/左右分栏复用；真实 SVN 跨 URL 验证 | T3 |
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
-| 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
+| 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ✅ copy/history 边；拓扑 Canvas/时间线；分页/All；四类节点动作；真实 SVN copy-edge/Diff 验证 | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | ✅ `svn info --xml --depth immediates` 返回锁详情；mkdir/delete/copy/move/rename 均需提交说明，delete/move/rename 二次确认 | T2 |
 | 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | ✅ CFM/冲突工作区入口；内置三路+树/属性；外置工具可增强 | T2 |
 | 12 | Resolved | `resolved` | 多选 | ✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除 | T2 |
@@ -178,9 +178,9 @@
 
 ### 4.6 Revision Graph（必须，T3）
 
-- [ ] trunk/branches/tags 路径模式可配  
-- [ ] 节点颜色/分类；剪枝与视图切换  
-- [ ] 节点：Log / Checkout / Blame / Diff  
+- [x] trunk/branches/tags glob 路径模式可配（`*`/`?`/`**`，设置持久化）
+- [x] 节点颜色/分类与 copy 源色混合；标签/未分类/已删除剪枝；拓扑/时间线切换
+- [x] 节点：Log / Checkout / Blame / Diff（远端 URL/revision 原子传递；日志/Diff 认证重试）
 
 ### 4.7 Progress / 通用对话框行为（必须）
 
@@ -229,7 +229,7 @@
 | S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | ❌ | T5 |
 | S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ❌ | T3/T5 |
 | S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ❌ | T5 |
-| S07 | Revision Graph | 分类 pattern、颜色混合 | ❌ | T3 |
+| S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | 弱 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 弱 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 弱 | T1/T5 |

@@ -63,6 +63,26 @@ public actor SvnService {
         try await backend.diffBetweenPaths(wc: wc, oldPath: oldPath, newPath: newPath)
     }
 
+    public func repositoryDiff(
+        wc: URL,
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        auth: Credential? = nil
+    ) async throws -> String {
+        try await retryingAuthentication(wc: credentialScope(for: newURL), initialAuth: auth) { auth in
+            try await backend.repositoryDiff(
+                wc: wc,
+                oldURL: oldURL,
+                oldRevision: oldRevision,
+                newURL: newURL,
+                newRevision: newRevision,
+                auth: auth
+            )
+        }
+    }
+
     public func diffAgainstBase(wc: URL, target: String) async throws -> String {
         try await backend.diffAgainstBase(wc: wc, target: target)
     }
@@ -141,7 +161,16 @@ public actor SvnService {
         verbose: Bool,
         stopOnCopy: Bool
     ) async throws -> [LogEntry] {
-        try await backend.log(
+        if let url = URL(string: target), url.scheme != nil {
+            return try await remoteLog(
+                url: target,
+                from: from,
+                batch: batch,
+                verbose: verbose,
+                auth: nil
+            )
+        }
+        return try await backend.log(
             wc: wc,
             target: target,
             from: from,

@@ -1010,6 +1010,32 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var cfmColumns: CFMColumnConfiguration
     /// Progress 完成后的自动关闭策略。
     public var progressAutoCloseMode: ProgressAutoCloseMode
+    /// Revision Graph 分类路径、节点颜色与复制颜色混合策略。
+    public var revisionGraph: RevisionGraphSettings
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        revisionGraph: RevisionGraphSettings
+    ) {
+        self.svnPath = svnPath
+        self.logBatchSize = logBatchSize
+        self.branchLayout = branchLayout
+        self.processTimeout = processTimeout
+        self.externalDiffTool = externalDiffTool
+        self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
+        self.aiPrivacy = aiPrivacy
+        self.cfmColumns = cfmColumns
+        self.progressAutoCloseMode = progressAutoCloseMode
+        self.revisionGraph = revisionGraph
+    }
 
     public init(
         svnPath: String? = nil,
@@ -1022,15 +1048,18 @@ public struct AppSettings: Codable, Equatable, Sendable {
         cfmColumns: CFMColumnConfiguration = .default,
         progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
     ) {
-        self.svnPath = svnPath
-        self.logBatchSize = logBatchSize
-        self.branchLayout = branchLayout
-        self.processTimeout = processTimeout
-        self.externalDiffTool = externalDiffTool
-        self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
-        self.aiPrivacy = aiPrivacy
-        self.cfmColumns = cfmColumns
-        self.progressAutoCloseMode = progressAutoCloseMode
+        self.init(
+            svnPath: svnPath,
+            logBatchSize: logBatchSize,
+            branchLayout: branchLayout,
+            processTimeout: processTimeout,
+            externalDiffTool: externalDiffTool,
+            commitGuardHardBlockConflictMarkers: commitGuardHardBlockConflictMarkers,
+            aiPrivacy: aiPrivacy,
+            cfmColumns: cfmColumns,
+            progressAutoCloseMode: progressAutoCloseMode,
+            revisionGraph: RevisionGraphSettings()
+        )
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1043,6 +1072,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case aiPrivacy
         case cfmColumns
         case progressAutoCloseMode
+        case revisionGraph
     }
 
     public init(from decoder: Decoder) throws {
@@ -1056,6 +1086,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
         cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
         progressAutoCloseMode = try container.decodeIfPresent(ProgressAutoCloseMode.self, forKey: .progressAutoCloseMode) ?? .noConflicts
+        revisionGraph = try container.decodeIfPresent(RevisionGraphSettings.self, forKey: .revisionGraph) ?? RevisionGraphSettings()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1069,6 +1100,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(aiPrivacy, forKey: .aiPrivacy)
         try container.encode(cfmColumns, forKey: .cfmColumns)
         try container.encode(progressAutoCloseMode, forKey: .progressAutoCloseMode)
+        try container.encode(revisionGraph, forKey: .revisionGraph)
     }
 }
 

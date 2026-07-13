@@ -33,6 +33,15 @@ public protocol SvnBackend: Sendable {
     ) async throws -> String
     /// 双路径 Diff（`--old` / `--new`）
     func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String
+    /// 两个仓库位置之间的带 peg revision Diff（Revision Graph 节点动作）。
+    func repositoryDiff(
+        wc: URL,
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        auth: Credential?
+    ) async throws -> String
     /// 显式对比 BASE
     func diffAgainstBase(wc: URL, target: String) async throws -> String
     func applyPatch(wc: URL, patchFile: URL) async throws

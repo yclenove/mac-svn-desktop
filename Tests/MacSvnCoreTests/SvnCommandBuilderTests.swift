@@ -251,6 +251,23 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["diff", "--non-interactive", "-r", "BASE", "a.txt"])
     }
 
+    func testRepositoryDiffUsesPeggedURLsAndAuthenticationArguments() {
+        let command = SvnCommandBuilder.repositoryDiff(
+            oldURL: "file:///repo/trunk",
+            oldRevision: Revision(4),
+            newURL: "file:///repo/branches/feature",
+            newRevision: Revision(9),
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "diff", "--non-interactive",
+            "--username", "u", "--password-from-stdin",
+            "--old", "file:///repo/trunk@4",
+            "--new", "file:///repo/branches/feature@9"
+        ])
+    }
+
     func testDiffBetweenPathsUsesOldAndNew() {
         let command = SvnCommandBuilder.diffBetweenPaths(oldPath: "a.txt", newPath: "b.txt")
         XCTAssertEqual(
