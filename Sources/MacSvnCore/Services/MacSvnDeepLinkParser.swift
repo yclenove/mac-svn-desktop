@@ -26,14 +26,18 @@ public struct MacSvnDeepLinkParser: Sendable {
             }
             return .open(path: path)
         case "command":
-            guard let path = values["path"], !path.isEmpty else {
+            let paths = items
+                .filter { $0.name.lowercased() == "path" }
+                .compactMap(\.value)
+                .filter { !$0.isEmpty }
+            guard !paths.isEmpty else {
                 throw MacSvnDeepLinkParserError.missingParameter("path")
             }
             guard let rawCommand = values["command"],
                   let command = SvnCommandID(rawValue: rawCommand) else {
                 throw MacSvnDeepLinkParserError.unknownCommand(values["command"] ?? "")
             }
-            return .command(command: command, path: path)
+            return .command(command: command, paths: paths)
         case "log":
             let target = try target(from: values)
             return .log(target: target, revision: try optionalRevision(values["rev"]))

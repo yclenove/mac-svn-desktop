@@ -100,6 +100,9 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("SvnCommandCatalog.extendedMenuCommands"))
         XCTAssertTrue(source.contains("commandID"))
         XCTAssertTrue(source.contains("submenu"))
+        XCTAssertTrue(source.contains("selectedItemURLs()"))
+        XCTAssertTrue(source.contains(".map(\\.path)"))
+        XCTAssertTrue(source.contains("paths: paths"))
     }
 
     private static func readFinderSyncSource() throws -> String {

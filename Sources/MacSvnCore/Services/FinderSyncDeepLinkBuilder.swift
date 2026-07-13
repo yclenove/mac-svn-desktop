@@ -29,15 +29,18 @@ public struct FinderSyncDeepLinkBuilder: Sendable {
     }
 
     public func commandURL(for command: SvnCommandID, path: String) -> URL? {
-        guard !path.isEmpty else { return nil }
+        commandURL(for: command, paths: [path])
+    }
+
+    public func commandURL(for command: SvnCommandID, paths: [String]) -> URL? {
+        let paths = paths.filter { !$0.isEmpty }
+        guard !paths.isEmpty else { return nil }
 
         var components = URLComponents()
         components.scheme = ProductBranding.urlScheme
         components.host = "command"
-        components.queryItems = [
-            URLQueryItem(name: "path", value: path),
-            URLQueryItem(name: "command", value: command.rawValue),
-        ]
+        components.queryItems = paths.map { URLQueryItem(name: "path", value: $0) }
+            + [URLQueryItem(name: "command", value: command.rawValue)]
         return components.url
     }
 }

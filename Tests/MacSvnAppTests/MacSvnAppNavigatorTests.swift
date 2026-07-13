@@ -54,10 +54,28 @@ final class MacSvnAppNavigatorTests: XCTestCase {
     func testDeepLinkCommandExecutesFinderExtendedCommand() {
         let navigator = MacSvnAppNavigator(selectedRoute: .settings)
 
-        let result = navigator.handle(deepLink: .command(command: .deleteKeepLocal, path: "/tmp/repo/file.txt"))
+        let result = navigator.handle(deepLink: .command(command: .deleteKeepLocal, paths: ["/tmp/repo/file.txt"]))
 
         XCTAssertEqual(result, .navigated(to: .changes))
         XCTAssertEqual(navigator.pendingDeleteIntent, PendingDeleteIntent(command: .deleteKeepLocal, paths: ["/tmp/repo/file.txt"]))
+    }
+
+    func testDeepLinkCommandExecutesAllFinderSelectedPaths() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .settings)
+
+        let result = navigator.handle(deepLink: .command(
+            command: .deleteKeepLocal,
+            paths: ["/tmp/repo/first.txt", "/tmp/repo/second.txt"]
+        ))
+
+        XCTAssertEqual(result, .navigated(to: .changes))
+        XCTAssertEqual(
+            navigator.pendingDeleteIntent,
+            PendingDeleteIntent(
+                command: .deleteKeepLocal,
+                paths: ["/tmp/repo/first.txt", "/tmp/repo/second.txt"]
+            )
+        )
     }
 
     func testCLICommitUICarriesMessage() {

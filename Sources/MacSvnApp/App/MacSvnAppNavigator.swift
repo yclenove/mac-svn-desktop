@@ -452,8 +452,8 @@ public final class MacSvnAppNavigator: ObservableObject {
             selectedRoute = .changes
             lastAutomationMessage = "深链打开：\(path)"
             return nil
-        case .command(let command, let path):
-            let result = perform(command: command, paths: [path])
+        case .command(let command, let paths):
+            let result = perform(command: command, paths: paths)
             lastAutomationMessage = "Finder 命令：\(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)"
             return result
         case .log(let target, _):

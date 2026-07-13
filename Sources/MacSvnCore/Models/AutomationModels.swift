@@ -7,7 +7,7 @@ public enum MacSvnAutomationTarget: Equatable, Sendable {
 
 public enum MacSvnDeepLinkAction: Equatable, Sendable {
     case open(path: String)
-    case command(command: SvnCommandID, path: String)
+    case command(command: SvnCommandID, paths: [String])
     case log(target: MacSvnAutomationTarget, revision: Revision?)
     case diff(target: MacSvnAutomationTarget, range: RevisionRange?)
 }

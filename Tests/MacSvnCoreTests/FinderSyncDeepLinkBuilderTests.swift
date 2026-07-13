@@ -32,6 +32,20 @@ final class FinderSyncDeepLinkBuilderTests: XCTestCase {
         XCTAssertEqual(components.queryItems?.first { $0.name == "path" }?.value, "/Users/me/repo/file.txt")
         XCTAssertEqual(components.queryItems?.first { $0.name == "command" }?.value, SvnCommandID.deleteKeepLocal.rawValue)
     }
+
+    func testBuildsCommandURLWithAllSelectedPathsInOrder() throws {
+        let builder = FinderSyncDeepLinkBuilder()
+        let url = try XCTUnwrap(builder.commandURL(
+            for: .deleteKeepLocal,
+            paths: ["/Users/me/repo/first.txt", "/Users/me/repo/second.txt"]
+        ))
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(
+            components.queryItems?.filter { $0.name == "path" }.compactMap(\.value),
+            ["/Users/me/repo/first.txt", "/Users/me/repo/second.txt"]
+        )
+    }
 }
 
 final class FinderSyncRootsExporterTests: XCTestCase {

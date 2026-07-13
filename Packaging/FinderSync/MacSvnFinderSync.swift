@@ -60,9 +60,7 @@ final class MacSvnFinderSync: FIFinderSync {
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu(title: ProductBranding.displayName)
-        let targetURL = FIFinderSyncController.default().targetedURL()
-            ?? FIFinderSyncController.default().selectedItemURLs()?.first
-        let path = targetURL?.path ?? ""
+        let paths = selectedMenuPaths()
 
         // Finder 菜单回调是同步的：固定提供深链入口；角标侧仍用 PresentationBuilder 精细态。
         let items: [(SvnCommandID, String)] = [
@@ -75,7 +73,7 @@ final class MacSvnFinderSync: FIFinderSync {
         ]
         for (commandID, title) in items {
             let item = NSMenuItem(title: title, action: #selector(handleMenuAction(_:)), keyEquivalent: "")
-            item.representedObject = MenuPayload(commandID: commandID, path: path)
+            item.representedObject = MenuPayload(commandID: commandID, paths: paths)
             item.target = self
             menu.addItem(item)
         }
@@ -94,7 +92,7 @@ final class MacSvnFinderSync: FIFinderSync {
                 action: #selector(handleMenuAction(_:)),
                 keyEquivalent: ""
             )
-            item.representedObject = MenuPayload(commandID: commandID, path: path)
+            item.representedObject = MenuPayload(commandID: commandID, paths: paths)
             item.target = self
             extendedMenu.addItem(item)
         }
@@ -105,19 +103,32 @@ final class MacSvnFinderSync: FIFinderSync {
 
     @objc private func handleMenuAction(_ sender: NSMenuItem) {
         guard let payload = sender.representedObject as? MenuPayload else { return }
-        let linkPath = payload.path.isEmpty
-            ? (FIFinderSyncController.default().targetedURL()?.path ?? "")
-            : payload.path
+        let linkPaths = payload.paths.isEmpty ? selectedMenuPaths() : payload.paths
         let url: URL?
         if let commandID = payload.commandID {
-            url = deepLinkBuilder.commandURL(for: commandID, path: linkPath)
+            url = deepLinkBuilder.commandURL(for: commandID, paths: linkPaths)
         } else if let actionID = payload.actionID {
-            url = deepLinkBuilder.url(for: actionID, path: linkPath)
+            url = deepLinkBuilder.url(for: actionID, path: linkPaths.first ?? "")
         } else {
             return
         }
         guard let url else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    private func selectedMenuPaths() -> [String] {
+        let selectedPaths = FIFinderSyncController.default()
+            .selectedItemURLs()?
+            .map(\.path)
+            .filter { !$0.isEmpty } ?? []
+        if !selectedPaths.isEmpty {
+            return selectedPaths
+        }
+        guard let targetedPath = FIFinderSyncController.default().targetedURL()?.path,
+              !targetedPath.isEmpty else {
+            return []
+        }
+        return [targetedPath]
     }
 
     private func registerBadgeImages() {
@@ -237,18 +248,18 @@ final class MacSvnFinderSync: FIFinderSync {
 private struct MenuPayload {
     let actionID: FinderSyncMenuActionID?
     let commandID: SvnCommandID?
-    let path: String
+    let paths: [String]
 
     init(actionID: FinderSyncMenuActionID, path: String) {
         self.actionID = actionID
         self.commandID = nil
-        self.path = path
+        self.paths = [path]
     }
 
-    init(commandID: SvnCommandID, path: String) {
+    init(commandID: SvnCommandID, paths: [String]) {
         self.actionID = nil
         self.commandID = commandID
-        self.path = path
+        self.paths = paths
     }
 }
 

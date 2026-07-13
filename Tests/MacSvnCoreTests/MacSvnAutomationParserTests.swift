@@ -14,7 +14,17 @@ final class MacSvnAutomationParserTests: XCTestCase {
         XCTAssertEqual(open, .open(path: "/Users/me/repo"))
         XCTAssertEqual(log, .log(target: .repositoryURL("https://svn.example.com/repo/trunk"), revision: Revision(1200)))
         XCTAssertEqual(diff, .diff(target: .path("Sources/App.swift"), range: RevisionRange(start: Revision(1199), end: Revision(1200))))
-        XCTAssertEqual(command, .command(command: .deleteKeepLocal, path: "/Users/me/repo"))
+        XCTAssertEqual(command, .command(command: .deleteKeepLocal, paths: ["/Users/me/repo"]))
+    }
+
+    func testDeepLinkParserPreservesRepeatedCommandPaths() throws {
+        let parser = MacSvnDeepLinkParser()
+        let command = try parser.parse(URL(string: "svnstudio://command?path=%2Frepo%2Ffirst&path=%2Frepo%2Fsecond&command=cmd.15.deleteKeepLocal")!)
+
+        XCTAssertEqual(
+            command,
+            .command(command: .deleteKeepLocal, paths: ["/repo/first", "/repo/second"])
+        )
     }
 
     func testDeepLinkParserRejectsInvalidSchemeUnknownRouteMissingTargetAndBadRevision() throws {
