@@ -1102,6 +1102,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var shelvingVersion: SvnShelvingVersion
     /// S13：日志缓存启用、保留期和每目标容量。
     public var logCachePolicy: LogCachePolicy
+    /// S08：Finder Sync 状态缓存模式。
+    public var finderSyncCacheMode: FinderSyncCacheMode
 
     public init(
         svnPath: String? = nil,
@@ -1127,6 +1129,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.revisionGraph = revisionGraph
         self.shelvingVersion = .v3
         self.logCachePolicy = LogCachePolicy()
+        self.finderSyncCacheMode = .defaultCache
     }
 
     public init(
@@ -1154,6 +1157,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.revisionGraph = revisionGraph
         self.shelvingVersion = shelvingVersion
         self.logCachePolicy = LogCachePolicy()
+        self.finderSyncCacheMode = .defaultCache
     }
 
     public init(
@@ -1221,6 +1225,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case revisionGraph
         case shelvingVersion
         case logCachePolicy
+        case finderSyncCacheMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -1237,6 +1242,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         revisionGraph = try container.decodeIfPresent(RevisionGraphSettings.self, forKey: .revisionGraph) ?? RevisionGraphSettings()
         shelvingVersion = try container.decodeIfPresent(SvnShelvingVersion.self, forKey: .shelvingVersion) ?? .v3
         logCachePolicy = try container.decodeIfPresent(LogCachePolicy.self, forKey: .logCachePolicy) ?? LogCachePolicy()
+        finderSyncCacheMode = try container.decodeIfPresent(FinderSyncCacheMode.self, forKey: .finderSyncCacheMode)
+            ?? .defaultCache
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1253,6 +1260,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(revisionGraph, forKey: .revisionGraph)
         try container.encode(shelvingVersion, forKey: .shelvingVersion)
         try container.encode(logCachePolicy, forKey: .logCachePolicy)
+        try container.encode(finderSyncCacheMode, forKey: .finderSyncCacheMode)
     }
 }
 

@@ -33,8 +33,19 @@ final class MacSvnFinderSync: FIFinderSync {
                 return
             }
 
-            let statuses = await cache.statuses(for: root)
             let relative = MacSvnFinderSync.relativePath(of: path, under: root) ?? "."
+            guard await cache.collectsBadges() else {
+                await MainActor.run {
+                    FIFinderSyncController.default().setBadgeIdentifier("", for: url)
+                }
+                return
+            }
+            guard let statuses = await cache.statuses(for: root, requestedTarget: relative) else {
+                await MainActor.run {
+                    FIFinderSyncController.default().setBadgeIdentifier("", for: url)
+                }
+                return
+            }
             let presentation = builder.presentation(for: relative, statuses: statuses)
             await MainActor.run {
                 FIFinderSyncController.default().setBadgeIdentifier(presentation.badge.rawValue, for: url)
@@ -107,28 +118,32 @@ final class MacSvnFinderSync: FIFinderSync {
     }
 
     private func reloadMonitoredDirectories() {
-        let roots = loadRoots()
+        let configuration = loadConfiguration()
         let cache = statusCache
+        let directoryURLs = Set(
+            configuration.roots.map { URL(fileURLWithPath: $0, isDirectory: true) }
+        )
         Task {
-            await cache.updateRoots(roots)
+            await cache.updateConfiguration(configuration)
+            await MainActor.run {
+                FIFinderSyncController.default().directoryURLs = directoryURLs
+            }
         }
-        FIFinderSyncController.default().directoryURLs = Set(roots.map { URL(fileURLWithPath: $0, isDirectory: true) })
     }
 
-    private func loadRoots() -> [String] {
+    private func loadConfiguration() -> FinderSyncRootsFile {
         let support = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
-        return (try? FinderSyncRootsExporter.load(from: fileURL)) ?? []
+        return (try? FinderSyncRootsExporter.loadConfiguration(from: fileURL)) ?? FinderSyncRootsFile()
     }
 
     private func watchRootsFile() {
         let support = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
-        let fileURL = FinderSyncRootsExporter.fileURL(in: support)
-        let path = fileURL.path
-        guard FileManager.default.fileExists(atPath: path) else { return }
-        let fd = open(path, O_EVTONLY)
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        let directoryPath = support.path
+        let fd = open(directoryPath, O_EVTONLY)
         guard fd >= 0 else { return }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
@@ -191,12 +206,24 @@ private struct MenuPayload {
 /// 按 WC 根缓存 `svn status --xml` 结果，避免 Finder 刷角标时频繁打进程。
 actor FinderSyncStatusCache {
     private var roots: [String] = []
+    private var mode: FinderSyncCacheMode = .defaultCache
     private var cache: [String: (date: Date, statuses: [FileStatus])] = [:]
     private var inFlight: [String: Task<[FileStatus], Never>] = [:]
-    private let ttl: TimeInterval = 8
+    private var configurationGeneration = 0
 
-    func updateRoots(_ roots: [String]) {
-        self.roots = roots.map { ($0 as NSString).standardizingPath }
+    func updateConfiguration(_ configuration: FinderSyncRootsFile) {
+        let normalizedRoots = configuration.roots.map { ($0 as NSString).standardizingPath }
+        guard roots != normalizedRoots || mode != configuration.cacheMode else { return }
+        configurationGeneration += 1
+        roots = normalizedRoots
+        mode = configuration.cacheMode
+        cache.removeAll()
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+    }
+
+    func collectsBadges() -> Bool {
+        FinderSyncCachePolicy(mode: mode).collectsBadges
     }
 
     func workingCopyRoot(containing path: String) -> String? {
@@ -206,52 +233,71 @@ actor FinderSyncStatusCache {
             .max(by: { $0.count < $1.count })
     }
 
-    func cachedStatuses(for root: String) -> [FileStatus]? {
-        let key = (root as NSString).standardizingPath
+    func cachedStatuses(for key: String, ttl: TimeInterval) -> [FileStatus]? {
         guard let entry = cache[key], Date().timeIntervalSince(entry.date) < ttl else {
             return nil
         }
         return entry.statuses
     }
 
-    func statuses(for root: String) async -> [FileStatus] {
-        let key = (root as NSString).standardizingPath
-        if let cached = cachedStatuses(for: key) {
+    func statuses(for root: String, requestedTarget: String) async -> [FileStatus]? {
+        let policy = FinderSyncCachePolicy(mode: mode)
+        guard policy.collectsBadges,
+              let scope = policy.statusScope(requestedTarget: requestedTarget) else {
+            return nil
+        }
+        let generation = configurationGeneration
+        let normalizedRoot = (root as NSString).standardizingPath
+        let key = normalizedRoot + "\u{0}" + scope + "\u{0}" + String(generation)
+        if let cached = cachedStatuses(for: key, ttl: policy.cacheTTL) {
             return cached
         }
         if let task = inFlight[key] {
             return await task.value
         }
         let task = Task {
-            await Self.runSvnStatus(wc: URL(fileURLWithPath: key, isDirectory: true))
+            await Self.runSvnStatus(
+                wc: URL(fileURLWithPath: normalizedRoot, isDirectory: true),
+                requestedTarget: scope
+            )
         }
         inFlight[key] = task
         let loaded = await task.value
+        guard generation == configurationGeneration else {
+            inFlight[key] = nil
+            return nil
+        }
         cache[key] = (Date(), loaded)
         inFlight[key] = nil
         return loaded
     }
 
-    private static func runSvnStatus(wc: URL) async -> [FileStatus] {
+    private static func runSvnStatus(wc: URL, requestedTarget: String) async -> [FileStatus] {
         guard let statusData = await runSvn(
-            arguments: ["status", "--xml", "--verbose", "--no-ignore", "--non-interactive"],
+            arguments: [
+                "status", "--xml", "--verbose", "--no-ignore", "--non-interactive",
+                requestedTarget
+            ],
             wc: wc
         ), let statuses = try? StatusXMLParser.parse(statusData) else {
             return []
         }
 
         async let infoData = runSvn(
-            arguments: ["info", "--xml", "--recursive", "--non-interactive"],
+            arguments: ["info", "--xml", "--recursive", "--non-interactive", requestedTarget],
             wc: wc
         )
         async let currentPropertyData = runSvn(
-            arguments: ["proplist", "--xml", "--verbose", "--recursive", "--non-interactive", "."],
+            arguments: [
+                "proplist", "--xml", "--verbose", "--recursive", "--non-interactive",
+                requestedTarget
+            ],
             wc: wc
         )
         async let basePropertyData = runSvn(
             arguments: [
                 "proplist", "--xml", "--verbose", "--recursive",
-                "--revision", "BASE", "--non-interactive", "."
+                "--revision", "BASE", "--non-interactive", requestedTarget
             ],
             wc: wc
         )

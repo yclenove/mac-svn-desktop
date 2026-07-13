@@ -13,6 +13,7 @@ public struct MacSvnSettingsView: View {
     @State private var logCacheEnabled = true
     @State private var logCacheRetentionDays = 90
     @State private var logCacheMaxEntries = 20_000
+    @State private var finderSyncCacheMode: FinderSyncCacheMode = .defaultCache
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -72,6 +73,14 @@ public struct MacSvnSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section("Finder 角标") {
+                Picker("Status Cache", selection: $finderSyncCacheMode) {
+                    ForEach(FinderSyncCacheMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
             Section("分支布局") {
                 TextField("trunk", text: $trunk)
                 TextField("branches", text: $branches)
@@ -128,6 +137,7 @@ public struct MacSvnSettingsView: View {
         logCacheEnabled = settings.logCachePolicy.enabled
         logCacheRetentionDays = settings.logCachePolicy.retentionDays
         logCacheMaxEntries = settings.logCachePolicy.maxEntriesPerTarget
+        finderSyncCacheMode = settings.finderSyncCacheMode
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -158,6 +168,7 @@ public struct MacSvnSettingsView: View {
             retentionDays: logCacheRetentionDays,
             maxEntriesPerTarget: logCacheMaxEntries
         )
+        settings.finderSyncCacheMode = finderSyncCacheMode
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
         settings.revisionGraph = RevisionGraphSettings(
@@ -184,10 +195,23 @@ public struct MacSvnSettingsView: View {
         }
         do {
             try await session.settingsStore.update(settings)
-            statusText = "已保存。svn 路径、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
         } catch {
             statusText = "保存失败：\(error.localizedDescription)"
+            return
         }
+
+        let records = await session.workspaceStore.records()
+        do {
+            try FinderSyncRootsExporter.export(
+                records: records,
+                cacheMode: settings.finderSyncCacheMode,
+                to: FinderSyncRootsExporter.fileURL(in: session.supportDirectory)
+            )
+        } catch {
+            statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"
+            return
+        }
+        statusText = "已保存。svn 路径、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
     }
 
     private func clearLogCache() async {

@@ -35,14 +35,58 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("inFlight[key] = nil"))
     }
 
+    func testExtensionHonorsDefaultShellAndNoneCacheModes() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("FinderSyncRootsExporter.loadConfiguration"))
+        XCTAssertTrue(source.contains("FinderSyncCachePolicy(mode:"))
+        XCTAssertTrue(source.contains("statusScope(requestedTarget:"))
+        XCTAssertTrue(source.contains("guard policy.collectsBadges"))
+        XCTAssertTrue(source.contains("requestedTarget:"))
+    }
+
+    func testConfigurationChangesDiscardOldInFlightResultsBeforeRegisteringDirectories() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("private var configurationGeneration"))
+        XCTAssertTrue(source.contains("guard generation == configurationGeneration"))
+        XCTAssertTrue(source.contains("await cache.updateConfiguration(configuration)"))
+        XCTAssertTrue(source.contains("await MainActor.run"))
+    }
+
+    func testExtensionWatchesConfigurationDirectoryAcrossAtomicReplacements() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("let directoryPath = support.path"))
+        XCTAssertTrue(source.contains("open(directoryPath, O_EVTONLY)"))
+        XCTAssertFalse(source.contains("open(fileURL.path, O_EVTONLY)"))
+    }
+
+    func testSettingsPersistsAndExportsFinderSyncCacheMode() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnSettingsView.swift")
+
+        XCTAssertTrue(source.contains("@State private var finderSyncCacheMode"))
+        XCTAssertTrue(source.contains("Picker(\"Status Cache\""))
+        XCTAssertTrue(source.contains("settings.finderSyncCacheMode = finderSyncCacheMode"))
+        XCTAssertTrue(source.contains("cacheMode: settings.finderSyncCacheMode"))
+    }
+
     private static func readFinderSyncSource() throws -> String {
+        try readRepoSource(at: "Packaging/FinderSync/MacSvnFinderSync.swift")
+    }
+
+    private static func readFeatureSource(named fileName: String) throws -> String {
+        try readRepoSource(at: "Sources/MacSvnApp/Features/\(fileName)")
+    }
+
+    private static func readRepoSource(at path: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         let repoRoot = testsFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         return try String(
-            contentsOf: repoRoot.appendingPathComponent("Packaging/FinderSync/MacSvnFinderSync.swift"),
+            contentsOf: repoRoot.appendingPathComponent(path),
             encoding: .utf8
         )
     }

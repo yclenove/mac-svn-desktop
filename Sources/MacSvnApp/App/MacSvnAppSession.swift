@@ -144,6 +144,7 @@ public final class MacSvnAppSession: ObservableObject {
         // 同步导出 Finder Sync 监视根目录（扩展启动时读取）
         try? FinderSyncRootsExporter.export(
             records: workspaces,
+            cacheMode: settings.finderSyncCacheMode,
             to: FinderSyncRootsExporter.fileURL(in: directory)
         )
 
