@@ -78,6 +78,34 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         )
     }
 
+    func testFinderCopyMoveDeepLinkCarriesAbsolutePathsAndRelativeSelection() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .settings)
+
+        let result = navigator.handle(deepLink: .command(
+            command: .copyMove,
+            paths: ["/tmp/repo/Sources/App.swift"]
+        ))
+
+        XCTAssertEqual(result, .navigated(to: .changes))
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/repo/Sources/App.swift")
+        XCTAssertEqual(
+            navigator.pendingCopyMoveIntent,
+            PendingCopyMoveIntent(paths: ["/tmp/repo/Sources/App.swift"])
+        )
+        XCTAssertEqual(
+            navigator.pendingCopyMoveIntent?.relativePaths(under: "/tmp/repo"),
+            ["Sources/App.swift"]
+        )
+        XCTAssertNil(
+            navigator.pendingCopyMoveIntent?.relativePaths(under: "/tmp/repository-sibling")
+        )
+        XCTAssertEqual(
+            navigator.consumePendingCopyMoveIntent(),
+            PendingCopyMoveIntent(paths: ["/tmp/repo/Sources/App.swift"])
+        )
+        XCTAssertNil(navigator.pendingCopyMoveIntent)
+    }
+
     func testFinderPropertiesDeepLinkOpensAbsoluteWorkingCopyPathAndCarriesTarget() {
         let navigator = MacSvnAppNavigator(selectedRoute: .settings)
 

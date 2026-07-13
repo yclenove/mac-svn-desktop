@@ -95,15 +95,50 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         let source = try Self.readFinderSyncSource()
 
         XCTAssertTrue(source.contains("更多命令…"))
-        XCTAssertTrue(source.contains("let items: [(SvnCommandID, String)]"))
-        XCTAssertTrue(source.contains(".showLog"))
-        XCTAssertTrue(source.contains("SvnCommandCatalog.extendedMenuCommands"))
-        XCTAssertTrue(source.contains(".properties"))
+        XCTAssertTrue(source.contains("menuPlan.promotedCommandIDs"))
+        XCTAssertTrue(source.contains("menuPlan.submenuCommandIDs"))
+        XCTAssertTrue(source.contains("SvnCommandCatalog.descriptor(for: commandID)"))
+        XCTAssertTrue(source.contains("descriptor.displayName"))
         XCTAssertTrue(source.contains("commandID"))
         XCTAssertTrue(source.contains("submenu"))
         XCTAssertTrue(source.contains("selectedItemURLs()"))
         XCTAssertTrue(source.contains(".map(\\.path)"))
         XCTAssertTrue(source.contains("paths: paths"))
+    }
+
+    func testExtensionBuildsConfiguredMenusFromSynchronousStatusSnapshots() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("FinderSyncContextMenuBuilder"))
+        XCTAssertTrue(source.contains("FinderSyncMenuStateSnapshot"))
+        XCTAssertTrue(source.contains("configuration.contextMenuSettings"))
+        XCTAssertTrue(source.contains("menuStateSnapshot.plan(for: paths)"))
+        XCTAssertTrue(source.contains("menuPlan.isHidden"))
+        XCTAssertTrue(source.contains("menuPlan.promotedCommandIDs"))
+        XCTAssertTrue(source.contains("menuPlan.submenuCommandIDs"))
+        XCTAssertTrue(source.contains("menuSnapshot.update(root: root, statuses: statuses)"))
+    }
+
+    func testSettingsPersistsAndExportsFinderContextMenuSettings() throws {
+        let featureSource = try Self.readFeatureSource(named: "MacSvnSettingsView.swift")
+        let sessionSource = try Self.readRepoSource(at: "Sources/MacSvnApp/App/MacSvnAppSession.swift")
+
+        XCTAssertTrue(featureSource.contains("Section(\"Finder 菜单\")"))
+        XCTAssertTrue(featureSource.contains("finderSyncPromotedCommandIDs"))
+        XCTAssertTrue(featureSource.contains("finderSyncPromoteLockForNeedsLock"))
+        XCTAssertTrue(featureSource.contains("finderSyncHideUnversionedMenus"))
+        XCTAssertTrue(featureSource.contains("finderSyncMenuExcludedPaths"))
+        XCTAssertTrue(featureSource.contains("contextMenuSettings: settings.finderSyncContextMenuSettings"))
+        XCTAssertTrue(sessionSource.contains("contextMenuSettings: settings.finderSyncContextMenuSettings"))
+    }
+
+    func testChangesPageConsumesFinderCopyMoveIntentAndOpensSheet() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnChangesView.swift")
+
+        XCTAssertTrue(source.contains("navigator?.pendingCopyMoveIntent"))
+        XCTAssertTrue(source.contains("consumePendingCopyMoveIntent"))
+        XCTAssertTrue(source.contains("relativePaths(under: record.localPath)"))
+        XCTAssertTrue(source.contains("showCopyMoveSheet = true"))
     }
 
     func testPropertiesPageProvidesTortoiseEquivalentSVNInformationSummary() throws {

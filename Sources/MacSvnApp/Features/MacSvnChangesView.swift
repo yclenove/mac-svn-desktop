@@ -86,6 +86,13 @@ public struct MacSvnChangesView: View {
     }
 
     public var body: some View {
+        configuredBody
+            .onChange(of: navigator?.pendingCopyMoveIntent) { _, _ in
+                consumePendingCopyMoveIntentIfReady()
+            }
+    }
+
+    private var configuredBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             actionBar
@@ -130,6 +137,7 @@ public struct MacSvnChangesView: View {
             await bindAndRefresh()
             consumePendingChangelistIntent()
             consumePendingDeleteIntent()
+            consumePendingCopyMoveIntentIfReady()
         }
         .confirmationDialog(
             "确认还原选中文件的本地修改？此操作不可撤销。",
@@ -809,6 +817,20 @@ public struct MacSvnChangesView: View {
         }
         applyFilters()
         await changes.refresh()
+        consumePendingCopyMoveIntentIfReady()
+    }
+
+    private func consumePendingCopyMoveIntentIfReady() {
+        guard let intent = navigator?.pendingCopyMoveIntent,
+              let record = workspaceController.selectedRecord,
+              record.isValid,
+              let relativePaths = intent.relativePaths(under: record.localPath),
+              relativePaths.count == 1 else { return }
+        selectedPaths = Set(relativePaths)
+        onFocusedPathChange?(relativePaths[0])
+        prepareCopyMoveSheet()
+        showCopyMoveSheet = true
+        _ = navigator?.consumePendingCopyMoveIntent()
     }
 
     /// 关闭 Add/Cleanup/Revert/Delete 等对话框并清空临时勾选，防止跨 WC 误操作。

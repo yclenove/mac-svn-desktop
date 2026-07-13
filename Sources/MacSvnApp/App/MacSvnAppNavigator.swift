@@ -139,6 +139,33 @@ public struct PendingDeleteIntent: Equatable, Sendable {
     }
 }
 
+/// Finder Copy/Move 入口的一次性意图；路径保留绝对值，消费时再按已选工作副本转换。
+public struct PendingCopyMoveIntent: Equatable, Sendable {
+    public let paths: [String]
+
+    public init(paths: [String]) {
+        self.paths = paths.filter { !$0.isEmpty }
+    }
+
+    public func relativePaths(under root: String) -> [String]? {
+        let normalizedRoot = (root as NSString).standardizingPath
+        guard !normalizedRoot.isEmpty else { return nil }
+        var relativePaths: [String] = []
+        for path in paths {
+            let normalizedPath = (path as NSString).standardizingPath
+            guard normalizedPath == normalizedRoot || normalizedPath.hasPrefix(normalizedRoot + "/") else {
+                return nil
+            }
+            if normalizedPath == normalizedRoot {
+                relativePaths.append(".")
+            } else {
+                relativePaths.append(String(normalizedPath.dropFirst(normalizedRoot.count + 1)))
+            }
+        }
+        return relativePaths
+    }
+}
+
 public struct PendingRevisionPropertiesIntent: Equatable, Sendable {
     public let command: SvnCommandID
     public let revision: Revision
@@ -191,6 +218,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var pendingPatchIntent: PendingPatchIntent?
     @Published public var pendingDeleteIntent: PendingDeleteIntent?
+    @Published public var pendingCopyMoveIntent: PendingCopyMoveIntent?
     @Published public var pendingRevisionPropertiesIntent: PendingRevisionPropertiesIntent?
     @Published public var pendingCreateRepository = false
     @Published public var lastAutomationMessage: String?
@@ -317,6 +345,10 @@ public final class MacSvnAppNavigator: ObservableObject {
 
         if command == .deleteKeepLocal || command == .deleteUnversioned {
             pendingDeleteIntent = PendingDeleteIntent(command: command, paths: paths)
+        }
+
+        if command == .copyMove {
+            pendingCopyMoveIntent = PendingCopyMoveIntent(paths: paths)
         }
 
         if command == .compareRevisions {
@@ -563,6 +595,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingDeleteIntent() -> PendingDeleteIntent? {
         let value = pendingDeleteIntent
         pendingDeleteIntent = nil
+        return value
+    }
+
+    public func consumePendingCopyMoveIntent() -> PendingCopyMoveIntent? {
+        let value = pendingCopyMoveIntent
+        pendingCopyMoveIntent = nil
         return value
     }
 

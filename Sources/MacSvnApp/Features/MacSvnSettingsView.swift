@@ -17,6 +17,10 @@ public struct MacSvnSettingsView: View {
     @State private var finderSyncIncludedPaths = ""
     @State private var finderSyncExcludedPaths = ""
     @State private var finderSyncEnabledBadges = Set(FinderSyncBadge.allCases)
+    @State private var finderSyncPromotedCommandIDs = Set(FinderSyncContextMenuSettings.defaultPromotedCommandIDs)
+    @State private var finderSyncPromoteLockForNeedsLock = true
+    @State private var finderSyncHideUnversionedMenus = false
+    @State private var finderSyncMenuExcludedPaths = ""
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -99,6 +103,19 @@ public struct MacSvnSettingsView: View {
                     }
                 }
             }
+            Section("Finder 菜单") {
+                DisclosureGroup("提升到顶层的命令") {
+                    ForEach(SvnCommandCatalog.dailyCFMCommands, id: \.id) { descriptor in
+                        Toggle(
+                            descriptor.displayName,
+                            isOn: finderSyncPromotedCommandBinding(descriptor.id)
+                        )
+                    }
+                }
+                Toggle("needs-lock 文件自动提升 Lock", isOn: $finderSyncPromoteLockForNeedsLock)
+                Toggle("未版本控制/已忽略路径隐藏菜单", isOn: $finderSyncHideUnversionedMenus)
+                patternEditor("菜单排除路径（每行一个）", text: $finderSyncMenuExcludedPaths)
+            }
             Section("分支布局") {
                 TextField("trunk", text: $trunk)
                 TextField("branches", text: $branches)
@@ -159,6 +176,10 @@ public struct MacSvnSettingsView: View {
         finderSyncIncludedPaths = settings.finderSyncOverlaySettings.includedPaths.joined(separator: "\n")
         finderSyncExcludedPaths = settings.finderSyncOverlaySettings.excludedPaths.joined(separator: "\n")
         finderSyncEnabledBadges = settings.finderSyncOverlaySettings.enabledBadges
+        finderSyncPromotedCommandIDs = Set(settings.finderSyncContextMenuSettings.promotedCommandIDs)
+        finderSyncPromoteLockForNeedsLock = settings.finderSyncContextMenuSettings.promoteLockForNeedsLock
+        finderSyncHideUnversionedMenus = settings.finderSyncContextMenuSettings.hideMenusForUnversionedItems
+        finderSyncMenuExcludedPaths = settings.finderSyncContextMenuSettings.excludedPaths.joined(separator: "\n")
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -194,6 +215,14 @@ public struct MacSvnSettingsView: View {
             includedPaths: patterns(from: finderSyncIncludedPaths),
             excludedPaths: patterns(from: finderSyncExcludedPaths),
             enabledBadges: finderSyncEnabledBadges
+        )
+        settings.finderSyncContextMenuSettings = FinderSyncContextMenuSettings(
+            promotedCommandIDs: SvnCommandCatalog.dailyCFMCommandIDs.filter {
+                finderSyncPromotedCommandIDs.contains($0)
+            },
+            promoteLockForNeedsLock: finderSyncPromoteLockForNeedsLock,
+            hideMenusForUnversionedItems: finderSyncHideUnversionedMenus,
+            excludedPaths: patterns(from: finderSyncMenuExcludedPaths)
         )
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
@@ -232,6 +261,7 @@ public struct MacSvnSettingsView: View {
                 records: records,
                 cacheMode: settings.finderSyncCacheMode,
                 overlaySettings: settings.finderSyncOverlaySettings,
+                contextMenuSettings: settings.finderSyncContextMenuSettings,
                 to: FinderSyncRootsExporter.fileURL(in: session.supportDirectory)
             )
         } catch {
@@ -280,6 +310,19 @@ public struct MacSvnSettingsView: View {
                     finderSyncEnabledBadges.insert(badge)
                 } else {
                     finderSyncEnabledBadges.remove(badge)
+                }
+            }
+        )
+    }
+
+    private func finderSyncPromotedCommandBinding(_ commandID: SvnCommandID) -> Binding<Bool> {
+        Binding(
+            get: { finderSyncPromotedCommandIDs.contains(commandID) },
+            set: { isPromoted in
+                if isPromoted {
+                    finderSyncPromotedCommandIDs.insert(commandID)
+                } else {
+                    finderSyncPromotedCommandIDs.remove(commandID)
                 }
             }
         )

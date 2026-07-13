@@ -6,17 +6,20 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
     public var roots: [String]
     public var cacheMode: FinderSyncCacheMode
     public var overlaySettings: FinderSyncOverlaySettings
+    public var contextMenuSettings: FinderSyncContextMenuSettings
 
     public init(
-        version: Int = 3,
+        version: Int = 4,
         roots: [String] = [],
         cacheMode: FinderSyncCacheMode = .defaultCache,
-        overlaySettings: FinderSyncOverlaySettings = FinderSyncOverlaySettings()
+        overlaySettings: FinderSyncOverlaySettings = FinderSyncOverlaySettings(),
+        contextMenuSettings: FinderSyncContextMenuSettings = FinderSyncContextMenuSettings()
     ) {
         self.version = version
         self.roots = roots
         self.cacheMode = cacheMode
         self.overlaySettings = overlaySettings
+        self.contextMenuSettings = contextMenuSettings
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -24,6 +27,7 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
         case roots
         case cacheMode
         case overlaySettings
+        case contextMenuSettings
     }
 
     public init(from decoder: Decoder) throws {
@@ -36,6 +40,10 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
             FinderSyncOverlaySettings.self,
             forKey: .overlaySettings
         ) ?? FinderSyncOverlaySettings()
+        contextMenuSettings = try container.decodeIfPresent(
+            FinderSyncContextMenuSettings.self,
+            forKey: .contextMenuSettings
+        ) ?? FinderSyncContextMenuSettings()
     }
 }
 
@@ -54,6 +62,7 @@ public enum FinderSyncRootsExporter {
             records: records,
             cacheMode: existing?.cacheMode ?? .defaultCache,
             overlaySettings: existing?.overlaySettings ?? FinderSyncOverlaySettings(),
+            contextMenuSettings: existing?.contextMenuSettings ?? FinderSyncContextMenuSettings(),
             to: fileURL
         )
     }
@@ -69,6 +78,8 @@ public enum FinderSyncRootsExporter {
             records: records,
             cacheMode: cacheMode,
             overlaySettings: existingOverlaySettings,
+            contextMenuSettings: (try? loadConfiguration(from: fileURL).contextMenuSettings)
+                ?? FinderSyncContextMenuSettings(),
             to: fileURL
         )
     }
@@ -79,13 +90,32 @@ public enum FinderSyncRootsExporter {
         overlaySettings: FinderSyncOverlaySettings,
         to fileURL: URL
     ) throws {
+        let existingContextMenuSettings = (try? loadConfiguration(from: fileURL).contextMenuSettings)
+            ?? FinderSyncContextMenuSettings()
+        try export(
+            records: records,
+            cacheMode: cacheMode,
+            overlaySettings: overlaySettings,
+            contextMenuSettings: existingContextMenuSettings,
+            to: fileURL
+        )
+    }
+
+    public static func export(
+        records: [WorkingCopyRecord],
+        cacheMode: FinderSyncCacheMode,
+        overlaySettings: FinderSyncOverlaySettings,
+        contextMenuSettings: FinderSyncContextMenuSettings,
+        to fileURL: URL
+    ) throws {
         let roots = Array(
             Set(records.filter(\.isValid).map(\.localPath))
         ).sorted()
         let payload = FinderSyncRootsFile(
             roots: roots,
             cacheMode: cacheMode,
-            overlaySettings: overlaySettings
+            overlaySettings: overlaySettings,
+            contextMenuSettings: contextMenuSettings
         )
         let data = try JSONEncoder().encode(payload)
         try FileManager.default.createDirectory(

@@ -110,4 +110,30 @@ final class MacSvnAppSessionTests: XCTestCase {
         )
         XCTAssertEqual(configuration.overlaySettings, configured.finderSyncOverlaySettings)
     }
+
+    func testBootstrapExportsConfiguredFinderSyncContextMenuSettings() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var configured = AppSettings()
+        configured.finderSyncContextMenuSettings = FinderSyncContextMenuSettings(
+            promotedCommandIDs: [.copyMove, .update],
+            hideMenusForUnversionedItems: true,
+            excludedPaths: ["/tmp/private"]
+        )
+        let data = try JSONEncoder().encode(SettingsFile(settings: configured))
+        try data.write(to: root.appendingPathComponent("settings.json"))
+
+        _ = try await MacSvnAppSession.bootstrap(supportDirectory: root)
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(
+            from: FinderSyncRootsExporter.fileURL(in: root)
+        )
+        XCTAssertEqual(
+            configuration.contextMenuSettings,
+            configured.finderSyncContextMenuSettings
+        )
+    }
 }

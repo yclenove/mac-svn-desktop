@@ -25,6 +25,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(settings.externalDiffTool)
         XCTAssertEqual(settings.logCachePolicy, LogCachePolicy())
         XCTAssertEqual(settings.finderSyncCacheMode, .defaultCache)
+        XCTAssertEqual(settings.finderSyncContextMenuSettings, FinderSyncContextMenuSettings())
     }
 
     func testUpdatePersistsSettings() async throws {
@@ -87,6 +88,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(decoded.settings.shelvingVersion, .v3)
         XCTAssertEqual(decoded.settings.logCachePolicy, LogCachePolicy())
         XCTAssertEqual(decoded.settings.finderSyncCacheMode, .defaultCache)
+        XCTAssertEqual(decoded.settings.finderSyncContextMenuSettings, FinderSyncContextMenuSettings())
     }
 
     func testLogCachePolicyPersistsWithSettings() async throws {
@@ -131,6 +133,26 @@ final class SettingsStoreTests: XCTestCase {
 
         let reloaded = try await makeStore(root: root).load()
         XCTAssertEqual(reloaded.finderSyncOverlaySettings, settings.finderSyncOverlaySettings)
+    }
+
+    func testFinderSyncContextMenuSettingsPersistWithSettings() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.finderSyncContextMenuSettings = FinderSyncContextMenuSettings(
+            promotedCommandIDs: [.update, .copyMove],
+            promoteLockForNeedsLock: false,
+            hideMenusForUnversionedItems: true,
+            excludedPaths: ["/tmp/vendor"]
+        )
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(
+            reloaded.finderSyncContextMenuSettings,
+            settings.finderSyncContextMenuSettings
+        )
     }
 
     func testResetRestoresDefaults() async throws {

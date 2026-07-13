@@ -1118,6 +1118,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var finderSyncCacheMode: FinderSyncCacheMode
     /// S08：Finder Sync 包含/排除路径与可见角标。
     public var finderSyncOverlaySettings: FinderSyncOverlaySettings
+    /// S02：Finder Sync 顶层菜单、needs-lock 提升与菜单过滤。
+    public var finderSyncContextMenuSettings: FinderSyncContextMenuSettings
 
     public init(
         svnPath: String? = nil,
@@ -1145,6 +1147,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.logCachePolicy = LogCachePolicy()
         self.finderSyncCacheMode = .defaultCache
         self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
+        self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
     }
 
     public init(
@@ -1174,6 +1177,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.logCachePolicy = LogCachePolicy()
         self.finderSyncCacheMode = .defaultCache
         self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
+        self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
     }
 
     public init(
@@ -1243,6 +1247,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case logCachePolicy
         case finderSyncCacheMode
         case finderSyncOverlaySettings
+        case finderSyncContextMenuSettings
     }
 
     public init(from decoder: Decoder) throws {
@@ -1265,6 +1270,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
             FinderSyncOverlaySettings.self,
             forKey: .finderSyncOverlaySettings
         ) ?? FinderSyncOverlaySettings()
+        finderSyncContextMenuSettings = try container.decodeIfPresent(
+            FinderSyncContextMenuSettings.self,
+            forKey: .finderSyncContextMenuSettings
+        ) ?? FinderSyncContextMenuSettings()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1283,6 +1292,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(logCachePolicy, forKey: .logCachePolicy)
         try container.encode(finderSyncCacheMode, forKey: .finderSyncCacheMode)
         try container.encode(finderSyncOverlaySettings, forKey: .finderSyncOverlaySettings)
+        try container.encode(finderSyncContextMenuSettings, forKey: .finderSyncContextMenuSettings)
     }
 }
 

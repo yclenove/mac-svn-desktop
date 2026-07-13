@@ -8,6 +8,7 @@ final class MacSvnFinderSync: FIFinderSync {
     private let presentationBuilder = FinderSyncPresentationBuilder()
     private let deepLinkBuilder = FinderSyncDeepLinkBuilder()
     private let statusCache = FinderSyncStatusCache()
+    private let menuStateSnapshot = FinderSyncMenuStateSnapshot()
     private var rootsFileObserver: DispatchSourceFileSystemObject?
 
     override init() {
@@ -25,6 +26,7 @@ final class MacSvnFinderSync: FIFinderSync {
         let path = url.path
         let builder = presentationBuilder
         let cache = statusCache
+        let menuSnapshot = menuStateSnapshot
         Task {
             guard let context = await cache.requestContext(containing: path) else {
                 await MainActor.run {
@@ -52,6 +54,7 @@ final class MacSvnFinderSync: FIFinderSync {
                 statuses: statuses,
                 overlaySettings: context.overlaySettings
             )
+            menuSnapshot.update(root: root, statuses: statuses)
             await MainActor.run {
                 FIFinderSyncController.default().setBadgeIdentifier(presentation.badge.rawValue, for: url)
             }
@@ -61,32 +64,26 @@ final class MacSvnFinderSync: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu(title: ProductBranding.displayName)
         let paths = selectedMenuPaths()
+        let menuPlan = menuStateSnapshot.plan(for: paths)
+        guard !menuPlan.isHidden else { return menu }
 
-        // Finder 菜单回调是同步的：固定提供深链入口；角标侧仍用 PresentationBuilder 精细态。
-        let items: [(SvnCommandID, String)] = [
-            (.update, "更新"),
-            (.commit, "提交"),
-            (.showLog, "查看日志"),
-            (.diff, "查看差异"),
-            (.revert, "还原"),
-            (.resolved, "解决冲突"),
-        ]
-        for (commandID, title) in items {
-            let item = NSMenuItem(title: title, action: #selector(handleMenuAction(_:)), keyEquivalent: "")
+        for commandID in menuPlan.promotedCommandIDs {
+            guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }
+            let item = NSMenuItem(
+                title: descriptor.displayName,
+                action: #selector(handleMenuAction(_:)),
+                keyEquivalent: ""
+            )
             item.representedObject = MenuPayload(commandID: commandID, paths: paths)
             item.target = self
             menu.addItem(item)
         }
 
+        guard !menuPlan.submenuCommandIDs.isEmpty else { return menu }
         menu.addItem(.separator())
         let extendedItem = NSMenuItem(title: "更多命令…", action: nil, keyEquivalent: "")
         let extendedMenu = NSMenu(title: "更多命令…")
-        let extendedCommandIDs: [SvnCommandID] = [
-            .add,
-            .delete,
-            .properties,
-        ] + SvnCommandCatalog.extendedMenuCommands.map(\.id)
-        for commandID in extendedCommandIDs {
+        for commandID in menuPlan.submenuCommandIDs {
             guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }
             let item = NSMenuItem(
                 title: descriptor.displayName,
@@ -165,6 +162,7 @@ final class MacSvnFinderSync: FIFinderSync {
 
     private func reloadMonitoredDirectories() {
         let configuration = loadConfiguration()
+        menuStateSnapshot.update(configuration: configuration)
         let cache = statusCache
         let directoryURLs = Set(
             configuration.overlaySettings
@@ -243,6 +241,52 @@ final class MacSvnFinderSync: FIFinderSync {
         image.unlockFocus()
         image.isTemplate = false
         return image
+    }
+}
+
+private final class FinderSyncMenuStateSnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private var configuration = FinderSyncRootsFile()
+    private var states: [String: FinderSyncMenuTargetState] = [:]
+    private let builder = FinderSyncContextMenuBuilder()
+
+    func update(configuration: FinderSyncRootsFile) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.configuration = configuration
+        states.removeAll()
+    }
+
+    func update(root: String, statuses: [FileStatus]) {
+        lock.lock()
+        defer { lock.unlock() }
+        let normalizedRoot = (root as NSString).standardizingPath
+        for status in statuses {
+            let relative = status.path == "." ? "" : status.path
+            let absolute = relative.isEmpty
+                ? normalizedRoot
+                : (normalizedRoot as NSString).appendingPathComponent(relative)
+            states[(absolute as NSString).standardizingPath] = FinderSyncMenuTargetState(
+                path: absolute,
+                itemStatus: status.itemStatus,
+                hasNeedsLock: status.overlay.hasNeedsLock,
+                isReadOnly: status.overlay.isReadOnly,
+                isRepositoryLocked: status.overlay.isRepositoryLocked
+            )
+        }
+    }
+
+    func plan(for paths: [String]) -> FinderSyncContextMenuPlan {
+        lock.lock()
+        defer { lock.unlock() }
+        let targets = paths.map { path in
+            states[(path as NSString).standardizingPath]
+                ?? FinderSyncMenuTargetState(path: path, itemStatus: nil)
+        }
+        return builder.plan(
+            targets: targets,
+            settings: configuration.contextMenuSettings
+        )
     }
 }
 
