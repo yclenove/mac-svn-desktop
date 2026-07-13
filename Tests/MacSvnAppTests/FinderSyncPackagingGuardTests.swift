@@ -91,6 +91,17 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("overlaySettings: context.overlaySettings"))
     }
 
+    func testExtensionProvidesNormalAndTortoiseExtendedFinderMenus() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("更多命令…"))
+        XCTAssertTrue(source.contains("let items: [(SvnCommandID, String)]"))
+        XCTAssertTrue(source.contains(".showLog"))
+        XCTAssertTrue(source.contains("SvnCommandCatalog.extendedMenuCommands"))
+        XCTAssertTrue(source.contains("commandID"))
+        XCTAssertTrue(source.contains("submenu"))
+    }
+
     private static func readFinderSyncSource() throws -> String {
         try readRepoSource(at: "Packaging/FinderSync/MacSvnFinderSync.swift")
     }

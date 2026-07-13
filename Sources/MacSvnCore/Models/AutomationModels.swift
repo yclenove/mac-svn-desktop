@@ -7,6 +7,7 @@ public enum MacSvnAutomationTarget: Equatable, Sendable {
 
 public enum MacSvnDeepLinkAction: Equatable, Sendable {
     case open(path: String)
+    case command(command: SvnCommandID, path: String)
     case log(target: MacSvnAutomationTarget, revision: Revision?)
     case diff(target: MacSvnAutomationTarget, range: RevisionRange?)
 }
@@ -15,6 +16,7 @@ public enum MacSvnDeepLinkParserError: Error, Equatable, Sendable {
     case invalidScheme(String?)
     case missingRoute
     case unknownRoute(String)
+    case unknownCommand(String)
     case missingTarget
     case missingParameter(String)
     case invalidRevision(String)

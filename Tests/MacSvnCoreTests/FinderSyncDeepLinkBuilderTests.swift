@@ -22,6 +22,16 @@ final class FinderSyncDeepLinkBuilderTests: XCTestCase {
         XCTAssertEqual(commit.host, "open")
         XCTAssertEqual(URLComponents(url: commit, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value, "commit")
     }
+
+    func testBuildsCommandURLForFinderExtendedMenu() throws {
+        let builder = FinderSyncDeepLinkBuilder()
+        let url = try XCTUnwrap(builder.commandURL(for: .deleteKeepLocal, path: "/Users/me/repo/file.txt"))
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(components.host, "command")
+        XCTAssertEqual(components.queryItems?.first { $0.name == "path" }?.value, "/Users/me/repo/file.txt")
+        XCTAssertEqual(components.queryItems?.first { $0.name == "command" }?.value, SvnCommandID.deleteKeepLocal.rawValue)
+    }
 }
 
 final class FinderSyncRootsExporterTests: XCTestCase {

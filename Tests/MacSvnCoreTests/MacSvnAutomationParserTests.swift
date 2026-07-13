@@ -9,10 +9,12 @@ final class MacSvnAutomationParserTests: XCTestCase {
         let open = try parser.parse(URL(string: "svnstudio://open?path=/Users/me/repo")!)
         let log = try parser.parse(URL(string: "svnstudio://log?url=https%3A%2F%2Fsvn.example.com%2Frepo%2Ftrunk&rev=r1200")!)
         let diff = try parser.parse(URL(string: "svnstudio://diff?path=Sources%2FApp.swift&from=1199&to=1200")!)
+        let command = try parser.parse(URL(string: "svnstudio://command?path=/Users/me/repo&command=cmd.15.deleteKeepLocal")!)
 
         XCTAssertEqual(open, .open(path: "/Users/me/repo"))
         XCTAssertEqual(log, .log(target: .repositoryURL("https://svn.example.com/repo/trunk"), revision: Revision(1200)))
         XCTAssertEqual(diff, .diff(target: .path("Sources/App.swift"), range: RevisionRange(start: Revision(1199), end: Revision(1200))))
+        XCTAssertEqual(command, .command(command: .deleteKeepLocal, path: "/Users/me/repo"))
     }
 
     func testDeepLinkParserRejectsInvalidSchemeUnknownRouteMissingTargetAndBadRevision() throws {
@@ -29,6 +31,9 @@ final class MacSvnAutomationParserTests: XCTestCase {
         }
         XCTAssertThrowsError(try parser.parse(URL(string: "svnstudio://log?path=/repo&rev=abc")!)) { error in
             XCTAssertEqual(error as? MacSvnDeepLinkParserError, .invalidRevision("abc"))
+        }
+        XCTAssertThrowsError(try parser.parse(URL(string: "svnstudio://command?path=/repo&command=cmd.999")!)) { error in
+            XCTAssertEqual(error as? MacSvnDeepLinkParserError, .unknownCommand("cmd.999"))
         }
     }
 

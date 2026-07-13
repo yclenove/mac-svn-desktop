@@ -65,20 +65,41 @@ final class MacSvnFinderSync: FIFinderSync {
         let path = targetURL?.path ?? ""
 
         // Finder 菜单回调是同步的：固定提供深链入口；角标侧仍用 PresentationBuilder 精细态。
-        let items: [(FinderSyncMenuActionID, String)] = [
+        let items: [(SvnCommandID, String)] = [
             (.update, "更新"),
             (.commit, "提交"),
-            (.log, "查看日志"),
+            (.showLog, "查看日志"),
             (.diff, "查看差异"),
             (.revert, "还原"),
-            (.resolve, "解决冲突"),
+            (.resolved, "解决冲突"),
         ]
-        for (actionID, title) in items {
+        for (commandID, title) in items {
             let item = NSMenuItem(title: title, action: #selector(handleMenuAction(_:)), keyEquivalent: "")
-            item.representedObject = MenuPayload(actionID: actionID, path: path)
+            item.representedObject = MenuPayload(commandID: commandID, path: path)
             item.target = self
             menu.addItem(item)
         }
+
+        menu.addItem(.separator())
+        let extendedItem = NSMenuItem(title: "更多命令…", action: nil, keyEquivalent: "")
+        let extendedMenu = NSMenu(title: "更多命令…")
+        let extendedCommandIDs: [SvnCommandID] = [
+            .add,
+            .delete,
+        ] + SvnCommandCatalog.extendedMenuCommands.map(\.id)
+        for commandID in extendedCommandIDs {
+            guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }
+            let item = NSMenuItem(
+                title: descriptor.displayName,
+                action: #selector(handleMenuAction(_:)),
+                keyEquivalent: ""
+            )
+            item.representedObject = MenuPayload(commandID: commandID, path: path)
+            item.target = self
+            extendedMenu.addItem(item)
+        }
+        extendedItem.submenu = extendedMenu
+        menu.addItem(extendedItem)
         return menu
     }
 
@@ -87,7 +108,15 @@ final class MacSvnFinderSync: FIFinderSync {
         let linkPath = payload.path.isEmpty
             ? (FIFinderSyncController.default().targetedURL()?.path ?? "")
             : payload.path
-        guard let url = deepLinkBuilder.url(for: payload.actionID, path: linkPath) else { return }
+        let url: URL?
+        if let commandID = payload.commandID {
+            url = deepLinkBuilder.commandURL(for: commandID, path: linkPath)
+        } else if let actionID = payload.actionID {
+            url = deepLinkBuilder.url(for: actionID, path: linkPath)
+        } else {
+            return
+        }
+        guard let url else { return }
         NSWorkspace.shared.open(url)
     }
 
@@ -206,8 +235,21 @@ final class MacSvnFinderSync: FIFinderSync {
 }
 
 private struct MenuPayload {
-    let actionID: FinderSyncMenuActionID
+    let actionID: FinderSyncMenuActionID?
+    let commandID: SvnCommandID?
     let path: String
+
+    init(actionID: FinderSyncMenuActionID, path: String) {
+        self.actionID = actionID
+        self.commandID = nil
+        self.path = path
+    }
+
+    init(commandID: SvnCommandID, path: String) {
+        self.actionID = nil
+        self.commandID = commandID
+        self.path = path
+    }
 }
 
 private struct FinderSyncRequestContext: Sendable {

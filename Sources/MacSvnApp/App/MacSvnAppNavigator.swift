@@ -444,16 +444,23 @@ public final class MacSvnAppNavigator: ObservableObject {
         return nonEmpty[1]
     }
 
-    public func handle(deepLink action: MacSvnDeepLinkAction) {
+    @discardableResult
+    public func handle(deepLink action: MacSvnDeepLinkAction) -> SvnCommandPerformResult? {
         switch action {
         case .open(let path):
             pendingOpenPath = path
             selectedRoute = .changes
             lastAutomationMessage = "深链打开：\(path)"
+            return nil
+        case .command(let command, let path):
+            let result = perform(command: command, paths: [path])
+            lastAutomationMessage = "Finder 命令：\(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)"
+            return result
         case .log(let target, _):
             apply(target: target)
             selectedRoute = .log
             lastAutomationMessage = "深链跳转历史"
+            return nil
         case .diff(let target, let range):
             apply(target: target)
             if case .path(let path) = target {
@@ -463,6 +470,7 @@ public final class MacSvnAppNavigator: ObservableObject {
             // Diff 归入变更工作区，路径经 pendingDiffPath 注入
             selectedRoute = .changes
             lastAutomationMessage = "深链跳转 Diff"
+            return nil
         }
     }
 
