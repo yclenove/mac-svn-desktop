@@ -118,6 +118,33 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testReintegrateMergeUsesModernCompleteMergeWithoutObsoleteFlag() {
+        let command = SvnCommandBuilder.mergeReintegrate(
+            source: "file:///repo/branches/feature-one",
+            dryRun: true,
+            authArguments: ["--username", "u"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "--username", "u", "file:///repo/branches/feature-one"
+        ])
+        XCTAssertFalse(command.arguments.contains("--reintegrate"))
+    }
+
+    func testMergeRevisionUsesSingleChangeRevision() {
+        let command = SvnCommandBuilder.mergeRevisionTo(
+            source: "file:///repo/trunk",
+            revision: Revision(12),
+            dryRun: false
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive",
+            "-c", "12", "file:///repo/trunk"
+        ])
+    }
+
     func testExportCanOmitExternals() {
         let command = SvnCommandBuilder.export(
             url: "file:///repo/trunk",

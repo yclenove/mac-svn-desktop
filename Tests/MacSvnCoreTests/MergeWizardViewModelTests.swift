@@ -118,6 +118,40 @@ final class MergeWizardViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReintegrateUsesCompleteMergeProviderOperation() async {
+        let provider = FakeMergeProvider(results: [.success(MergeSummary(merged: 1))])
+        let viewModel = MergeWizardViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.previewReintegrate(wc: wc, source: " file:///repo/branches/feature-one ")
+
+        XCTAssertEqual(viewModel.state, .previewReady(MergeSummary(merged: 1)))
+        let calls = await provider.recordedReintegrateCalls()
+        XCTAssertEqual(calls, [
+            MergeSpecialCall(wc: wc, source: "file:///repo/branches/feature-one", revision: nil, dryRun: true)
+        ])
+    }
+
+    @MainActor
+    func testMergeRevisionToUsesSelectedRevisionProviderOperation() async {
+        let provider = FakeMergeProvider(results: [.success(MergeSummary(updated: 1))])
+        let viewModel = MergeWizardViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.mergeRevisionTo(
+            wc: wc,
+            source: "file:///repo/trunk",
+            revision: Revision(12)
+        )
+
+        XCTAssertEqual(viewModel.state, .completed(MergeSummary(updated: 1)))
+        let calls = await provider.recordedReintegrateCalls()
+        XCTAssertEqual(calls, [
+            MergeSpecialCall(wc: wc, source: "file:///repo/trunk", revision: Revision(12), dryRun: false)
+        ])
+    }
+
+    @MainActor
     func testPreviewRejectsEmptySourceBeforeProviderCall() async {
         let provider = FakeMergeProvider(results: [.success(MergeSummary(updated: 1))])
         let viewModel = MergeWizardViewModel(provider: provider)
@@ -174,6 +208,13 @@ private struct TwoTreeDiffCall: Equatable, Sendable {
     let newPath: String
 }
 
+private struct MergeSpecialCall: Equatable, Sendable {
+    let wc: URL
+    let source: String
+    let revision: Revision?
+    let dryRun: Bool
+}
+
 private actor FakeMergeProvider: MergeProviding {
     private var results: [Result<MergeSummary, Error>]
     private var twoTreeResults: [Result<MergeSummary, Error>]
@@ -182,6 +223,7 @@ private actor FakeMergeProvider: MergeProviding {
     private var twoTreeCalls: [TwoTreeMergeCall] = []
     private var diffCalls: [MergeDiffCall] = []
     private var twoTreeDiffCalls: [TwoTreeDiffCall] = []
+    private var reintegrateCalls: [MergeSpecialCall] = []
 
     init(
         results: [Result<MergeSummary, Error>] = [],
@@ -200,6 +242,7 @@ private actor FakeMergeProvider: MergeProviding {
     func recordedTwoTreeCalls() -> [TwoTreeMergeCall] { twoTreeCalls }
     func recordedDiffCalls() -> [MergeDiffCall] { diffCalls }
     func recordedTwoTreeDiffCalls() -> [TwoTreeDiffCall] { twoTreeDiffCalls }
+    func recordedReintegrateCalls() -> [MergeSpecialCall] { reintegrateCalls }
 
     func merge(
         wc: URL,
@@ -245,5 +288,17 @@ private actor FakeMergeProvider: MergeProviding {
         twoTreeDiffCalls.append(TwoTreeDiffCall(oldPath: oldPath, newPath: newPath))
         guard !diffResults.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake diff") }
         return try diffResults.removeFirst().get()
+    }
+
+    func mergeReintegrate(wc: URL, source: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        reintegrateCalls.append(MergeSpecialCall(wc: wc, source: source, revision: nil, dryRun: dryRun))
+        guard !results.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake result") }
+        return try results.removeFirst().get()
+    }
+
+    func mergeRevisionTo(wc: URL, source: String, revision: Revision, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        reintegrateCalls.append(MergeSpecialCall(wc: wc, source: source, revision: revision, dryRun: dryRun))
+        guard !results.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake result") }
+        return try results.removeFirst().get()
     }
 }

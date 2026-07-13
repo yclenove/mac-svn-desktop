@@ -68,6 +68,8 @@ public enum LogContextActionIntent: Equatable, Sendable {
     case revertChangesFromRevision(path: String, revision: Revision)
     /// L14：从日志检出/导出
     case checkoutOrExport(sourcePegURL: String, revision: Revision)
+    /// L13：将日志选中的单个修订合并到当前工作副本
+    case mergeRevisionTo(sourceURL: String, revision: Revision)
 }
 
 /// 从 Catalog ID + 上下文解析可执行意图。
@@ -95,6 +97,11 @@ public enum LogContextActionPolicy: Sendable {
     /// T2.5 剪贴板（L17）。
     public static let t2ClipboardActionIDs: [SvnCommandID] = [
         .logCopyToClipboard,
+    ]
+
+    /// T3：从日志选择单个修订合并到当前工作副本。
+    public static let t3RevisionActionIDs: [SvnCommandID] = [
+        .logMergeRevisionTo,
     ]
 
     /// 兼容旧名。
@@ -129,6 +136,8 @@ public enum LogContextActionPolicy: Sendable {
         workingCopyURL: String
     ) -> LogContextActionIntent? {
         switch command {
+        case .logMergeRevisionTo:
+            return .mergeRevisionTo(sourceURL: workingCopyURL, revision: revision)
         case .logCreateBranchTagFromRevision:
             return .createBranchTag(
                 sourcePegURL: LogChangedPathPolicy.pegURL(workingCopyURL: workingCopyURL, revision: revision),

@@ -361,6 +361,12 @@ public struct MacSvnLogView: View {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
+        Divider()
+        ForEach(LogContextActionPolicy.t3RevisionActionIDs, id: \.rawValue) { command in
+            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+                Task { await performLogAction(command, changedPath: path, revision: revision) }
+            }
+        }
     }
 
     @ViewBuilder
@@ -634,6 +640,37 @@ public struct MacSvnLogView: View {
             checkoutExportRevision = rev
             checkoutExportIsExport = false
             showCheckoutExportSheet = true
+
+        case .mergeRevisionTo(let sourceURL, let rev):
+            pendingConfirmTitle = "将 r\(rev.value) 合并到当前工作副本？"
+            pendingConfirmDetail = "来源：\(sourceURL)\n将执行单修订合并（svn merge -c \(rev.value)），并可能产生冲突。"
+            pendingConfirmAction = { await self.mergeRevisionTo(sourceURL: sourceURL, revision: rev) }
+            showConfirmSheet = true
+        }
+    }
+
+    private func mergeRevisionTo(sourceURL: String, revision: Revision) async {
+        guard let record = workspaceController.selectedRecord else { return }
+        let wc = URL(fileURLWithPath: record.localPath)
+        do {
+            let summary = try await session.svnService.mergeRevisionTo(
+                wc: wc,
+                source: sourceURL,
+                revision: revision,
+                dryRun: false,
+                auth: nil
+            )
+            if summary.conflicted > 0 {
+                navigator.openMergeConflicts(
+                    paths: summary.affectedPaths.filter { $0.action == .conflicted }.map(\.path)
+                )
+                statusText = "r\(revision.value) 已合并，但产生了冲突"
+            } else {
+                statusText = "已将 r\(revision.value) 合并到当前工作副本"
+                navigator.selectMode(.changes)
+            }
+        } catch {
+            errorText = "合并 r\(revision.value) 失败：\(error)"
         }
     }
 

@@ -10,6 +10,7 @@ public struct MacSvnMergeWizardView: View {
     private enum MergeMode: String, CaseIterable, Identifiable {
         case revisionRange = "修订范围"
         case twoTrees = "两棵树"
+        case reintegrate = "重新整合"
         var id: String { rawValue }
     }
 
@@ -48,7 +49,7 @@ public struct MacSvnMergeWizardView: View {
                     TextField("来源 URL / 分支", text: $sourceURL)
                     if mergeMode == .twoTrees {
                         TextField("目标 URL / 分支", text: $targetURL)
-                    } else {
+                    } else if mergeMode == .revisionRange {
                         HStack {
                             TextField("起始 revision（可选）", text: $startRevision)
                             TextField("结束 revision（可选）", text: $endRevision)
@@ -146,6 +147,13 @@ public struct MacSvnMergeWizardView: View {
                 await viewModel.mergeTwoTrees(wc: wc, from: sourceURL, to: targetURL)
             }
             summary = dryRun ? viewModel.previewSummary : viewModel.mergeSummary
+        } else if mergeMode == .reintegrate {
+            if dryRun {
+                await viewModel.previewReintegrate(wc: wc, source: sourceURL)
+            } else {
+                await viewModel.reintegrate(wc: wc, source: sourceURL)
+            }
+            summary = dryRun ? viewModel.previewSummary : viewModel.mergeSummary
         } else if dryRun {
             await viewModel.preview(wc: wc, source: sourceURL, range: range)
             summary = viewModel.previewSummary
@@ -178,6 +186,9 @@ public struct MacSvnMergeWizardView: View {
         guard !sourceURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         if mergeMode == .twoTrees {
             return !targetURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        if mergeMode == .reintegrate {
+            return false
         }
         return parsedRevisionRange != nil
     }

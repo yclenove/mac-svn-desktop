@@ -128,6 +128,30 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
+    /// SVN 1.8+ 的完整合并就是现代 reintegrate 语义；旧的 --reintegrate 已废弃。
+    public static func mergeReintegrate(
+        source: String,
+        dryRun: Bool = false,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        merge(source: source, range: nil, dryRun: dryRun, authArguments: authArguments)
+    }
+
+    public static func mergeRevisionTo(
+        source: String,
+        revision: Revision,
+        dryRun: Bool = false,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["merge", "--accept", "postpone", "--non-interactive"]
+        if dryRun {
+            arguments.append("--dry-run")
+        }
+        arguments += authArguments
+        arguments += ["-c", revision.description, source]
+        return SvnCommand(arguments: arguments)
+    }
+
     public static func resolve(path: String, accept: ResolveAccept) -> SvnCommand {
         SvnCommand(arguments: [
             "resolve", "--accept", accept.rawValue, "--non-interactive", path

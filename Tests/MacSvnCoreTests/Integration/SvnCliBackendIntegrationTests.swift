@@ -899,6 +899,75 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testReintegrateAndMergeRevisionToUseModernCompleteAndSingleRevisionMerges() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/reintegrate-source"
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "create reintegrate branch",
+            auth: nil
+        )
+        let branchWC = fixture.root.appendingPathComponent("reintegrate-wc", isDirectory: true)
+        try await fixture.backend.checkout(url: branchURL, to: branchWC)
+        try "branch change\n".write(
+            to: branchWC.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let branchRevision = try await service.commit(
+            wc: branchWC,
+            paths: ["README.txt"],
+            message: "branch change",
+            auth: nil
+        )
+
+        let revisionPreview = try await service.mergeRevisionTo(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            revision: branchRevision,
+            dryRun: true,
+            auth: nil
+        )
+        let revisionMerged = try await service.mergeRevisionTo(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            revision: branchRevision,
+            dryRun: false,
+            auth: nil
+        )
+        XCTAssertTrue(revisionPreview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(revisionMerged.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("README.txt"), encoding: .utf8),
+            "branch change\n"
+        )
+
+        let reintegrateWC = fixture.root.appendingPathComponent("trunk-reintegrate-wc", isDirectory: true)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: reintegrateWC)
+        let preview = try await service.mergeReintegrate(
+            wc: reintegrateWC,
+            source: branchURL,
+            dryRun: true,
+            auth: nil
+        )
+        let merged = try await service.mergeReintegrate(
+            wc: reintegrateWC,
+            source: branchURL,
+            dryRun: false,
+            auth: nil
+        )
+        XCTAssertTrue(preview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(merged.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertEqual(
+            try String(contentsOf: reintegrateWC.appendingPathComponent("README.txt"), encoding: .utf8),
+            "branch change\n"
+        )
+    }
+
     func testConflictServiceListsTextConflictAndResolveMineFull() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

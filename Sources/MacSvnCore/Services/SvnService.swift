@@ -340,6 +340,45 @@ public actor SvnService {
         }
     }
 
+    /// 现代 SVN 的 complete merge 即 reintegrate 语义；不再拼接已废弃的 --reintegrate。
+    public func mergeReintegrate(
+        wc: URL,
+        source: String,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        try await withWriteLock(wc: wc, operation: "mergeReintegrate") {
+            let credentialScope = credentialScope(for: source)
+            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.mergeReintegrate(wc: wc, source: source, dryRun: dryRun, auth: auth)
+            }
+        }
+    }
+
+    public func mergeRevisionTo(
+        wc: URL,
+        source: String,
+        revision: Revision,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        guard revision.value > 0 else {
+            throw SvnError.other(code: nil, stderr: "revision must be greater than zero")
+        }
+        return try await withWriteLock(wc: wc, operation: "mergeRevisionTo") {
+            let credentialScope = credentialScope(for: source)
+            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.mergeRevisionTo(
+                    wc: wc,
+                    source: source,
+                    revision: revision,
+                    dryRun: dryRun,
+                    auth: auth
+                )
+            }
+        }
+    }
+
     public func checkout(
         url: String,
         to destination: URL,

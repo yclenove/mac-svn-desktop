@@ -101,6 +101,40 @@ public struct SvnCliBackend: SvnBackend {
         return try MergeOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
     }
 
+    public func mergeReintegrate(
+        wc: URL,
+        source: String,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.mergeReintegrate(
+            source: normalizedRemoteURL(source),
+            dryRun: dryRun,
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
+        return try MergeOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
+    }
+
+    public func mergeRevisionTo(
+        wc: URL,
+        source: String,
+        revision: Revision,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.mergeRevisionTo(
+            source: normalizedRemoteURL(source),
+            revision: revision,
+            dryRun: dryRun,
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
+        return try MergeOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
+    }
+
     public func commit(
         wc: URL,
         paths: [String],

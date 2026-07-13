@@ -9,6 +9,8 @@ public protocol SvnBackend: Sendable {
     func switchTo(wc: URL, url: String, revision: Revision?, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
     func mergeTwoTrees(wc: URL, from: String, to: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
+    func mergeReintegrate(wc: URL, source: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
+    func mergeRevisionTo(wc: URL, source: String, revision: Revision, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
     func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
     func add(wc: URL, paths: [String]) async throws
     func assignChangelist(wc: URL, name: String, paths: [String], depth: SvnDepth) async throws
@@ -81,6 +83,25 @@ public protocol SvnBackend: Sendable {
     func info(wc: URL, target: String) async throws -> SvnInfo
     /// 查询仓库 HEAD 修订号（`svn info -r HEAD`），供多路径统一更新钉住 revision。
     func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision
+}
+
+public extension SvnBackend {
+    func mergeReintegrate(wc: URL, source: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        try await merge(wc: wc, source: source, range: nil, dryRun: dryRun, auth: auth)
+    }
+
+    func mergeRevisionTo(wc: URL, source: String, revision: Revision, dryRun: Bool, auth: Credential?) async throws -> MergeSummary {
+        guard revision.value > 0 else {
+            throw SvnError.other(code: nil, stderr: "revision must be greater than zero")
+        }
+        return try await merge(
+            wc: wc,
+            source: source,
+            range: RevisionRange(start: Revision(revision.value - 1), end: revision),
+            dryRun: dryRun,
+            auth: auth
+        )
+    }
 }
 
 public extension SvnBackend {

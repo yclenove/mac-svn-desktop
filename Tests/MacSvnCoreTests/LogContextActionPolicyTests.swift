@@ -74,6 +74,20 @@ final class LogContextActionPolicyTests: XCTestCase {
         )
     }
 
+    func testMergeRevisionToUsesWorkingCopyURLAndSelectedRevision() {
+        let intent = LogContextActionPolicy.intent(
+            command: .logMergeRevisionTo,
+            changedPath: "/trunk/README.txt",
+            revision: Revision(12),
+            workingCopyURL: "file:///repo/trunk"
+        )
+
+        XCTAssertEqual(
+            intent,
+            .mergeRevisionTo(sourceURL: "file:///repo/trunk", revision: Revision(12))
+        )
+    }
+
     func testUpdateToRevisionDefaultsToDotWhenPathEmpty() {
         let intent = LogContextActionPolicy.intent(
             command: .logUpdateItemToRevision,
