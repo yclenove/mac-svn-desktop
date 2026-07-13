@@ -968,6 +968,28 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testRepositoryCreatorCreatesRealFSFSRepository() async throws {
+        let fixture = try makeFixture()
+        let svnadmin = URL(fileURLWithPath: fixture.svnExecutable)
+            .deletingLastPathComponent()
+            .appendingPathComponent("svnadmin")
+        guard FileManager.default.isExecutableFile(atPath: svnadmin.path) else {
+            throw XCTSkip("svnadmin executable is not available beside svn")
+        }
+        let destination = fixture.root.appendingPathComponent("created-repository", isDirectory: true)
+        let creator = SvnRepositoryCreator(
+            svnadminExecutable: svnadmin.path,
+            runner: ProcessRunner(),
+            timeout: 30
+        )
+
+        try await creator.create(at: destination)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("format").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("db").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("conf").path))
+    }
+
     func testConflictServiceListsTextConflictAndResolveMineFull() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

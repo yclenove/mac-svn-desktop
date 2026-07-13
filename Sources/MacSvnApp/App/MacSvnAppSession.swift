@@ -20,6 +20,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let svnService: SvnService
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
+    public let repositoryCreator: SvnRepositoryCreator
     public let gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer
     public let gitMigrationService: GitMigrationService
     public let gitMigrationSyncService: GitMigrationSyncService
@@ -50,6 +51,7 @@ public final class MacSvnAppSession: ObservableObject {
         svnService: SvnService,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String,
+        repositoryCreator: SvnRepositoryCreator,
         gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer,
         gitMigrationService: GitMigrationService,
         gitMigrationSyncService: GitMigrationSyncService,
@@ -79,6 +81,7 @@ public final class MacSvnAppSession: ObservableObject {
         self.svnService = svnService
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
+        self.repositoryCreator = repositoryCreator
         self.gitMigrationSourceAnalyzer = gitMigrationSourceAnalyzer
         self.gitMigrationService = gitMigrationService
         self.gitMigrationSyncService = gitMigrationSyncService
@@ -137,6 +140,11 @@ public final class MacSvnAppSession: ObservableObject {
         )
 
         let svnPath = resolveSvnExecutablePath(configured: settings.svnPath)
+        let repositoryCreator = SvnRepositoryCreator(
+            svnadminExecutable: resolveSvnadminExecutablePath(svnExecutablePath: svnPath),
+            runner: ProcessRunner(),
+            timeout: settings.processTimeout
+        )
         let backend = SvnCliBackend(
             svnExecutable: svnPath,
             runner: ProcessRunner(),
@@ -256,6 +264,7 @@ public final class MacSvnAppSession: ObservableObject {
             shelveService: shelveService,
             svnService: svnService,
             svnExecutablePath: svnPath,
+            repositoryCreator: repositoryCreator,
             gitMigrationSourceAnalyzer: gitMigrationSourceAnalyzer,
             gitMigrationService: gitMigrationService,
             gitMigrationSyncService: gitMigrationSyncService,
@@ -311,5 +320,22 @@ public final class MacSvnAppSession: ObservableObject {
         }
 
         return "/opt/homebrew/bin/svn"
+    }
+
+    public static func resolveSvnadminExecutablePath(svnExecutablePath: String) -> String {
+        let sibling = URL(fileURLWithPath: svnExecutablePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("svnadmin")
+            .path
+        if FileManager.default.isExecutableFile(atPath: sibling) {
+            return sibling
+        }
+
+        let candidates = [
+            "/opt/homebrew/bin/svnadmin",
+            "/usr/local/bin/svnadmin",
+            "/usr/bin/svnadmin"
+        ]
+        return candidates.first(where: FileManager.default.isExecutableFile(atPath:)) ?? sibling
     }
 }

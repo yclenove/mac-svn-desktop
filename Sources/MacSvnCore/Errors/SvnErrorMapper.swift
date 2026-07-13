@@ -17,7 +17,7 @@ public enum SvnErrorMapper {
     }
 
     private static func firstErrorCode(in stderr: String) -> Int? {
-        guard let markerRange = stderr.range(of: "svn: E") else {
+        guard let markerRange = stderr.range(of: ": E") else {
             return nil
         }
 

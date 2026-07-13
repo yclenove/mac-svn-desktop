@@ -144,6 +144,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingAIChatQuery: String?
     @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var pendingPatchIntent: PendingPatchIntent?
+    @Published public var pendingCreateRepository = false
     @Published public var lastAutomationMessage: String?
     /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
     @Published public var lastCommandResult: SvnCommandPerformResult?
@@ -240,6 +241,10 @@ public final class MacSvnAppNavigator: ObservableObject {
             pendingExternalsIntent = PendingExternalsIntent(path: paths.first(where: { !$0.isEmpty }))
         }
 
+        if command == .createRepositoryHere {
+            pendingCreateRepository = true
+        }
+
         if [.checkout, .export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
             pendingTransferIntent = PendingTransferIntent(
                 command: command,
@@ -325,7 +330,9 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .export, .importToRepository, .importInPlace, .relocate,
              .removeFromVersionControl:
             return .repositoryBrowser
-        case .createRepositoryHere, .deleteKeepLocal, .deleteUnversioned:
+        case .createRepositoryHere:
+            return .repositoryBrowser
+        case .deleteKeepLocal, .deleteUnversioned:
             return nil
         case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
              .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,
@@ -485,6 +492,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingMergeWizard() -> Bool {
         let value = pendingMergeWizard
         pendingMergeWizard = false
+        return value
+    }
+
+    public func consumePendingCreateRepository() -> Bool {
+        let value = pendingCreateRepository
+        pendingCreateRepository = false
         return value
     }
 

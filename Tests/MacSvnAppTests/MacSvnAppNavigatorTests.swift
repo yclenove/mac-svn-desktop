@@ -278,6 +278,16 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertFalse(navigator.pendingMergeWizard)
     }
 
+    func testCreateRepositoryHereNavigatesToBrowserAndCarriesIntent() {
+        let navigator = MacSvnAppNavigator()
+
+        navigator.perform(command: .createRepositoryHere, paths: [], options: SvnCommandOptions())
+
+        XCTAssertEqual(navigator.selectedRoute, .repositoryBrowser)
+        XCTAssertTrue(navigator.consumePendingCreateRepository())
+        XCTAssertFalse(navigator.consumePendingCreateRepository())
+    }
+
     func testPatchCommandsNavigateToShelveAndCarryIntentWithoutOpeningPath() {
         let navigator = MacSvnAppNavigator()
         let options = SvnCommandOptions(extras: ["patchFile": "/tmp/changes.patch"])

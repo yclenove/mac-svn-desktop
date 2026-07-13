@@ -37,6 +37,9 @@ public struct MacSvnRepoBrowserView: View {
     @State private var remoteWriteMessage = ""
     @State private var pendingRemoteWriteConfirmation: RepoRemoteWriteConfirmation?
     @State private var showRemoteWriteConfirmation = false
+    @State private var createRepositoryVM: CreateRepositoryViewModel?
+    @State private var showCreateRepositorySheet = false
+    @State private var repositoryPath = ""
 
     private enum RemoteWriteKind: String, Identifiable {
         case mkdir = "新建目录"
@@ -92,6 +95,14 @@ public struct MacSvnRepoBrowserView: View {
         .sheet(isPresented: $showTransferSheet) {
             transferSheet
         }
+        .sheet(isPresented: $showCreateRepositorySheet) {
+            createRepositorySheet
+        }
+        .onChange(of: navigator.pendingCreateRepository) { _, pending in
+            if pending {
+                presentCreateRepository()
+            }
+        }
         .alert(
             "确认远端操作",
             isPresented: $showRemoteWriteConfirmation,
@@ -128,6 +139,8 @@ public struct MacSvnRepoBrowserView: View {
                 ForEach(TransferKind.allCases) { kind in
                     Button(kind.rawValue) { presentTransfer(kind) }
                 }
+                Divider()
+                Button("在此创建仓库…") { presentCreateRepository() }
             }
         }
         .padding(24)
@@ -389,6 +402,65 @@ public struct MacSvnRepoBrowserView: View {
         .frame(minWidth: 520)
     }
 
+    private var createRepositorySheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("在此创建仓库").font(.title2.weight(.semibold))
+            HStack {
+                TextField("仓库目录", text: $repositoryPath)
+                    .textFieldStyle(.roundedBorder)
+                Button("选择…") { chooseRepositoryPath() }
+            }
+            LabeledContent("文件系统", value: "FSFS")
+            if case .error(let message) = createRepositoryVM?.state {
+                Text(message).foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
+                Button("取消") { showCreateRepositorySheet = false }
+                Button("创建") { Task { await createRepository() } }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(repositoryPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 500)
+    }
+
+    private func presentCreateRepository() {
+        _ = navigator.consumePendingCreateRepository()
+        createRepositoryVM = CreateRepositoryViewModel(provider: session.repositoryCreator)
+        repositoryPath = ""
+        showCreateRepositorySheet = true
+    }
+
+    private func chooseRepositoryPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "选择仓库目录"
+        if panel.runModal() == .OK, let url = panel.url {
+            repositoryPath = url.path
+        }
+    }
+
+    private func createRepository() async {
+        guard let createRepositoryVM else { return }
+        await createRepositoryVM.create(path: repositoryPath)
+        switch createRepositoryVM.state {
+        case .completed(let destination):
+            statusText = "仓库创建完成：\(destination.path)"
+            rootURL = destination.absoluteString
+            showCreateRepositorySheet = false
+            await openRoot()
+        case .error(let message):
+            statusText = "创建仓库失败：\(message)"
+        default:
+            break
+        }
+    }
+
     private var canExecuteTransfer: Bool {
         switch transferKind {
         case .export: return !transferURL.isEmpty && !transferDestination.isEmpty
@@ -401,6 +473,7 @@ public struct MacSvnRepoBrowserView: View {
     private func presentTransfer(_ kind: TransferKind) {
         transferKind = kind
         transferVM = ImportExportViewModel(provider: session.svnService)
+        createRepositoryVM = CreateRepositoryViewModel(provider: session.repositoryCreator)
         transferPath = workspaceController.selectedRecord?.localPath ?? ""
         transferURL = rootURL
         transferDestination = ""
@@ -638,6 +711,9 @@ public struct MacSvnRepoBrowserView: View {
         }
         await consumePendingBrowse()
         consumePendingTransfer()
+        if navigator.pendingCreateRepository {
+            presentCreateRepository()
+        }
     }
 
     /// 消费历史页 L08 注入的仓库 URL（及可选修订）。
