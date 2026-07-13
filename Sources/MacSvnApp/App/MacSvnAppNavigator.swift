@@ -28,6 +28,22 @@ public struct PendingLogDiffIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingTransferIntent: Equatable, Sendable {
+    public let command: SvnCommandID
+    public let path: String?
+    public let url: String?
+    public let revision: Revision?
+    public let message: String?
+
+    public init(command: SvnCommandID, path: String?, url: String?, revision: Revision?, message: String?) {
+        self.command = command
+        self.path = path
+        self.url = url
+        self.revision = revision
+        self.message = message
+    }
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -59,6 +75,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingReleaseNotesEntries: [LogEntry]?
     /// ⌘K 无结构化命中时带入 AI Chat 的自然语言 query（FR-EX-04）。
     @Published public var pendingAIChatQuery: String?
+    @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var lastAutomationMessage: String?
     /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
     @Published public var lastCommandResult: SvnCommandPerformResult?
@@ -125,6 +142,16 @@ public final class MacSvnAppNavigator: ObservableObject {
             pendingMergeWizard = true
         }
 
+        if [.export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
+            pendingTransferIntent = PendingTransferIntent(
+                command: command,
+                path: paths.first,
+                url: options.url,
+                revision: options.revision,
+                message: options.message
+            )
+        }
+
         // #19–#21：锁定命令注入路径与意图。
         if let lockIntent = Self.lockIntent(for: command) {
             pendingLockPaths = paths.filter { !$0.isEmpty }
@@ -173,8 +200,12 @@ public final class MacSvnAppNavigator: ObservableObject {
             return .locks
         case .shelve:
             return .shelve
-        case .checkout, .export, .importToRepository, .importInPlace, .relocate,
-             .createRepositoryHere, .removeFromVersionControl, .createPatch, .applyPatch,
+        case .checkout:
+            return .repositoryBrowser
+        case .export, .importToRepository, .importInPlace, .relocate,
+             .removeFromVersionControl:
+            return .repositoryBrowser
+        case .createRepositoryHere, .createPatch, .applyPatch,
              .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned,
              .repairFilenameCaseConflict:
             return nil
@@ -326,6 +357,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingBrowseRevision() -> Revision? {
         let value = pendingBrowseRevision
         pendingBrowseRevision = nil
+        return value
+    }
+
+    public func consumePendingTransferIntent() -> PendingTransferIntent? {
+        let value = pendingTransferIntent
+        pendingTransferIntent = nil
         return value
     }
 

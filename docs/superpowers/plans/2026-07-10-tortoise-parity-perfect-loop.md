@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.8 ✅；**下一 T2.9**；覆盖率 **50/114（43.86%）** |
+| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.9 ✅；**下一 T2.10**；覆盖率以脚本结果为准 |
 
 ---
 
@@ -148,7 +148,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T2.6** Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
 - [x] **T2.7** Lock / Unlock / Break lock（#19–21）
 - [x] **T2.8** Branch-Tag / Switch / Merge+dry-run（#22–24）
-- [ ] **T2.9** Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
+- [x] **T2.9** Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
 - [ ] **T2.10** Create Patch / Apply Patch（#33,#34）
 - [ ] **T2.11** Properties 模板与编辑（#35）；Blame 悬停日志（#31）
 - [ ] **T2.12** Repo Browser 远端写 + 高危确认 + 锁列（#10 + §4.5）
@@ -252,6 +252,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T2.7 | a877356 | Lock/Unlock/Break lock + CFM 入口 | #19–21、D21 ✅ | needs-lock→T4；下一 T2.8 |
 | 2026-07-11 | 交接 | 425cba7 | Cursor→Codex 长程说明书 | 无功能变更 | 下一刀仍 T2.8；见 codex-tortoise-parity-long-loop.md |
 | 2026-07-13 | T2.8 | c8a2ff0 | Branch/Switch/Merge 单测 + 真实 SVN 两树/Diff 集成测；全量 638 绿 | #22–24、D19/D20 ✅；§4.4 核心勾选 | reintegrate 仍属 T3.6；下一 T2.9 |
+| 2026-07-13 | T2.9 | （提交后回填） | Export/Import/Import in Place/Relocate/Remove VC；命令、Service、UI、真实 SVN 集成测 | #26/#27/#30/#43/#44、D04/D26 ✅ | 就地导入通过临时检出原子替换；下一 T2.10 |
 
 ---
 

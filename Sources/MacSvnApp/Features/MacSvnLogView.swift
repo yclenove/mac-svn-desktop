@@ -743,7 +743,7 @@ public struct MacSvnLogView: View {
 
         do {
             if checkoutExportIsExport {
-                try await session.svnService.export(url: url, to: target, revision: rev, auth: nil)
+                try await session.svnService.export(url: url, to: target, revision: rev, ignoreExternals: false, auth: nil)
                 statusText = "已导出 r\(rev.value) → \(target.path)"
             } else {
                 try await session.svnService.checkout(

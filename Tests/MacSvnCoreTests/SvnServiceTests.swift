@@ -1284,11 +1284,28 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         }
     }
 
-    func export(url: String, to destination: URL, revision: Revision?, auth: Credential?) async throws {
+    func export(url: String, to destination: URL, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws {
         let error = recordExport(revision: revision, auth: auth)
+        _ = ignoreExternals
         if let error {
             throw error
         }
+    }
+
+    func importProject(path: URL, url: String, message: String, auth: Credential?) async throws -> Revision {
+        _ = (path, url, message, auth)
+        record("importProject")
+        return Revision(1)
+    }
+
+    func relocate(wc: URL, from: String, to: String, auth: Credential?) async throws {
+        _ = (wc, from, to, auth)
+        record("relocate")
+    }
+
+    func removeFromVersionControl(path: URL, recursive: Bool) async throws {
+        _ = (path, recursive)
+        record("removeFromVersionControl")
     }
 
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {

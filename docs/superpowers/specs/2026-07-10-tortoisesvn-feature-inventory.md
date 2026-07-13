@@ -48,7 +48,7 @@
 | D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | 🟡 | T4 |
 | D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K 齐；Finder 拖拽 T4 | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
-| D04 | Import / Import in Place | import、就地导入 | ❌ | T2 |
+| D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
 | D05 | Checkout | depth、revision、ignore-externals、pristines | ✅ depth/rev/omit-ext；pristines 进阶仍开 | T2 |
 | D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | ✅ | T1 |
 | D07 | Update | 统一 HEAD 修订、冲突列表入口 | ✅ | T1 |
@@ -70,7 +70,7 @@
 | D23 | Blame | blame + blame differences | 🟡 | T2/T3 |
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | 🟡 | T2 |
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ❌ | T3 |
-| D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ❌ | T2 |
+| D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
 | D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ❌ | T5 |
 | D28 | Settings 全页 | 见 §6 | ❌/弱 | T4/T5 |
 
@@ -105,11 +105,11 @@
 | 23 | Switch | `switch [-r] URL` | 未提交警告 | ✅ 可选 revision；未提交变更二次确认并保留目标参数；CFM/⌘K 可达 | T2 |
 | 24 | Merge | `merge [--dry-run]` + unified 预览 | 范围/树、Test merge | ✅ 范围/两树、dry-run、Unified Diff、大文本门禁、冲突工作区回跳 | T2 |
 | 25 | Merge reintegrate | 🔷 | 确认 | ❌ | T3 |
-| 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ❌ | T2 |
-| 27 | Relocate | `switch --relocate` | From/To URL | ❌ | T2 |
+| 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ✅ URL/WC 导出、修订、`--ignore-externals`、UI | T2 |
+| 27 | Relocate | `switch --relocate` | From/To URL | ✅ From/To 校验、写锁、认证重试、UI | T2 |
 | 28 | Create Repository Here | `svnadmin create --fs-type fsfs` | 路径 | ❌ | T3 |
 | 29 | Add | 递归扫描可添加 | 勾选列表 | ✅ | T1 |
-| 30 | Import | `import -m PATH URL` | 说明 | ❌ | T2 |
+| 30 | Import | `import -m PATH URL` | 说明 | ✅ UTF-8 说明、认证重试、UI | T2 |
 | 31 | Blame | `blame` + `log` tip | 修订范围、悬停 | 🟡 | T2 |
 | 32 | Add to Ignore List | `propget/propset svn:ignore` | 文件名/通配 | ✅ | T1 |
 | 33 | Create Patch | `diff > patch` | 路径勾选 | ❌ | T2 |
@@ -122,8 +122,8 @@
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
 | 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ❌ | T2 |
 | 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ❌ | T3 |
-| 43 | Import in Place | DUG 就地导入 | 向导 | ❌ | T2 |
-| 44 | Remove from version control | 导出式去 `.svn` | 确认 | ❌ | T2 |
+| 43 | Import in Place | DUG 就地导入 | 向导 | ✅ 导入后临时检出并原子替换目录内容 | T2 |
+| 44 | Remove from version control | 导出式去 `.svn` | 确认 | ✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件 | T2 |
 | 45 | Repair Move / Repair Copy | CFM 内修复 | 配对选择 | ✅ | T1 |
 | 46 | Filename case conflict repair | DUG rename 章 | 修复向导 | ❌ | T2 |
 

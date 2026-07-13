@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T2.9：Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
+- Affected: SvnCommandBuilder/Backend/Cli/Service, ImportExportViewModel, MacSvnRepoBrowserView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: 支持 `--ignore-externals`、UTF-8 导入说明、From/To relocate、就地导入后可用工作副本、安全移除 `.svn`；下一 T2.10
+
 - Summary: Tortoise 完美 Loop T2.8：Branch/Tag 三种 copy 源、Switch 可选 revision/未提交确认、Merge 范围/两树/dry-run/Unified Diff/冲突回跳（#22–24）
 - Affected: BranchCopyViewModel, BranchSwitchViewModel, MergeWizardViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnBranchesView, MacSvnMergeWizardView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: inventory #22–24、D19/D20 ✅；Merge reintegrate 仍属 T3.6；下一 T2.9

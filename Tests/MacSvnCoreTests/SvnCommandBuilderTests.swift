@@ -118,6 +118,49 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testExportCanOmitExternals() {
+        let command = SvnCommandBuilder.export(
+            url: "file:///repo/trunk",
+            to: "/tmp/export",
+            revision: Revision(12),
+            ignoreExternals: true,
+            authArguments: ["--username", "u"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "export", "--non-interactive", "-r", "12", "--ignore-externals",
+            "--username", "u", "file:///repo/trunk", "/tmp/export"
+        ])
+    }
+
+    func testImportUsesUtf8MessageAndAuth() {
+        let command = SvnCommandBuilder.import(
+            path: "/tmp/project",
+            url: "file:///repo/trunk",
+            message: "首次导入",
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "import", "--encoding", "UTF-8", "--non-interactive",
+            "-m", "首次导入", "--username", "u", "--password-from-stdin",
+            "/tmp/project", "file:///repo/trunk"
+        ])
+    }
+
+    func testRelocateUsesSwitchRelocateAndFromToURLs() {
+        let command = SvnCommandBuilder.relocate(
+            from: "https://old.example/svn",
+            to: "https://new.example/svn",
+            workingCopy: "/tmp/wc"
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "switch", "--relocate", "--non-interactive",
+            "https://old.example/svn", "https://new.example/svn", "/tmp/wc"
+        ])
+    }
+
     func testResolveUsesAcceptNonInteractiveAndPath() {
         let command = SvnCommandBuilder.resolve(path: "README.txt", accept: .mineFull)
 

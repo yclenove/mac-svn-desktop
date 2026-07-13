@@ -17,6 +17,17 @@ public struct MacSvnRepoBrowserView: View {
     @State private var checkoutIgnoreExternals = false
     @State private var statusText: String?
     @State private var previewText: String = ""
+    @State private var transferVM: ImportExportViewModel?
+    @State private var showTransferSheet = false
+    @State private var transferKind: TransferKind = .export
+    @State private var transferPath = ""
+    @State private var transferURL = ""
+    @State private var transferDestination = ""
+    @State private var transferFromURL = ""
+    @State private var transferToURL = ""
+    @State private var transferMessage = ""
+    @State private var transferRevision = ""
+    @State private var transferIgnoreExternals = false
 
     /// 远端写操作弹窗状态（均需提交说明，对应 FR-RB-06）。
     @State private var showRemoteWriteSheet = false
@@ -31,6 +42,15 @@ public struct MacSvnRepoBrowserView: View {
         case copy = "复制"
         case move = "移动"
 
+        var id: String { rawValue }
+    }
+
+    private enum TransferKind: String, Identifiable, CaseIterable {
+        case export = "导出"
+        case importProject = "导入"
+        case importInPlace = "就地导入"
+        case relocate = "重新定位"
+        case removeFromVersionControl = "移除版本控制"
         var id: String { rawValue }
     }
 
@@ -60,8 +80,14 @@ public struct MacSvnRepoBrowserView: View {
         .onChange(of: navigator.pendingBrowseURL) { _, _ in
             Task { await consumePendingBrowse() }
         }
+        .onChange(of: navigator.pendingTransferIntent) { _, _ in
+            consumePendingTransfer()
+        }
         .sheet(isPresented: $showRemoteWriteSheet) {
             remoteWriteSheet
+        }
+        .sheet(isPresented: $showTransferSheet) {
+            transferSheet
         }
     }
 
@@ -80,6 +106,11 @@ public struct MacSvnRepoBrowserView: View {
                 Task { await browserVM?.addBookmark(url: rootURL) }
             }
             .disabled(rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Menu("SVN 操作") {
+                ForEach(TransferKind.allCases) { kind in
+                    Button(kind.rawValue) { presentTransfer(kind) }
+                }
+            }
         }
         .padding(24)
     }
@@ -245,6 +276,110 @@ public struct MacSvnRepoBrowserView: View {
         .frame(minWidth: 420)
     }
 
+    private var transferSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(transferKind.rawValue).font(.title2.weight(.semibold))
+            Picker("操作", selection: $transferKind) {
+                ForEach(TransferKind.allCases) { kind in Text(kind.rawValue).tag(kind) }
+            }
+            .pickerStyle(.segmented)
+
+            switch transferKind {
+            case .export:
+                TextField("仓库 URL", text: $transferURL).textFieldStyle(.roundedBorder)
+                TextField("导出到本地路径", text: $transferDestination).textFieldStyle(.roundedBorder)
+                TextField("修订（留空=HEAD）", text: $transferRevision).textFieldStyle(.roundedBorder)
+                Toggle("忽略外部项", isOn: $transferIgnoreExternals)
+            case .importProject, .importInPlace:
+                TextField("本地目录", text: $transferPath).textFieldStyle(.roundedBorder)
+                TextField("仓库 URL", text: $transferURL).textFieldStyle(.roundedBorder)
+                TextField("提交说明（必填）", text: $transferMessage).textFieldStyle(.roundedBorder)
+            case .relocate:
+                TextField("From URL", text: $transferFromURL).textFieldStyle(.roundedBorder)
+                TextField("To URL", text: $transferToURL).textFieldStyle(.roundedBorder)
+                LabeledContent("工作副本", value: workspaceController.selectedRecord?.localPath ?? "未选择")
+            case .removeFromVersionControl:
+                TextField("本地目录", text: $transferPath).textFieldStyle(.roundedBorder)
+                Text("只删除 .svn 元数据，保留工作文件。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            if case .completed(let message) = transferVM?.state {
+                Text(message).foregroundStyle(.green)
+            } else if case .error(let message) = transferVM?.state {
+                Text(message).foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
+                Button("取消") { showTransferSheet = false }
+                Button("执行") { Task { await executeTransfer() } }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canExecuteTransfer)
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 520)
+    }
+
+    private var canExecuteTransfer: Bool {
+        switch transferKind {
+        case .export: return !transferURL.isEmpty && !transferDestination.isEmpty
+        case .importProject, .importInPlace: return !transferPath.isEmpty && !transferURL.isEmpty && !transferMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .relocate: return !transferFromURL.isEmpty && !transferToURL.isEmpty && workspaceController.selectedRecord != nil
+        case .removeFromVersionControl: return !transferPath.isEmpty
+        }
+    }
+
+    private func presentTransfer(_ kind: TransferKind) {
+        transferKind = kind
+        transferVM = ImportExportViewModel(provider: session.svnService)
+        transferPath = workspaceController.selectedRecord?.localPath ?? ""
+        transferURL = rootURL
+        transferDestination = ""
+        transferFromURL = ""
+        transferToURL = ""
+        transferMessage = ""
+        transferRevision = ""
+        showTransferSheet = true
+    }
+
+    private func consumePendingTransfer() {
+        guard let intent = navigator.consumePendingTransferIntent() else { return }
+        switch intent.command {
+        case .export: transferKind = .export
+        case .importToRepository: transferKind = .importProject
+        case .importInPlace: transferKind = .importInPlace
+        case .relocate: transferKind = .relocate
+        case .removeFromVersionControl: transferKind = .removeFromVersionControl
+        default: return
+        }
+        transferVM = ImportExportViewModel(provider: session.svnService)
+        transferPath = intent.path ?? workspaceController.selectedRecord?.localPath ?? ""
+        transferURL = intent.url ?? rootURL
+        transferMessage = intent.message ?? ""
+        if let revision = intent.revision { transferRevision = String(revision.value) }
+        showTransferSheet = true
+    }
+
+    private func executeTransfer() async {
+        guard let transferVM else { return }
+        switch transferKind {
+        case .export:
+            let revision = Int(transferRevision).map { Revision($0) }
+            await transferVM.export(url: transferURL, to: URL(fileURLWithPath: transferDestination), revision: revision, ignoreExternals: transferIgnoreExternals)
+        case .importProject:
+            await transferVM.importProject(path: URL(fileURLWithPath: transferPath), url: transferURL, message: transferMessage)
+        case .importInPlace:
+            await transferVM.importInPlace(path: URL(fileURLWithPath: transferPath), url: transferURL, message: transferMessage)
+        case .relocate:
+            guard let wc = workspaceController.selectedRecord?.localPath else { return }
+            await transferVM.relocate(wc: URL(fileURLWithPath: wc), from: transferFromURL, to: transferToURL)
+        case .removeFromVersionControl:
+            await transferVM.removeFromVersionControl(path: URL(fileURLWithPath: transferPath))
+        }
+        if case .completed(let message) = transferVM.state { statusText = message }
+    }
+
     private var canSubmitRemoteWrite: Bool {
         let messageOK = !remoteWriteMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         guard messageOK else { return false }
@@ -342,12 +477,14 @@ public struct MacSvnRepoBrowserView: View {
             workspaceImporter: session.workspaceStore,
             infoProvider: session.svnService
         )
+        transferVM = ImportExportViewModel(provider: session.svnService)
         await vm.loadBookmarks()
         if let first = workspaceController.selectedRecord?.repoURL {
             rootURL = first
             await openRoot()
         }
         await consumePendingBrowse()
+        consumePendingTransfer()
     }
 
     /// 消费历史页 L08 注入的仓库 URL（及可选修订）。

@@ -455,6 +455,7 @@ public struct SvnCliBackend: SvnBackend {
         url: String,
         to destination: URL,
         revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil
     ) async throws {
         let authArguments = try AuthArguments.build(credential: auth)
@@ -463,11 +464,59 @@ public struct SvnCliBackend: SvnBackend {
                 url: normalizedRemoteURL(url),
                 to: destination.path,
                 revision: revision,
+                ignoreExternals: ignoreExternals,
                 authArguments: authArguments.arguments
             ),
             currentDirectory: nil,
             stdin: authArguments.stdin
         )
+    }
+
+    public func importProject(
+        path: URL,
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let result = try await run(
+            SvnCommandBuilder.`import`(
+                path: path.path,
+                url: normalizedRemoteURL(url),
+                message: message,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+        return try CommitOutputParser.parseRevision(from: String(decoding: result.stdout, as: UTF8.self))
+    }
+
+    public func relocate(
+        wc: URL,
+        from: String,
+        to: String,
+        auth: Credential? = nil
+    ) async throws {
+        let authArguments = try AuthArguments.build(credential: auth)
+        _ = try await run(
+            SvnCommandBuilder.relocate(
+                from: normalizedRemoteURL(from),
+                to: normalizedRemoteURL(to),
+                workingCopy: wc.path,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+    }
+
+    public func removeFromVersionControl(path: URL, recursive: Bool) async throws {
+        try VersionControlRemovalPolicy.validate(path)
+        let fileManager = FileManager.default
+        let metadata = path.appendingPathComponent(".svn")
+        guard fileManager.fileExists(atPath: metadata.path) else { return }
+        try fileManager.removeItem(at: metadata)
     }
 
     public func copy(

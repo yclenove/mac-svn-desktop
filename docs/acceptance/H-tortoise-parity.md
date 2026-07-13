@@ -60,7 +60,7 @@
 - [x] Edit Conflicts + Resolved（#11,#12）
 - [x] Lock / Unlock / Break lock（#19–21）
 - [x] Branch-Tag / Switch / Merge+dry-run（#22–24）：三种 copy 源、Switch `-r`/未提交确认、范围/两树/dry-run/Unified Diff/冲突回跳
-- [ ] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
+- [x] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）：导出含忽略外部项、导入/就地导入、From/To 重新定位、安全移除 `.svn`
 - [ ] Create / Apply Patch（#33,#34）
 - [ ] Properties + Blame 悬停（#35,#31）
 - [ ] Repo Browser 远端写 + 高危确认（#10）

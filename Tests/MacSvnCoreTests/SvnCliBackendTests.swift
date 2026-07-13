@@ -327,6 +327,7 @@ final class SvnCliBackendTests: XCTestCase {
             url: "file:///repo/trunk",
             to: URL(fileURLWithPath: "/tmp/export"),
             revision: Revision(7),
+            ignoreExternals: false,
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -339,6 +340,63 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/trunk", "/tmp/export"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testExportCanIgnoreExternals() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.export(
+            url: "file:///repo/trunk",
+            to: URL(fileURLWithPath: "/tmp/export"),
+            revision: nil,
+            ignoreExternals: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "export", "--non-interactive", "--ignore-externals",
+            "file:///repo/trunk", "/tmp/export"
+        ])
+    }
+
+    func testImportAndRelocateForwardAuthWithoutLeakingPassword() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 8.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.importProject(
+            path: URL(fileURLWithPath: "/tmp/project"),
+            url: "file:///repo/trunk",
+            message: "导入",
+            auth: Credential(username: "u", password: "secret")
+        )
+        try await backend.relocate(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "https://old.example/svn",
+            to: "https://new.example/svn",
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["import", "--encoding", "UTF-8", "--non-interactive", "-m", "导入", "--username", "u", "--password-from-stdin", "/tmp/project", "file:///repo/trunk"],
+            ["switch", "--relocate", "--non-interactive", "--username", "u", "--password-from-stdin", "https://old.example/svn", "https://new.example/svn", "/tmp/wc"]
+        ])
+        XCTAssertEqual(runner.calls.map(\.stdin), [Data("secret\n".utf8), Data("secret\n".utf8)])
+    }
+
+    func testRemoveFromVersionControlDeletesOnlySVNMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("svnstudio-remove-\(UUID().uuidString)")
+        let metadata = root.appendingPathComponent(".svn")
+        try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: true)
+        let file = root.appendingPathComponent("keep.txt")
+        try Data("keep".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)))
+        try await backend.removeFromVersionControl(path: root, recursive: true)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: metadata.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 
     func testCopyPassesAuthStdinRunsWithoutWorkingCopyAndParsesRevision() async throws {

@@ -3,6 +3,49 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testImportProjectAndImportInPlaceProduceUsableRepositoryContent() async throws {
+        let fixture = try makeFixture()
+        let source = fixture.root.appendingPathComponent("new-project", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try "imported\n".write(to: source.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
+
+        let revision = try await fixture.backend.importProject(
+            path: source,
+            url: "\(fixture.repositoryURL)/imported",
+            message: "import project",
+            auth: nil
+        )
+        XCTAssertGreaterThan(revision.value, 0)
+
+        let inPlace = fixture.root.appendingPathComponent("in-place", isDirectory: true)
+        try FileManager.default.createDirectory(at: inPlace, withIntermediateDirectories: true)
+        try "in place\n".write(to: inPlace.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
+        let service = SvnService(backend: fixture.backend)
+        _ = try await service.importInPlace(
+            path: inPlace,
+            url: "\(fixture.repositoryURL)/in-place",
+            message: "import in place",
+            auth: nil
+        )
+
+        let statuses = try await fixture.backend.status(wc: inPlace)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal })
+        XCTAssertEqual(try String(contentsOf: inPlace.appendingPathComponent("README.txt")), "in place\n")
+    }
+
+    func testRelocateKeepsWorkingCopyUsable() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.relocate(
+            wc: fixture.workingCopy,
+            from: fixture.repositoryURL,
+            to: fixture.repositoryURL,
+            auth: nil
+        )
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal })
+    }
+
     func testCheckoutThenStatusIsClean() async throws {
         let fixture = try makeFixture()
 

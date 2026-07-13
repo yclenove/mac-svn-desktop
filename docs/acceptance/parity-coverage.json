@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-13T02:30:08Z",
+  "generated_at": "2026-07-13T02:59:42Z",
   "total": 114,
-  "done": 50,
+  "done": 57,
   "partial": 19,
-  "missing": 45,
-  "coverage": 0.438596,
-  "coverage_percent": 43.86,
+  "missing": 38,
+  "coverage": 0.5,
+  "coverage_percent": 50.0,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 12,
+      "done": 14,
       "partial": 9,
-      "missing": 7
+      "missing": 5
     },
     "command": {
       "total": 46,
-      "done": 23,
+      "done": 28,
       "partial": 4,
-      "missing": 19
+      "missing": 14
     },
     "log": {
       "total": 20,
@@ -65,8 +65,8 @@
       "key": "D04",
       "section": "domain",
       "title": "Import / Import in Place",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `svn import` + 导入后临时检出替换，保留可用工作副本",
+      "status": "done"
     },
     {
       "key": "D05",
@@ -219,8 +219,8 @@
       "key": "D26",
       "section": "domain",
       "title": "Export / Unversion / Relocate",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate`",
+      "status": "done"
     },
     {
       "key": "D27",
@@ -415,15 +415,15 @@
       "key": "cmd.26",
       "section": "command",
       "title": "Export",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ URL/WC 导出、修订、`--ignore-externals`、UI",
+      "status": "done"
     },
     {
       "key": "cmd.27",
       "section": "command",
       "title": "Relocate",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ From/To 校验、写锁、认证重试、UI",
+      "status": "done"
     },
     {
       "key": "cmd.28",
@@ -443,8 +443,8 @@
       "key": "cmd.30",
       "section": "command",
       "title": "Import",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ UTF-8 说明、认证重试、UI",
+      "status": "done"
     },
     {
       "key": "cmd.31",
@@ -534,15 +534,15 @@
       "key": "cmd.43",
       "section": "command",
       "title": "Import in Place",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 导入后临时检出并原子替换目录内容",
+      "status": "done"
     },
     {
       "key": "cmd.44",
       "section": "command",
       "title": "Remove from version control",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件",
+      "status": "done"
     },
     {
       "key": "cmd.45",

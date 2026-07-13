@@ -6,6 +6,7 @@ public enum SvnServiceError: Error, Equatable, Sendable {
     case localChangesPreventSwitch(paths: [String])
     case commitGuardWarnings([CommitGuardIssue])
     case commitGuardBlocked([CommitGuardIssue])
+    case invalidRelocateURLs
 }
 
 public protocol CredentialProviding: Sendable {
@@ -271,14 +272,127 @@ public actor SvnService {
         url: String,
         to destination: URL,
         revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         auth: Credential? = nil
     ) async throws {
         try await withWriteLock(wc: destination, operation: "export") {
             let credentialScope = credentialScope(for: url)
             try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
-                try await backend.export(url: url, to: destination, revision: revision, auth: auth)
+                try await backend.export(
+                    url: url,
+                    to: destination,
+                    revision: revision,
+                    ignoreExternals: ignoreExternals,
+                    auth: auth
+                )
             }
         }
+    }
+
+    /// 兼容 Git 迁移模块的旧导出协议；默认保留外部定义。
+    public func export(
+        url: String,
+        to destination: URL,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws {
+        try await export(
+            url: url,
+            to: destination,
+            revision: revision,
+            ignoreExternals: false,
+            auth: auth
+        )
+    }
+
+    public func importProject(
+        path: URL,
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        try requireCommitMessage(message)
+        return try await retryingAuthentication(wc: credentialScope(for: url), initialAuth: auth) { auth in
+            try await backend.importProject(path: path, url: url, message: message, auth: auth)
+        }
+    }
+
+    /// 将普通目录导入后重新检出到原目录，使目录真正成为工作副本。
+    /// `svn import` 本身不会写入 `.svn`，因此不能把它当作就地导入的完成态。
+    public func importInPlace(
+        path: URL,
+        url: String,
+        message: String,
+        auth: Credential? = nil
+    ) async throws -> Revision {
+        try requireCommitMessage(message)
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw SvnServiceError.invalidRelocateURLs
+        }
+        guard !fileManager.fileExists(atPath: path.appendingPathComponent(".svn").path) else {
+            throw SvnServiceError.invalidRelocateURLs
+        }
+
+        return try await withWriteLock(wc: path, operation: "importInPlace") {
+            try await retryingAuthentication(wc: credentialScope(for: url), initialAuth: auth) { auth in
+                let revision = try await backend.importProject(path: path, url: url, message: message, auth: auth)
+                let parent = path.deletingLastPathComponent()
+                let token = UUID().uuidString
+                let checkoutPath = parent.appendingPathComponent(".svnstudio-import-\(token)")
+                let backupPath = parent.appendingPathComponent(".svnstudio-import-backup-\(token)")
+                defer {
+                    try? fileManager.removeItem(at: checkoutPath)
+                    try? fileManager.removeItem(at: backupPath)
+                }
+
+                try await backend.checkout(
+                    url: url,
+                    to: checkoutPath,
+                    depth: .infinity,
+                    revision: revision,
+                    ignoreExternals: false,
+                    auth: auth
+                )
+
+                try fileManager.moveItem(at: path, to: backupPath)
+                do {
+                    try fileManager.createDirectory(at: path, withIntermediateDirectories: false)
+                    for child in try fileManager.contentsOfDirectory(at: checkoutPath, includingPropertiesForKeys: nil) {
+                        try fileManager.moveItem(at: child, to: path.appendingPathComponent(child.lastPathComponent))
+                    }
+                    try fileManager.removeItem(at: backupPath)
+                } catch {
+                    try? fileManager.removeItem(at: path)
+                    try? fileManager.moveItem(at: backupPath, to: path)
+                    throw error
+                }
+                return revision
+            }
+        }
+    }
+
+    public func relocate(
+        wc: URL,
+        from: String,
+        to: String,
+        auth: Credential? = nil
+    ) async throws {
+        guard !from.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SvnServiceError.invalidRelocateURLs
+        }
+        try await withWriteLock(wc: wc, operation: "relocate") {
+            try await retryingAuthentication(wc: credentialScope(for: to), initialAuth: auth) { auth in
+                try await backend.relocate(wc: wc, from: from, to: to, auth: auth)
+            }
+        }
+    }
+
+    public func removeFromVersionControl(path: URL, recursive: Bool = true) async throws {
+        try VersionControlRemovalPolicy.validate(path)
+        try await backend.removeFromVersionControl(path: path, recursive: recursive)
     }
 
     public func copy(

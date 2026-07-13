@@ -358,6 +358,7 @@ public enum SvnCommandBuilder {
         url: String,
         to destination: String,
         revision: Revision? = nil,
+        ignoreExternals: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
         var arguments = ["export", "--non-interactive"]
@@ -366,9 +367,36 @@ public enum SvnCommandBuilder {
             arguments += ["-r", revision.description]
         }
 
+        if ignoreExternals {
+            arguments.append("--ignore-externals")
+        }
+
         arguments += authArguments
         arguments += [url, destination]
         return SvnCommand(arguments: arguments)
+    }
+
+    public static func `import`(
+        path: String,
+        url: String,
+        message: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "import", "--encoding", "UTF-8", "--non-interactive",
+            "-m", message
+        ] + authArguments + [path, url])
+    }
+
+    public static func relocate(
+        from: String,
+        to: String,
+        workingCopy: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "switch", "--relocate", "--non-interactive"
+        ] + authArguments + [from, to, workingCopy])
     }
 
     public static func copy(
