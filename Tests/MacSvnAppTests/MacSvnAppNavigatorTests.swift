@@ -141,6 +141,21 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertFalse(navigator.pendingMergeWizard)
     }
 
+    func testPatchCommandsNavigateToShelveAndCarryIntentWithoutOpeningPath() {
+        let navigator = MacSvnAppNavigator()
+        let options = SvnCommandOptions(extras: ["patchFile": "/tmp/changes.patch"])
+
+        XCTAssertEqual(
+            navigator.perform(command: .createPatch, paths: ["README.txt"], options: options),
+            .navigated(to: .shelve)
+        )
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.consumePendingPatchIntent(),
+            PendingPatchIntent(command: .createPatch, paths: ["README.txt"], patchFile: "/tmp/changes.patch")
+        )
+    }
+
     func testMergeConflictNavigationPreservesFirstConflictPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
 

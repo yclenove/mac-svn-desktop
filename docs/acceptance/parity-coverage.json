@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-13T02:59:42Z",
+  "generated_at": "2026-07-13T03:22:40Z",
   "total": 114,
-  "done": 57,
+  "done": 60,
   "partial": 19,
-  "missing": 38,
-  "coverage": 0.5,
-  "coverage_percent": 50.0,
+  "missing": 35,
+  "coverage": 0.526316,
+  "coverage_percent": 52.63,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 14,
+      "done": 15,
       "partial": 9,
-      "missing": 5
+      "missing": 4
     },
     "command": {
       "total": 46,
-      "done": 28,
+      "done": 30,
       "partial": 4,
-      "missing": 14
+      "missing": 12
     },
     "log": {
       "total": 20,
@@ -191,8 +191,8 @@
       "key": "D22",
       "section": "domain",
       "title": "Patch",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口",
+      "status": "done"
     },
     {
       "key": "D23",
@@ -464,15 +464,15 @@
       "key": "cmd.33",
       "section": "command",
       "title": "Create Patch",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 按选择路径聚合 diff、原子写入 patch、UI",
+      "status": "done"
     },
     {
       "key": "cmd.34",
       "section": "command",
       "title": "Apply Patch",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `svn patch`、缺文件校验、新 `.rej` 路径报告、UI",
+      "status": "done"
     },
     {
       "key": "cmd.35",

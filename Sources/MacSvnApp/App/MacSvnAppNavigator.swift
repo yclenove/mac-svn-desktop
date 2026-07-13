@@ -44,6 +44,18 @@ public struct PendingTransferIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingPatchIntent: Equatable, Sendable {
+    public let command: SvnCommandID
+    public let paths: [String]
+    public let patchFile: String?
+
+    public init(command: SvnCommandID, paths: [String], patchFile: String?) {
+        self.command = command
+        self.paths = paths
+        self.patchFile = patchFile
+    }
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -76,6 +88,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     /// ⌘K 无结构化命中时带入 AI Chat 的自然语言 query（FR-EX-04）。
     @Published public var pendingAIChatQuery: String?
     @Published public var pendingTransferIntent: PendingTransferIntent?
+    @Published public var pendingPatchIntent: PendingPatchIntent?
     @Published public var lastAutomationMessage: String?
     /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
     @Published public var lastCommandResult: SvnCommandPerformResult?
@@ -112,7 +125,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     ) -> SvnCommandPerformResult {
         // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
         let isLockCommand = Self.lockIntent(for: command) != nil
-        if !isLockCommand, let firstPath = paths.first, !firstPath.isEmpty {
+        let isPatchCommand = command == .createPatch || command == .applyPatch
+        if !isLockCommand, !isPatchCommand, let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
         }
         if paths.count >= 2, !paths[1].isEmpty {
@@ -149,6 +163,14 @@ public final class MacSvnAppNavigator: ObservableObject {
                 url: options.url,
                 revision: options.revision,
                 message: options.message
+            )
+        }
+
+        if isPatchCommand {
+            pendingPatchIntent = PendingPatchIntent(
+                command: command,
+                paths: paths,
+                patchFile: options.extras["patchFile"]
             )
         }
 
@@ -200,12 +222,14 @@ public final class MacSvnAppNavigator: ObservableObject {
             return .locks
         case .shelve:
             return .shelve
+        case .createPatch, .applyPatch:
+            return .shelve
         case .checkout:
             return .repositoryBrowser
         case .export, .importToRepository, .importInPlace, .relocate,
              .removeFromVersionControl:
             return .repositoryBrowser
-        case .createRepositoryHere, .createPatch, .applyPatch,
+        case .createRepositoryHere,
              .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned,
              .repairFilenameCaseConflict:
             return nil
@@ -363,6 +387,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingTransferIntent() -> PendingTransferIntent? {
         let value = pendingTransferIntent
         pendingTransferIntent = nil
+        return value
+    }
+
+    public func consumePendingPatchIntent() -> PendingPatchIntent? {
+        let value = pendingPatchIntent
+        pendingPatchIntent = nil
         return value
     }
 

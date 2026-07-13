@@ -49,6 +49,32 @@ public actor SvnService {
         try await backend.diffAgainstBase(wc: wc, target: target)
     }
 
+    /// 将选中路径的工作副本差异按选择顺序合并为单个 patch 文件。
+    public func createPatch(wc: URL, paths: [String], to destination: URL) async throws {
+        let normalizedPaths = try PatchPathPolicy.validate(paths)
+        var diffs: [String] = []
+        for path in normalizedPaths {
+            let diff = try await backend.diff(wc: wc, target: path, r1: nil, r2: nil)
+            if !diff.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                diffs.append(diff)
+            }
+        }
+
+        let patchText = diffs.joined(separator: "\n")
+        guard !patchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw PatchPathError.emptyPatch
+        }
+
+        let fileManager = FileManager.default
+        let parent = destination.deletingLastPathComponent()
+        try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let temporary = parent.appendingPathComponent(".svnstudio-patch-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: temporary) }
+        try patchText.write(to: temporary, atomically: true, encoding: .utf8)
+        _ = try? fileManager.removeItem(at: destination)
+        try fileManager.moveItem(at: temporary, to: destination)
+    }
+
     public func blame(wc: URL, target: String) async throws -> [BlameLine] {
         try await backend.blame(wc: wc, target: target)
     }
@@ -563,8 +589,28 @@ public actor SvnService {
 
     public func applyPatch(wc: URL, patchFile: URL) async throws {
         try await withWriteLock(wc: wc, operation: "patch") {
+            let beforeRejects = rejectFiles(in: wc)
             try await backend.applyPatch(wc: wc, patchFile: patchFile)
+            let newRejects = rejectFiles(in: wc).subtracting(beforeRejects)
+            if !newRejects.isEmpty {
+                throw PatchPathError.rejectedPaths(newRejects.sorted())
+            }
         }
+    }
+
+    private func rejectFiles(in workingCopy: URL) -> Set<String> {
+        guard let enumerator = FileManager.default.enumerator(
+            at: workingCopy,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        return Set(enumerator.compactMap { item in
+            guard let url = item as? URL, url.pathExtension == "rej" else { return nil }
+            return url.path
+        })
     }
 
     public func setProperty(wc: URL, target: String, name: String, value: String) async throws {

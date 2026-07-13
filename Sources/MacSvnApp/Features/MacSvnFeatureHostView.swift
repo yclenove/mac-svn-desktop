@@ -66,7 +66,7 @@ public struct MacSvnFeatureHostView: View {
                 navigator: navigator
             )
         case .shelve:
-            MacSvnShelveView(workspaceController: workspaceController, session: session)
+            MacSvnShelveView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .gitMigration:
             MacSvnGitMigrationView(workspaceController: workspaceController, session: session)
         case .teamActivity:

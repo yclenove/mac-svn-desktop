@@ -3,6 +3,24 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testCreateAndApplyPatchRoundTripSelectedWorkingCopyChange() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+        try "hello\npatched\n".write(to: readme, atomically: true, encoding: .utf8)
+        let patchFile = fixture.root.appendingPathComponent("changes.patch")
+
+        try await service.createPatch(wc: fixture.workingCopy, paths: ["README.txt"], to: patchFile)
+        try await fixture.backend.revert(wc: fixture.workingCopy, paths: ["README.txt"], recursive: false)
+        XCTAssertEqual(try String(contentsOf: readme), "hello\n")
+
+        try await service.applyPatch(wc: fixture.workingCopy, patchFile: patchFile)
+        XCTAssertEqual(try String(contentsOf: readme), "hello\npatched\n")
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertTrue(statuses.contains { $0.path == "README.txt" && $0.itemStatus == .modified })
+    }
+
     func testImportProjectAndImportInPlaceProduceUsableRepositoryContent() async throws {
         let fixture = try makeFixture()
         let source = fixture.root.appendingPathComponent("new-project", isDirectory: true)

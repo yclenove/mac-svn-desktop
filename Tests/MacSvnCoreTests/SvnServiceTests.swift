@@ -484,6 +484,24 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.patchFiles, [patchFile])
     }
 
+    func testCreatePatchWritesSelectedDiffsToOnePatchFile() async throws {
+        let backend = MockSvnBackend()
+        backend.diffResult = "diff for selected path\n"
+        let service = SvnService(backend: backend)
+        let patchFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("svnstudio-(UUID().uuidString).patch")
+        defer { try? FileManager.default.removeItem(at: patchFile) }
+
+        try await service.createPatch(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["README.txt", "src/main.swift"],
+            to: patchFile
+        )
+
+        XCTAssertEqual(try String(contentsOf: patchFile), "diff for selected path\n\ndiff for selected path\n")
+        XCTAssertEqual(backend.calls.map(\.name), ["diff", "diff"])
+    }
+
     func testApplyPatchWriteLockBlocksConcurrentWritesOnSameWorkingCopy() async throws {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -512,6 +530,29 @@ final class SvnServiceTests: XCTestCase {
 
         await releasePatch.open()
         _ = try await patchTask.value
+    }
+
+    func testApplyPatchReportsNewRejectFilesAsConflicts() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+        let wc = FileManager.default.temporaryDirectory.appendingPathComponent("svnstudio-patch-wc-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: wc, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: wc) }
+        backend.onApplyPatch = {
+            try? "reject".write(to: wc.appendingPathComponent("README.txt.rej"), atomically: true, encoding: .utf8)
+        }
+
+        do {
+            try await service.applyPatch(wc: wc, patchFile: URL(fileURLWithPath: "/tmp/change.patch"))
+            XCTFail("Expected patch rejection")
+        } catch let error as PatchPathError {
+            guard case .rejectedPaths(let paths) = error else {
+                XCTFail("Expected rejected paths, got \(error)")
+                return
+            }
+            XCTAssertEqual(paths.count, 1)
+            XCTAssertTrue(paths[0].hasSuffix("/README.txt.rej"))
+        }
     }
 
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {

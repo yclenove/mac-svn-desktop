@@ -66,7 +66,7 @@
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | ✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达 | T2 |
 | D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6 | T2/T3 |
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
-| D22 | Patch | create/apply patch | ❌ | T2 |
+| D22 | Patch | create/apply patch | ✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口 | T2 |
 | D23 | Blame | blame + blame differences | 🟡 | T2/T3 |
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | 🟡 | T2 |
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ❌ | T3 |
@@ -112,8 +112,8 @@
 | 30 | Import | `import -m PATH URL` | 说明 | ✅ UTF-8 说明、认证重试、UI | T2 |
 | 31 | Blame | `blame` + `log` tip | 修订范围、悬停 | 🟡 | T2 |
 | 32 | Add to Ignore List | `propget/propset svn:ignore` | 文件名/通配 | ✅ | T1 |
-| 33 | Create Patch | `diff > patch` | 路径勾选 | ❌ | T2 |
-| 34 | Apply Patch | TortoiseMerge 级应用 | 冲突处理 | ❌ | T2 |
+| 33 | Create Patch | `diff > patch` | 路径勾选 | ✅ 按选择路径聚合 diff、原子写入 patch、UI | T2 |
+| 34 | Apply Patch | TortoiseMerge 级应用 | 冲突处理 | ✅ `svn patch`、缺文件校验、新 `.rej` 路径报告、UI | T2 |
 | 35 | Properties | 属性 CRUD + 模板 | svn:/tsvn: 编辑器 | 🟡 | T2 |
 | 36 | Copy / Move | `copy`/`move` | 目标路径 | ✅ | T1 |
 | 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置 | 🟡 | T3 |

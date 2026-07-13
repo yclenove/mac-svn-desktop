@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T2.10：Create Patch / Apply Patch（#33,#34）
+- Affected: PatchPathPolicy, PatchViewModel, SvnService, MacSvnShelveView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: 按勾选路径生成单一 patch，应用 patch 后报告新 `.rej` 冲突文件；搁置页与命令面板可达；下一 T2.11
+
 - Summary: Tortoise 完美 Loop T2.9：Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
 - Affected: SvnCommandBuilder/Backend/Cli/Service, ImportExportViewModel, MacSvnRepoBrowserView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: 支持 `--ignore-externals`、UTF-8 导入说明、From/To relocate、就地导入后可用工作副本、安全移除 `.svn`；下一 T2.10
