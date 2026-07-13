@@ -107,7 +107,7 @@
 | 25 | Merge reintegrate | 🔷 | 确认 | ✅ 现代 SVN complete merge 语义；Merge 向导支持 dry-run/执行/冲突回跳；真实 WC 验证 | T3 |
 | 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ✅ URL/WC 导出、修订、`--ignore-externals`、UI | T2 |
 | 27 | Relocate | `switch --relocate` | From/To URL | ✅ From/To 校验、写锁、认证重试、UI | T2 |
-| 28 | Create Repository Here | `svnadmin create --fs-type fsfs` | 路径 | ❌ | T3 |
+| 28 | Create Repository Here | `svnadmin create --fs-type fsfs` | 路径 | ✅ 仓库浏览器/⌘K 入口、目录选择、用户工具链同目录 `svnadmin`、真实 FSFS 仓库验证 | T3 |
 | 29 | Add | 递归扫描可添加 | 勾选列表 | ✅ | T1 |
 | 30 | Import | `import -m PATH URL` | 说明 | ✅ UTF-8 说明、认证重试、UI | T2 |
 | 31 | Blame | `blame` + `log` tip | 修订范围、悬停 | ✅ `-r X:Y`、行悬停 revision 日志、作者/日期/路径摘要 | T2 |

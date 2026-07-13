@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T11:35:17Z",
+  "generated_at": "2026-07-13T11:47:19Z",
   "total": 114,
-  "done": 81,
+  "done": 82,
   "partial": 12,
-  "missing": 21,
-  "coverage": 0.710526,
-  "coverage_percent": 71.05,
+  "missing": 20,
+  "coverage": 0.719298,
+  "coverage_percent": 71.93,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 42,
+      "done": 43,
       "partial": 0,
-      "missing": 4
+      "missing": 3
     },
     "log": {
       "total": 20,
@@ -429,8 +429,8 @@
       "key": "cmd.28",
       "section": "command",
       "title": "Create Repository Here",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ 仓库浏览器/⌘K 入口、目录选择、用户工具链同目录 `svnadmin`、真实 FSFS 仓库验证",
+      "status": "done"
     },
     {
       "key": "cmd.29",

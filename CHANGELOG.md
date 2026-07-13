@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.7：Create Repository Here（#28）
+- Affected: SvnRepositoryCreator, CreateRepositoryViewModel, MacSvnRepoBrowserView, MacSvnAppNavigator, MacSvnAppSession, SvnErrorMapper, Tests/*, docs/*
+- Impact: 仓库浏览器与 ⌘K 支持选择目录并执行 `svnadmin create --fs-type fsfs`；`svnadmin` 跟随用户配置的 SVN 工具链并保留结构化错误码；创建成功后直接浏览 `file://` 仓库；真实 FSFS format/db/conf 验证；全量 761 绿；覆盖率 82/114；下一 T3.8
+
 - Summary: Tortoise 完美 Loop T3.6：Merge reintegrate 与日志 Merge revision to…（#25、#42、L13）
 - Affected: SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, MergeWizardViewModel, MacSvnMergeWizardView, LogContextActionPolicy, MacSvnLogView, Tests/*, docs/*
 - Impact: 适配 SVN 1.14 的现代 complete merge reintegrate 语义（不使用已废弃的 `--reintegrate`）；Merge 向导支持重新整合 dry-run/执行及冲突回跳；日志路径菜单新增 L13，使用 `svn merge -c REV` 合并到当前工作副本并提供高危确认；真实 SVN 验证；全量 755 绿；覆盖率 81/114；下一 T3.7
