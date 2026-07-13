@@ -230,7 +230,7 @@
 | S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
 | S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ❌ | T5 |
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
-| S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | 弱 | T4 |
+| S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | 🟡 Default/Shell/None 设置、持久化与 Finder 原子热更新 ✅；包含/排除路径、可选角标待 T4.3 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 弱 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 弱 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ❌ | T5 |
@@ -249,7 +249,7 @@
 | Ignored / Unversioned（可选显示） | 🟡 `--no-ignore` 采集与独立角标 ✅；可选显示待 T4.3 | T4 |
 | Depth shallow / Nested WC / Externals / Switched | ✅ info depth、嵌套 `.svn`、external/file-external、switched XML | T4 |
 | 仅 mergeinfo 属性变更 | ✅ current/BASE 全属性快照差集仅为 `svn:mergeinfo` 时使用独立角标 | T4 |
-| Status Cache 三模式 + 包含排除路径 | 缺口 | T4 |
+| Status Cache 三模式 + 包含排除路径 | 🟡 Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）✅；包含/排除路径待 T4.3 | T4 |
 
 ---
 
@@ -272,7 +272,7 @@
 | 命令 #1–46 | 🟡 ~15 · ❌ ~25+ | 入口或对话框不足 |
 | 日志右键 L01–L20 | ❌ 为主 | 历史深度几乎未做 |
 | 设置 S01–S13 | ❌/弱 | 设置体系未成型 |
-| Overlay 全状态 | 5/7 ✅ | 全状态映射已完成；可选显示、Cache 三模式与包含/排除路径待 T4.2/T4.3 |
+| Overlay 全状态 | 5/7 ✅ | 全状态映射与 Cache 三模式已完成；可选显示、包含/排除路径待 T4.3 |
 | 域 D01–D28 | 无一域可称「对标完成」 | — |
 
 **结论：** 对标小乌龟 = **命令矩阵 + 对话框选项 + 日志动作 + 设置页 + Overlay 策略** 五层全部 ✅；仅「能提交/能看 log」不算完成。

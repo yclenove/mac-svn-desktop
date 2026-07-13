@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T4.2：Finder Status Cache 三模式
+- Affected: FinderSyncCachePolicy, FinderSyncRootsExporter, AppSettings, MacSvnSettingsView, MacSvnFinderSync, Tests/*, docs/*
+- Impact: 设置页支持 Default/Shell/None 并持久化到 `finder-sync-roots.json` v2；Default 按 WC 根缓存 8 秒完整快照，Shell 按 Finder 请求目标缓存 2 秒，None 停止 SVN 状态采集与角标但保留右键菜单；兼容 v1 默认迁移，工作副本刷新保留模式；配置原子热更新使用 generation 隔离旧并发结果，并监听稳定目录以支持连续保存；全量 822 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 97/114；下一 T4.3
+
 - Summary: Tortoise 完美 Loop T4.1：Finder Overlay 全状态映射
 - Affected: FileStatusOverlayMetadata, StatusXMLParser, FinderSyncInfoXMLParser, FinderSyncStatusEnricher, FinderSyncPresentationBuilder, MacSvnFinderSync, Tests/*, docs/*
 - Impact: Finder Sync 覆盖 normal/modified/conflicted/added/deleted/missing/replaced/locked/needs-lock/ignored/unversioned/shallow/nested/external/switched/mergeinfo-only；结构化读取 status/info/current+BASE properties，精确识别属性冲突、只读 needs-lock 与仅 mergeinfo 变化；目录含根路径按优先级递归聚合；并发刷新按 WC 合并；全量 810 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 97/114；下一 T4.2

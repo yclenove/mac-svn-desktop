@@ -7,8 +7,16 @@
 | 项 | 值 |
 |----|-----|
 | Xcode Target | `MacSVN.xcodeproj` → `SVNStudioFinderSync`（嵌入 `SVNStudio.app/Contents/PlugIns/`） |
-| 根目录导出 | 主应用写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json` |
+| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v2；v1 自动按 Default 迁移） |
 | Bundle ID | `dev.yclenove.svnstudio.FinderSync` |
+
+## Status Cache
+
+- Default：按工作副本根采集完整递归快照，缓存 8 秒。
+- Shell：只按 Finder 当前请求目标采集，缓存 2 秒。
+- None：不执行 SVN 状态采集、不显示角标，Finder 右键菜单保持可用。
+
+模式可在设置的 Finder 角标区域切换；扩展监听配置目录，连续原子保存可热更新。配置切换会清空缓存并使旧的并发采集结果失效。
 
 ## 深链
 
@@ -38,3 +46,4 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] 18 类角标已注册：normal/modified/conflicted/added/deleted/missing/replaced/locked/needs-lock/ignored/unversioned/shallow/nested/external/switched/mergeinfo-only/incomplete/obstructed
 - [x] `svn status --xml --verbose --no-ignore` + info depth + current/BASE property 快照结构化采集
 - [x] 工作副本根与目录按角标优先级递归聚合；同一 WC 并发刷新合并为一个采集任务
+- [x] Status Cache Default / Shell / None；设置持久化、v1 配置迁移、原子热更新与旧任务隔离

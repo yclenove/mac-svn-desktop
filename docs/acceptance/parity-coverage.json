@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-07-13T14:07:52Z",
+  "generated_at": "2026-07-13T14:29:47Z",
   "total": 114,
   "done": 97,
-  "partial": 9,
-  "missing": 8,
+  "partial": 10,
+  "missing": 7,
   "coverage": 0.850877,
   "coverage_percent": 85.09,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
@@ -35,8 +35,8 @@
     "overlay": {
       "total": 7,
       "done": 5,
-      "partial": 1,
-      "missing": 1
+      "partial": 2,
+      "missing": 0
     }
   },
   "items": [
@@ -751,7 +751,7 @@
       "key": "S08",
       "section": "settings",
       "title": "Icon Overlays",
-      "raw_status": "弱",
+      "raw_status": "🟡 Default/Shell/None 设置、持久化与 Finder 原子热更新 ✅；包含/排除路径、可选角标待 T4.3",
       "status": "partial"
     },
     {
@@ -835,8 +835,8 @@
       "key": "overlay.07",
       "section": "overlay",
       "title": "Status Cache 三模式 + 包含排除路径",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "🟡 Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）✅；包含/排除路径待 T4.3",
+      "status": "partial"
     }
   ]
 }
