@@ -36,9 +36,8 @@ final class MacSvnFinderSync: FIFinderSync {
             let statuses = await cache.statuses(for: root)
             let relative = MacSvnFinderSync.relativePath(of: path, under: root) ?? "."
             let presentation = builder.presentation(for: relative, statuses: statuses)
-            let identifier = presentation.badge == .normal ? "" : presentation.badge.rawValue
             await MainActor.run {
-                FIFinderSyncController.default().setBadgeIdentifier(identifier, for: url)
+                FIFinderSyncController.default().setBadgeIdentifier(presentation.badge.rawValue, for: url)
             }
         }
     }
@@ -78,21 +77,32 @@ final class MacSvnFinderSync: FIFinderSync {
 
     private func registerBadgeImages() {
         let controller = FIFinderSyncController.default()
-        let badges: [(FinderSyncBadge, NSColor, String)] = [
-            (.modified, .systemOrange, "修改"),
-            (.added, .systemGreen, "新增"),
-            (.deleted, .systemRed, "删除"),
-            (.missing, .systemRed, "缺失"),
-            (.conflicted, .systemPurple, "冲突"),
-            (.replaced, .systemOrange, "替换"),
-            (.unversioned, .systemGray, "未版本"),
-            (.ignored, .systemGray, "忽略"),
-            (.external, .systemBlue, "外部"),
-            (.incomplete, .systemYellow, "不完整"),
-            (.obstructed, .systemRed, "阻碍"),
+        let badges: [(FinderSyncBadge, NSColor, String, String)] = [
+            (.normal, .systemGreen, "checkmark.circle.fill", "正常"),
+            (.modified, .systemOrange, "pencil.circle.fill", "修改"),
+            (.added, .systemGreen, "plus.circle.fill", "新增"),
+            (.deleted, .systemRed, "minus.circle.fill", "删除"),
+            (.missing, .systemRed, "questionmark.circle.fill", "缺失"),
+            (.conflicted, .systemPurple, "exclamationmark.triangle.fill", "冲突"),
+            (.replaced, .systemOrange, "arrow.triangle.2.circlepath.circle.fill", "替换"),
+            (.locked, .systemBlue, "lock.fill", "已锁定"),
+            (.needsLock, .systemYellow, "lock.open.fill", "需要锁定"),
+            (.unversioned, .systemGray, "questionmark.circle.fill", "未版本"),
+            (.ignored, .systemGray, "eye.slash.fill", "忽略"),
+            (.shallow, .systemYellow, "arrow.down.to.line.compact", "稀疏深度"),
+            (.nested, .systemTeal, "square.stack.3d.up.fill", "嵌套工作副本"),
+            (.external, .systemBlue, "link.circle.fill", "外部项"),
+            (.switched, .systemIndigo, "arrow.triangle.branch", "已切换"),
+            (.mergeInfo, .systemTeal, "arrow.triangle.merge", "仅合并信息"),
+            (.incomplete, .systemYellow, "ellipsis.circle.fill", "不完整"),
+            (.obstructed, .systemRed, "nosign", "阻碍"),
         ]
-        for (badge, color, label) in badges {
-            controller.setBadgeImage(Self.makeBadgeImage(color: color), label: label, forBadgeIdentifier: badge.rawValue)
+        for (badge, color, symbol, label) in badges {
+            controller.setBadgeImage(
+                Self.makeBadgeImage(color: color, symbolName: symbol),
+                label: label,
+                forBadgeIdentifier: badge.rawValue
+            )
         }
     }
 
@@ -147,8 +157,22 @@ final class MacSvnFinderSync: FIFinderSync {
         return String(normalizedPath.dropFirst(normalizedRoot.count + 1))
     }
 
-    private static func makeBadgeImage(color: NSColor) -> NSImage {
+    private static func makeBadgeImage(color: NSColor, symbolName: String) -> NSImage {
         let size = NSSize(width: 16, height: 16)
+        if let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
+            let image = NSImage(size: size)
+            image.lockFocus()
+            color.set()
+            symbol.draw(
+                in: NSRect(origin: .zero, size: size),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+            image.unlockFocus()
+            image.isTemplate = false
+            return image
+        }
         let image = NSImage(size: size)
         image.lockFocus()
         color.setFill()
@@ -168,6 +192,7 @@ private struct MenuPayload {
 actor FinderSyncStatusCache {
     private var roots: [String] = []
     private var cache: [String: (date: Date, statuses: [FileStatus])] = [:]
+    private var inFlight: [String: Task<[FileStatus], Never>] = [:]
     private let ttl: TimeInterval = 8
 
     func updateRoots(_ roots: [String]) {
@@ -194,17 +219,79 @@ actor FinderSyncStatusCache {
         if let cached = cachedStatuses(for: key) {
             return cached
         }
-        let loaded = await Self.runSvnStatus(wc: URL(fileURLWithPath: key, isDirectory: true))
+        if let task = inFlight[key] {
+            return await task.value
+        }
+        let task = Task {
+            await Self.runSvnStatus(wc: URL(fileURLWithPath: key, isDirectory: true))
+        }
+        inFlight[key] = task
+        let loaded = await task.value
         cache[key] = (Date(), loaded)
+        inFlight[key] = nil
         return loaded
     }
 
     private static func runSvnStatus(wc: URL) async -> [FileStatus] {
+        guard let statusData = await runSvn(
+            arguments: ["status", "--xml", "--verbose", "--no-ignore", "--non-interactive"],
+            wc: wc
+        ), let statuses = try? StatusXMLParser.parse(statusData) else {
+            return []
+        }
+
+        async let infoData = runSvn(
+            arguments: ["info", "--xml", "--recursive", "--non-interactive"],
+            wc: wc
+        )
+        async let currentPropertyData = runSvn(
+            arguments: ["proplist", "--xml", "--verbose", "--recursive", "--non-interactive", "."],
+            wc: wc
+        )
+        async let basePropertyData = runSvn(
+            arguments: [
+                "proplist", "--xml", "--verbose", "--recursive",
+                "--revision", "BASE", "--non-interactive", "."
+            ],
+            wc: wc
+        )
+        let (loadedInfoData, loadedCurrentPropertyData, loadedBasePropertyData) = await (
+            infoData,
+            currentPropertyData,
+            basePropertyData
+        )
+
+        let depths = loadedInfoData.flatMap { try? FinderSyncInfoXMLParser.parseDepths($0) } ?? [:]
+        let currentProperties = loadedCurrentPropertyData.flatMap { try? PropertyXMLParser.parse($0) } ?? []
+        let baseProperties = loadedBasePropertyData.flatMap { try? PropertyXMLParser.parse($0) }
+        let pathMetadata = statuses.map { status in
+            let url = status.path == "." ? wc : wc.appendingPathComponent(status.path)
+            var isDirectory: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            let nestedMetadata = url.appendingPathComponent(".svn", isDirectory: true)
+            return FinderSyncPathMetadata(
+                path: status.path,
+                isReadOnly: exists && !FileManager.default.isWritableFile(atPath: url.path),
+                depth: depths[status.path],
+                isNestedWorkingCopy: status.path != "."
+                    && isDirectory.boolValue
+                    && FileManager.default.fileExists(atPath: nestedMetadata.path)
+            )
+        }
+        return FinderSyncStatusEnricher.enrich(
+            statuses: statuses,
+            currentProperties: currentProperties,
+            baseProperties: baseProperties,
+            pathMetadata: pathMetadata
+        )
+    }
+
+    private static func runSvn(arguments: [String], wc: URL) async -> Data? {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                process.arguments = ["svn", "status", "--xml", "--non-interactive"]
+                process.arguments = ["svn"] + arguments
                 process.currentDirectoryURL = wc
                 process.environment = ProcessInfo.processInfo.environment.merging([
                     "LC_ALL": "C",
@@ -214,15 +301,14 @@ actor FinderSyncStatusCache {
 
                 let stdout = Pipe()
                 process.standardOutput = stdout
-                process.standardError = Pipe()
+                process.standardError = FileHandle.nullDevice
                 do {
                     try process.run()
-                    process.waitUntilExit()
                     let data = stdout.fileHandleForReading.readDataToEndOfFile()
-                    let statuses = (try? StatusXMLParser.parse(data)) ?? []
-                    continuation.resume(returning: statuses)
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus == 0 ? data : nil)
                 } catch {
-                    continuation.resume(returning: [])
+                    continuation.resume(returning: nil)
                 }
             }
         }

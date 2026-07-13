@@ -67,6 +67,66 @@ final class FinderSyncPresentationBuilderTests: XCTestCase {
         XCTAssertFalse(isEnabled(.commit, in: presentation))
     }
 
+    func testOverlayMetadataMapsDedicatedTortoiseStates() {
+        let builder = FinderSyncPresentationBuilder()
+        let cases: [(String, FileStatusOverlayMetadata, FinderSyncBadge)] = [
+            ("property.txt", FileStatusOverlayMetadata(propertyStatus: .modified), .modified),
+            ("property-conflict.txt", FileStatusOverlayMetadata(propertyStatus: .conflicted), .conflicted),
+            ("locked.txt", FileStatusOverlayMetadata(isRepositoryLocked: true), .locked),
+            ("needs-lock.txt", FileStatusOverlayMetadata(hasNeedsLock: true, isReadOnly: true), .needsLock),
+            ("shallow", FileStatusOverlayMetadata(depth: .files), .shallow),
+            ("nested", FileStatusOverlayMetadata(isNestedWorkingCopy: true), .nested),
+            ("external", FileStatusOverlayMetadata(isFileExternal: true), .external),
+            ("switched", FileStatusOverlayMetadata(isSwitched: true), .switched),
+            ("mergeinfo", FileStatusOverlayMetadata(isMergeInfoOnly: true), .mergeInfo)
+        ]
+
+        for (path, metadata, expectedBadge) in cases {
+            let presentation = builder.presentation(
+                for: path,
+                statuses: [FileStatus(
+                    path: path,
+                    itemStatus: .normal,
+                    revision: Revision(3),
+                    isTreeConflict: false,
+                    overlay: metadata
+                )]
+            )
+            XCTAssertEqual(presentation.badge, expectedBadge, "(path) should map to (expectedBadge)")
+        }
+    }
+
+    func testRootPresentationAggregatesAllStatuses() {
+        let builder = FinderSyncPresentationBuilder()
+        let presentation = builder.presentation(
+            for: ".",
+            statuses: [
+                FileStatus(path: "src/a.swift", itemStatus: .modified, revision: Revision(2), isTreeConflict: false),
+                FileStatus(path: "docs/conflict.md", itemStatus: .normal, revision: Revision(2), isTreeConflict: false,
+                           overlay: FileStatusOverlayMetadata(isRepositoryLocked: true))
+            ]
+        )
+
+        XCTAssertEqual(presentation.targetPath, ".")
+        XCTAssertEqual(presentation.badge, .modified)
+    }
+
+    func testNeedsLockDoesNotApplyToWritableFile() {
+        let builder = FinderSyncPresentationBuilder()
+        let presentation = builder.presentation(
+            for: "tracked.txt",
+            statuses: [FileStatus(
+                path: "tracked.txt",
+                itemStatus: .normal,
+                revision: Revision(1),
+                isTreeConflict: false,
+                overlay: FileStatusOverlayMetadata(hasNeedsLock: true)
+            )]
+        )
+
+        XCTAssertEqual(presentation.badge, .normal)
+    }
+
     private func enabledActionIDs(in presentation: FinderSyncPresentation) -> [FinderSyncMenuActionID] {
         presentation.menuActions.filter(\.isEnabled).map(\.id)
     }

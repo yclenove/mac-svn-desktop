@@ -62,4 +62,25 @@ final class StatusXMLParserTests: XCTestCase {
             }
         }
     }
+
+    func testParsesOverlayAttributesLocksDepthAndPropertyStatus() throws {
+        let xml = """
+        <status><target path=".">
+          <entry path="src/switched.txt">
+            <wc-status item="normal" props="modified" revision="8" wc-locked="true" switched="true" file-external="true" depth="files">
+              <lock><token>lock-token</token></lock>
+            </wc-status>
+          </entry>
+        </target></status>
+        """
+
+        let status = try XCTUnwrap(StatusXMLParser.parse(Data(xml.utf8)).first)
+
+        XCTAssertEqual(status.overlay.propertyStatus, .modified)
+        XCTAssertTrue(status.overlay.isWorkingCopyLocked)
+        XCTAssertTrue(status.overlay.isRepositoryLocked)
+        XCTAssertTrue(status.overlay.isSwitched)
+        XCTAssertTrue(status.overlay.isFileExternal)
+        XCTAssertEqual(status.overlay.depth, .files)
+    }
 }

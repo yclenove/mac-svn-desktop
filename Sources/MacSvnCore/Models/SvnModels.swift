@@ -79,6 +79,45 @@ public enum SvnDepth: String, Codable, Equatable, Sendable {
     case infinity
 }
 
+/// Finder/Tortoise 角标需要的工作副本附加状态。
+/// `svn status --xml` 直接提供的字段由解析器填写，其余字段由状态采集器补充。
+public struct FileStatusOverlayMetadata: Equatable, Sendable {
+    public let propertyStatus: ItemStatus
+    public let isWorkingCopyLocked: Bool
+    public let isRepositoryLocked: Bool
+    public let isSwitched: Bool
+    public let isFileExternal: Bool
+    public let hasNeedsLock: Bool
+    public let isReadOnly: Bool
+    public let depth: SvnDepth?
+    public let isNestedWorkingCopy: Bool
+    public let isMergeInfoOnly: Bool
+
+    public init(
+        propertyStatus: ItemStatus = .none,
+        isWorkingCopyLocked: Bool = false,
+        isRepositoryLocked: Bool = false,
+        isSwitched: Bool = false,
+        isFileExternal: Bool = false,
+        hasNeedsLock: Bool = false,
+        isReadOnly: Bool = false,
+        depth: SvnDepth? = nil,
+        isNestedWorkingCopy: Bool = false,
+        isMergeInfoOnly: Bool = false
+    ) {
+        self.propertyStatus = propertyStatus
+        self.isWorkingCopyLocked = isWorkingCopyLocked
+        self.isRepositoryLocked = isRepositoryLocked
+        self.isSwitched = isSwitched
+        self.isFileExternal = isFileExternal
+        self.hasNeedsLock = hasNeedsLock
+        self.isReadOnly = isReadOnly
+        self.depth = depth
+        self.isNestedWorkingCopy = isNestedWorkingCopy
+        self.isMergeInfoOnly = isMergeInfoOnly
+    }
+}
+
 public struct FileStatus: Equatable, Sendable {
     public let path: String
     public let itemStatus: ItemStatus
@@ -88,6 +127,8 @@ public struct FileStatus: Equatable, Sendable {
     public let remoteItemStatus: ItemStatus?
     /// 工作副本 changelist 归属；未分配时为 `nil`。
     public let changelist: String?
+    /// Finder/Tortoise 角标所需的属性、锁、稀疏工作副本和外部项状态。
+    public let overlay: FileStatusOverlayMetadata
 
     public init(
         path: String,
@@ -97,12 +138,33 @@ public struct FileStatus: Equatable, Sendable {
         remoteItemStatus: ItemStatus? = nil,
         changelist: String? = nil
     ) {
+        self.init(
+            path: path,
+            itemStatus: itemStatus,
+            revision: revision,
+            isTreeConflict: isTreeConflict,
+            remoteItemStatus: remoteItemStatus,
+            changelist: changelist,
+            overlay: FileStatusOverlayMetadata()
+        )
+    }
+
+    public init(
+        path: String,
+        itemStatus: ItemStatus,
+        revision: Revision?,
+        isTreeConflict: Bool,
+        remoteItemStatus: ItemStatus? = nil,
+        changelist: String? = nil,
+        overlay: FileStatusOverlayMetadata
+    ) {
         self.path = path
         self.itemStatus = itemStatus
         self.revision = revision
         self.isTreeConflict = isTreeConflict
         self.remoteItemStatus = remoteItemStatus
         self.changelist = changelist
+        self.overlay = overlay
     }
 }
 

@@ -13,6 +13,12 @@ public enum FinderSyncBadge: String, Equatable, Sendable {
     case external
     case incomplete
     case obstructed
+    case locked
+    case needsLock
+    case shallow
+    case nested
+    case switched
+    case mergeInfo
 }
 
 public enum FinderSyncMenuActionID: String, Codable, Equatable, Hashable, Sendable {
@@ -69,13 +75,54 @@ public struct FinderSyncPresentationBuilder: Sendable {
     }
 
     private static func statusesMatching(targetPath: String, statuses: [FileStatus]) -> [FileStatus] {
-        statuses.filter { status in
+        if targetPath == "." {
+            return statuses
+        }
+        return statuses.filter { status in
             let path = normalize(status.path)
             return path == targetPath || path.hasPrefix(targetPath + "/")
         }
     }
 
     private static func badge(for status: FileStatus) -> FinderSyncBadge {
+        badges(for: status).max { priority($0) < priority($1) } ?? .normal
+    }
+
+    private static func badges(for status: FileStatus) -> [FinderSyncBadge] {
+        var badges: [FinderSyncBadge] = [baseBadge(for: status)]
+        let overlay = status.overlay
+        if overlay.propertyStatus == .conflicted {
+            badges.append(.conflicted)
+        } else if overlay.propertyStatus != .none,
+                  overlay.propertyStatus != .normal,
+                  !overlay.isMergeInfoOnly {
+            badges.append(.modified)
+        }
+        if overlay.isWorkingCopyLocked || overlay.isRepositoryLocked {
+            badges.append(.locked)
+        }
+        if overlay.hasNeedsLock && overlay.isReadOnly {
+            badges.append(.needsLock)
+        }
+        if let depth = overlay.depth, depth != .infinity {
+            badges.append(.shallow)
+        }
+        if overlay.isNestedWorkingCopy {
+            badges.append(.nested)
+        }
+        if overlay.isSwitched {
+            badges.append(.switched)
+        }
+        if overlay.isFileExternal || status.itemStatus == .external {
+            badges.append(.external)
+        }
+        if overlay.isMergeInfoOnly {
+            badges.append(.mergeInfo)
+        }
+        return badges
+    }
+
+    private static func baseBadge(for status: FileStatus) -> FinderSyncBadge {
         if status.isTreeConflict {
             return .conflicted
         }
@@ -122,6 +169,18 @@ public struct FinderSyncPresentationBuilder: Sendable {
             return 20
         case .normal:
             return 0
+        case .locked:
+            return 65
+        case .switched:
+            return 55
+        case .nested:
+            return 65
+        case .shallow:
+            return 50
+        case .needsLock:
+            return 40
+        case .mergeInfo:
+            return 75
         }
     }
 
