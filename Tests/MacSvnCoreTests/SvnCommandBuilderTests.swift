@@ -256,6 +256,14 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["delete", "--non-interactive", "old.txt"])
     }
 
+    func testDeleteKeepingLocalPreservesWorkingCopyFile() {
+        let command = SvnCommandBuilder.deleteKeepingLocal(paths: ["old.txt", "dir"])
+        XCTAssertEqual(
+            command.arguments,
+            ["delete", "--keep-local", "--non-interactive", "old.txt", "dir"]
+        )
+    }
+
     func testRevertCanBeRecursive() {
         let command = SvnCommandBuilder.revert(paths: ["dir"], recursive: true)
         XCTAssertEqual(command.arguments, ["revert", "--non-interactive", "--recursive", "dir"])

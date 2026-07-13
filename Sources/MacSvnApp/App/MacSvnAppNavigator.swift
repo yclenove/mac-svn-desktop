@@ -105,6 +105,16 @@ public struct PendingPatchIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingDeleteIntent: Equatable, Sendable {
+    public let command: SvnCommandID
+    public let paths: [String]
+
+    public init(command: SvnCommandID, paths: [String]) {
+        self.command = command
+        self.paths = paths
+    }
+}
+
 /// 全局导航与自动化入口：深链 / CLI 伴生命令落到工作区 Mode 与 WC 打开意图。
 @MainActor
 public final class MacSvnAppNavigator: ObservableObject {
@@ -144,6 +154,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingAIChatQuery: String?
     @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var pendingPatchIntent: PendingPatchIntent?
+    @Published public var pendingDeleteIntent: PendingDeleteIntent?
     @Published public var pendingCreateRepository = false
     @Published public var lastAutomationMessage: String?
     /// 最近一次 `perform(command:)` 结果（供 UI / 测试观察）。
@@ -183,6 +194,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
         let isPathInspectorCommand = command == .blame || command == .properties || command == .externals
+            || command == .deleteKeepLocal || command == .deleteUnversioned
         let isChangelistCommand = command == .changeLists
         let canInferWorkingCopyPath = command != .diffWithURL || (
             paths.count >= 2 && (paths[0] as NSString).isAbsolutePath
@@ -263,6 +275,10 @@ public final class MacSvnAppNavigator: ObservableObject {
             )
         }
 
+        if command == .deleteKeepLocal || command == .deleteUnversioned {
+            pendingDeleteIntent = PendingDeleteIntent(command: command, paths: paths)
+        }
+
         if let path = paths.first, !path.isEmpty {
             if command == .blame {
                 pendingBlameIntent = PendingBlameIntent(path: path, revision: options.revision)
@@ -333,7 +349,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .createRepositoryHere:
             return .repositoryBrowser
         case .deleteKeepLocal, .deleteUnversioned:
-            return nil
+            return .changes
         case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
              .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,
              .logCreateBranchTagFromRevision, .logUpdateItemToRevision, .logRevertToThisRevision,
@@ -468,6 +484,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingExternalsIntent() -> PendingExternalsIntent? {
         let value = pendingExternalsIntent
         pendingExternalsIntent = nil
+        return value
+    }
+
+    public func consumePendingDeleteIntent() -> PendingDeleteIntent? {
+        let value = pendingDeleteIntent
+        pendingDeleteIntent = nil
         return value
     }
 

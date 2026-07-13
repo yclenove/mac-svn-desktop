@@ -278,6 +278,31 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertFalse(navigator.pendingMergeWizard)
     }
 
+    @MainActor
+    func testDeleteVariantsNavigateToChangesWithAtomicIntent() {
+        let navigator = MacSvnAppNavigator()
+
+        XCTAssertEqual(
+            navigator.perform(command: .deleteKeepLocal, paths: ["old.txt"]),
+            .navigated(to: .changes)
+        )
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.consumePendingDeleteIntent(),
+            PendingDeleteIntent(command: .deleteKeepLocal, paths: ["old.txt"])
+        )
+
+        XCTAssertEqual(
+            navigator.perform(command: .deleteUnversioned, paths: ["scratch.txt"]),
+            .navigated(to: .changes)
+        )
+        XCTAssertEqual(
+            navigator.consumePendingDeleteIntent(),
+            PendingDeleteIntent(command: .deleteUnversioned, paths: ["scratch.txt"])
+        )
+        XCTAssertNil(navigator.consumePendingDeleteIntent())
+    }
+
     func testCreateRepositoryHereNavigatesToBrowserAndCarriesIntent() {
         let navigator = MacSvnAppNavigator()
 

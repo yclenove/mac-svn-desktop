@@ -1291,6 +1291,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("delete")
     }
 
+    func deleteKeepingLocal(wc: URL, paths: [String]) async throws {
+        record("deleteKeepingLocal")
+    }
+
+    func deleteUnversioned(wc: URL, paths: [String]) async throws {
+        record("deleteUnversioned")
+    }
+
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         record("moveInWorkingCopy")
     }

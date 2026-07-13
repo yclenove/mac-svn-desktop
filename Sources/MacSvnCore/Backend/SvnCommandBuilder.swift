@@ -185,6 +185,10 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["delete", "--non-interactive"] + paths)
     }
 
+    public static func deleteKeepingLocal(paths: [String]) -> SvnCommand {
+        SvnCommand(arguments: ["delete", "--keep-local", "--non-interactive"] + paths)
+    }
+
     /// 工作副本内修复移动（无提交说明）。目标已存在时由 CliBackend 先挪开再执行。
     public static func workingCopyMove(source: String, destination: String) -> SvnCommand {
         SvnCommand(arguments: ["move", "--non-interactive", source, destination])

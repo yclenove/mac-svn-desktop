@@ -16,6 +16,8 @@ public protocol SvnBackend: Sendable {
     func assignChangelist(wc: URL, name: String, paths: [String], depth: SvnDepth) async throws
     func removeFromChangelists(wc: URL, paths: [String], depth: SvnDepth) async throws
     func delete(wc: URL, paths: [String]) async throws
+    func deleteKeepingLocal(wc: URL, paths: [String]) async throws
+    func deleteUnversioned(wc: URL, paths: [String]) async throws
     /// CFM Repair Move：`svn move`（工作副本内，不提交）
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
     /// 同目录 Rename：`svn rename`（工作副本内，不提交）

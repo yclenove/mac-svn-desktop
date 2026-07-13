@@ -22,8 +22,11 @@ public struct MacSvnChangesView: View {
     @State private var selectedPaths: Set<String> = []
     @State private var confirmRevert = false
     @State private var confirmDelete = false
+    @State private var confirmDeleteKeepLocal = false
+    @State private var confirmDeleteUnversioned = false
     @State private var confirmMarkResolved = false
     @State private var showAddSheet = false
+    @State private var showDeleteUnversionedSheet = false
     @State private var showCleanupSheet = false
     @State private var showRevertSheet = false
     @State private var showRenameSheet = false
@@ -36,6 +39,8 @@ public struct MacSvnChangesView: View {
     @State private var copyMoveKind: CopyMoveKind = .move
     @State private var copyMoveDestination = ""
     @State private var addSelectedPaths: Set<String> = []
+    @State private var unversionedDeletionCandidates: [FileStatus] = []
+    @State private var unversionedDeletionSelectedPaths: Set<String> = []
     @State private var revertRecursive = false
     @State private var cleanupOptions = SvnCleanupOptions()
     @State private var statusBanner: String?
@@ -118,9 +123,13 @@ public struct MacSvnChangesView: View {
         .onChange(of: navigator?.pendingChangelistIntent) { _, _ in
             consumePendingChangelistIntent()
         }
+        .onChange(of: navigator?.pendingDeleteIntent) { _, _ in
+            consumePendingDeleteIntent()
+        }
         .task {
             await bindAndRefresh()
             consumePendingChangelistIntent()
+            consumePendingDeleteIntent()
         }
         .confirmationDialog(
             "确认还原选中文件的本地修改？此操作不可撤销。",
@@ -143,6 +152,26 @@ public struct MacSvnChangesView: View {
             Button("取消", role: .cancel) {}
         }
         .confirmationDialog(
+            "确认从版本库删除选中路径，但保留本地文件？提交前可用还原撤销版本库删除。",
+            isPresented: $confirmDeleteKeepLocal,
+            titleVisibility: .visible
+        ) {
+            Button("删除并保留本地", role: .destructive) {
+                Task { await runDeleteKeepingLocal() }
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "确认删除选中的未版本项？此操作会直接删除本地文件，不能通过 SVN 还原。",
+            isPresented: $confirmDeleteUnversioned,
+            titleVisibility: .visible
+        ) {
+            Button("删除未版本项", role: .destructive) {
+                Task { await runDeleteUnversioned() }
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .confirmationDialog(
             "将选中冲突路径标记为已解决（svn resolve --accept working）？树冲突建议在冲突工作区专用面板处理。",
             isPresented: $confirmMarkResolved,
             titleVisibility: .visible
@@ -154,6 +183,9 @@ public struct MacSvnChangesView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             addSheet
+        }
+        .sheet(isPresented: $showDeleteUnversionedSheet) {
+            deleteUnversionedSheet
         }
         .sheet(isPresented: $showCleanupSheet) {
             cleanupSheet
@@ -339,10 +371,22 @@ public struct MacSvnChangesView: View {
             }
             .disabled(actionsVM?.isRunning == true || changesVM == nil)
 
-            Button("删除") {
-                confirmDelete = true
+            Menu {
+                Button("删除", role: .destructive) {
+                    confirmDelete = true
+                }
+                .disabled(selectedPaths.isEmpty)
+                Button("删除（保留本地）", role: .destructive) {
+                    confirmDeleteKeepLocal = true
+                }
+                .disabled(selectedPaths.isEmpty)
+                Button("删除未版本项", role: .destructive) {
+                    Task { await prepareUnversionedDeletion() }
+                }
+            } label: {
+                Label("删除", systemImage: "trash")
             }
-            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
+            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
             Button("还原…") {
                 revertRecursive = false
@@ -561,6 +605,10 @@ public struct MacSvnChangesView: View {
         case .delete, .revert, .addToIgnoreList:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
                 && (id != .addToIgnoreList || session != nil)
+        case .deleteKeepLocal:
+            return !selectedPaths.isEmpty && actionsVM?.isRunning != true
+        case .deleteUnversioned:
+            return changesVM != nil && actionsVM?.isRunning != true
         case .rename, .copyMove, .repairFilenameCaseConflict:
             return selectedPaths.count == 1 && actionsVM?.isRunning != true
         case .changeLists:
@@ -613,6 +661,10 @@ public struct MacSvnChangesView: View {
             showAddSheet = true
         case .delete:
             confirmDelete = true
+        case .deleteKeepLocal:
+            confirmDeleteKeepLocal = true
+        case .deleteUnversioned:
+            Task { await prepareUnversionedDeletion() }
         case .revert:
             revertRecursive = false
             showRevertSheet = true
@@ -821,6 +873,20 @@ public struct MacSvnChangesView: View {
             prepareChangelistSheet()
         } else {
             statusBanner = "请选择路径后使用“变更列表…”管理归属"
+        }
+    }
+
+    private func consumePendingDeleteIntent() {
+        guard actionsVM != nil else { return }
+        guard let intent = navigator?.consumePendingDeleteIntent() else { return }
+        selectedPaths = Set(intent.paths)
+        switch intent.command {
+        case .deleteKeepLocal:
+            confirmDeleteKeepLocal = true
+        case .deleteUnversioned:
+            Task { await prepareUnversionedDeletion() }
+        default:
+            break
         }
     }
 
@@ -1034,6 +1100,72 @@ public struct MacSvnChangesView: View {
         guard let actionsVM, let changesVM else { return }
         await actionsVM.delete(paths: Array(selectedPaths))
         await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private func runDeleteKeepingLocal() async {
+        guard let actionsVM, let changesVM else { return }
+        await actionsVM.deleteKeepingLocal(paths: Array(selectedPaths).sorted())
+        await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private func prepareUnversionedDeletion() async {
+        guard let actionsVM else { return }
+        let candidates = await actionsVM.prepareUnversionedDeletion()
+        guard !candidates.isEmpty else {
+            statusBanner = "当前没有可删除的未版本项"
+            return
+        }
+        unversionedDeletionCandidates = candidates
+        let candidatePaths = Set(candidates.map(\.path))
+        let selected = selectedPaths.intersection(candidatePaths)
+        unversionedDeletionSelectedPaths = selected.isEmpty ? candidatePaths : selected
+        showDeleteUnversionedSheet = true
+    }
+
+    private func runDeleteUnversioned() async {
+        guard let actionsVM, let changesVM else { return }
+        let paths = Array(unversionedDeletionSelectedPaths).sorted()
+        guard !paths.isEmpty else {
+            statusBanner = "未勾选未版本项"
+            return
+        }
+        showDeleteUnversionedSheet = false
+        await actionsVM.deleteUnversioned(paths: paths)
+        await syncAfterAction(actionsVM, changesVM)
+    }
+
+    private var deleteUnversionedSheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("删除未版本项")
+                .font(.headline)
+            List(unversionedDeletionCandidates, id: \.path) { entry in
+                Toggle(isOn: Binding(
+                    get: { unversionedDeletionSelectedPaths.contains(entry.path) },
+                    set: { selected in
+                        if selected {
+                            unversionedDeletionSelectedPaths.insert(entry.path)
+                        } else {
+                            unversionedDeletionSelectedPaths.remove(entry.path)
+                        }
+                    }
+                )) {
+                    Text(entry.path)
+                        .font(.body.monospaced())
+                }
+            }
+            HStack {
+                Button("取消") { showDeleteUnversionedSheet = false }
+                Spacer()
+                Button("继续") {
+                    showDeleteUnversionedSheet = false
+                    confirmDeleteUnversioned = true
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(unversionedDeletionSelectedPaths.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 460, height: 360)
     }
 
     /// CFM「标记为已解决」：对选中文本/属性冲突执行 `svn resolve --accept working`。
@@ -1438,6 +1570,8 @@ public struct MacSvnChangesView: View {
         case .update: return "更新"
         case .add: return "添加"
         case .delete: return "删除"
+        case .deleteKeepLocal: return "删除（保留本地）"
+        case .deleteUnversioned: return "删除未版本项"
         case .rename: return "重命名"
         case .copy: return "复制"
         case .move: return "移动"

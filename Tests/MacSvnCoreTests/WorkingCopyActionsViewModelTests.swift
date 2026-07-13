@@ -113,6 +113,46 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testDeleteKeepingLocalUsesDedicatedOperationAndRefreshesStatuses() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.deleteKeepingLocal(paths: ["old.txt"])
+
+        XCTAssertEqual(viewModel.state, .completed(.deleteKeepLocal))
+        let actionCalls = await actionProvider.recordedCalls()
+        XCTAssertEqual(actionCalls.map(\.operation), [.deleteKeepLocal])
+    }
+
+    @MainActor
+    func testDeleteUnversionedPreparesCandidatesAndUsesDedicatedOperation() async {
+        let actionProvider = FakeWorkingCopyActionProvider(
+            unversionedResult: [
+                FileStatus(path: "scratch.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+            ]
+        )
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        let candidates = await viewModel.prepareUnversionedDeletion()
+        await viewModel.deleteUnversioned(paths: candidates.map(\.path))
+
+        XCTAssertEqual(candidates.map(\.path), ["scratch.txt"])
+        XCTAssertEqual(viewModel.state, .completed(.deleteUnversioned))
+        let actionCalls = await actionProvider.recordedCalls()
+        XCTAssertEqual(actionCalls.map(\.operation), [.deleteUnversioned])
+    }
+
+    @MainActor
     func testCopyMoveValidatesThenCallsProvider() async {
         let actionProvider = FakeWorkingCopyActionProvider()
         let statusProvider = ActionStatusProvider(result: .success([]))
@@ -419,6 +459,7 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
     private let repairCopyError: SvnError?
     private let revertError: SvnError?
     private let cleanupError: SvnError?
+    private let unversionedResult: [FileStatus]
     private var calls: [ActionCall] = []
 
     init(
@@ -429,7 +470,8 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         repairMoveError: SvnError? = nil,
         repairCopyError: SvnError? = nil,
         revertError: SvnError? = nil,
-        cleanupError: SvnError? = nil
+        cleanupError: SvnError? = nil,
+        unversionedResult: [FileStatus] = []
     ) {
         self.updateResult = updateResult
         self.updateError = updateError
@@ -439,6 +481,7 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         self.repairCopyError = repairCopyError
         self.revertError = revertError
         self.cleanupError = cleanupError
+        self.unversionedResult = unversionedResult
     }
 
     func recordedCalls() -> [ActionCall] {
@@ -473,6 +516,18 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         if let deleteError {
             throw deleteError
         }
+    }
+
+    func deleteKeepingLocal(wc: URL, paths: [String]) async throws {
+        calls.append(ActionCall(operation: .deleteKeepLocal, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: false))
+    }
+
+    func deleteUnversioned(wc: URL, paths: [String]) async throws {
+        calls.append(ActionCall(operation: .deleteUnversioned, wc: wc, paths: paths, revision: nil, setDepth: nil, recursive: false))
+    }
+
+    func unversionedPaths(wc: URL) async throws -> [FileStatus] {
+        unversionedResult
     }
 
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {

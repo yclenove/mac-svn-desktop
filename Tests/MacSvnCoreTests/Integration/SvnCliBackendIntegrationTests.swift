@@ -1202,6 +1202,47 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statusesByPath["src/main.txt"], .deleted)
     }
 
+    func testDeleteKeepingLocalSchedulesDeleteAndPreservesFile() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        try await service.deleteKeepingLocal(wc: fixture.workingCopy, paths: ["README.txt"])
+
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertEqual(statuses.first(where: { $0.path == "README.txt" })?.itemStatus, .deleted)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: readme.path))
+    }
+
+    func testDeleteUnversionedRemovesFilesAndDirectoriesButKeepsVersionedPaths() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let scratchFile = fixture.workingCopy.appendingPathComponent("scratch.txt")
+        let scratchDirectory = fixture.workingCopy.appendingPathComponent("scratch-dir", isDirectory: true)
+        try "scratch\n".write(to: scratchFile, atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(at: scratchDirectory, withIntermediateDirectories: true)
+        try "nested\n".write(
+            to: scratchDirectory.appendingPathComponent("nested.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let candidates = try await service.unversionedPaths(wc: fixture.workingCopy)
+        XCTAssertEqual(Set(candidates.map(\.path)), ["scratch-dir", "scratch.txt"])
+        try await service.deleteUnversioned(
+            wc: fixture.workingCopy,
+            paths: ["scratch.txt", "scratch-dir"]
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: scratchFile.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: scratchDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: fixture.workingCopy.appendingPathComponent("README.txt").path
+        ))
+    }
+
     func testRepairMoveAfterExternalRenameSchedulesHistoryPreservingMove() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

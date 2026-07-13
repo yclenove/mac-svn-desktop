@@ -186,6 +186,16 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.delete(paths: paths), currentDirectory: wc.path, stdin: nil)
     }
 
+    public func deleteKeepingLocal(wc: URL, paths: [String]) async throws {
+        _ = try await run(SvnCommandBuilder.deleteKeepingLocal(paths: paths), currentDirectory: wc.path, stdin: nil)
+    }
+
+    public func deleteUnversioned(wc: URL, paths: [String]) async throws {
+        for path in paths {
+            try FileManager.default.removeItem(at: wc.appendingPathComponent(path))
+        }
+    }
+
     public func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         // Repair Move：源常为 missing（磁盘上无文件）。先把未版本目标挪回源路径，再 svn move。
         let fileManager = FileManager.default

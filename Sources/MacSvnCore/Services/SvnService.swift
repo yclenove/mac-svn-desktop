@@ -683,6 +683,32 @@ public actor SvnService {
         }
     }
 
+    public func unversionedPaths(wc: URL) async throws -> [FileStatus] {
+        let statuses = try await backend.status(wc: wc)
+        return try UnversionedDeletionPolicy.candidates(
+            from: statuses,
+            workingCopy: wc
+        )
+    }
+
+    public func deleteKeepingLocal(wc: URL, paths: [String]) async throws {
+        try await withWriteLock(wc: wc, operation: "deleteKeepingLocal") {
+            try await backend.deleteKeepingLocal(wc: wc, paths: paths)
+        }
+    }
+
+    public func deleteUnversioned(wc: URL, paths: [String]) async throws {
+        let statuses = try await backend.status(wc: wc)
+        let normalizedPaths = try UnversionedDeletionPolicy.validatedPaths(
+            paths,
+            from: statuses,
+            workingCopy: wc
+        )
+        try await withWriteLock(wc: wc, operation: "deleteUnversioned") {
+            try await backend.deleteUnversioned(wc: wc, paths: normalizedPaths)
+        }
+    }
+
     public func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         try await withWriteLock(wc: wc, operation: "repairMove") {
             try await backend.moveInWorkingCopy(wc: wc, source: source, destination: destination)

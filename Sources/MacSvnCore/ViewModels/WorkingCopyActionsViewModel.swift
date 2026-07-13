@@ -5,6 +5,9 @@ public protocol WorkingCopyActionProviding: Sendable {
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws
+    func deleteKeepingLocal(wc: URL, paths: [String]) async throws
+    func deleteUnversioned(wc: URL, paths: [String]) async throws
+    func unversionedPaths(wc: URL) async throws -> [FileStatus]
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
@@ -17,6 +20,8 @@ public enum WorkingCopyOperation: Equatable, Sendable {
     case update
     case add
     case delete
+    case deleteKeepLocal
+    case deleteUnversioned
     case rename
     case copy
     case move
@@ -98,6 +103,29 @@ public final class WorkingCopyActionsViewModel {
     public func delete(paths: [String]) async {
         await performPathAction(.delete, paths: paths) {
             try await actionProvider.delete(wc: workingCopy, paths: paths)
+        }
+    }
+
+    public func deleteKeepingLocal(paths: [String]) async {
+        await performPathAction(.deleteKeepLocal, paths: paths) {
+            try await actionProvider.deleteKeepingLocal(wc: workingCopy, paths: paths)
+        }
+    }
+
+    public func prepareUnversionedDeletion() async -> [FileStatus] {
+        do {
+            let candidates = try await actionProvider.unversionedPaths(wc: workingCopy)
+            refreshedStatuses = candidates
+            return candidates
+        } catch {
+            state = .error(error.localizedDescription)
+            return []
+        }
+    }
+
+    public func deleteUnversioned(paths: [String]) async {
+        await performPathAction(.deleteUnversioned, paths: paths) {
+            try await actionProvider.deleteUnversioned(wc: workingCopy, paths: paths)
         }
     }
 
