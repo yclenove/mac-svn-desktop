@@ -57,7 +57,7 @@
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
 | D11 | Change Lists | 分组、提交按列表 | ✅ status XML 归属；CFM 列/分组与列表移入/移出；Commit 按列表选择并保留 `ignore-on-commit` 语义 | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | ✅ 官方 `x-shelve`/`x-unshelve`/list/diff/log/drop；能力探测；本地手工快照迁移且失败保留快照 | T3 |
-| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
+| D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L14+L17 ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local 确认与未版本预览勾选/路径复核齐全 | T1/T2/T3 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
@@ -67,7 +67,7 @@
 | D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/现代 complete merge（reintegrate）/dry-run/Unified Diff/mergeinfo/冲突回跳；日志单修订合并也已接入 | T2/T3 |
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
 | D22 | Patch | create/apply patch | ✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口 | T2 |
-| D23 | Blame | blame + blame differences | 🟡 Blame 修订范围/悬停日志 ✅；Blame differences 仍属 T3.9 | T2/T3 |
+| D23 | Blame | blame + blame differences | ✅ 修订范围/悬停日志；双修订内容+归属差异、BASE/previous、变化筛选；历史 URL/peg 解析 | T2/T3 |
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | ✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created | T2 |
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作 | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
@@ -86,7 +86,7 @@
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | ✅ | T1 |
 | 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ✅ URL+revision 表单；peg revision、svn+ssh user@host、认证重试；Unified/左右分栏复用；真实 SVN 跨 URL 验证 | T3 |
-| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3 | T2 |
+| 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L14+L17；L15–L16、统计/离线→T3 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ✅ copy/history 边；拓扑 Canvas/时间线；分页/All；四类节点动作；真实 SVN copy-edge/Diff 验证 | T3 |
 | 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | ✅ `svn info --xml --depth immediates` 返回锁详情；mkdir/delete/copy/move/rename 均需提交说明，delete/move/rename 二次确认 | T2 |
@@ -119,7 +119,7 @@
 | 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置、官方列表/Diff/Log/Unshelve/Drop、手工快照迁移 | ✅ | T3 |
 | 38 | Change Lists | changelist 分组 | 提交按列表 | ✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证 | T3 |
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证 | T3 |
-| 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
+| 40 | Compare revisions / Blame differences | 双侧 blame + `diff -r OLD:NEW` | 双修订 | ✅ Blame 分段模式、双修订/BASE 表单、左右作者/日期/内容、增删改与归属汇总；CFM/⌘K；真实 SVN 往返 | T3 |
 | 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开 | T2 |
 | 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ✅ `svn merge -c REV`；日志右键确认后合并到当前 WC | T3 |
 | 43 | Import in Place | DUG 就地导入 | 向导 | ✅ 导入后临时检出并原子替换目录内容 | T2 |
@@ -198,7 +198,7 @@
 |----|------|------|--------|------|
 | L01 | Compare with working copy | 与 WC 比 | ✅ | T2 |
 | L02 | Compare with previous revision | 与前一修订比 | ✅ | T2 |
-| L03 | Compare and blame with BASE/previous | Blame 差异 | ❌ | T3 |
+| L03 | Compare and blame with BASE/previous | Blame 差异 | ✅ 日志路径菜单默认 PREV:REV；仓库 URL@peg 原子注入 Blame 差异页；BASE 可直接取目标基线 | T3 |
 | L04 | Show changes as unified diff | 含 Shift 选项（EOL/空白） | ✅ 统一 Diff 面板；EOL/空白进阶仍开 | T2 |
 | L05 | Save revision to… | 另存历史文件 | ✅ | T2 |
 | L06 | Open / Open with… | 打开历史内容 | ✅ 系统默认打开；Open with… 进阶仍开 | T2 |

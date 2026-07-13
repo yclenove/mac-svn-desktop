@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.9：Compare revisions / Blame differences（#40、L03、D23）
+- Affected: BlameDifferenceViewModel, MacSvnBlameView, LogContextActionPolicy, MacSvnLogView, MacSvnAppNavigator, SvnCommandBuilder, SvnCommandCatalog, MacSvnChangesView, Tests/*, docs/*
+- Impact: 双修订分别读取 blame，并用 `svn diff -r OLD:NEW` 对齐左右内容与行号，展示作者/日期/修订、增删改和归属变化汇总；支持仅变化筛选、目标 BASE 与任意双修订；日志 L03 默认 PREV:REV，使用仓库 URL 与 `@peg` 保证历史路径解析；CFM/⌘K 可达；真实 SVN 双提交往返；全量 778 绿；覆盖率 87/114；下一 T3.10
+
 - Summary: Tortoise 完美 Loop T3.8：Delete keep local / Delete unversioned（#15、#16）
 - Affected: UnversionedDeletionPolicy, SvnCommandBuilder, SvnBackend, SvnCliBackend, SvnService, WorkingCopyActionsViewModel, MacSvnChangesView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: 支持 `svn delete --keep-local` 并二次确认；删除未版本项提供 status 候选预览和勾选，执行前重新读取 status、校验 WC 路径边界与未版本状态，父子路径合并避免重复删除；CFM/⌘K 使用一次性原子意图；真实 SVN 验证本地保留、文件/目录删除与版本文件不受影响；全量 771 绿；覆盖率 84/114；下一 T3.9
