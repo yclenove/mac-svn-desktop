@@ -32,6 +32,15 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testMergeUnifiedDiffUsesPerformanceLimitsAPI() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnMergeWizardView.swift")
+        XCTAssertTrue(source.contains("DiffPerformanceLimits"))
+        XCTAssertTrue(
+            source.contains("truncatedDisplayText"),
+            "Merge Unified Diff 必须截断超大文本，避免 SwiftUI 一次渲染全部内容"
+        )
+    }
+
     func testEmbeddedCommitViewAvoidsSplitViewInEmbeddedBranch() throws {
         let source = try Self.readFeatureSource(named: "MacSvnCommitView.swift")
         // 嵌入分支须用 HStack；独立页仍可用 HSplitView

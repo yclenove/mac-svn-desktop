@@ -6,8 +6,9 @@ public protocol SvnBackend: Sendable {
     /// Check for Modifications → Check Repository（`svn status -u`）
     func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool, auth: Credential?) async throws -> UpdateSummary
-    func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary
+    func switchTo(wc: URL, url: String, revision: Revision?, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
+    func mergeTwoTrees(wc: URL, from: String, to: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
     func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
     func add(wc: URL, paths: [String]) async throws
     func delete(wc: URL, paths: [String]) async throws

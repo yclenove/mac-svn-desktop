@@ -76,10 +76,19 @@ public enum SvnCommandBuilder {
         return SvnCommand(arguments: arguments)
     }
 
-    public static func switchTo(url: String, authArguments: [String] = []) -> SvnCommand {
-        SvnCommand(arguments: [
+    public static func switchTo(
+        url: String,
+        revision: Revision? = nil,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = [
             "switch", "--accept", "postpone", "--non-interactive"
-        ] + authArguments + [url])
+        ] + authArguments
+        if let revision {
+            arguments += ["-r", revision.description]
+        }
+        arguments.append(url)
+        return SvnCommand(arguments: arguments)
     }
 
     public static func merge(
@@ -101,6 +110,21 @@ public enum SvnCommandBuilder {
         }
 
         arguments.append(source)
+        return SvnCommand(arguments: arguments)
+    }
+
+    public static func merge(
+        from: String,
+        to: String,
+        dryRun: Bool = false,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        var arguments = ["merge", "--accept", "postpone", "--non-interactive"]
+        if dryRun {
+            arguments.append("--dry-run")
+        }
+        arguments += authArguments
+        arguments += [from, to]
         return SvnCommand(arguments: arguments)
     }
 

@@ -199,6 +199,7 @@ final class SvnCliBackendTests: XCTestCase {
         let summary = try await backend.switchTo(
             wc: URL(fileURLWithPath: "/tmp/wc"),
             url: "file:///repo/branches/feature-one",
+            revision: Revision(8),
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -208,6 +209,7 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, [
             "switch", "--accept", "postpone", "--non-interactive",
             "--username", "u", "--password-from-stdin",
+            "-r", "8",
             "file:///repo/branches/feature-one"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
@@ -239,6 +241,31 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/branches/feature-one"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testTwoTreeMergePassesBothUrlsAndParsesSummary() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("U    README.txt\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let summary = try await backend.mergeTwoTrees(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "file:///repo/branches/old",
+            to: "file:///repo/branches/new",
+            dryRun: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(summary.updated, 1)
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "file:///repo/branches/old", "file:///repo/branches/new"
+        ])
     }
 
     func testResolveRunsInWorkingCopy() async throws {

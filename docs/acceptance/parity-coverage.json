@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-10T16:26:20Z",
+  "generated_at": "2026-07-13T02:30:08Z",
   "total": 114,
-  "done": 45,
-  "partial": 24,
+  "done": 50,
+  "partial": 19,
   "missing": 45,
-  "coverage": 0.394737,
-  "coverage_percent": 39.47,
+  "coverage": 0.438596,
+  "coverage_percent": 43.86,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 10,
-      "partial": 11,
+      "done": 12,
+      "partial": 9,
       "missing": 7
     },
     "command": {
       "total": 46,
-      "done": 20,
-      "partial": 7,
+      "done": 23,
+      "partial": 4,
       "missing": 19
     },
     "log": {
@@ -170,15 +170,15 @@
       "key": "D19",
       "section": "domain",
       "title": "Branch/Tag / Switch",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达",
+      "status": "done"
     },
     {
       "key": "D20",
       "section": "domain",
       "title": "Merge",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6",
+      "status": "done"
     },
     {
       "key": "D21",
@@ -387,22 +387,22 @@
       "key": "cmd.22",
       "section": "command",
       "title": "Branch/Tag",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 三源表单；peg 仅剥末尾 `@数字`；CFM/⌘K 可达",
+      "status": "done"
     },
     {
       "key": "cmd.23",
       "section": "command",
       "title": "Switch",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 可选 revision；未提交变更二次确认并保留目标参数；CFM/⌘K 可达",
+      "status": "done"
     },
     {
       "key": "cmd.24",
       "section": "command",
       "title": "Merge",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 范围/两树、dry-run、Unified Diff、大文本门禁、冲突工作区回跳",
+      "status": "done"
     },
     {
       "key": "cmd.25",

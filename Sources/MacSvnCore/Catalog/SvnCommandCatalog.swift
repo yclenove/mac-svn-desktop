@@ -179,7 +179,10 @@ public enum SvnCommandCatalog: Sendable {
         .resolved,
         .getLock,
         .releaseLock,
-        .breakLock
+        .breakLock,
+        .branchTag,
+        .switchBranch,
+        .merge
     ]
 
     public static var dailyCFMCommands: [SvnCommandDescriptor] {

@@ -59,7 +59,7 @@
 - [x] Edit Conflicts + Resolved 打磨（#11,#12）；属性/树冲突入口
 - [x] Edit Conflicts + Resolved（#11,#12）
 - [x] Lock / Unlock / Break lock（#19–21）
-- [ ] Branch-Tag / Switch / Merge+dry-run（#22–24）
+- [x] Branch-Tag / Switch / Merge+dry-run（#22–24）：三种 copy 源、Switch `-r`/未提交确认、范围/两树/dry-run/Unified Diff/冲突回跳
 - [ ] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）
 - [ ] Create / Apply Patch（#33,#34）
 - [ ] Properties + Blame 悬停（#35,#31）

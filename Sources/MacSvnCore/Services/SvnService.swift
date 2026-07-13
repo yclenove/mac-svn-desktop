@@ -175,6 +175,7 @@ public actor SvnService {
     public func switchTo(
         wc: URL,
         url: String,
+        revision: Revision? = nil,
         auth: Credential? = nil,
         allowLocalChanges: Bool = false
     ) async throws -> UpdateSummary {
@@ -188,9 +189,24 @@ public actor SvnService {
 
             let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
             return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
-                try await backend.switchTo(wc: wc, url: url, auth: auth)
+                try await backend.switchTo(wc: wc, url: url, revision: revision, auth: auth)
             }
         }
+    }
+
+    public func switchTo(
+        wc: URL,
+        url: String,
+        auth: Credential?,
+        allowLocalChanges: Bool
+    ) async throws -> UpdateSummary {
+        try await switchTo(
+            wc: wc,
+            url: url,
+            revision: nil,
+            auth: auth,
+            allowLocalChanges: allowLocalChanges
+        )
     }
 
     public func merge(
@@ -204,6 +220,27 @@ public actor SvnService {
             let credentialScope = URL(string: source) ?? URL(fileURLWithPath: source)
             return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
                 try await backend.merge(wc: wc, source: source, range: range, dryRun: dryRun, auth: auth)
+            }
+        }
+    }
+
+    public func mergeTwoTrees(
+        wc: URL,
+        from: String,
+        to: String,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        try await withWriteLock(wc: wc, operation: "mergeTwoTrees") {
+            let credentialScope = credentialScope(for: from)
+            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                try await backend.mergeTwoTrees(
+                    wc: wc,
+                    from: from,
+                    to: to,
+                    dryRun: dryRun,
+                    auth: auth
+                )
             }
         }
     }

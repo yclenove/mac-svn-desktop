@@ -19,6 +19,7 @@ final class BranchSwitchViewModelTests: XCTestCase {
             BranchSwitchCall(
                 wc: wc,
                 url: "file:///repo/branches/feature-one",
+                revision: nil,
                 auth: nil,
                 allowLocalChanges: false
             )
@@ -34,7 +35,12 @@ final class BranchSwitchViewModelTests: XCTestCase {
         let viewModel = BranchSwitchViewModel(provider: provider)
         let wc = URL(fileURLWithPath: "/tmp/wc")
 
-        await viewModel.switchTo(wc: wc, url: "file:///repo/branches/feature-one", auth: nil)
+        await viewModel.switchTo(
+            wc: wc,
+            url: "file:///repo/branches/feature-one",
+            revision: Revision(8),
+            auth: nil
+        )
         XCTAssertEqual(viewModel.state, .confirmationRequired(paths: ["README.txt"]))
 
         await viewModel.confirmSwitchWithLocalChanges()
@@ -45,12 +51,14 @@ final class BranchSwitchViewModelTests: XCTestCase {
             BranchSwitchCall(
                 wc: wc,
                 url: "file:///repo/branches/feature-one",
+                revision: Revision(8),
                 auth: nil,
                 allowLocalChanges: false
             ),
             BranchSwitchCall(
                 wc: wc,
                 url: "file:///repo/branches/feature-one",
+                revision: Revision(8),
                 auth: nil,
                 allowLocalChanges: true
             )
@@ -92,6 +100,7 @@ final class BranchSwitchViewModelTests: XCTestCase {
 private struct BranchSwitchCall: Equatable, Sendable {
     let wc: URL
     let url: String
+    let revision: Revision?
     let auth: Credential?
     let allowLocalChanges: Bool
 }
@@ -114,9 +123,26 @@ private actor FakeBranchSwitchProvider: BranchSwitchProviding {
         auth: Credential?,
         allowLocalChanges: Bool
     ) async throws -> UpdateSummary {
+        try await switchTo(
+            wc: wc,
+            url: url,
+            revision: nil,
+            auth: auth,
+            allowLocalChanges: allowLocalChanges
+        )
+    }
+
+    func switchTo(
+        wc: URL,
+        url: String,
+        revision: Revision?,
+        auth: Credential?,
+        allowLocalChanges: Bool
+    ) async throws -> UpdateSummary {
         calls.append(BranchSwitchCall(
             wc: wc,
             url: url,
+            revision: revision,
             auth: auth,
             allowLocalChanges: allowLocalChanges
         ))

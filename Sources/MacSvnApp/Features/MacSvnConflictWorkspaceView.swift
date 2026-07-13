@@ -87,20 +87,34 @@ public struct MacSvnConflictWorkspaceView: View {
             case .conflicts:
                 conflictPane
             case .mergeWizard:
-                MacSvnMergeWizardView(workspaceController: workspaceController, session: session)
+                MacSvnMergeWizardView(
+                    workspaceController: workspaceController,
+                    session: session,
+                    navigator: navigator
+                )
             }
         }
         .task {
             privacySettings = await session.currentAIPrivacy()
             await reloadConflicts()
             await consumePendingConflictPath()
+            if navigator.consumePendingMergeWizard() {
+                tab = .mergeWizard
+            }
             consumePendingResolvedHint()
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadConflicts() }
         }
         .onChange(of: navigator.pendingConflictPath) { _, _ in
+            tab = .conflicts
             Task { await consumePendingConflictPath() }
+        }
+        .onChange(of: navigator.pendingMergeWizard) { _, isPending in
+            if isPending {
+                tab = .mergeWizard
+                _ = navigator.consumePendingMergeWizard()
+            }
         }
         .onChange(of: navigator.pendingResolvedHint) { _, isHint in
             if isHint {

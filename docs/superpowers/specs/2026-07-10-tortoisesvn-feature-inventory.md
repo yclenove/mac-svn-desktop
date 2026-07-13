@@ -63,8 +63,8 @@
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | 🟡 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ❌ | T3 |
-| D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | 🟡 | T2 |
-| D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | 🟡 | T2/T3 |
+| D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | ✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达 | T2 |
+| D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/dry-run/Unified Diff/mergeinfo/冲突回跳；reintegrate 仍属 T3.6 | T2/T3 |
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
 | D22 | Patch | create/apply patch | ❌ | T2 |
 | D23 | Blame | blame + blame differences | 🟡 | T2/T3 |
@@ -101,9 +101,9 @@
 | 19 | Get Lock | `lock -m [--force]` | 注释、steal | ✅ 锁定页+CFM/⌘K；注释与夺锁确认 | T2 |
 | 20 | Release Lock | `unlock` | 多选 | ✅ 多选释放；优先本 WC 持有 | T2 |
 | 21 | Break lock | 🔷 | 高危确认 | ✅ `unlock --force` + 确认门控 | T2 |
-| 22 | Branch/Tag | `copy` 三种源 | HEAD / 特定修订 / WC | 🟡 | T2 |
-| 23 | Switch | `switch [-r] URL` | 未提交警告 | 🟡 | T2 |
-| 24 | Merge | `merge [--dry-run]` + unified 预览 | 范围/树、Test merge | 🟡 | T2 |
+| 22 | Branch/Tag | `copy` 三种源 | HEAD / 特定修订 / WC | ✅ 三源表单；peg 仅剥末尾 `@数字`；CFM/⌘K 可达 | T2 |
+| 23 | Switch | `switch [-r] URL` | 未提交警告 | ✅ 可选 revision；未提交变更二次确认并保留目标参数；CFM/⌘K 可达 | T2 |
+| 24 | Merge | `merge [--dry-run]` + unified 预览 | 范围/树、Test merge | ✅ 范围/两树、dry-run、Unified Diff、大文本门禁、冲突工作区回跳 | T2 |
 | 25 | Merge reintegrate | 🔷 | 确认 | ❌ | T3 |
 | 26 | Export | `export` 或 WC 文件复制 | 含未版本、omit externals | ❌ | T2 |
 | 27 | Relocate | `switch --relocate` | From/To URL | ❌ | T2 |
@@ -163,10 +163,10 @@
 
 ### 4.4 Merge（必须）
 
-- [ ] 修订范围合并、两树合并  
-- [ ] Test merge (`--dry-run`)、Unified diff 预览  
+- [x] 修订范围合并、两树合并
+- [x] Test merge (`--dry-run`)、Unified diff 预览
 - [ ] reintegrate（T3）  
-- [ ] 冲突后进入编辑器；mergeinfo 可观察  
+- [x] 冲突后进入编辑器；mergeinfo 可观察
 
 ### 4.5 Repo Browser（必须）
 

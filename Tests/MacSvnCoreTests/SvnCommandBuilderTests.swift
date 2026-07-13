@@ -75,12 +75,14 @@ final class SvnCommandBuilderTests: XCTestCase {
     func testSwitchUsesPostponeNonInteractiveAuthAndUrl() {
         let command = SvnCommandBuilder.switchTo(
             url: "file:///repo/branches/feature-one",
+            revision: Revision(8),
             authArguments: ["--username", "u", "--password-from-stdin"]
         )
 
         XCTAssertEqual(command.arguments, [
             "switch", "--accept", "postpone", "--non-interactive",
             "--username", "u", "--password-from-stdin",
+            "-r", "8",
             "file:///repo/branches/feature-one"
         ])
     }
@@ -98,6 +100,21 @@ final class SvnCommandBuilderTests: XCTestCase {
             "--username", "u", "--password-from-stdin",
             "-r", "2:5",
             "file:///repo/branches/feature-one"
+        ])
+    }
+
+    func testTwoTreeMergeUsesBothSourcesAndDryRun() {
+        let command = SvnCommandBuilder.merge(
+            from: "file:///repo/branches/old",
+            to: "file:///repo/branches/new",
+            dryRun: true,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/branches/old", "file:///repo/branches/new"
         ])
     }
 

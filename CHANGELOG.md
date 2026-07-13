@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-13
+
+- Summary: Tortoise 完美 Loop T2.8：Branch/Tag 三种 copy 源、Switch 可选 revision/未提交确认、Merge 范围/两树/dry-run/Unified Diff/冲突回跳（#22–24）
+- Affected: BranchCopyViewModel, BranchSwitchViewModel, MergeWizardViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnBranchesView, MacSvnMergeWizardView, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: inventory #22–24、D19/D20 ✅；Merge reintegrate 仍属 T3.6；下一 T2.9
+
 ## 2026-07-11
 
 - Summary: Cursor→Codex 交接：新增 Tortoise 完美对标长程 Loop 说明书；暂停于 T2.7 完成后、T2.8 未开工

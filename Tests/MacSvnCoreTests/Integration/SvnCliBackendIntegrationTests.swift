@@ -555,6 +555,68 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testServiceTwoTreeMergePreviewAndExecutionIntoWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/two-tree-source"
+
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "create two-tree branch",
+            auth: nil
+        )
+        try await fixture.backend.checkout(url: branchURL, to: fixture.workingCopy)
+        try "two-tree change\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let branchChangeRevision = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "two-tree change",
+            auth: nil
+        )
+        _ = try await service.switchTo(wc: fixture.workingCopy, url: fixture.trunkURL, auth: nil)
+
+        let rangeDiff = try await service.diff(
+            wc: fixture.workingCopy,
+            target: branchURL,
+            r1: Revision(max(0, branchChangeRevision.value - 1)),
+            r2: branchChangeRevision
+        )
+        let twoTreeDiff = try await service.diffBetweenPaths(
+            wc: fixture.workingCopy,
+            oldPath: fixture.trunkURL,
+            newPath: branchURL
+        )
+
+        let preview = try await service.mergeTwoTrees(
+            wc: fixture.workingCopy,
+            from: fixture.trunkURL,
+            to: branchURL,
+            dryRun: true,
+            auth: nil
+        )
+        let summary = try await service.mergeTwoTrees(
+            wc: fixture.workingCopy,
+            from: fixture.trunkURL,
+            to: branchURL,
+            dryRun: false,
+            auth: nil
+        )
+
+        XCTAssertTrue(preview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(summary.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(rangeDiff.contains("two-tree change"))
+        XCTAssertTrue(twoTreeDiff.contains("two-tree change"))
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("README.txt"), encoding: .utf8),
+            "two-tree change\n"
+        )
+    }
+
     func testConflictServiceListsTextConflictAndResolveMineFull() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

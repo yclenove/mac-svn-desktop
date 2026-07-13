@@ -3,6 +3,63 @@ import XCTest
 
 final class BranchCopyViewModelTests: XCTestCase {
     @MainActor
+    func testCreateFromHeadStripsExistingPegRevision() async {
+        let provider = FakeBranchCopyProvider(result: .success(Revision(20)))
+        let viewModel = BranchCopyViewModel(copyProvider: provider)
+
+        await viewModel.create(
+            kind: .branch,
+            source: .head(repositoryURL: "file:///repo/trunk@19"),
+            repositoryRoot: "file:///repo",
+            name: "feature-head",
+            layout: BranchLayout(),
+            message: "create from HEAD"
+        )
+
+        let calls = await provider.recordedCalls()
+        XCTAssertEqual(calls.single?.source, "file:///repo/trunk")
+    }
+
+    @MainActor
+    func testCreateFromRevisionPreservesUserAtHostAndPinsPegRevision() async {
+        let provider = FakeBranchCopyProvider(result: .success(Revision(21)))
+        let viewModel = BranchCopyViewModel(copyProvider: provider)
+
+        await viewModel.create(
+            kind: .tag,
+            source: .revision(
+                repositoryURL: "svn+ssh://user@host/repo/trunk@18",
+                revision: Revision(12)
+            ),
+            repositoryRoot: "svn+ssh://user@host/repo",
+            name: "v1.2",
+            layout: BranchLayout(),
+            message: "tag r12"
+        )
+
+        let calls = await provider.recordedCalls()
+        XCTAssertEqual(calls.single?.source, "svn+ssh://user@host/repo/trunk@12")
+    }
+
+    @MainActor
+    func testCreateFromWorkingCopyUsesLocalPath() async {
+        let provider = FakeBranchCopyProvider(result: .success(Revision(22)))
+        let viewModel = BranchCopyViewModel(copyProvider: provider)
+
+        await viewModel.create(
+            kind: .branch,
+            source: .workingCopy(URL(fileURLWithPath: "/tmp/wc")),
+            repositoryRoot: "file:///repo",
+            name: "feature-wc",
+            layout: BranchLayout(),
+            message: "copy local changes"
+        )
+
+        let calls = await provider.recordedCalls()
+        XCTAssertEqual(calls.single?.source, "/tmp/wc")
+    }
+
+    @MainActor
     func testCreateBranchBuildsDestinationFromLayoutAndStoresRevision() async {
         let provider = FakeBranchCopyProvider(result: .success(Revision(12)))
         let viewModel = BranchCopyViewModel(copyProvider: provider)
@@ -121,5 +178,11 @@ private actor FakeBranchCopyProvider: BranchCopyProviding {
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
         calls.append(BranchCopyCall(source: source, destination: destination, message: message, auth: auth))
         return try result.get()
+    }
+}
+
+private extension Array {
+    var single: Element? {
+        count == 1 ? first : nil
     }
 }

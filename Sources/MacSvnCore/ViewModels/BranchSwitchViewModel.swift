@@ -5,6 +5,7 @@ public protocol BranchSwitchProviding: Sendable {
     func switchTo(
         wc: URL,
         url: String,
+        revision: Revision?,
         auth: Credential?,
         allowLocalChanges: Bool
     ) async throws -> UpdateSummary
@@ -24,6 +25,7 @@ public final class BranchSwitchViewModel {
     private struct PendingSwitch: Sendable {
         let wc: URL
         let url: String
+        let revision: Revision?
         let auth: Credential?
     }
 
@@ -37,9 +39,20 @@ public final class BranchSwitchViewModel {
         self.provider = provider
     }
 
-    public func switchTo(wc: URL, url: String, auth: Credential? = nil) async {
-        pendingSwitch = PendingSwitch(wc: wc, url: url, auth: auth)
-        await performSwitch(wc: wc, url: url, auth: auth, allowLocalChanges: false)
+    public func switchTo(
+        wc: URL,
+        url: String,
+        revision: Revision? = nil,
+        auth: Credential? = nil
+    ) async {
+        pendingSwitch = PendingSwitch(wc: wc, url: url, revision: revision, auth: auth)
+        await performSwitch(
+            wc: wc,
+            url: url,
+            revision: revision,
+            auth: auth,
+            allowLocalChanges: false
+        )
     }
 
     public func confirmSwitchWithLocalChanges() async {
@@ -51,6 +64,7 @@ public final class BranchSwitchViewModel {
         await performSwitch(
             wc: pendingSwitch.wc,
             url: pendingSwitch.url,
+            revision: pendingSwitch.revision,
             auth: pendingSwitch.auth,
             allowLocalChanges: true
         )
@@ -59,6 +73,7 @@ public final class BranchSwitchViewModel {
     private func performSwitch(
         wc: URL,
         url: String,
+        revision: Revision?,
         auth: Credential?,
         allowLocalChanges: Bool
     ) async {
@@ -68,6 +83,7 @@ public final class BranchSwitchViewModel {
             let summary = try await provider.switchTo(
                 wc: wc,
                 url: url,
+                revision: revision,
                 auth: auth,
                 allowLocalChanges: allowLocalChanges
             )

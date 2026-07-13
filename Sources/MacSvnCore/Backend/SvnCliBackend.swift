@@ -52,11 +52,13 @@ public struct SvnCliBackend: SvnBackend {
     public func switchTo(
         wc: URL,
         url: String,
+        revision: Revision? = nil,
         auth: Credential? = nil
     ) async throws -> UpdateSummary {
         let authArguments = try AuthArguments.build(credential: auth)
         let command = SvnCommandBuilder.switchTo(
             url: normalizedRemoteURL(url),
+            revision: revision,
             authArguments: authArguments.arguments
         )
         let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
@@ -74,6 +76,24 @@ public struct SvnCliBackend: SvnBackend {
         let command = SvnCommandBuilder.merge(
             source: normalizedRemoteURL(source),
             range: range,
+            dryRun: dryRun,
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
+        return try MergeOutputParser.parse(String(decoding: result.stdout, as: UTF8.self))
+    }
+
+    public func mergeTwoTrees(
+        wc: URL,
+        from: String,
+        to: String,
+        dryRun: Bool,
+        auth: Credential? = nil
+    ) async throws -> MergeSummary {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.merge(
+            from: normalizedRemoteURL(from),
+            to: normalizedRemoteURL(to),
             dryRun: dryRun,
             authArguments: authArguments.arguments
         )

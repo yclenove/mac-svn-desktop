@@ -13,8 +13,18 @@ public struct MacSvnBranchesView: View {
     @State private var newName = ""
     @State private var createMessage = "create branch"
     @State private var createKind: BranchReferenceKind = .branch
+    @State private var createSourceMode: CopySourceMode = .head
+    @State private var createRevisionText = ""
+    @State private var switchRevisionText = ""
     @State private var statusText: String?
     @State private var confirmLocalChanges = false
+
+    private enum CopySourceMode: String, CaseIterable, Identifiable {
+        case head = "HEAD"
+        case revision = "指定 revision"
+        case workingCopy = "当前工作副本"
+        var id: String { rawValue }
+    }
 
     public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
         self.workspaceController = workspaceController
@@ -67,10 +77,27 @@ public struct MacSvnBranchesView: View {
                                 Text("分支").tag(BranchReferenceKind.branch)
                                 Text("标签").tag(BranchReferenceKind.tag)
                             }
+                            Picker("来源", selection: $createSourceMode) {
+                                ForEach(CopySourceMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            if createSourceMode == .revision {
+                                TextField("来源 revision", text: $createRevisionText)
+                            } else if createSourceMode == .workingCopy,
+                                      let path = workspaceController.selectedRecord?.localPath {
+                                Text(path)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             TextField("名称", text: $newName)
                             TextField("提交说明", text: $createMessage)
                             Button("创建") { Task { await createBranch() } }
                                 .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        Section("切换选项") {
+                            TextField("目标 revision（可选）", text: $switchRevisionText)
+                                .help("留空切换到目标分支 HEAD")
                         }
                         Section("svn:mergeinfo（当前 WC）") {
                             if let mergeInfoVM {
@@ -213,9 +240,22 @@ public struct MacSvnBranchesView: View {
 
         let settings = await session.settingsStore.settings()
         let root = info.repositoryRoot ?? record.repoURL
+        let source: BranchCopySource
+        switch createSourceMode {
+        case .head:
+            source = .head(repositoryURL: info.url)
+        case .revision:
+            guard let value = Int(createRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)), value >= 0 else {
+                statusText = "创建失败：revision 必须是非负整数"
+                return
+            }
+            source = .revision(repositoryURL: info.url, revision: Revision(value))
+        case .workingCopy:
+            source = .workingCopy(URL(fileURLWithPath: record.localPath))
+        }
         await copyVM.create(
             kind: createKind,
-            source: record.repoURL,
+            source: source,
             repositoryRoot: root,
             name: newName,
             layout: settings.branchLayout,
@@ -225,6 +265,7 @@ public struct MacSvnBranchesView: View {
         case .completed(let revision):
             statusText = "创建成功 r\(revision.value)"
             newName = ""
+            createRevisionText = ""
             await reload()
         case .error(let message):
             statusText = "创建失败：\(message)"
@@ -235,7 +276,21 @@ public struct MacSvnBranchesView: View {
 
     private func switchTo(_ url: String) async {
         guard let record = workspaceController.selectedRecord, let switchVM else { return }
-        await switchVM.switchTo(wc: URL(fileURLWithPath: record.localPath), url: url)
+        let trimmedRevision = switchRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let revision: Revision?
+        if trimmedRevision.isEmpty {
+            revision = nil
+        } else if let value = Int(trimmedRevision), value >= 0 {
+            revision = Revision(value)
+        } else {
+            statusText = "切换失败：revision 必须是非负整数"
+            return
+        }
+        await switchVM.switchTo(
+            wc: URL(fileURLWithPath: record.localPath),
+            url: url,
+            revision: revision
+        )
         switch switchVM.state {
         case .completed:
             statusText = "切换完成"

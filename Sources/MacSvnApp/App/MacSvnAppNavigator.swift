@@ -44,6 +44,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingBlamePath: String?
     /// CFM / 更新后 → 冲突工作区预选路径（#11）。
     @Published public var pendingConflictPath: String?
+    /// Catalog Merge 命令进入合并向导；与冲突回跳保持原子区分。
+    @Published public var pendingMergeWizard = false
     /// ⌘K / 自动化「标记为已解决」：进入冲突工作区后提示勾选批量 Resolved（#12）。
     @Published public var pendingResolvedHint = false
     /// CFM / ⌘K → 锁定页预选路径（#19–#21）。
@@ -117,6 +119,10 @@ public final class MacSvnAppNavigator: ObservableObject {
                 pendingConflictPath = first
             }
             pendingResolvedHint = (command == .resolved)
+        }
+
+        if command == .merge {
+            pendingMergeWizard = true
         }
 
         // #19–#21：锁定命令注入路径与意图。
@@ -284,6 +290,19 @@ public final class MacSvnAppNavigator: ObservableObject {
         let value = pendingResolvedHint
         pendingResolvedHint = false
         return value
+    }
+
+    public func consumePendingMergeWizard() -> Bool {
+        let value = pendingMergeWizard
+        pendingMergeWizard = false
+        return value
+    }
+
+    public func openMergeConflicts(paths: [String]) {
+        pendingMergeWizard = false
+        pendingConflictPath = paths.first(where: { !$0.isEmpty })
+        selectedRoute = .merge
+        lastAutomationMessage = "合并产生冲突：已打开冲突工作区"
     }
 
     public func consumePendingLockPaths() -> [String] {

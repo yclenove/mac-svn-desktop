@@ -4,6 +4,76 @@ import XCTest
 
 final class MergeWizardViewModelTests: XCTestCase {
     @MainActor
+    func testPreviewTwoTreesUsesDryRunAndStoresSummary() async {
+        let provider = FakeMergeProvider(twoTreeResults: [.success(MergeSummary(updated: 2))])
+        let viewModel = MergeWizardViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.previewTwoTrees(
+            wc: wc,
+            from: " file:///repo/branches/old ",
+            to: " file:///repo/branches/new "
+        )
+
+        XCTAssertEqual(viewModel.state, .previewReady(MergeSummary(updated: 2)))
+        let calls = await provider.recordedTwoTreeCalls()
+        XCTAssertEqual(calls, [
+            TwoTreeMergeCall(
+                wc: wc,
+                from: "file:///repo/branches/old",
+                to: "file:///repo/branches/new",
+                dryRun: true,
+                auth: nil
+            )
+        ])
+    }
+
+    @MainActor
+    func testUnifiedDiffPreviewUsesRangeSource() async {
+        let provider = FakeMergeProvider(diffResults: [.success("--- old\n+++ new\n")])
+        let viewModel = MergeWizardViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        await viewModel.previewUnifiedDiff(
+            wc: wc,
+            source: "file:///repo/branches/feature-one",
+            range: RevisionRange(start: Revision(2), end: Revision(5))
+        )
+
+        XCTAssertEqual(viewModel.state, .diffReady)
+        XCTAssertEqual(viewModel.unifiedDiff, "--- old\n+++ new\n")
+        let calls = await provider.recordedDiffCalls()
+        XCTAssertEqual(calls, [
+            MergeDiffCall(
+                wc: wc,
+                target: "file:///repo/branches/feature-one",
+                r1: Revision(2),
+                r2: Revision(5)
+            )
+        ])
+    }
+
+    @MainActor
+    func testTwoTreeUnifiedDiffUsesOldAndNewUrls() async {
+        let provider = FakeMergeProvider(diffResults: [.success("two-tree diff")])
+        let viewModel = MergeWizardViewModel(provider: provider)
+
+        await viewModel.previewTwoTreeUnifiedDiff(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "file:///repo/branches/old",
+            to: "file:///repo/branches/new"
+        )
+
+        XCTAssertEqual(viewModel.state, .diffReady)
+        XCTAssertEqual(viewModel.unifiedDiff, "two-tree diff")
+        let calls = await provider.recordedTwoTreeDiffCalls()
+        XCTAssertEqual(
+            calls,
+            [TwoTreeDiffCall(oldPath: "file:///repo/branches/old", newPath: "file:///repo/branches/new")]
+        )
+    }
+
+    @MainActor
     func testPreviewUsesDryRunAndStoresSummary() async {
         let provider = FakeMergeProvider(results: [.success(MergeSummary(updated: 1))])
         let viewModel = MergeWizardViewModel(provider: provider)
@@ -84,17 +154,52 @@ private struct MergeCall: Equatable, Sendable {
     let auth: Credential?
 }
 
+private struct TwoTreeMergeCall: Equatable, Sendable {
+    let wc: URL
+    let from: String
+    let to: String
+    let dryRun: Bool
+    let auth: Credential?
+}
+
+private struct MergeDiffCall: Equatable, Sendable {
+    let wc: URL
+    let target: String
+    let r1: Revision?
+    let r2: Revision?
+}
+
+private struct TwoTreeDiffCall: Equatable, Sendable {
+    let oldPath: String
+    let newPath: String
+}
+
 private actor FakeMergeProvider: MergeProviding {
     private var results: [Result<MergeSummary, Error>]
+    private var twoTreeResults: [Result<MergeSummary, Error>]
+    private var diffResults: [Result<String, Error>]
     private var calls: [MergeCall] = []
+    private var twoTreeCalls: [TwoTreeMergeCall] = []
+    private var diffCalls: [MergeDiffCall] = []
+    private var twoTreeDiffCalls: [TwoTreeDiffCall] = []
 
-    init(results: [Result<MergeSummary, Error>]) {
+    init(
+        results: [Result<MergeSummary, Error>] = [],
+        twoTreeResults: [Result<MergeSummary, Error>] = [],
+        diffResults: [Result<String, Error>] = []
+    ) {
         self.results = results
+        self.twoTreeResults = twoTreeResults
+        self.diffResults = diffResults
     }
 
     func recordedCalls() -> [MergeCall] {
         calls
     }
+
+    func recordedTwoTreeCalls() -> [TwoTreeMergeCall] { twoTreeCalls }
+    func recordedDiffCalls() -> [MergeDiffCall] { diffCalls }
+    func recordedTwoTreeDiffCalls() -> [TwoTreeDiffCall] { twoTreeDiffCalls }
 
     func merge(
         wc: URL,
@@ -116,5 +221,29 @@ private actor FakeMergeProvider: MergeProviding {
         }
 
         return try results.removeFirst().get()
+    }
+
+    func mergeTwoTrees(
+        wc: URL,
+        from: String,
+        to: String,
+        dryRun: Bool,
+        auth: Credential?
+    ) async throws -> MergeSummary {
+        twoTreeCalls.append(TwoTreeMergeCall(wc: wc, from: from, to: to, dryRun: dryRun, auth: auth))
+        guard !twoTreeResults.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake result") }
+        return try twoTreeResults.removeFirst().get()
+    }
+
+    func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
+        diffCalls.append(MergeDiffCall(wc: wc, target: target, r1: r1, r2: r2))
+        guard !diffResults.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake diff") }
+        return try diffResults.removeFirst().get()
+    }
+
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        twoTreeDiffCalls.append(TwoTreeDiffCall(oldPath: oldPath, newPath: newPath))
+        guard !diffResults.isEmpty else { throw SvnError.other(code: nil, stderr: "missing fake diff") }
+        return try diffResults.removeFirst().get()
     }
 }

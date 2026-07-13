@@ -130,6 +130,27 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertNil(navigator.pendingLockIntent)
     }
 
+    func testTortoiseParityCommandsNavigateToBranchAndMergeWorkflows() {
+        let navigator = MacSvnAppNavigator()
+
+        XCTAssertEqual(navigator.perform(command: .branchTag), .navigated(to: .branches))
+        XCTAssertEqual(navigator.perform(command: .switchBranch), .navigated(to: .branches))
+        XCTAssertEqual(navigator.perform(command: .merge), .navigated(to: .merge))
+        XCTAssertTrue(navigator.pendingMergeWizard)
+        XCTAssertTrue(navigator.consumePendingMergeWizard())
+        XCTAssertFalse(navigator.pendingMergeWizard)
+    }
+
+    func testMergeConflictNavigationPreservesFirstConflictPath() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .changes)
+
+        navigator.openMergeConflicts(paths: ["src/conflict.swift"])
+
+        XCTAssertEqual(navigator.selectedRoute, .merge)
+        XCTAssertEqual(navigator.pendingConflictPath, "src/conflict.swift")
+        XCTAssertFalse(navigator.pendingMergeWizard)
+    }
+
 
     func testPerformCoversEveryCatalogIDWithoutCrash() {
         let navigator = MacSvnAppNavigator()
