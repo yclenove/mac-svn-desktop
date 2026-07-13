@@ -33,9 +33,9 @@
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
 | 工作区 | T2.12 已提交，工作区应干净 |
-| 最近功能 tip | `4acd365` feat(T2.12) Repo Browser 远端写 / 锁列 |
+| 最近功能 tip | `1f444a5` fix(T2.12) 确认快照 / 路径编码 |
 | 覆盖率 | **65/114 = 57.02%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **671** 绿（2026-07-13） |
+| 测试 | 全量 **673** 绿（2026-07-13） |
 | Wave | **G0 ✅ · G1 ✅ · T2 进行中**（T2.1–T2.12 ✅，下一 **T2.13**） |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
@@ -223,7 +223,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；覆盖率 57/114；下一刀 T2.10 |
 | 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；真实 SVN 往返和 `.rej` 冲突报告；覆盖率 60/114；下一刀 T2.11 |
 | 2026-07-13 | T2.11 | c4a6682 | Properties 模板/多行编辑；Blame 修订范围/悬停日志；覆盖率 63/114；下一刀 T2.12 |
-| 2026-07-13 | T2.12 | 4acd365 | Repo Browser 远端写与高危确认；`svn info --xml --depth immediates` 锁列；真实 SVN 写操作/锁信息集成测；下一刀 T2.13 |
+| 2026-07-13 | T2.12 | 4acd365 + 1f444a5 | Repo Browser 远端写与高危确认；pending 确认快照；`svn info --xml --depth immediates` 锁列；路径 URL 编码；全量 673 绿；下一刀 T2.13 |
 
 ---
 
