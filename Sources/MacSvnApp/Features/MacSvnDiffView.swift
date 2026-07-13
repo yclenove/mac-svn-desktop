@@ -18,6 +18,10 @@ public struct MacSvnDiffView: View {
     @State private var mode: DiffMode = .unified
     @State private var r1Text = ""
     @State private var r2Text = ""
+    @State private var urlDiffTarget = ""
+    @State private var urlDiffURL = ""
+    @State private var urlDiffRevision = ""
+    @State private var showURLDiffSheet = false
     @State private var externalDiffTool: ExternalDiffToolConfiguration?
 
     private enum DiffMode: String, CaseIterable, Identifiable {
@@ -47,13 +51,8 @@ public struct MacSvnDiffView: View {
                     .font(embedded ? .headline : .largeTitle.weight(.semibold))
                 Spacer()
                 if !embedded {
-                    Picker("", selection: $mode) {
-                        ForEach(DiffMode.allCases) { item in
-                            Text(item.rawValue).tag(item)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 220)
+                    diffModePicker
+                        .frame(maxWidth: 220)
                     TextField("r1", text: $r1Text)
                         .frame(width: 72)
                         .textFieldStyle(.roundedBorder)
@@ -74,6 +73,9 @@ public struct MacSvnDiffView: View {
                         Task { await loadTwoFiles() }
                     }
                     .disabled(selectedPath == nil || comparePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("与 URL 比较…") {
+                        prepareURLDiff()
+                    }
                     Button("外置查看器") {
                         Task { await openExternal() }
                     }
@@ -82,10 +84,15 @@ public struct MacSvnDiffView: View {
                         Task { await reloadPaths() }
                     }
                 } else {
+                    diffModePicker
+                        .frame(width: 160)
                     Button("对比 BASE") {
                         Task { await loadAgainstBase() }
                     }
                     .disabled(selectedPath == nil)
+                    Button("与 URL 比较…") {
+                        prepareURLDiff()
+                    }
                     Button("外置") {
                         Task { await openExternal() }
                     }
@@ -168,6 +175,12 @@ public struct MacSvnDiffView: View {
         .onChange(of: navigator.pendingLogDiff) { _, _ in
             Task { await consumeNavigatorIntent() }
         }
+        .onChange(of: navigator.pendingDiffWithURL) { _, _ in
+            Task { await consumeNavigatorIntent() }
+        }
+        .sheet(isPresented: $showURLDiffSheet) {
+            urlDiffSheet
+        }
     }
 
     private func loadExternalPath(_ path: String, resetRevisionRange: Bool) async {
@@ -182,6 +195,29 @@ public struct MacSvnDiffView: View {
         }
         selectedPath = path
         await loadDiff(path: path)
+    }
+
+    private func embeddedSideBySideContent(_ viewModel: DiffViewModel) -> some View {
+        let columns = DiffViewModel.sideBySideColumnTexts(viewModel.sideBySideRows)
+        return ScrollView(.vertical) {
+            HStack(alignment: .top, spacing: 0) {
+                ScrollView(.horizontal) {
+                    Text(columns.left)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(12)
+                }
+                Divider()
+                ScrollView(.horizontal) {
+                    Text(columns.right)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(12)
+                }
+            }
+        }
     }
 
     private func ensureViewModel() async {
@@ -221,7 +257,12 @@ public struct MacSvnDiffView: View {
             case .error(let message):
                 ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
             case .loaded:
-                if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
+                if embedded, mode == .sideBySide,
+                   DiffPerformanceLimits.shouldUseEmbeddedSideBySide(
+                       rowCount: viewModel.sideBySideRows.count
+                   ) {
+                    embeddedSideBySideContent(viewModel)
+                } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
                     lineOrRowCount: viewModel.sideBySideRows.count,
                     embedded: embedded
                 ), mode == .sideBySide {
@@ -354,7 +395,88 @@ public struct MacSvnDiffView: View {
         }
     }
 
+    private var diffModePicker: some View {
+        Picker("显示模式", selection: $mode) {
+            ForEach(DiffMode.allCases) { item in
+                Text(item.rawValue).tag(item)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+    }
+
+    private var urlDiffSheet: some View {
+        NavigationStack {
+            Form {
+                TextField("本地目标", text: $urlDiffTarget)
+                TextField("仓库 URL", text: $urlDiffURL)
+                    .textContentType(.URL)
+                TextField("Revision（留空为 HEAD）", text: $urlDiffRevision)
+            }
+            .formStyle(.grouped)
+            .navigationTitle("与 URL 比较")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { showURLDiffSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("比较") {
+                        showURLDiffSheet = false
+                        Task { await loadURLDiff() }
+                    }
+                    .disabled(
+                        urlDiffTarget.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        urlDiffURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
+                }
+            }
+        }
+        .frame(minWidth: 420, minHeight: 220)
+    }
+
+    private func prepareURLDiff() {
+        urlDiffTarget = selectedPath ?? externalSelectedPath ?? ""
+        urlDiffURL = ""
+        urlDiffRevision = ""
+        showURLDiffSheet = true
+    }
+
+    private func loadURLDiff() async {
+        await ensureViewModel()
+        guard let viewModel else {
+            errorText = "请先选择有效工作副本"
+            showURLDiffSheet = true
+            return
+        }
+        await viewModel.loadWithURL(
+            target: urlDiffTarget,
+            url: urlDiffURL,
+            revisionText: urlDiffRevision
+        )
+        switch viewModel.state {
+        case .loaded:
+            statusText = "与 URL 比较：\(urlDiffURL)"
+            errorText = nil
+        case .error(let message):
+            errorText = "URL Diff 失败：\(message)"
+        default:
+            break
+        }
+    }
+
     private func consumeNavigatorIntent() async {
+        if let intent = navigator.consumePendingDiffWithURL() {
+            urlDiffTarget = intent.target ?? selectedPath ?? externalSelectedPath ?? ""
+            urlDiffURL = intent.url ?? ""
+            urlDiffRevision = intent.revision.map(String.init) ?? ""
+            if urlDiffTarget.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                urlDiffURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                showURLDiffSheet = true
+            } else {
+                await loadURLDiff()
+            }
+            return
+        }
         if let intent = navigator.consumePendingLogDiff() {
             switch intent.kind {
             case .previous:

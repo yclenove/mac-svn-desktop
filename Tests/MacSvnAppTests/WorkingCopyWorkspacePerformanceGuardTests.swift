@@ -32,6 +32,28 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testEmbeddedDiffOffersUnifiedAndSideBySideModePicker() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnDiffView.swift")
+        let occurrences = source.components(separatedBy: "diffModePicker").count - 1
+
+        XCTAssertGreaterThanOrEqual(
+            occurrences,
+            3,
+            "模式 Picker 必须由独立页与嵌入式 Diff 共用，确保左右分栏在真实工作区可达"
+        )
+        XCTAssertTrue(source.contains("if embedded, mode == .sideBySide"))
+        XCTAssertTrue(source.contains("sideBySideColumnTexts"))
+        XCTAssertTrue(source.contains("embeddedSideBySideContent"))
+        XCTAssertTrue(source.contains("shouldUseEmbeddedSideBySide"))
+    }
+
+    func testDiffWithURLContextMenuRequiresSingleSelection() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnChangesView.swift")
+
+        XCTAssertTrue(source.contains("case .diffWithURL:"))
+        XCTAssertTrue(source.contains("return selectedPaths.count == 1"))
+    }
+
     func testMergeUnifiedDiffUsesPerformanceLimitsAPI() throws {
         let source = try Self.readFeatureSource(named: "MacSvnMergeWizardView.swift")
         XCTAssertTrue(source.contains("DiffPerformanceLimits"))

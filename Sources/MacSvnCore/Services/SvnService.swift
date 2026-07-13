@@ -41,6 +41,24 @@ public actor SvnService {
         try await backend.diff(wc: wc, target: target, r1: r1, r2: r2)
     }
 
+    public func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential? = nil
+    ) async throws -> String {
+        try await retryingAuthentication(wc: credentialScope(for: url), initialAuth: auth) { auth in
+            try await backend.diffWithURL(
+                wc: wc,
+                target: target,
+                url: url,
+                revision: revision,
+                auth: auth
+            )
+        }
+    }
+
     public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
         try await backend.diffBetweenPaths(wc: wc, oldPath: oldPath, newPath: newPath)
     }

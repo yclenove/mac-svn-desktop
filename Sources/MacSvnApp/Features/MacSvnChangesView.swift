@@ -472,6 +472,8 @@ public struct MacSvnChangesView: View {
             return changesVM != nil && actionsVM?.isRunning != true
         case .commit, .diff, .showLog, .editConflicts:
             return true
+        case .diffWithURL:
+            return selectedPaths.count == 1 && actionsVM?.isRunning != true
         case .resolved:
             return !selectedMarkResolvedPaths.isEmpty && actionsVM?.isRunning != true
         case .getLock, .releaseLock, .breakLock:

@@ -7,7 +7,7 @@ import Foundation
 ///
 /// 约束：
 /// 1. 变更工作区禁止嵌套 Split；用固定 `HStack`/`VStack` + `frame`
-/// 2. 嵌入 Diff 必须单块 `Text`，禁止按行 `ForEach`
+/// 2. 嵌入 Diff 禁止按行 `ForEach`；左右分栏使用两块完整 `Text` 列
 /// 3. 超大 Diff 跳过逐行/并排结构解析，显示侧截断并引导外置工具
 public enum DiffPerformanceLimits: Sendable {
     /// 超过此字符数时跳过 `parseLines` / `parseSideBySideRows`，避免构建海量模型对象。
@@ -30,6 +30,10 @@ public enum DiffPerformanceLimits: Sendable {
         guard !embedded else { return false }
         guard lineOrRowCount > 0 else { return false }
         return lineOrRowCount <= maxPerLineSwiftUIRowCount
+    }
+
+    public static func shouldUseEmbeddedSideBySide(rowCount: Int) -> Bool {
+        rowCount > 0
     }
 
     /// 生成可安全塞进单个 `Text` 的展示字符串（超长截断）。

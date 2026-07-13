@@ -64,6 +64,58 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, ["--version", "--quiet"])
     }
 
+    func testDiffWithURLUsesURLAsOldAndWorkingCopyTargetAsNewWithAuthStdin() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("@@ diff\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let diff = try await backend.diffWithURL(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt@7",
+            revision: Revision(7),
+            auth: Credential(username: "alice", password: "secret")
+        )
+
+        XCTAssertEqual(diff, "@@ diff\n")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "diff", "--non-interactive",
+            "--username", "alice", "--password-from-stdin",
+            "--old", "file:///repo/trunk/README.txt@7",
+            "--new", "README.txt"
+        ])
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testDiffWithURLAppendsIndependentRevisionWhenURLHasNoPegRevision() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.diffWithURL(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt",
+            revision: Revision(7),
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single.map { Array($0.arguments.suffix(4)) }, [
+            "--old", "file:///repo/trunk/README.txt@7",
+            "--new", "README.txt"
+        ])
+    }
+
     func testStatusRunsInWorkingCopyAndParsesXml() async throws {
         let xml = """
         <status><target path="."><entry path="a.txt"><wc-status item="modified" revision="3"/></entry></target></status>

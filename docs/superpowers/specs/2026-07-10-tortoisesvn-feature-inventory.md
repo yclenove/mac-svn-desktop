@@ -85,7 +85,7 @@
 | 3 | Update to revision | `update [-r][-depth][--ignore-externals]` | rev、depth、omit externals | ✅ | T2 |
 | 4 | Commit | `status`→可选 `add`→`commit [-depth][--no-unlock]` | 勾选、未版本、Keep locks、说明历史 | ✅ | T1 |
 | 5 | Diff | 视觉 Diff（非仅 unified）；双任意文件 | 外置查看器、EOL/空白（进阶） | ✅ | T1 |
-| 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ❌ | T3 |
+| 6 | Diff with URL | 🔷 与 URL@rev | URL+rev 选择器 | ✅ URL+revision 表单；peg revision、svn+ssh user@host、认证重试；Unified/左右分栏复用；真实 SVN 跨 URL 验证 | T3 |
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |

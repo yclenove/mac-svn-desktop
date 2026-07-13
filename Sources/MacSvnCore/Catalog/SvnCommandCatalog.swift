@@ -165,6 +165,7 @@ public enum SvnCommandCatalog: Sendable {
         .update,
         .commit,
         .diff,
+        .diffWithURL,
         .showLog,
         .checkForModifications,
         .add,

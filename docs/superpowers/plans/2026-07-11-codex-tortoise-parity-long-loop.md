@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2，当前继续 T3.1。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2 与 T3.1，当前继续 T3.2。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T3.1 Diff with URL（#6）
+当前第一个未完成项：T3.2 Revision Graph 核心 + 设置 pattern（#9, S07, §4.6）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T2.15/G2 已提交，工作区应干净 |
-| 最近功能 tip | `4d5fff6` docs(T2.15/G2) #41 核验、T2 inventory/H 清单与全量测试闸门 |
-| 覆盖率 | **67/114 = 58.77%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **688** 绿（2026-07-13） |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅**（T2 全部通过，下一 **T3.1**） |
+| 工作区 | T3.1 实现与验收文档已更新，提交后应干净 |
+| 最近功能 tip | T3.1 功能提交后回填；前一闸门为 `4d5fff6` |
+| 覆盖率 | **68/114 = 59.65%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **710** 绿（2026-07-13；含真实 SVN T3.1 跨 URL 集成测） |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1 ✅；下一 **T3.2** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -61,6 +61,7 @@
 | **T2.13** | Filename case conflict repair | ✅ |
 | **T2.14** | Progress Auto-close 基础 | ✅ |
 | **T2.15 / G2** | T2 出门闸门 | ✅ |
+| **T3.1** | Diff with URL（#6） | ✅ |
 | T3.* | 专业能力（含 L03/L13/L15–L16、reintegrate、Revision Graph…） | |
 | T4.* | Overlay / Finder / Status Cache | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
@@ -104,7 +105,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.1**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T3.2**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -227,6 +228,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.13 | e646b1d | 大小写冲突修复策略、两步临时 SVN 改名、失败回滚、CFM/⌘K 向导；真实 SVN 提交验证；全量 683 绿；下一刀 T2.14 |
 | 2026-07-13 | T2.14 | 5a418c9 | Progress Auto-close 四档策略、设置持久化、更新/本地成功操作完成提示接线；全量 688 绿；下一刀 T2.15/G2 |
 | 2026-07-13 | T2.15/G2 | 4d5fff6 | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
+| 2026-07-13 | T3.1 | （提交后回填） | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
 
 ---
 

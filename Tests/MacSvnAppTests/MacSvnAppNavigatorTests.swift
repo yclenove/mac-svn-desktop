@@ -127,6 +127,72 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertEqual(navigator.pendingDiffPath, "/tmp/wc/a.swift")
     }
 
+    func testPerformDiffWithURLCarriesAtomicIntentAndConsumesItOnce() {
+        let navigator = MacSvnAppNavigator()
+        navigator.pendingDiffPath = "stale.txt"
+        navigator.pendingDiffRevision = Revision(99)
+        navigator.pendingLogDiff = PendingLogDiffIntent(
+            path: "old.txt",
+            revision: Revision(98),
+            kind: .previous
+        )
+        let result = navigator.perform(
+            command: .diffWithURL,
+            paths: ["/tmp/wc", "README.txt"],
+            options: SvnCommandOptions(
+                revision: Revision(7),
+                url: "file:///repo/trunk/README.txt"
+            )
+        )
+
+        XCTAssertEqual(result, .navigated(to: .diff))
+        XCTAssertEqual(navigator.pendingOpenPath, "/tmp/wc")
+        XCTAssertNil(navigator.pendingDiffPath)
+        XCTAssertNil(navigator.pendingDiffRevision)
+        XCTAssertNil(navigator.pendingLogDiff)
+        XCTAssertEqual(
+            navigator.pendingDiffWithURL,
+            PendingDiffWithURLIntent(
+                target: "README.txt",
+                url: "file:///repo/trunk/README.txt",
+                revision: Revision(7)
+            )
+        )
+        XCTAssertEqual(
+            navigator.consumePendingDiffWithURL(),
+            PendingDiffWithURLIntent(
+                target: "README.txt",
+                url: "file:///repo/trunk/README.txt",
+                revision: Revision(7)
+            )
+        )
+        XCTAssertNil(navigator.pendingDiffWithURL)
+    }
+
+    func testPerformDiffWithURLForRelativeTargetDoesNotOpenItAsWorkingCopy() {
+        let navigator = MacSvnAppNavigator()
+
+        _ = navigator.perform(command: .diffWithURL, paths: ["README.txt"])
+
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.pendingDiffWithURL,
+            PendingDiffWithURLIntent(target: "README.txt", url: nil, revision: nil)
+        )
+    }
+
+    func testPerformDiffWithURLDoesNotGuessFromMultipleRelativeTargets() {
+        let navigator = MacSvnAppNavigator()
+
+        _ = navigator.perform(command: .diffWithURL, paths: ["A.txt", "B.txt"])
+
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.pendingDiffWithURL,
+            PendingDiffWithURLIntent(target: nil, url: nil, revision: nil)
+        )
+    }
+
     func testPerformLockCommandsInjectIntentWithoutOpeningWC() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
         _ = navigator.perform(command: .breakLock, paths: ["locked.txt", "other.txt"])

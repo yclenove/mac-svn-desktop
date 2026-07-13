@@ -155,6 +155,24 @@ final class DiffViewModelTests: XCTestCase {
         ])
     }
 
+    func testSideBySideColumnTextsPreserveAlignedRowsWithoutPerLineViews() {
+        let rows = DiffViewModel.parseSideBySideRows("""
+        @@ -1,2 +1,2 @@
+        -old
+        +new
+         same
+        """)
+
+        let columns = DiffViewModel.sideBySideColumnTexts(rows)
+
+        XCTAssertEqual(columns.left.components(separatedBy: "\n").count, 3)
+        XCTAssertEqual(columns.right.components(separatedBy: "\n").count, 3)
+        XCTAssertTrue(columns.left.contains("1  old"))
+        XCTAssertTrue(columns.right.contains("1  new"))
+        XCTAssertTrue(columns.left.contains("2  same"))
+        XCTAssertTrue(columns.right.contains("2  same"))
+    }
+
     @MainActor
     func testLoadUnifiedDiffAlsoBuildsSideBySideRows() async {
         let diff = """

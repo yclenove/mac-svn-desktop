@@ -40,6 +40,11 @@ final class DiffPerformanceLimitsTests: XCTestCase {
         )
     }
 
+    func testEmbeddedSideBySideRequiresParsedRows() {
+        XCTAssertFalse(DiffPerformanceLimits.shouldUseEmbeddedSideBySide(rowCount: 0))
+        XCTAssertTrue(DiffPerformanceLimits.shouldUseEmbeddedSideBySide(rowCount: 1))
+    }
+
     func testTruncatedDisplayTextAppendsHintWhenOverLimit() {
         let raw = String(repeating: "a", count: DiffPerformanceLimits.maxDisplayCharacterCount + 50)
         let truncated = DiffPerformanceLimits.truncatedDisplayText(raw)

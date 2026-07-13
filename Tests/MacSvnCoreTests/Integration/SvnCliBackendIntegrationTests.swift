@@ -3,6 +3,28 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    @MainActor
+    func testDiffWithURLComparesWorkingCopyAgainstBranchURLAtRevision() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let viewModel = DiffViewModel(
+            workingCopy: fixture.workingCopy,
+            diffProvider: service
+        )
+
+        await viewModel.loadWithURL(
+            target: "README.txt",
+            url: "\(fixture.repositoryURL)/branches/feature-one/README.txt",
+            revisionText: "1"
+        )
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertTrue(viewModel.diffText.contains("-branch seed"), viewModel.diffText)
+        XCTAssertTrue(viewModel.diffText.contains("+hello"), viewModel.diffText)
+        XCTAssertTrue(viewModel.diffText.contains("branches/feature-one/README.txt"), viewModel.diffText)
+    }
+
     func testCreateAndApplyPatchRoundTripSelectedWorkingCopyChange() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

@@ -201,6 +201,25 @@ public enum SvnCommandBuilder {
         ])
     }
 
+    /// 工作副本目标与任意仓库 URL（可带 peg revision）的 Diff。
+    public static func diffWithURL(
+        url: String,
+        target: String,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "diff", "--non-interactive"
+        ] + authArguments + [
+            "--old", url,
+            "--new", localTargetWithPegDisambiguator(target)
+        ])
+    }
+
+    private static func localTargetWithPegDisambiguator(_ target: String) -> String {
+        guard target.contains("@"), !target.hasSuffix("@") else { return target }
+        return target + "@"
+    }
+
     /// 工作副本相对 BASE 的 Diff（显式 `-r BASE`，与无 -r 默认行为一致，便于 UI「对比 BASE」）
     public static func diffAgainstBase(target: String) -> SvnCommand {
         SvnCommand(arguments: ["diff", "--non-interactive", "-r", "BASE", target])

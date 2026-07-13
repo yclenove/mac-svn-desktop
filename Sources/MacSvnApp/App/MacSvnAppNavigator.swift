@@ -28,6 +28,19 @@ public struct PendingLogDiffIntent: Equatable, Sendable {
     }
 }
 
+/// Diff with URL 的一次性导航意图，避免 URL、目标和 revision 分散更新。
+public struct PendingDiffWithURLIntent: Equatable, Sendable {
+    public let target: String?
+    public let url: String?
+    public let revision: Revision?
+
+    public init(target: String?, url: String?, revision: Revision?) {
+        self.target = target
+        self.url = url
+        self.revision = revision
+    }
+}
+
 public struct PendingTransferIntent: Equatable, Sendable {
     public let command: SvnCommandID
     public let path: String?
@@ -64,6 +77,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingCommitMessage: String?
     @Published public var pendingDiffPath: String?
     @Published public var pendingDiffRevision: Revision?
+    @Published public var pendingDiffWithURL: PendingDiffWithURLIntent?
     /// 历史页 Diff 对比模式：与上一修订 / 与工作副本（L01/L02）。
     @Published public var pendingDiffCompareKind: PendingDiffCompareKind = .previous
     /// 历史页原子 Diff 意图（优先于分字段 pendingDiff*）。
@@ -129,22 +143,39 @@ public final class MacSvnAppNavigator: ObservableObject {
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
         let isPathInspectorCommand = command == .blame || command == .properties
-        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand,
+        let canInferWorkingCopyPath = command != .diffWithURL || (
+            paths.count >= 2 && (paths[0] as NSString).isAbsolutePath
+        )
+        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand, canInferWorkingCopyPath,
            let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
         }
-        if paths.count >= 2, !paths[1].isEmpty {
-            // 第二路径常用于 Diff 目标文件
-            pendingDiffPath = paths[1]
-        } else if let only = paths.first, command == .diff {
-            // 仅 Diff 注入 pendingDiffPath；CFM 等命令不应误触发 Diff 加载
-            pendingDiffPath = only
+        if command != .diffWithURL {
+            if paths.count >= 2, !paths[1].isEmpty {
+                // 第二路径常用于 Diff 目标文件
+                pendingDiffPath = paths[1]
+            } else if let only = paths.first, command == .diff {
+                // 仅 Diff 注入 pendingDiffPath；CFM 等命令不应误触发 Diff 加载
+                pendingDiffPath = only
+            }
+        }
+
+        if command == .diffWithURL {
+            pendingDiffPath = nil
+            pendingDiffRevision = nil
+            pendingDiffCompareKind = .previous
+            pendingLogDiff = nil
+            pendingDiffWithURL = PendingDiffWithURLIntent(
+                target: Self.diffWithURLTarget(paths),
+                url: options.url,
+                revision: options.revision
+            )
         }
 
         if let message = options.message, !message.isEmpty {
             pendingCommitMessage = message
         }
-        if let revision = options.revision {
+        if let revision = options.revision, command != .diffWithURL {
             pendingDiffRevision = revision
         }
 
@@ -266,6 +297,17 @@ public final class MacSvnAppNavigator: ObservableObject {
         }
     }
 
+    private static func diffWithURLTarget(_ paths: [String]) -> String? {
+        let nonEmpty = paths.filter { !$0.isEmpty }
+        if nonEmpty.count == 1 {
+            return nonEmpty[0]
+        }
+        guard nonEmpty.count == 2, (nonEmpty[0] as NSString).isAbsolutePath else {
+            return nil
+        }
+        return nonEmpty[1]
+    }
+
     public func handle(deepLink action: MacSvnDeepLinkAction) {
         switch action {
         case .open(let path):
@@ -327,6 +369,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingDiffRevision() -> Revision? {
         let value = pendingDiffRevision
         pendingDiffRevision = nil
+        return value
+    }
+
+    public func consumePendingDiffWithURL() -> PendingDiffWithURLIntent? {
+        let value = pendingDiffWithURL
+        pendingDiffWithURL = nil
         return value
     }
 

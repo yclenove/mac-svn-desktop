@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.1：Diff with URL（#6）
+- Affected: DiffWithURLValidationPolicy, DiffViewModel, SvnCommandBuilder/Backend/Service, MacSvnDiffView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
+- Impact: 新增 URL+revision 比较表单；留空 revision 使用 HEAD，支持 URL 末尾 peg revision 与 `svn+ssh://user@host`；拒绝 URL 内嵌密码；认证密码仅经 stdin 并支持一次重试；原子导航 intent 可从 CFM/⌘K 预填；嵌入式左右分栏使用两列完整文本并保留大 Diff 回退与请求代次保护；真实 SVN 验证跨 URL 输出方向；全量 710 绿；下一 T3.2
+
 - Summary: Tortoise 完美 Loop T2.15：通过 G2 出门闸门
 - Affected: tortoisesvn-feature-inventory, H-tortoise-parity, parity-coverage, perfect-loop/long-loop docs
 - Impact: 核验 #41 已由日志 L05/L06 的 `cat URL@rev`、另存和系统打开完整覆盖并升为 ✅；#15/#16 波次与 T3.8 对齐；T2 独占范围、H-T2 与全量 688 测试通过；下一 T3.1

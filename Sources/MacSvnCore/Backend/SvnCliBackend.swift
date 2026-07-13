@@ -282,6 +282,29 @@ public struct SvnCliBackend: SvnBackend {
         return String(decoding: result.stdout, as: UTF8.self)
     }
 
+    public func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String {
+        let request = try DiffWithURLValidationPolicy.validate(
+            workingCopy: wc,
+            target: target,
+            url: url,
+            revisionText: revision?.description ?? ""
+        )
+        let authArguments = try AuthArguments.build(credential: auth)
+        let command = SvnCommandBuilder.diffWithURL(
+            url: normalizedRemoteURL(request.url),
+            target: request.target,
+            authArguments: authArguments.arguments
+        )
+        let result = try await run(command, currentDirectory: wc.path, stdin: authArguments.stdin)
+        return String(decoding: result.stdout, as: UTF8.self)
+    }
+
     public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
         let result = try await run(
             SvnCommandBuilder.diffBetweenPaths(oldPath: oldPath, newPath: newPath),

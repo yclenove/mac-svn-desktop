@@ -28,6 +28,28 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log", "info"])
     }
 
+    func testDiffWithURLPromptsForCredentialsAndRetriesOnce() async throws {
+        let backend = MockSvnBackend()
+        backend.diffWithURLResult = "@@ diff"
+        backend.diffWithURLErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let diff = try await service.diffWithURL(
+            wc: wc,
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt@7",
+            revision: Revision(7)
+        )
+
+        XCTAssertEqual(diff, "@@ diff")
+        XCTAssertEqual(backend.calls.map(\.name), ["diffWithURL", "diffWithURL"])
+        XCTAssertEqual(backend.diffWithURLCredentials, [nil, Credential(username: "u", password: "p")])
+        let requestedScopes = await provider.recordedWorkingCopies()
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk/README.txt@7")!])
+    }
+
     func testBlameForwardsToBackend() async throws {
         let backend = MockSvnBackend()
         backend.blameResult = [
@@ -915,6 +937,7 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedMergeCredentials: [Credential?] = []
     private var recordedResolveAccepts: [ResolveAccept] = []
     private var recordedPatchFiles: [URL] = []
+    private var recordedDiffWithURLCredentials: [Credential?] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -922,6 +945,12 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedCalls
+    }
+
+    var diffWithURLCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedDiffWithURLCredentials
     }
 
     var updateCredentials: [Credential?] {
@@ -1234,6 +1263,21 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         record("diff")
         return diffResult
+    }
+
+    var diffWithURLResult = ""
+    var diffWithURLErrors: [SvnError] = []
+
+    func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String {
+        let error = recordDiffWithURL(auth: auth)
+        if let error { throw error }
+        return diffWithURLResult
     }
 
     func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
@@ -1592,6 +1636,15 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         recordedCalls.append(Call(name: name))
         recordedMergeCredentials.append(auth)
         let error = mergeErrors.isEmpty ? nil : mergeErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordDiffWithURL(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "diffWithURL"))
+        recordedDiffWithURLCredentials.append(auth)
+        let error = diffWithURLErrors.isEmpty ? nil : diffWithURLErrors.removeFirst()
         callsLock.unlock()
         return error
     }

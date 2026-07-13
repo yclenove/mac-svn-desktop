@@ -24,6 +24,13 @@ public protocol SvnBackend: Sendable {
     func cleanup(wc: URL, options: SvnCleanupOptions) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String
     /// 双路径 Diff（`--old` / `--new`）
     func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String
     /// 显式对比 BASE
@@ -66,6 +73,16 @@ public protocol SvnBackend: Sendable {
 }
 
 public extension SvnBackend {
+    func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String {
+        throw SvnError.other(code: nil, stderr: "diffWithURLUnavailable")
+    }
+
     func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         try await list(url: url, depth: depth, auth: auth)
     }

@@ -3,11 +3,28 @@ import Observation
 
 public protocol DiffProviding: Sendable {
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String
+    func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String
     func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String
     func diffAgainstBase(wc: URL, target: String) async throws -> String
 }
 
 extension DiffProviding {
+    public func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String {
+        throw SvnError.other(code: nil, stderr: "diffWithURLUnavailable")
+    }
+
     /// 默认回退：未实现双路径时抛错（生产路径由 `SvnService` 覆盖）
     public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
         throw SvnError.other(code: nil, stderr: "diffBetweenPathsUnavailable")
@@ -133,12 +150,23 @@ public struct SideBySideDiffRow: Equatable, Identifiable, Sendable {
     }
 }
 
+public struct SideBySideDiffColumns: Equatable, Sendable {
+    public let left: String
+    public let right: String
+
+    public init(left: String, right: String) {
+        self.left = left
+        self.right = right
+    }
+}
+
 @MainActor
 @Observable
 public final class DiffViewModel {
     private let workingCopy: URL
     private let diffProvider: any DiffProviding
     private let externalDiffOpener: (any ExternalDiffOpening)?
+    private var requestGeneration = 0
 
     public private(set) var state: DiffViewState = .idle
     public private(set) var externalDiffState: ExternalDiffState = .idle
@@ -157,31 +185,66 @@ public final class DiffViewModel {
     }
 
     public func load(target: String, r1: Revision? = nil, r2: Revision? = nil) async {
-        state = .loading
+        let generation = beginLoad()
 
         do {
             let rawDiff = try await diffProvider.diff(wc: workingCopy, target: target, r1: r1, r2: r2)
+            guard generation == requestGeneration else { return }
             applyLoadedDiff(rawDiff, target: target)
         } catch {
+            guard generation == requestGeneration else { return }
+            failLoad(error)
+        }
+    }
+
+    /// 工作副本目标与任意仓库 URL（可带 peg revision）的 Diff。
+    public func loadWithURL(
+        target: String,
+        url: String,
+        revisionText: String = "",
+        auth: Credential? = nil
+    ) async {
+        let generation = beginLoad()
+
+        do {
+            let request = try DiffWithURLValidationPolicy.validate(
+                workingCopy: workingCopy,
+                target: target,
+                url: url,
+                revisionText: revisionText
+            )
+            let rawDiff = try await diffProvider.diffWithURL(
+                wc: request.workingCopy,
+                target: request.target,
+                url: request.url,
+                revision: request.revision,
+                auth: auth
+            )
+            guard generation == requestGeneration else { return }
+            applyLoadedDiff(rawDiff, target: request.target)
+        } catch {
+            guard generation == requestGeneration else { return }
             failLoad(error)
         }
     }
 
     /// 显式对比 BASE（`svn diff -r BASE`）
     public func loadAgainstBase(target: String) async {
-        state = .loading
+        let generation = beginLoad()
 
         do {
             let rawDiff = try await diffProvider.diffAgainstBase(wc: workingCopy, target: target)
+            guard generation == requestGeneration else { return }
             applyLoadedDiff(rawDiff, target: target)
         } catch {
+            guard generation == requestGeneration else { return }
             failLoad(error)
         }
     }
 
     /// 双任意文件 Diff（`svn diff --old --new`）
     public func loadBetweenPaths(oldPath: String, newPath: String) async {
-        state = .loading
+        let generation = beginLoad()
 
         do {
             let rawDiff = try await diffProvider.diffBetweenPaths(
@@ -189,19 +252,28 @@ public final class DiffViewModel {
                 oldPath: oldPath,
                 newPath: newPath
             )
+            guard generation == requestGeneration else { return }
             applyLoadedDiff(rawDiff, target: newPath)
         } catch {
+            guard generation == requestGeneration else { return }
             failLoad(error)
         }
     }
 
     /// 清空展示但不销毁实例（嵌入工作区切换选中时用）。
     public func clearDisplay() {
+        requestGeneration += 1
         diffText = ""
         lines = []
         sideBySideRows = []
         state = .idle
         externalDiffState = .idle
+    }
+
+    private func beginLoad() -> Int {
+        requestGeneration += 1
+        state = .loading
+        return requestGeneration
     }
 
     public func openExternalDiff(
@@ -263,6 +335,20 @@ public final class DiffViewModel {
             let text = String(line)
             return UnifiedDiffLine(id: index, text: text, kind: classify(text))
         }
+    }
+
+    /// 嵌入工作区的左右分栏使用两块完整 Text，避免为每一行创建 SwiftUI 节点。
+    nonisolated public static func sideBySideColumnTexts(_ rows: [SideBySideDiffRow]) -> SideBySideDiffColumns {
+        func displayText(_ cell: SideBySideDiffCell?) -> String {
+            guard let cell else { return "" }
+            let number = cell.lineNumber.map(String.init) ?? ""
+            return number.isEmpty ? cell.text : "\(number)  \(cell.text)"
+        }
+
+        return SideBySideDiffColumns(
+            left: rows.map { displayText($0.left) }.joined(separator: "\n"),
+            right: rows.map { displayText($0.right) }.joined(separator: "\n")
+        )
     }
 
     nonisolated public static func parseSideBySideRows(_ diff: String) -> [SideBySideDiffRow] {

@@ -72,7 +72,7 @@
 
 ## T3 — 专业能力
 
-- [ ] Diff with URL（#6）
+- [x] Diff with URL（#6）：URL+revision 表单（留空为 HEAD）；peg revision 与 `svn+ssh://user@host`；认证 stdin/重试；Unified/左右分栏；真实 SVN 跨 URL 验证
 - [ ] Revision Graph（#9）
 - [ ] Change Lists（#38）
 - [ ] Externals（#39）
