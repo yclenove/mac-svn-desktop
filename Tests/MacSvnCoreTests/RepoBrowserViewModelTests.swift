@@ -59,10 +59,10 @@ final class RepoBrowserViewModelTests: XCTestCase {
         await viewModel.preview(entry: entry, baseURL: "file:///repo/trunk")
         let calls = await provider.recordedCatCalls()
 
-        XCTAssertEqual(viewModel.previewState(for: "file:///repo/trunk/中文文件.txt"), .loaded("中文内容\n"))
+        XCTAssertEqual(viewModel.previewState(for: "file:///repo/trunk/%E4%B8%AD%E6%96%87%E6%96%87%E4%BB%B6.txt"), .loaded("中文内容\n"))
         XCTAssertEqual(calls, [
             RepoCatCall(
-                url: "file:///repo/trunk/中文文件.txt",
+                url: "file:///repo/trunk/%E4%B8%AD%E6%96%87%E6%96%87%E4%BB%B6.txt",
                 revision: nil,
                 sizeLimit: RepoBrowserViewModel.defaultPreviewSizeLimit,
                 auth: nil
@@ -276,7 +276,7 @@ final class RepoBrowserViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testRemoteOperationsCallProviderUpdateStateAndRefreshChildren() async {
+    func testRemoteOperationsCallProviderUpdateStateAndRefreshChildren() async throws {
         let provider = FakeRepoBrowserProvider(
             listResult: .success([
                 RemoteEntry(name: "docs", path: "docs", kind: .directory, size: nil, revision: Revision(5), author: nil, date: nil)
@@ -305,7 +305,9 @@ final class RepoBrowserViewModelTests: XCTestCase {
         )
 
         await viewModel.createDirectory(named: " docs ", in: "file:///repo/trunk", message: "创建目录：docs")
-        await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件", confirmed: true)
+        await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件")
+        let deleteConfirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(deleteConfirmation)
         await viewModel.copy(
             entry: entry,
             baseURL: "file:///repo/trunk",
@@ -316,9 +318,10 @@ final class RepoBrowserViewModelTests: XCTestCase {
             entry: entry,
             baseURL: "file:///repo/trunk",
             to: "file:///repo/trunk/new.txt",
-            message: "移动旧文件",
-            confirmed: true
+            message: "移动旧文件"
         )
+        let moveConfirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(moveConfirmation)
         let operationCalls = await provider.recordedRemoteOperationCalls()
         let listCalls = await provider.recordedListCalls()
 
@@ -427,7 +430,7 @@ final class RepoBrowserViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testRenameRequiresConfirmationThenUsesRemoteMove() async {
+    func testRenameRequiresConfirmationThenUsesRemoteMove() async throws {
         let provider = FakeRepoBrowserProvider(
             listResult: .success([]),
             catResult: .success(Data()),
@@ -452,8 +455,7 @@ final class RepoBrowserViewModelTests: XCTestCase {
             entry: entry,
             baseURL: "file:///repo/trunk",
             to: "new.txt",
-            message: "重命名",
-            confirmed: false
+            message: "重命名"
         )
         XCTAssertEqual(
             viewModel.remoteOperationState,
@@ -464,13 +466,8 @@ final class RepoBrowserViewModelTests: XCTestCase {
             ))
         )
 
-        await viewModel.rename(
-            entry: entry,
-            baseURL: "file:///repo/trunk",
-            to: "new.txt",
-            message: "重命名",
-            confirmed: true
-        )
+        let confirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(confirmation)
 
         let calls = await provider.recordedRemoteOperationCalls()
         XCTAssertEqual(viewModel.remoteOperationState, .completed(.rename, revision: Revision(3)))
@@ -483,6 +480,55 @@ final class RepoBrowserViewModelTests: XCTestCase {
                 auth: nil
             )
         ])
+    }
+
+    @MainActor
+    func testStaleRemoteConfirmationCannotExecuteAfterPendingOperationChanges() async throws {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(4))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let first = RemoteEntry(name: "first.txt", path: "first.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+        let second = RemoteEntry(name: "second.txt", path: "second.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+
+        await viewModel.delete(entry: first, baseURL: "file:///repo/trunk", message: "删除 first")
+        let stale = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.delete(entry: second, baseURL: "file:///repo/trunk", message: "删除 second")
+        await viewModel.confirmRemoteOperation(stale)
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(calls, [])
+    }
+
+    @MainActor
+    func testRemoteEntryPathsEncodeSpecialCharactersForProviderURLs() async throws {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(5))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(name: "a#b?.txt", path: "a#b?.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+
+        await viewModel.copy(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "file:///repo/branches/copy.txt",
+            message: "复制特殊字符文件"
+        )
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(calls.first?.source, "file:///repo/trunk/a%23b%3F.txt")
     }
 
     private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {

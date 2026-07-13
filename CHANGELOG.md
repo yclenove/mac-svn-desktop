@@ -6,6 +6,10 @@
 - Affected: RemoteInfoXMLParser, RepoRemoteWriteConfirmationPolicy, RepoBrowserViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnRepoBrowserView, Tests/*, docs/*
 - Impact: Repo Browser 支持远端 mkdir/delete/copy/move/rename；删除/移动/重命名由 Core 强制二次确认并展示源/目标；通过单次 `svn info --xml --depth immediates` 展示 owner/comment/created 锁信息；真实 SVN 远端写与锁集成验证；下一 T2.13
 
+- Summary: T2.12 审查修复：确认快照绑定与远端路径 URL 编码
+- Affected: RepoBrowserViewModel, MacSvnRepoBrowserView, RepoBrowserViewModelTests
+- Impact: 移除 `confirmed` 绕过入口；确认只接受当前 pending operation 的不可变 source/destination/message/auth 快照；`#`、`?`、中文等远端条目路径通过 URL 组件编码后再访问；全量 673 测试绿
+
 - Summary: Tortoise 完美 Loop T2.11：Properties 模板/编辑与 Blame 修订范围/悬停日志（#35,#31）
 - Affected: PropertyViewModel, BlameViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnPropertiesView, MacSvnBlameView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
 - Impact: 属性 CRUD/多行编辑/文件目录模板与 CFM/⌘K 路径意图齐全；Blame 支持 `-r X:Y` 和行悬停 revision 日志；Blame differences 仍属 T3.9；下一 T2.12

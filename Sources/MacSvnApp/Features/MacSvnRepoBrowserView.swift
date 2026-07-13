@@ -93,12 +93,12 @@ public struct MacSvnRepoBrowserView: View {
             transferSheet
         }
         .alert(
-            "确认远端\(remoteWriteKind.rawValue)",
+            "确认远端操作",
             isPresented: $showRemoteWriteConfirmation,
             presenting: pendingRemoteWriteConfirmation
-        ) { _ in
-            Button("确认\(remoteWriteKind.rawValue)", role: .destructive) {
-                Task { await executeRemoteWrite(confirmed: true) }
+        ) { confirmation in
+            Button("确认", role: .destructive) {
+                Task { await confirmRemoteWrite(confirmation) }
             }
             Button("取消", role: .cancel) {
                 browserVM?.cancelRemoteOperationConfirmation()
@@ -333,7 +333,7 @@ public struct MacSvnRepoBrowserView: View {
                 Spacer()
                 Button("取消") { showRemoteWriteSheet = false }
                 Button(requiresRemoteWriteConfirmation ? "继续" : "执行并提交") {
-                    Task { await executeRemoteWrite(confirmed: false) }
+                    Task { await executeRemoteWrite() }
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canSubmitRemoteWrite)
@@ -486,7 +486,7 @@ public struct MacSvnRepoBrowserView: View {
         showRemoteWriteSheet = true
     }
 
-    private func executeRemoteWrite(confirmed: Bool) async {
+    private func executeRemoteWrite() async {
         guard let browserVM else { return }
         let message = remoteWriteMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         switch remoteWriteKind {
@@ -497,8 +497,7 @@ public struct MacSvnRepoBrowserView: View {
             await browserVM.delete(
                 entry: selectedEntry,
                 baseURL: rootURL,
-                message: message,
-                confirmed: confirmed
+                message: message
             )
         case .copy:
             guard let selectedEntry else { return }
@@ -514,8 +513,7 @@ public struct MacSvnRepoBrowserView: View {
                 entry: selectedEntry,
                 baseURL: rootURL,
                 to: remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines),
-                message: message,
-                confirmed: confirmed
+                message: message
             )
         case .rename:
             guard let selectedEntry else { return }
@@ -523,8 +521,7 @@ public struct MacSvnRepoBrowserView: View {
                 entry: selectedEntry,
                 baseURL: rootURL,
                 to: remoteWriteName,
-                message: message,
-                confirmed: confirmed
+                message: message
             )
         }
         if case .confirmationRequired(let confirmation) = browserVM.remoteOperationState {
@@ -534,6 +531,18 @@ public struct MacSvnRepoBrowserView: View {
         }
         applyRemoteOperationStatus(browserVM.remoteOperationState)
         if case .completed = browserVM.remoteOperationState {
+            showRemoteWriteSheet = false
+            selectedEntry = nil
+            pendingRemoteWriteConfirmation = nil
+        }
+    }
+
+    private func confirmRemoteWrite(_ confirmation: RepoRemoteWriteConfirmation) async {
+        guard let browserVM else { return }
+        await browserVM.confirmRemoteOperation(confirmation)
+        applyRemoteOperationStatus(browserVM.remoteOperationState)
+        if case .completed = browserVM.remoteOperationState {
+            showRemoteWriteConfirmation = false
             showRemoteWriteSheet = false
             selectedEntry = nil
             pendingRemoteWriteConfirmation = nil

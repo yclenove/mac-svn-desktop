@@ -85,9 +85,21 @@ public final class RepoBrowserViewModel {
     private var logEntriesByURL: [String: [LogEntry]] = [:]
     private var nextLogRevisionByURL: [String: Revision] = [:]
     private var hasMoreLogByURL: [String: Bool] = [:]
+    private struct PendingRemoteOperation {
+        let confirmation: RepoRemoteWriteConfirmation
+        let refreshURL: String
+        let message: String
+        let auth: Credential?
+    }
+
+    private var pendingRemoteOperation: PendingRemoteOperation?
     public private(set) var bookmarks: [RepoBookmark] = []
     public private(set) var bookmarkState: RepoBookmarkState = .idle
     public private(set) var remoteOperationState: RepoRemoteOperationState = .idle
+
+    public var confirmation: RepoRemoteWriteConfirmation? {
+        pendingRemoteOperation?.confirmation
+    }
 
     public init(
         listProvider: any RepoListProviding,
@@ -271,11 +283,16 @@ public final class RepoBrowserViewModel {
         entry: RemoteEntry,
         baseURL: String,
         message: String,
-        auth: Credential? = nil,
-        confirmed: Bool = false
+        auth: Credential? = nil
     ) async {
         let url = remoteURL(baseURL: baseURL, entryPath: entry.path)
-        guard confirmed || requestConfirmation(for: .delete, sourceURL: url) == nil else {
+        guard !requestConfirmation(
+            for: .delete,
+            sourceURL: url,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
             return
         }
         await performRemoteOperation(.delete, refreshURL: baseURL, auth: auth) { provider in
@@ -301,15 +318,17 @@ public final class RepoBrowserViewModel {
         baseURL: String,
         to destinationURL: String,
         message: String,
-        auth: Credential? = nil,
-        confirmed: Bool = false
+        auth: Credential? = nil
     ) async {
         let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
-        guard confirmed || requestConfirmation(
+        guard !requestConfirmation(
             for: .move,
             sourceURL: sourceURL,
-            destinationURL: destinationURL
-        ) == nil else {
+            destinationURL: destinationURL,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
             return
         }
         await performRemoteOperation(.move, refreshURL: baseURL, auth: auth) { provider in
@@ -322,8 +341,7 @@ public final class RepoBrowserViewModel {
         baseURL: String,
         to newName: String,
         message: String,
-        auth: Credential? = nil,
-        confirmed: Bool = false
+        auth: Credential? = nil
     ) async {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty,
@@ -338,11 +356,14 @@ public final class RepoBrowserViewModel {
 
         let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
         let destinationURL = remoteURL(baseURL: baseURL, entryPath: trimmedName)
-        guard confirmed || requestConfirmation(
+        guard !requestConfirmation(
             for: .rename,
             sourceURL: sourceURL,
-            destinationURL: destinationURL
-        ) == nil else {
+            destinationURL: destinationURL,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
             return
         }
         await performRemoteOperation(.rename, refreshURL: baseURL, auth: auth) { provider in
@@ -354,7 +375,44 @@ public final class RepoBrowserViewModel {
         guard case .confirmationRequired = remoteOperationState else {
             return
         }
+        pendingRemoteOperation = nil
         remoteOperationState = .idle
+    }
+
+    public func confirmRemoteOperation(_ confirmation: RepoRemoteWriteConfirmation) async {
+        guard let pendingRemoteOperation,
+              pendingRemoteOperation.confirmation == confirmation,
+              remoteOperationState == .confirmationRequired(confirmation)
+        else {
+            return
+        }
+
+        self.pendingRemoteOperation = nil
+        switch confirmation.operation {
+        case .delete:
+            await performRemoteOperation(.delete, refreshURL: pendingRemoteOperation.refreshURL, auth: pendingRemoteOperation.auth) { provider in
+                try await provider.delete(
+                    url: confirmation.sourceURL,
+                    message: pendingRemoteOperation.message,
+                    auth: pendingRemoteOperation.auth
+                )
+            }
+        case .move, .rename:
+            guard let destinationURL = confirmation.destinationURL else {
+                remoteOperationState = .error("missingRemoteDestination")
+                return
+            }
+            await performRemoteOperation(confirmation.operation, refreshURL: pendingRemoteOperation.refreshURL, auth: pendingRemoteOperation.auth) { provider in
+                try await provider.move(
+                    source: confirmation.sourceURL,
+                    destination: destinationURL,
+                    message: pendingRemoteOperation.message,
+                    auth: pendingRemoteOperation.auth
+                )
+            }
+        case .mkdir, .copy:
+            return
+        }
     }
 
     public func loadBookmarks() async {
@@ -434,22 +492,31 @@ public final class RepoBrowserViewModel {
     private func requestConfirmation(
         for operation: RepoRemoteOperation,
         sourceURL: String,
-        destinationURL: String? = nil
-    ) -> RepoRemoteWriteConfirmation? {
+        destinationURL: String? = nil,
+        message: String,
+        refreshURL: String,
+        auth: Credential?
+    ) -> Bool {
         let confirmation = RepoRemoteWriteConfirmationPolicy.confirmation(
             for: operation,
             sourceURL: sourceURL,
             destinationURL: destinationURL
         )
         if let confirmation {
+            pendingRemoteOperation = PendingRemoteOperation(
+                confirmation: confirmation,
+                refreshURL: refreshURL,
+                message: message,
+                auth: auth
+            )
             remoteOperationState = .confirmationRequired(confirmation)
         }
-        return confirmation
+        return confirmation != nil
     }
 
     private func remoteURL(baseURL: String, entryPath: String) -> String {
-        if baseURL.hasSuffix("/") {
-            return baseURL + entryPath
+        if let base = URL(string: baseURL) {
+            return base.appendingPathComponent(entryPath, isDirectory: false).absoluteString
         }
 
         return baseURL + "/" + entryPath
