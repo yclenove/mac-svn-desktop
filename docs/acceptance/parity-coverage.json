@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T05:20:02Z",
+  "generated_at": "2026-07-13T05:26:39Z",
   "total": 114,
-  "done": 66,
+  "done": 67,
   "partial": 14,
-  "missing": 34,
-  "coverage": 0.578947,
-  "coverage_percent": 57.89,
+  "missing": 33,
+  "coverage": 0.587719,
+  "coverage_percent": 58.77,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 34,
+      "done": 35,
       "partial": 1,
-      "missing": 11
+      "missing": 10
     },
     "log": {
       "total": 20,
@@ -520,8 +520,8 @@
       "key": "cmd.41",
       "section": "command",
       "title": "Save revision / Open / Open with",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开",
+      "status": "done"
     },
     {
       "key": "cmd.42",

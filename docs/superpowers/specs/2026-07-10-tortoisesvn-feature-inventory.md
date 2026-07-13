@@ -94,8 +94,8 @@
 | 12 | Resolved | `resolved` | 多选 | ✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除 | T2 |
 | 13 | Rename | `rename` | 新名校验 | ✅ | T1 |
 | 14 | Delete | `delete` | 确认 | ✅ | T1 |
-| 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T2 |
-| 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T2 |
+| 15 | Delete (keep local) | 🔷 解除版本保留文件 | 确认 | ❌ | T3 |
+| 16 | Delete unversioned | 🔷 清未版本 | 预览列表 | ❌ | T3 |
 | 17 | Revert | `status`→勾选→`revert [-R]` | 勾选、单项 Diff | ✅ | T1 |
 | 18 | Cleanup | `cleanup` | 刷新壳层/断锁等选项 | ✅ | T1 |
 | 19 | Get Lock | `lock -m [--force]` | 注释、steal | ✅ 锁定页+CFM/⌘K；注释与夺锁确认 | T2 |
@@ -120,7 +120,7 @@
 | 38 | Change Lists | changelist 分组 | 提交按列表 | ❌ | T3 |
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ❌ | T3 |
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
-| 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ❌ | T2 |
+| 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开 | T2 |
 | 42 | Merge revision to… | 从日志拣选合并 | 目标 WC | ❌ | T3 |
 | 43 | Import in Place | DUG 就地导入 | 向导 | ✅ 导入后临时检出并原子替换目录内容 | T2 |
 | 44 | Remove from version control | 导出式去 `.svn` | 确认 | ✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件 | T2 |

@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T2.15：通过 G2 出门闸门
+- Affected: tortoisesvn-feature-inventory, H-tortoise-parity, parity-coverage, perfect-loop/long-loop docs
+- Impact: 核验 #41 已由日志 L05/L06 的 `cat URL@rev`、另存和系统打开完整覆盖并升为 ✅；#15/#16 波次与 T3.8 对齐；T2 独占范围、H-T2 与全量 688 测试通过；下一 T3.1
+
 - Summary: Tortoise 完美 Loop T2.14：Progress Auto-close 基础策略（§4.7）
 - Affected: ProgressAutoClosePolicy, AppSettings/SettingsStore, MacSvnSettingsView, MacSvnChangesView, Tests/*, docs/*
 - Impact: 提供手动/无合并增删/无冲突/无错误四档持久化策略；更新结果按冲突与合并增删判定，本地成功操作可自动收起，错误提示始终保留；下一 T2.15/G2
