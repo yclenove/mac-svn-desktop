@@ -32,10 +32,10 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T2.10 实现待提交；保留覆盖率报表更新 |
-| 最近功能 tip | `a877356` feat(T2.7) Lock/Unlock/Break；docs 回填 `23299fc` |
+| 工作区 | T2.10 已提交，工作区应干净 |
+| 最近功能 tip | `ab0d64a` feat(T2.10) Create/Apply Patch |
 | 覆盖率 | **60/114 = 52.63%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 交接前全量约 **625** 绿（以 tip 上 `swift test` 为准） |
+| 测试 | 全量 **658** 绿（2026-07-13） |
 | Wave | **G0 ✅ · G1 ✅ · T2 进行中**（T2.1–T2.10 ✅，下一 **T2.11**） |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
@@ -55,7 +55,7 @@
 |------|------|------|
 | **T2.8** | Branch-Tag / Switch / Merge+dry-run（#22–24） | ✅ |
 | **T2.9** | Export / Import / Import in Place / Relocate / Remove from VC | ✅ |
-| **T2.10** | Create / Apply Patch | **当前实现已完成，待提交** |
+| **T2.10** | Create / Apply Patch | ✅ |
 | T2.11 | Properties 模板；Blame 悬停 | |
 | T2.12 | Repo Browser 远端写 + 高危确认 + 锁列 | |
 | T2.13 | Filename case conflict repair | |
@@ -221,7 +221,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 |------|------|--------|------|
 | 2026-07-11 | 交接 | 425cba7 | Cursor→Codex；下一刀 T2.8；覆盖率 45/114 |
 | 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；覆盖率 57/114；下一刀 T2.10 |
-| 2026-07-13 | T2.10 | （提交后回填） | Create/Apply Patch；真实 SVN 往返和 `.rej` 冲突报告；覆盖率 60/114；下一刀 T2.11 |
+| 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；真实 SVN 往返和 `.rej` 冲突报告；覆盖率 60/114；下一刀 T2.11 |
 
 ---
 
