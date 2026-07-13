@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T2.13 实现完成，文档回填与提交收口中 |
-| 最近功能 tip | T2.13：大小写冲突修复向导与临时改名回滚 |
+| 工作区 | T2.13 已提交，工作区应干净 |
+| 最近功能 tip | `e646b1d` feat(T2.13) 大小写冲突修复向导与临时改名回滚 |
 | 覆盖率 | **66/114 = 57.89%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **683** 绿（2026-07-13） |
 | Wave | **G0 ✅ · G1 ✅ · T2 进行中**（T2.1–T2.13 ✅，下一 **T2.14**） |
@@ -224,7 +224,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；真实 SVN 往返和 `.rej` 冲突报告；覆盖率 60/114；下一刀 T2.11 |
 | 2026-07-13 | T2.11 | c4a6682 | Properties 模板/多行编辑；Blame 修订范围/悬停日志；覆盖率 63/114；下一刀 T2.12 |
 | 2026-07-13 | T2.12 | 4acd365 + 1f444a5 | Repo Browser 远端写与高危确认；pending 确认快照；`svn info --xml --depth immediates` 锁列；路径 URL 编码；全量 673 绿；下一刀 T2.13 |
-| 2026-07-13 | T2.13 | （提交后回填） | 大小写冲突修复策略、两步临时 SVN 改名、失败回滚、CFM/⌘K 向导；真实 SVN 提交验证；全量 683 绿；下一刀 T2.14 |
+| 2026-07-13 | T2.13 | e646b1d | 大小写冲突修复策略、两步临时 SVN 改名、失败回滚、CFM/⌘K 向导；真实 SVN 提交验证；全量 683 绿；下一刀 T2.14 |
 
 ---
 

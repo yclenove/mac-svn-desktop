@@ -256,7 +256,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；路径策略、PatchViewModel、搁置页/⌘K、真实 SVN 往返与 `.rej` 测试 | #33/#34、D22 ✅ | 下一 T2.11 |
 | 2026-07-13 | T2.11 | c4a6682 | Properties CRUD/模板/多行编辑；Blame `-r` 范围与悬停日志；CFM/⌘K 路径意图；真实 SVN 测试 | #31/#35、D17 ✅；D23 保持 🟡 | Blame differences→T3.9；下一 T2.12 |
 | 2026-07-13 | T2.12 | 4acd365 + 1f444a5 | Repo Browser 远端 mkdir/delete/copy/move/rename；pending 确认快照；远端 owner/comment/created 锁列；全量 673 绿，含真实 SVN 写操作/锁信息集成测 | #10、D24 ✅；§4.5 远端写/锁列 ✅ | 下一 T2.13 |
-| 2026-07-13 | T2.13 | （提交后回填） | Filename case conflict repair：策略校验、临时 SVN 改名中转、失败回滚、CFM/⌘K 向导与真实 SVN 提交验证 | #46、D15 ✅；全量 683 绿 | 下一 T2.14 |
+| 2026-07-13 | T2.13 | e646b1d | Filename case conflict repair：策略校验、临时 SVN 改名中转、失败回滚、CFM/⌘K 向导与真实 SVN 提交验证 | #46、D15 ✅；全量 683 绿 | 下一 T2.14 |
 
 ---
 
