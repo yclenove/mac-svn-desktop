@@ -83,7 +83,7 @@
 - [x] Compare revisions / Blame differences（#40, L03）：双修订 blame 元数据与 `svn diff -r OLD:NEW` 行对齐，展示左右作者/日期/内容、增删改与归属变化；支持变化筛选、BASE 和日志 PREV:REV；CFM/⌘K/L03 可达；仓库 URL@peg 与真实 SVN 双提交往返验证
 - [x] 日志 Edit author/message + rev props（L15,L16）：查看全部修订属性；编辑作者/日志说明且仅写变化项；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示；日志右键/详情/⌘K 可达；真实 SVN 无 hook 拒绝与中文往返验证
 - [x] 日志统计 / 离线缓存（L18、S13）：当前过滤结果统计；在线缓存按仓库目标与 stop-on-copy 隔离；容量/保留期策略、网络/认证/环境失败回退、强制离线读取、设置页清理
-- [ ] **G3**：inventory T3 全 ✅；本节勾选；全量测试绿
+- [x] **G3**：inventory T3 全 ✅；本节勾选；全量 798 tests 绿；覆盖率 92/114（80.70%）
 
 ---
 

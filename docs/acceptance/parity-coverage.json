@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-13T13:36:26Z",
+  "generated_at": "2026-07-13T13:42:12Z",
   "total": 114,
-  "done": 91,
-  "partial": 10,
+  "done": 92,
+  "partial": 9,
   "missing": 13,
-  "coverage": 0.798246,
-  "coverage_percent": 79.82,
+  "coverage": 0.807018,
+  "coverage_percent": 80.7,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 22,
-      "partial": 5,
+      "done": 23,
+      "partial": 4,
       "missing": 1
     },
     "command": {
@@ -128,8 +128,8 @@
       "key": "D13",
       "section": "domain",
       "title": "Show Log",
-      "raw_status": "🟡 过滤/stop/Next·All/Actions/L01–L17 ✅；统计/离线仍开",
-      "status": "partial"
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L20；当前过滤结果统计；缓存回退与强制离线；L15/L16 修订属性",
+      "status": "done"
     },
     {
       "key": "D14",

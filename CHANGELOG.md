@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.12 / G3：专业能力波次出门闸门
+- Affected: inventory, H-tortoise-parity, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: 补齐 Show Log 聚合域 D13 的统计/离线验收描述；T3 相关命令、日志、设置和 DUG 域逐项核验通过；全量 798 绿；覆盖率 92/114（80.70%）；下一 T4.1
+
 - Summary: Tortoise 完美 Loop T3.11：日志统计 / 离线缓存（L18、S13）
 - Affected: LogStatisticsBuilder, LogCacheStore, LogViewModel, MacSvnLogView, MacSvnSettingsView, MacSvnAppSession, AppSettings, Tests/*, docs/*
 - Impact: 日志统计支持当前过滤结果的修订、作者、日期、动作汇总；在线日志按仓库目标与 stop-on-copy 隔离缓存，支持容量/保留期策略、全量清理、网络/认证/环境失败回退和强制离线读取；设置持久化日志缓存策略；真实应用目标编译通过；全量 798 绿；覆盖率 91/114；下一 T3.12/G3
