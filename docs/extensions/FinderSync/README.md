@@ -7,7 +7,7 @@
 | 项 | 值 |
 |----|-----|
 | Xcode Target | `MacSVN.xcodeproj` → `SVNStudioFinderSync`（嵌入 `SVNStudio.app/Contents/PlugIns/`） |
-| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v2；v1 自动按 Default 迁移） |
+| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v3；v1/v2 缺失字段按默认值迁移） |
 | Bundle ID | `dev.yclenove.svnstudio.FinderSync` |
 
 ## Status Cache
@@ -17,6 +17,8 @@
 - None：不执行 SVN 状态采集、不显示角标，Finder 右键菜单保持可用。
 
 模式可在设置的 Finder 角标区域切换；扩展监听配置目录，连续原子保存可热更新。配置切换会清空缓存并使旧的并发采集结果失效。
+
+包含路径为空时覆盖所有已登记工作副本；填写后只监视工作副本内匹配的卷/路径。排除路径优先于包含路径，路径按标准化绝对路径的子树匹配。
 
 ## 深链
 
@@ -47,3 +49,4 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] `svn status --xml --verbose --no-ignore` + info depth + current/BASE property 快照结构化采集
 - [x] 工作副本根与目录按角标优先级递归聚合；同一 WC 并发刷新合并为一个采集任务
 - [x] Status Cache Default / Shell / None；设置持久化、v1 配置迁移、原子热更新与旧任务隔离
+- [x] 包含/排除卷与路径（exclude 优先）；18 类角标可在设置中选择并影响目录聚合

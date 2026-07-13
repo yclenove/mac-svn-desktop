@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T4.3：Finder 路径过滤与可选角标
+- Affected: FinderSyncOverlaySettings, FinderSyncPresentationBuilder, FinderSyncRootsExporter, AppSettings, MacSvnSettingsView, MacSvnFinderSync, Tests/*, docs/*
+- Impact: Finder 设置支持包含/排除卷与路径（标准化绝对路径子树匹配、exclude 优先）和 18 类角标逐项选择；include 子树成为实际监视目录，禁用角标不参与文件/目录优先级聚合；配置升级为 v3 并兼容 v1/v2 缺失字段，设置持久化与原子热更新保持；全量 836 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 100/114；下一 T4.4
+
 - Summary: Tortoise 完美 Loop T4.2：Finder Status Cache 三模式
 - Affected: FinderSyncCachePolicy, FinderSyncRootsExporter, AppSettings, MacSvnSettingsView, MacSvnFinderSync, Tests/*, docs/*
 - Impact: 设置页支持 Default/Shell/None 并持久化到 `finder-sync-roots.json` v2；Default 按 WC 根缓存 8 秒完整快照，Shell 按 Finder 请求目标缓存 2 秒，None 停止 SVN 状态采集与角标但保留右键菜单；兼容 v1 默认迁移，工作副本刷新保留模式；配置原子热更新使用 generation 隔离旧并发结果，并监听稳定目录以支持连续保存；全量 822 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 97/114；下一 T4.3
