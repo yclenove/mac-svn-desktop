@@ -8,6 +8,7 @@ public protocol WorkingCopyActionProviding: Sendable {
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
+    func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
     func cleanup(wc: URL, options: SvnCleanupOptions) async throws
 }
@@ -21,6 +22,7 @@ public enum WorkingCopyOperation: Equatable, Sendable {
     case move
     case repairMove
     case repairCopy
+    case repairFilenameCaseConflict
     case revert
     case cleanup
 }
@@ -163,6 +165,30 @@ public final class WorkingCopyActionsViewModel {
     /// CFM Repair Copy：先配对校验，再 `svn copy --force`，成功后刷新 status。
     public func repairCopy(selectedPaths: Set<String>, statuses: [FileStatus]) async {
         await performRepair(kind: .copy, selectedPaths: selectedPaths, statuses: statuses)
+    }
+
+    /// #46：校验 case-only rename 后，通过后端临时路径中转修复文件名。
+    public func repairFilenameCaseConflict(
+        sourcePath: String,
+        newName: String,
+        existingPaths: Set<String>
+    ) async {
+        switch FilenameCaseConflictRepairPolicy.resolve(
+            sourcePath: sourcePath,
+            newName: newName,
+            existingRelativePaths: existingPaths
+        ) {
+        case .failure(let error):
+            state = .error(error.localizedDescription)
+        case .success(let plan):
+            await perform(.repairFilenameCaseConflict) {
+                try await actionProvider.repairFilenameCaseConflict(
+                    wc: workingCopy,
+                    source: plan.sourcePath,
+                    destination: plan.destinationPath
+                )
+            }
+        }
     }
 
     public func revert(paths: [String], recursive: Bool = false, confirmed: Bool) async {

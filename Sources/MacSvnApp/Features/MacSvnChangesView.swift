@@ -27,9 +27,11 @@ public struct MacSvnChangesView: View {
     @State private var showCleanupSheet = false
     @State private var showRevertSheet = false
     @State private var showRenameSheet = false
+    @State private var showCaseConflictRepairSheet = false
     @State private var showIgnoreSheet = false
     @State private var showCopyMoveSheet = false
     @State private var renameNewName = ""
+    @State private var caseConflictNewName = ""
     @State private var ignoreKind: IgnorePatternKind = .exactFilename
     @State private var copyMoveKind: CopyMoveKind = .move
     @State private var copyMoveDestination = ""
@@ -145,6 +147,9 @@ public struct MacSvnChangesView: View {
         }
         .sheet(isPresented: $showRenameSheet) {
             renameSheet
+        }
+        .sheet(isPresented: $showCaseConflictRepairSheet) {
+            caseConflictRepairSheet
         }
         .sheet(isPresented: $showIgnoreSheet) {
             ignoreSheet
@@ -289,6 +294,12 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
 
+            Button("修复大小写…") {
+                prepareCaseConflictRepairSheet()
+                showCaseConflictRepairSheet = true
+            }
+            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+
             Button("复制/移动…") {
                 prepareCopyMoveSheet()
                 showCopyMoveSheet = true
@@ -426,6 +437,12 @@ public struct MacSvnChangesView: View {
                 Task { await runRepairCopy() }
             }
             .disabled(!canRepairCopy)
+        case .repairFilenameCaseConflict:
+            Button("修复文件名大小写…") {
+                prepareCaseConflictRepairSheet()
+                showCaseConflictRepairSheet = true
+            }
+            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
         default:
             Button(menuTitle(for: descriptor)) {
                 handleCatalogCommand(descriptor.id)
@@ -462,7 +479,7 @@ public struct MacSvnChangesView: View {
         case .delete, .revert, .addToIgnoreList:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
                 && (id != .addToIgnoreList || session != nil)
-        case .rename, .copyMove:
+        case .rename, .copyMove, .repairFilenameCaseConflict:
             return selectedPaths.count == 1 && actionsVM?.isRunning != true
         default:
             return actionsVM?.isRunning != true
@@ -521,6 +538,9 @@ public struct MacSvnChangesView: View {
         case .rename:
             prepareRenameSheet()
             showRenameSheet = true
+        case .repairFilenameCaseConflict:
+            prepareCaseConflictRepairSheet()
+            showCaseConflictRepairSheet = true
         case .addToIgnoreList:
             ignoreKind = .exactFilename
             showIgnoreSheet = true
@@ -650,6 +670,7 @@ public struct MacSvnChangesView: View {
         showCleanupSheet = false
         showRevertSheet = false
         showRenameSheet = false
+        showCaseConflictRepairSheet = false
         showIgnoreSheet = false
         showCopyMoveSheet = false
         confirmDelete = false
@@ -657,6 +678,7 @@ public struct MacSvnChangesView: View {
         confirmMarkResolved = false
         addSelectedPaths = []
         renameNewName = ""
+        caseConflictNewName = ""
         ignoreKind = .exactFilename
         copyMoveKind = .move
         copyMoveDestination = ""
@@ -1022,12 +1044,67 @@ public struct MacSvnChangesView: View {
         .frame(width: 440)
     }
 
+    private var caseConflictRepairSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("修复文件名大小写冲突")
+                .font(.headline)
+            if let source = selectedPaths.sorted().first {
+                Text("当前：\(source)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("修复后的名称", text: $caseConflictNewName)
+                Text("仅支持同一目录、仅大小写不同的名称。应用会通过临时 SVN 改名完成修复。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("取消") { showCaseConflictRepairSheet = false }
+                Spacer()
+                Button("修复") {
+                    Task { await runCaseConflictRepairFromSheet() }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(
+                    selectedPaths.count != 1
+                        || caseConflictNewName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+            }
+        }
+        .padding(24)
+        .frame(width: 480)
+    }
+
     private func prepareRenameSheet() {
         guard let path = selectedPaths.sorted().first else {
             renameNewName = ""
             return
         }
         renameNewName = (path as NSString).lastPathComponent
+    }
+
+    private func prepareCaseConflictRepairSheet() {
+        guard let path = selectedPaths.sorted().first else {
+            caseConflictNewName = ""
+            return
+        }
+        caseConflictNewName = (path as NSString).lastPathComponent
+    }
+
+    private func runCaseConflictRepairFromSheet() async {
+        guard let actionsVM, let changesVM else { return }
+        guard let source = selectedPaths.sorted().first, selectedPaths.count == 1 else {
+            statusBanner = "请先选中恰好一项再修复文件名大小写"
+            showCaseConflictRepairSheet = false
+            return
+        }
+        let existing = Set(changesVM.entries.map(\.path))
+        showCaseConflictRepairSheet = false
+        await actionsVM.repairFilenameCaseConflict(
+            sourcePath: source,
+            newName: caseConflictNewName,
+            existingPaths: existing
+        )
+        await syncAfterAction(actionsVM, changesVM)
     }
 
     private func runRenameFromSheet() async {
@@ -1178,6 +1255,7 @@ public struct MacSvnChangesView: View {
         case .move: return "移动"
         case .repairMove: return "修复移动"
         case .repairCopy: return "修复复制"
+        case .repairFilenameCaseConflict: return "修复文件名大小写"
         case .revert: return "还原"
         case .cleanup: return "清理"
         }

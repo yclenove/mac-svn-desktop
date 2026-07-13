@@ -18,6 +18,8 @@ public protocol SvnBackend: Sendable {
     func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws
     /// CFM Repair Copy：`svn copy`（工作副本内，不提交）
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws
+    /// #46：大小写不敏感文件系统上的 case-only rename。
+    func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws
     func revert(wc: URL, paths: [String], recursive: Bool) async throws
     func cleanup(wc: URL, options: SvnCleanupOptions) async throws
     func resolve(wc: URL, path: String, accept: ResolveAccept) async throws

@@ -586,6 +586,12 @@ public actor SvnService {
         }
     }
 
+    public func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws {
+        try await withWriteLock(wc: wc, operation: "repairFilenameCaseConflict") {
+            try await backend.repairFilenameCaseConflict(wc: wc, source: source, destination: destination)
+        }
+    }
+
     public func revert(wc: URL, paths: [String], recursive: Bool = false) async throws {
         try await withWriteLock(wc: wc, operation: "revert") {
             try await backend.revert(wc: wc, paths: paths, recursive: recursive)

@@ -216,6 +216,8 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .update, .updateToRevision, .checkForModifications, .add, .delete, .revert, .cleanup,
              .rename, .addToIgnoreList, .copyMove, .repairMoveCopy:
             return .changes
+        case .repairFilenameCaseConflict:
+            return .changes
         case .diff, .diffWithURL:
             return .diff
         case .showLog, .saveRevisionOpen:
@@ -242,8 +244,7 @@ public final class MacSvnAppNavigator: ObservableObject {
              .removeFromVersionControl:
             return .repositoryBrowser
         case .createRepositoryHere,
-             .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned,
-             .repairFilenameCaseConflict:
+             .revisionGraph, .changeLists, .deleteKeepLocal, .deleteUnversioned:
             return nil
         case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
              .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,

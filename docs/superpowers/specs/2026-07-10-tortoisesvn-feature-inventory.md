@@ -59,7 +59,7 @@
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
 | D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
-| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2 | T1/T2 |
+| D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local/清未版本仍开 | T1/T2 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
 | D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ❌ | T3 |
@@ -125,7 +125,7 @@
 | 43 | Import in Place | DUG 就地导入 | 向导 | ✅ 导入后临时检出并原子替换目录内容 | T2 |
 | 44 | Remove from version control | 导出式去 `.svn` | 确认 | ✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件 | T2 |
 | 45 | Repair Move / Repair Copy | CFM 内修复 | 配对选择 | ✅ | T1 |
-| 46 | Filename case conflict repair | DUG rename 章 | 修复向导 | ❌ | T2 |
+| 46 | Filename case conflict repair | DUG rename 章 | 修复向导：同目录仅大小写改名，临时 SVN 改名中转并失败回滚 | ✅ | T2 |
 
 ---
 

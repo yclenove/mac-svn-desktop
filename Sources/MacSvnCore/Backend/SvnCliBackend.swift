@@ -185,6 +185,39 @@ public struct SvnCliBackend: SvnBackend {
         )
     }
 
+    public func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws {
+        let parent = (source as NSString).deletingLastPathComponent
+        let temporaryName = ".svnstudio-case-repair-" + UUID().uuidString
+        let temporary = parent.isEmpty || parent == "."
+            ? temporaryName
+            : (parent as NSString).appendingPathComponent(temporaryName)
+        var staged = false
+
+        do {
+            _ = try await run(
+                SvnCommandBuilder.rename(source: source, destination: temporary),
+                currentDirectory: wc.path,
+                stdin: nil
+            )
+            staged = true
+            _ = try await run(
+                SvnCommandBuilder.rename(source: temporary, destination: destination),
+                currentDirectory: wc.path,
+                stdin: nil
+            )
+        } catch {
+            // 第二步失败时恢复原名，避免把工作副本留在隐藏临时路径。
+            if staged {
+                _ = try? await run(
+                    SvnCommandBuilder.rename(source: temporary, destination: source),
+                    currentDirectory: wc.path,
+                    stdin: nil
+                )
+            }
+            throw error
+        }
+    }
+
     /// Repair Copy：目标未版本文件先挪开，执行 `svn copy`，再盖回用户内容（`svn copy` 无 `--force`）。
     private func repairCopyWithExistingDestination(wc: URL, destination: String, command: SvnCommand) async throws {
         let fileManager = FileManager.default

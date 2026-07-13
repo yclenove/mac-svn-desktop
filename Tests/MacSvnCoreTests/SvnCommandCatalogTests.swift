@@ -54,10 +54,15 @@ final class SvnCommandCatalogTests: XCTestCase {
         XCTAssertTrue(ids.isSuperset(of: [
             .update, .commit, .diff, .add, .delete, .revert, .cleanup,
             .rename, .addToIgnoreList, .copyMove, .repairMoveCopy,
-            .branchTag, .switchBranch, .merge, .blame, .properties
+            .branchTag, .switchBranch, .merge, .blame, .properties,
+            .repairFilenameCaseConflict
         ]))
         let renameHits = SvnCommandCatalog.searchDailyCFM(query: "rename")
         XCTAssertEqual(renameHits.first?.id, .rename)
+        XCTAssertEqual(
+            SvnCommandCatalog.searchDailyCFM(query: "case conflict").first?.id,
+            .repairFilenameCaseConflict
+        )
         let ignoreHits = SvnCommandCatalog.searchDailyCFM(query: "ignore")
         XCTAssertEqual(ignoreHits.first?.id, .addToIgnoreList)
         XCTAssertTrue(SvnCommandCatalog.searchDailyCFM(query: "   ").isEmpty)

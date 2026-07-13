@@ -85,6 +85,19 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["locks", "lock", "unlock"])
     }
 
+    func testFilenameCaseConflictRepairForwardsThroughWriteLock() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+
+        try await service.repairFilenameCaseConflict(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "Foo.txt",
+            destination: "foo.txt"
+        )
+
+        XCTAssertEqual(backend.calls.map(\.name), ["repairFilenameCaseConflict"])
+    }
+
     func testCommitRejectsEmptyMessage() async {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -1204,6 +1217,10 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
 
     func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
         record("copyInWorkingCopy")
+    }
+
+    func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws {
+        record("repairFilenameCaseConflict")
     }
 
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {

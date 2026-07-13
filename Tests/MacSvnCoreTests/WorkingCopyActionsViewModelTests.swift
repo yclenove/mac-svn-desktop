@@ -205,6 +205,57 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testFilenameCaseConflictRepairValidatesCallsProviderAndRefreshes() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.repairFilenameCaseConflict(
+            sourcePath: "src/Foo.txt",
+            newName: "foo.txt",
+            existingPaths: ["src/Foo.txt"]
+        )
+        let actionCalls = await actionProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .completed(.repairFilenameCaseConflict))
+        XCTAssertEqual(actionCalls, [
+            ActionCall(
+                operation: .repairFilenameCaseConflict,
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["src/Foo.txt", "src/foo.txt"],
+                revision: nil,
+                setDepth: nil,
+                recursive: false
+            )
+        ])
+    }
+
+    @MainActor
+    func testFilenameCaseConflictRepairRejectsNonCaseOnlyRename() async {
+        let actionProvider = FakeWorkingCopyActionProvider()
+        let statusProvider = ActionStatusProvider(result: .success([]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            actionProvider: actionProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.repairFilenameCaseConflict(
+            sourcePath: "Foo.txt",
+            newName: "bar.txt",
+            existingPaths: ["Foo.txt"]
+        )
+
+        XCTAssertEqual(viewModel.state, .error("目标必须与当前名称仅大小写不同"))
+        let actionCalls = await actionProvider.recordedCalls()
+        XCTAssertTrue(actionCalls.isEmpty)
+    }
+
+    @MainActor
     func testRevertRequiresConfirmationBeforeCallingProvider() async {
         let actionProvider = FakeWorkingCopyActionProvider()
         let statusProvider = ActionStatusProvider(result: .success([]))
@@ -461,6 +512,17 @@ private actor FakeWorkingCopyActionProvider: WorkingCopyActionProviding {
         if let repairCopyError {
             throw repairCopyError
         }
+    }
+
+    func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws {
+        calls.append(ActionCall(
+            operation: .repairFilenameCaseConflict,
+            wc: wc,
+            paths: [source, destination],
+            revision: nil,
+            setDepth: nil,
+            recursive: false
+        ))
     }
 
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {

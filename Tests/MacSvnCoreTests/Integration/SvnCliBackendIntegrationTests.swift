@@ -989,6 +989,34 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(afterByPath["README-copy.txt"], .added)
     }
 
+    func testFilenameCaseConflictRepairSchedulesCaseOnlyRenameAndCommits() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        try await fixture.backend.repairFilenameCaseConflict(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "readme.txt"
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("readme.txt").path))
+
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        let statusByPath = Dictionary(uniqueKeysWithValues: statuses.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(statusByPath["readme.txt"], .added)
+        XCTAssertTrue(statusByPath["README.txt"] == nil || statusByPath["README.txt"] == .deleted)
+
+        _ = try await fixture.backend.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt", "readme.txt"],
+            message: "修复文件名大小写",
+            auth: nil
+        )
+        let entries = try await fixture.backend.list(url: fixture.trunkURL, depth: .immediates, auth: nil)
+        XCTAssertTrue(entries.contains { $0.name == "readme.txt" })
+        XCTAssertFalse(entries.contains { $0.name == "README.txt" })
+    }
+
     func testCommitWithChineseMessageIsReadBackFromLog() async throws {
         let fixture = try makeFixture()
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)

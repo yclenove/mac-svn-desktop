@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T04:37:50Z",
+  "generated_at": "2026-07-13T05:06:25Z",
   "total": 114,
-  "done": 65,
+  "done": 66,
   "partial": 14,
-  "missing": 35,
-  "coverage": 0.570175,
-  "coverage_percent": 57.02,
+  "missing": 34,
+  "coverage": 0.578947,
+  "coverage_percent": 57.89,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -16,9 +16,9 @@
     },
     "command": {
       "total": 46,
-      "done": 33,
+      "done": 34,
       "partial": 1,
-      "missing": 12
+      "missing": 11
     },
     "log": {
       "total": 20,
@@ -142,7 +142,7 @@
       "key": "D15",
       "section": "domain",
       "title": "Copy/Move/Rename/Delete",
-      "raw_status": "✅ Rename/Copy/Move/Delete/Repair；keep-local/清未版本/大小写 T2",
+      "raw_status": "✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local/清未版本仍开",
       "status": "done"
     },
     {
@@ -555,8 +555,8 @@
       "key": "cmd.46",
       "section": "command",
       "title": "Filename case conflict repair",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅",
+      "status": "done"
     },
     {
       "key": "L01",

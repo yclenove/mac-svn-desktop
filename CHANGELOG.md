@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T2.13：Filename case conflict repair（#46）
+- Affected: FilenameCaseConflictRepairPolicy, SvnBackend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
+- Impact: 新增同目录仅大小写改名修复向导；通过唯一临时 SVN 路径中转适配大小写不敏感文件系统，第二步失败会尝试恢复原名；CFM/⌘K 可达，真实 SVN 工作副本提交验证；下一 T2.14
+
 - Summary: Tortoise 完美 Loop T2.12：Repo Browser 远端写、高危确认与锁列（#10、D24）
 - Affected: RemoteInfoXMLParser, RepoRemoteWriteConfirmationPolicy, RepoBrowserViewModel, SvnCommandBuilder/Backend/Cli/Service, MacSvnRepoBrowserView, Tests/*, docs/*
 - Impact: Repo Browser 支持远端 mkdir/delete/copy/move/rename；删除/移动/重命名由 Core 强制二次确认并展示源/目标；通过单次 `svn info --xml --depth immediates` 展示 owner/comment/created 锁信息；真实 SVN 远端写与锁集成验证；下一 T2.13

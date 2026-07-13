@@ -3,6 +3,57 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendTests: XCTestCase {
+    func testFilenameCaseConflictRepairUsesTemporaryRenameThenDestinationRename() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.repairFilenameCaseConflict(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "Foo.txt",
+            destination: "foo.txt"
+        )
+
+        XCTAssertEqual(runner.calls.count, 2)
+        XCTAssertEqual(runner.calls[0].arguments.prefix(2), ["rename", "--non-interactive"])
+        XCTAssertEqual(runner.calls[1].arguments.prefix(2), ["rename", "--non-interactive"])
+        XCTAssertEqual(runner.calls[0].arguments.first, "rename")
+        XCTAssertEqual(runner.calls[1].arguments.first, "rename")
+        XCTAssertEqual(runner.calls[0].arguments[2], "Foo.txt")
+        XCTAssertTrue(runner.calls[0].arguments[3].hasPrefix(".svnstudio-case-repair-"))
+        XCTAssertEqual(runner.calls[1].arguments[2], runner.calls[0].arguments[3])
+        XCTAssertEqual(runner.calls[1].arguments[3], "foo.txt")
+    }
+
+    func testFilenameCaseConflictRepairAttemptsRollbackWhenSecondRenameFails() async {
+        let runner = SequenceProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E155010: rename failed", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        do {
+            try await backend.repairFilenameCaseConflict(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                source: "Foo.txt",
+                destination: "foo.txt"
+            )
+            XCTFail("Expected the destination rename to fail")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .other(code: 155010, stderr: "svn: E155010: rename failed"))
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+
+        XCTAssertEqual(runner.calls.count, 3)
+        XCTAssertEqual(runner.calls[2].arguments[2], runner.calls[0].arguments[3])
+        XCTAssertEqual(runner.calls[2].arguments[3], "Foo.txt")
+    }
     func testVersionRunsQuietVersionAndParsesOutput() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("1.14.5\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
@@ -672,6 +723,32 @@ private final class RecordingProcessRunner: ProcessRunning, @unchecked Sendable 
             timeout: timeout
         ))
         return result
+    }
+}
+
+private final class SequenceProcessRunner: ProcessRunning, @unchecked Sendable {
+    private(set) var calls: [RecordingProcessRunner.Call] = []
+    private var results: [ProcessResult]
+
+    init(results: [ProcessResult]) {
+        self.results = results
+    }
+
+    func run(
+        executable: String,
+        arguments: [String],
+        stdin: Data?,
+        currentDirectory: String?,
+        timeout: TimeInterval
+    ) async throws -> ProcessResult {
+        calls.append(RecordingProcessRunner.Call(
+            executable: executable,
+            arguments: arguments,
+            stdin: stdin,
+            currentDirectory: currentDirectory,
+            timeout: timeout
+        ))
+        return results.removeFirst()
     }
 }
 
