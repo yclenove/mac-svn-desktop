@@ -220,7 +220,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 时间 | 条目 | commit | 备注 |
 |------|------|--------|------|
 | 2026-07-11 | 交接 | 425cba7 | Cursor→Codex；下一刀 T2.8；覆盖率 45/114 |
-| 2026-07-13 | T2.9 | （提交后回填） | Export/Import/Import in Place/Relocate/Remove VC；覆盖率 57/114；下一刀 T2.10 |
+| 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；覆盖率 57/114；下一刀 T2.10 |
 
 ---
 

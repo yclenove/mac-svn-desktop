@@ -252,7 +252,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T2.7 | a877356 | Lock/Unlock/Break lock + CFM 入口 | #19–21、D21 ✅ | needs-lock→T4；下一 T2.8 |
 | 2026-07-11 | 交接 | 425cba7 | Cursor→Codex 长程说明书 | 无功能变更 | 下一刀仍 T2.8；见 codex-tortoise-parity-long-loop.md |
 | 2026-07-13 | T2.8 | c8a2ff0 | Branch/Switch/Merge 单测 + 真实 SVN 两树/Diff 集成测；全量 638 绿 | #22–24、D19/D20 ✅；§4.4 核心勾选 | reintegrate 仍属 T3.6；下一 T2.9 |
-| 2026-07-13 | T2.9 | （提交后回填） | Export/Import/Import in Place/Relocate/Remove VC；命令、Service、UI、真实 SVN 集成测 | #26/#27/#30/#43/#44、D04/D26 ✅ | 就地导入通过临时检出原子替换；下一 T2.10 |
+| 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；命令、Service、UI、真实 SVN 集成测 | #26/#27/#30/#43/#44、D04/D26 ✅ | 就地导入通过临时检出原子替换；下一 T2.10 |
 
 ---
 
