@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-13T15:36:13Z",
+  "generated_at": "2026-07-13T16:16:17Z",
   "total": 114,
-  "done": 100,
-  "partial": 7,
+  "done": 101,
+  "partial": 6,
   "missing": 7,
-  "coverage": 0.877193,
-  "coverage_percent": 87.72,
+  "coverage": 0.885965,
+  "coverage_percent": 88.6,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 23,
-      "partial": 4,
+      "done": 24,
+      "partial": 3,
       "missing": 1
     },
     "command": {
@@ -44,8 +44,8 @@
       "key": "D01",
       "section": "domain",
       "title": "Icon Overlays / WC Status",
-      "raw_status": "🟡 全状态采集/映射与目录递归聚合 ✅；属性页状态待 T4.6",
-      "status": "partial"
+      "raw_status": "✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要",
+      "status": "done"
     },
     {
       "key": "D02",

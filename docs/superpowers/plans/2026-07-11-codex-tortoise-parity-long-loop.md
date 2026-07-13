@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3 与 T4.1–T4.5，当前继续 T4.6。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3 与 T4.1–T4.6，当前继续 T4.7。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T4.6 Finder 属性页等价
+当前第一个未完成项：T4.7 Context Menu 设置
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T4.5 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | `f26cf1e`（T4.5 Finder 多选批量命令） |
-| 覆盖率 | **100/114 = 87.72%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **842** 绿（2026-07-13）；Finder Sync target 构建与 appex 嵌入校验通过 |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅**；T4.1–T4.5 ✅；下一 **T4.6** |
+| 工作区 | T4.6 实现与验收文档已更新，提交后应干净 |
+| 最近功能 tip | `5a21470`（T4.6 Finder SVN 信息面板） |
+| 覆盖率 | **101/114 = 88.60%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **846** 绿（2026-07-13）；Finder appex 嵌入校验通过 |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅**；T4.1–T4.6 ✅；下一 **T4.7** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -55,6 +55,7 @@
   - T4.3 Finder 包含/排除卷与路径、18 类角标可选与 include 子树监视
   - T4.4 Finder 普通菜单、「更多命令…」与统一命令深链
   - T4.5 Finder 多选路径保序传递与批量命令入口
+  - T4.6 Finder 属性深链与应用内 SVN 信息面板
 
 ### 1.2 未完成（按队列顺序）
 
@@ -86,6 +87,7 @@
 | **T4.4** | Finder 普通菜单 +「更多命令…」 | ✅ |
 | **T4.5** | Finder 多选批量命令 | ✅ |
 | T3.* | 专业能力（含 L03/L13/L15–L16、reintegrate、Revision Graph…） | |
+| **T4.6** | Finder 属性页等价 | ✅ |
 | T4.* | Overlay / Finder / Status Cache | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
 | **GP.*** | 100% 覆盖率收口后停 loop | |
@@ -128,7 +130,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T4.6**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T4.7**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -268,6 +270,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T4.3 | 5fa45f5 | Finder 包含/排除卷与路径（exclude 优先）、18 类角标可选、配置 v3 与 include 子树监视目录；Finder Sync target/appex 校验；覆盖率 100/114；全量 836 绿；下一刀 T4.4 |
 | 2026-07-13 | T4.4 | 011a7b2 | Finder 普通菜单与「更多命令…」扩展菜单；统一 `SvnCommandID` / `svnstudio://command` 深链；Catalog 扩展命令复用 Navigator；Finder Sync target/appex 校验；覆盖率 100/114；全量 839 绿；下一刀 T4.5 |
 | 2026-07-13 | T4.5 | f26cf1e | Finder 全部选中项保序传递；重复 `path` query 构建/解析；无选中项回退 targeted URL；Navigator 复用批量 `perform`；Finder Sync target/appex 校验；覆盖率 100/114；全量 842 绿；下一刀 T4.6 |
+| 2026-07-13 | T4.6 | 5a21470 | Finder 绝对子文件路径选择包含它的最深已登记 WC，并打开应用内属性页；展示 WC 状态/修订/作者/URL/锁/属性摘要；请求代次丢弃旧的异步 info/status 结果；真实 SVN 锁信息验证；D01 ✅；覆盖率 101/114；全量 846 绿；下一刀 T4.7 |
 
 ---
 

@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T4.6：Finder SVN 信息面板
+- Affected: MacSvnFinderSync, MacSvnAppNavigator, MacSvnWorkspaceController, MacSvnPropertiesView, SvnInfo, InfoXMLParser, Tests/*, docs/*
+- Impact: Finder「更多命令…」新增属性入口，绝对路径深链会选择包含该文件的最深已登记工作副本并进入应用内属性页；`svn info --xml` 结构化解析最后提交作者/修订/日期与仓库锁，面板集中展示 WC 状态、修订、最后作者、仓库 URL、锁和属性摘要；属性页用请求代次丢弃旧的异步 info/status 结果；真实 SVN 锁信息往返验证、全量 846 绿及 Finder appex 嵌入校验通过；D01 升为 ✅，覆盖率 101/114；下一 T4.7
+
 - Summary: Tortoise 完美 Loop T4.5：Finder 多选批量命令
 - Affected: MacSvnFinderSync, FinderSyncDeepLinkBuilder, MacSvnDeepLinkParser, MacSvnDeepLinkAction, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: Finder 菜单优先捕获全部选中项，无选中项时回退 targeted URL；统一 command 深链使用重复 `path` query 保序传递，Parser 不再覆盖重复路径，Navigator 原样交给既有 `perform(command:paths:)` 批量入口；单路径构建 API 保持兼容；全量 842 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 100/114；下一 T4.6

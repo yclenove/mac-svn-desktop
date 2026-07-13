@@ -94,7 +94,7 @@
 - [x] 包含/排除卷与路径（exclude 优先）；18 类角标种类可选
 - [x] Finder 右键：普通 +「更多命令…」（扩展菜单；统一 `SvnCommandCatalog` 与 `svnstudio://command` 深链）
 - [x] 多选批量（Finder 全部选中项保序进入统一 command 深链与 Navigator 批量入口）
-- [ ] 属性页等价（revision/作者/URL/锁/属性摘要）
+- [x] 属性页等价（Finder 属性命令深链打开应用内面板；WC 状态/revision/作者/URL/锁/属性摘要）
 - [ ] Context Menu 设置（S02）
 - [ ] **G4**：Overlay + S02/S08 ✅；Finder 冒烟；全量测试绿
 
