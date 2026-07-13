@@ -33,7 +33,7 @@
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
 | 工作区 | T3.4 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | （T3.4 提交后回填）；前一功能 tip 为 `eb73ea1` |
+| 最近功能 tip | `4658126`（T3.4 Externals）；前一功能 tip 为 `eb73ea1` |
 | 覆盖率 | **75/114 = 65.79%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **738** 绿（2026-07-13；含真实 SVN Externals 目录/文件往返、changelist、copy-edge / Revision Graph Diff 集成测） |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1–T3.4 ✅；下一 **T3.5** |
@@ -234,7 +234,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
 | 2026-07-13 | T3.2 | 681268b | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、Log/Checkout/Blame/Diff；真实 SVN copy-edge/Diff；覆盖率 71/114；全量 724 绿；下一刀 T3.3 |
 | 2026-07-13 | T3.3 | eb73ea1 | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；覆盖率 73/114；全量 730 绿；下一刀 T3.4 |
-| 2026-07-13 | T3.4 | （提交后回填） | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；覆盖率 75/114；全量 738 绿；下一刀 T3.5 |
+| 2026-07-13 | T3.4 | 4658126 | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；覆盖率 75/114；全量 738 绿；下一刀 T3.5 |
 
 ---
 

@@ -262,7 +262,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision 表单、peg/user@host 校验、认证 stdin/重试、原子导航 intent、Unified/左右分栏、真实 SVN 跨 URL 测试 | #6 ✅；H-T3 对应项 ✅；覆盖率 68/114；全量 710 绿 | 下一 T3.2 |
 | 2026-07-13 | T3.2 | 681268b | Revision Graph：repo-root verbose log 构图、copy/history 边、glob 分类/颜色混色、剪枝、拓扑/时间线、分页/All、四类节点动作；真实 SVN copy-edge/Diff；全量 724 绿 | #9、D25、S07、§4.6 ✅；H-T3 对应项 ✅；覆盖率 71/114 | 下一 T3.3 |
 | 2026-07-13 | T3.3 | eb73ea1 | Change Lists：status XML 归属、CFM 列/分组、移入/移出与深度、Commit 按列表选择、`ignore-on-commit` 默认排除、cmd.38 原子路径意图；真实 SVN 往返；全量 730 绿 | #38、D11、§4.2 Changelist ✅；H-T3 对应项 ✅；覆盖率 73/114 | 下一 T3.4 |
-| 2026-07-13 | T3.4 | （提交后回填） | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；真实 SVN 往返；全量 738 绿 | #39、D18、H-T3 Externals ✅；覆盖率 75/114 | 下一 T3.5 |
+| 2026-07-13 | T3.4 | 4658126 | Externals：现代/旧式定义解析、目录/文件 external 结构化编辑、operative/peg revision、注释保留、安全本地路径校验、仓库 URL 拖拽预填、保存后非忽略 externals 更新；真实 SVN 往返；全量 738 绿 | #39、D18、H-T3 Externals ✅；覆盖率 75/114 | 下一 T3.5 |
 
 ---
 
