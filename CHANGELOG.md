@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T4.1：Finder Overlay 全状态映射
+- Affected: FileStatusOverlayMetadata, StatusXMLParser, FinderSyncInfoXMLParser, FinderSyncStatusEnricher, FinderSyncPresentationBuilder, MacSvnFinderSync, Tests/*, docs/*
+- Impact: Finder Sync 覆盖 normal/modified/conflicted/added/deleted/missing/replaced/locked/needs-lock/ignored/unversioned/shallow/nested/external/switched/mergeinfo-only；结构化读取 status/info/current+BASE properties，精确识别属性冲突、只读 needs-lock 与仅 mergeinfo 变化；目录含根路径按优先级递归聚合；并发刷新按 WC 合并；全量 810 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 97/114；下一 T4.2
+
 - Summary: Tortoise 完美 Loop T3.12 / G3：专业能力波次出门闸门
 - Affected: inventory, H-tortoise-parity, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: 补齐 Show Log 聚合域 D13 的统计/离线验收描述；T3 相关命令、日志、设置和 DUG 域逐项核验通过；全量 798 绿；覆盖率 92/114（80.70%）；下一 T4.1

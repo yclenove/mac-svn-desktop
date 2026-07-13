@@ -45,7 +45,7 @@
 
 | 域 ID | DUG 章节 | 必须覆盖的能力要点 | Studio | 波次 |
 |-------|----------|-------------------|--------|------|
-| D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | 🟡 | T4 |
+| D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | 🟡 全状态采集/映射与目录递归聚合 ✅；属性页状态待 T4.6 | T4 |
 | D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K 齐；Finder 拖拽 T4 | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
@@ -243,12 +243,12 @@
 
 | 状态 | Studio | 波次 |
 |------|--------|------|
-| Normal / Modified / Conflicted / Added | 部分 | T4 |
-| Deleted / Missing / Replaced | 缺口 | T4 |
-| Locked / needs-lock(readonly) | 缺口 | T4 |
-| Ignored / Unversioned（可选显示） | 缺口 | T4 |
-| Depth shallow / Nested WC / Externals / Switched | 缺口 | T4 |
-| 仅 mergeinfo 属性变更 | 缺口 | T4 |
+| Normal / Modified / Conflicted / Added | ✅ status item/property/tree-conflict；normal 不再清空角标 | T4 |
+| Deleted / Missing / Replaced | ✅ 独立角标与目录优先级聚合 | T4 |
+| Locked / needs-lock(readonly) | ✅ WC/仓库 lock XML；`svn:needs-lock` + 文件只读联合判定 | T4 |
+| Ignored / Unversioned（可选显示） | 🟡 `--no-ignore` 采集与独立角标 ✅；可选显示待 T4.3 | T4 |
+| Depth shallow / Nested WC / Externals / Switched | ✅ info depth、嵌套 `.svn`、external/file-external、switched XML | T4 |
+| 仅 mergeinfo 属性变更 | ✅ current/BASE 全属性快照差集仅为 `svn:mergeinfo` 时使用独立角标 | T4 |
 | Status Cache 三模式 + 包含排除路径 | 缺口 | T4 |
 
 ---
@@ -272,7 +272,7 @@
 | 命令 #1–46 | 🟡 ~15 · ❌ ~25+ | 入口或对话框不足 |
 | 日志右键 L01–L20 | ❌ 为主 | 历史深度几乎未做 |
 | 设置 S01–S13 | ❌/弱 | 设置体系未成型 |
-| Overlay 全状态 | 大部分缺口 | Finder 集成未完成 |
+| Overlay 全状态 | 5/7 ✅ | 全状态映射已完成；可选显示、Cache 三模式与包含/排除路径待 T4.2/T4.3 |
 | 域 D01–D28 | 无一域可称「对标完成」 | — |
 
 **结论：** 对标小乌龟 = **命令矩阵 + 对话框选项 + 日志动作 + 设置页 + Overlay 策略** 五层全部 ✅；仅「能提交/能看 log」不算完成。

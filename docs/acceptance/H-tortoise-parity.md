@@ -89,7 +89,7 @@
 
 ## T4 — Shell 集成
 
-- [ ] Overlay 全状态（含 locked / needs-lock / ignored / depth / externals / switched 等）
+- [x] Overlay 全状态映射：status/info/property XML 采集；normal/modified/conflicted/added/deleted/missing/replaced/locked/needs-lock/ignored/unversioned/depth/nested/externals/switched/mergeinfo-only；目录递归聚合；可选显示策略仍属 T4.3
 - [ ] Status Cache 三模式（Default / Shell / None）（S08）
 - [ ] 包含/排除路径；可选角标种类
 - [ ] Finder 右键：普通 +「更多命令…」（扩展菜单）

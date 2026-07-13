@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3，当前继续 T4.1。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3 与 T4.1，当前继续 T4.2。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T4.1 Overlay 全状态映射表落地
+当前第一个未完成项：T4.2 Status Cache 三模式（Default / Shell / None，S08）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T3.12/G3 验收文档已更新，提交后应干净 |
-| 最近功能 tip | `73cf430`（T3.11 日志统计 / 离线缓存）；G3 为验收门禁 |
-| 覆盖率 | **92/114 = 80.70%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **798** 绿（2026-07-13；含日志统计、缓存降容/保留期、强制离线与原有真实 SVN 集成测） |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅**；T3.1–T3.12 ✅；下一 **T4.1** |
+| 工作区 | T4.1 实现与验收文档已更新，提交后应干净 |
+| 最近功能 tip | `304d2b6`（T4.1 Finder Overlay 全状态映射） |
+| 覆盖率 | **97/114 = 85.09%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **810** 绿（2026-07-13）；Finder Sync target 构建与 appex 嵌入校验通过 |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅**；T4.1 ✅；下一 **T4.2** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -50,6 +50,7 @@
   - T2.7 Get/Release/Break Lock（#19–#21）、D21（needs-lock 提升仍属 T4）
   - T3.11 日志统计 / 离线缓存（L18、S13）
   - T3.12 / G3：T3 inventory、H-tortoise 与全量测试出门闸门
+  - T4.1 Finder Overlay 全状态采集、映射与目录递归聚合
 
 ### 1.2 未完成（按队列顺序）
 
@@ -75,6 +76,7 @@
 | **T3.10** | Edit author/message + revision properties（L15、L16） | ✅ |
 | **T3.11** | 日志统计 / 离线缓存（L18、S13） | ✅ |
 | **T3.12 / G3** | T3 出门闸门：inventory、H-tortoise、全量测试 | ✅ |
+| **T4.1** | Finder Overlay 全状态映射表落地 | ✅ |
 | T3.* | 专业能力（含 L03/L13/L15–L16、reintegrate、Revision Graph…） | |
 | T4.* | Overlay / Finder / Status Cache | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
@@ -118,7 +120,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T4.1**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T4.2**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -253,6 +255,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T3.10 | c9c41ef | 全量 revprops 展示；作者/日志说明仅变化写入；认证重试/写锁；UTF-8 `0600` 临时值文件；hook 拒绝提示；日志右键/详情/⌘K；真实 SVN 无 hook 拒绝与中文/自定义属性往返；覆盖率 89/114；全量 787 绿；下一刀 T3.11 |
 | 2026-07-13 | T3.11 | 73cf430 | 日志统计作用于当前过滤结果；作者/日期/动作统计；缓存按仓库目标/stop-on-copy 隔离，支持容量/保留期、清理、网络/认证/环境失败回退与强制离线；设置持久化；覆盖率 91/114；全量 798 绿；下一刀 T3.12/G3 |
 | 2026-07-13 | T3.12/G3 | 73cf430 + 本次 docs | D13 聚合域验收描述修正；T3 inventory/H 清单核验；覆盖率 92/114；全量 798 绿；下一刀 T4.1 |
+| 2026-07-13 | T4.1 | 304d2b6 | 全状态结构化采集/角标映射；current/BASE 属性差集识别 mergeinfo-only；根/目录递归聚合；并发刷新合并；Finder Sync target/appex 校验；覆盖率 97/114；全量 810 绿；下一刀 T4.2 |
 
 ---
 

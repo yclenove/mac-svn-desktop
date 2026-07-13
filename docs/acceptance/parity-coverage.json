@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-13T13:42:12Z",
+  "generated_at": "2026-07-13T14:07:52Z",
   "total": 114,
-  "done": 92,
+  "done": 97,
   "partial": 9,
-  "missing": 13,
-  "coverage": 0.807018,
-  "coverage_percent": 80.7,
+  "missing": 8,
+  "coverage": 0.850877,
+  "coverage_percent": 85.09,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -34,9 +34,9 @@
     },
     "overlay": {
       "total": 7,
-      "done": 0,
+      "done": 5,
       "partial": 1,
-      "missing": 6
+      "missing": 1
     }
   },
   "items": [
@@ -44,7 +44,7 @@
       "key": "D01",
       "section": "domain",
       "title": "Icon Overlays / WC Status",
-      "raw_status": "🟡",
+      "raw_status": "🟡 全状态采集/映射与目录递归聚合 ✅；属性页状态待 T4.6",
       "status": "partial"
     },
     {
@@ -793,43 +793,43 @@
       "key": "overlay.01",
       "section": "overlay",
       "title": "Normal / Modified / Conflicted / Added",
-      "raw_status": "部分",
-      "status": "partial"
+      "raw_status": "✅ status item/property/tree-conflict；normal 不再清空角标",
+      "status": "done"
     },
     {
       "key": "overlay.02",
       "section": "overlay",
       "title": "Deleted / Missing / Replaced",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "✅ 独立角标与目录优先级聚合",
+      "status": "done"
     },
     {
       "key": "overlay.03",
       "section": "overlay",
       "title": "Locked / needs-lock(readonly)",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "✅ WC/仓库 lock XML；`svn:needs-lock` + 文件只读联合判定",
+      "status": "done"
     },
     {
       "key": "overlay.04",
       "section": "overlay",
       "title": "Ignored / Unversioned（可选显示）",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "🟡 `--no-ignore` 采集与独立角标 ✅；可选显示待 T4.3",
+      "status": "partial"
     },
     {
       "key": "overlay.05",
       "section": "overlay",
       "title": "Depth shallow / Nested WC / Externals / Switched",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "✅ info depth、嵌套 `.svn`、external/file-external、switched XML",
+      "status": "done"
     },
     {
       "key": "overlay.06",
       "section": "overlay",
       "title": "仅 mergeinfo 属性变更",
-      "raw_status": "缺口",
-      "status": "missing"
+      "raw_status": "✅ current/BASE 全属性快照差集仅为 `svn:mergeinfo` 时使用独立角标",
+      "status": "done"
     },
     {
       "key": "overlay.07",

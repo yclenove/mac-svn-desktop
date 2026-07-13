@@ -35,3 +35,6 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 ## 验收
 
 - [x] `SVNStudio.app/Contents/PlugIns/SVNStudioFinderSync.appex` 存在且 Bundle ID / 扩展点正确
+- [x] 18 类角标已注册：normal/modified/conflicted/added/deleted/missing/replaced/locked/needs-lock/ignored/unversioned/shallow/nested/external/switched/mergeinfo-only/incomplete/obstructed
+- [x] `svn status --xml --verbose --no-ignore` + info depth + current/BASE property 快照结构化采集
+- [x] 工作副本根与目录按角标优先级递归聚合；同一 WC 并发刷新合并为一个采集任务
