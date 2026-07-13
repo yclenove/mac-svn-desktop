@@ -123,6 +123,31 @@ public struct SvnCliBackend: SvnBackend {
         _ = try await run(SvnCommandBuilder.add(paths: paths), currentDirectory: wc.path, stdin: nil)
     }
 
+    public func assignChangelist(
+        wc: URL,
+        name: String,
+        paths: [String],
+        depth: SvnDepth
+    ) async throws {
+        _ = try await run(
+            SvnCommandBuilder.assignChangelist(name: name, paths: paths, depth: depth),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
+    public func removeFromChangelists(
+        wc: URL,
+        paths: [String],
+        depth: SvnDepth
+    ) async throws {
+        _ = try await run(
+            SvnCommandBuilder.removeFromChangelists(paths: paths, depth: depth),
+            currentDirectory: wc.path,
+            stdin: nil
+        )
+    }
+
     public func delete(wc: URL, paths: [String]) async throws {
         _ = try await run(SvnCommandBuilder.delete(paths: paths), currentDirectory: wc.path, stdin: nil)
     }

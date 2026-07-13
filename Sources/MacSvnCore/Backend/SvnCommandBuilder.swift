@@ -138,6 +138,25 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["add", "--non-interactive"] + paths)
     }
 
+    public static func assignChangelist(
+        name: String,
+        paths: [String],
+        depth: SvnDepth = .empty
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "changelist", name, "--depth", depth.rawValue, "--non-interactive"
+        ] + paths)
+    }
+
+    public static func removeFromChangelists(
+        paths: [String],
+        depth: SvnDepth = .empty
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "changelist", "--remove", "--depth", depth.rawValue, "--non-interactive"
+        ] + paths)
+    }
+
     public static func delete(paths: [String]) -> SvnCommand {
         SvnCommand(arguments: ["delete", "--non-interactive"] + paths)
     }

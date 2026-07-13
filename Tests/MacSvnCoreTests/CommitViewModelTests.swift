@@ -30,6 +30,31 @@ final class CommitViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testDefaultSelectionExcludesIgnoreOnCommitAndCanSelectNamedChangelist() {
+        let statuses = [
+            FileStatus(path: "normal.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+            FileStatus(path: "release.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "release"),
+            FileStatus(path: "later.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "ignore-on-commit")
+        ]
+        XCTAssertEqual(
+            CommitSelectionPolicy.defaultSelectedPaths(from: statuses),
+            Set(["normal.swift", "release.swift"])
+        )
+
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: statuses,
+            commitProvider: FakeCommitProvider(result: .success(Revision(2))),
+            statusProvider: FakeStatusProvider(result: .success([]))
+        )
+        viewModel.selectChangelist("release")
+
+        XCTAssertEqual(viewModel.availableChangelists, ["ignore-on-commit", "release"])
+        XCTAssertEqual(viewModel.selectedChangelist, "release")
+        XCTAssertEqual(viewModel.orderedSelectedPaths, ["release.swift"])
+    }
+
+    @MainActor
     func testCommitUsesSelectedPathsMessageAuthAndRefreshesStatuses() async {
         let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
         let statusProvider = FakeStatusProvider(result: .success([

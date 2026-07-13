@@ -43,11 +43,21 @@ public struct MacSvnChangesView: View {
     @State private var showUpdateToRevisionSheet = false
     @State private var updateToRevisionText = ""
     @State private var updateIgnoreExternals = false
+    @State private var showChangelistSheet = false
+    @State private var changelistName = ""
+    @State private var changelistDepth: SvnDepth = .empty
+    @State private var changelistOperation: ChangelistOperation = .assign
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
         case modified = "已修改"
         case conflicts = "冲突"
+        var id: String { rawValue }
+    }
+
+    private enum ChangelistOperation: String, CaseIterable, Identifiable {
+        case assign = "移动到列表"
+        case remove = "移出列表"
         var id: String { rawValue }
     }
 
@@ -105,7 +115,13 @@ public struct MacSvnChangesView: View {
             selectedPaths = newValue
             onFocusedPathChange?(newValue.sorted().first)
         }
-        .task { await bindAndRefresh() }
+        .onChange(of: navigator?.pendingChangelistIntent) { _, _ in
+            consumePendingChangelistIntent()
+        }
+        .task {
+            await bindAndRefresh()
+            consumePendingChangelistIntent()
+        }
         .confirmationDialog(
             "确认还原选中文件的本地修改？此操作不可撤销。",
             isPresented: $confirmRevert,
@@ -186,6 +202,51 @@ public struct MacSvnChangesView: View {
             .padding(24)
             .frame(width: 440)
         }
+        .sheet(isPresented: $showChangelistSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("管理变更列表")
+                    .font(.headline)
+                Picker("操作", selection: $changelistOperation) {
+                    ForEach(ChangelistOperation.allCases) { operation in
+                        Text(operation.rawValue).tag(operation)
+                    }
+                }
+                .pickerStyle(.segmented)
+                if changelistOperation == .assign {
+                    TextField("列表名称", text: $changelistName)
+                    let names = changesVM.map {
+                        ChangelistPolicy.groups(from: $0.entries).compactMap(\.name)
+                    } ?? []
+                    if !names.isEmpty {
+                        Picker("现有列表", selection: $changelistName) {
+                            Text("输入新名称").tag("")
+                            ForEach(names, id: \.self) { name in
+                                Text(name).tag(name)
+                            }
+                        }
+                    }
+                }
+                Picker("目录深度", selection: $changelistDepth) {
+                    Text("仅所选项").tag(SvnDepth.empty)
+                    Text("文件").tag(SvnDepth.files)
+                    Text("直接子项").tag(SvnDepth.immediates)
+                    Text("递归").tag(SvnDepth.infinity)
+                }
+                HStack {
+                    Button("取消") { showChangelistSheet = false }
+                    Spacer()
+                    Button("应用") { Task { await runChangelistOperation() } }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(
+                            selectedPaths.isEmpty
+                                || (changelistOperation == .assign
+                                    && changelistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        )
+                }
+            }
+            .padding(24)
+            .frame(width: 440)
+        }
     }
 
     private var header: some View {
@@ -215,9 +276,10 @@ public struct MacSvnChangesView: View {
             Picker("视图", selection: $displayMode) {
                 Text("平铺").tag(ChangesDisplayMode.flat)
                 Text("树").tag(ChangesDisplayMode.tree)
+                Text("列表").tag(ChangesDisplayMode.changelists)
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 140)
+            .frame(maxWidth: 210)
             .onChange(of: displayMode) { _, newValue in
                 changesVM?.displayMode = newValue
             }
@@ -330,6 +392,11 @@ public struct MacSvnChangesView: View {
             }
             .disabled(selectedPaths.isEmpty || session == nil || actionsVM?.isRunning == true)
 
+            Button("变更列表…") {
+                prepareChangelistSheet()
+            }
+            .disabled(selectedPaths.isEmpty || changesVM == nil || actionsVM?.isRunning == true)
+
             if let conflictCount = conflictCount, conflictCount > 0 {
                 Button("解决冲突 (\(conflictCount))") {
                     navigator?.selectMode(.conflicts)
@@ -403,13 +470,23 @@ public struct MacSvnChangesView: View {
                                 .tag(entry.path)
                                 .listRowBackground(highlightColor(changesVM.highlight(for: entry)))
                         }
-                    } else {
+                    } else if displayMode == .tree {
                         OutlineGroup(changesVM.visibleTreeEntries, children: \.outlineChildren) { node in
                             treeRow(node)
                                 .tag(node.path)
                                 .listRowBackground(
                                     node.fileStatus.map { highlightColor(changesVM.highlight(for: $0)) } ?? Color.clear
                                 )
+                        }
+                    } else {
+                        ForEach(changesVM.visibleChangelistGroups) { group in
+                            Section(group.displayName) {
+                                ForEach(group.entries, id: \.path) { entry in
+                                    flatRow(entry)
+                                        .tag(entry.path)
+                                        .listRowBackground(highlightColor(changesVM.highlight(for: entry)))
+                                }
+                            }
                         }
                     }
                 }
@@ -443,6 +520,9 @@ public struct MacSvnChangesView: View {
                 showCaseConflictRepairSheet = true
             }
             .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+        case .changeLists:
+            Button("变更列表…") { prepareChangelistSheet() }
+                .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
         default:
             Button(menuTitle(for: descriptor)) {
                 handleCatalogCommand(descriptor.id)
@@ -483,6 +563,8 @@ public struct MacSvnChangesView: View {
                 && (id != .addToIgnoreList || session != nil)
         case .rename, .copyMove, .repairFilenameCaseConflict:
             return selectedPaths.count == 1 && actionsVM?.isRunning != true
+        case .changeLists:
+            return !selectedPaths.isEmpty && actionsVM?.isRunning != true
         default:
             return actionsVM?.isRunning != true
         }
@@ -549,6 +631,8 @@ public struct MacSvnChangesView: View {
         case .copyMove:
             prepareCopyMoveSheet()
             showCopyMoveSheet = true
+        case .changeLists:
+            prepareChangelistSheet()
         case .commit, .diff, .showLog, .checkForModifications:
             _ = navigator?.perform(command: id, paths: Array(selectedPaths).sorted())
         case .editConflicts:
@@ -602,6 +686,13 @@ public struct MacSvnChangesView: View {
                         .font(.caption2)
                         .foregroundStyle(.orange)
                         .frame(width: 40, alignment: .center)
+                case .changelist:
+                    Text(entry.changelist ?? "—")
+                        .font(.caption)
+                        .foregroundStyle(
+                            ChangelistPolicy.isIgnoredOnCommit(entry.changelist) ? .orange : .secondary
+                        )
+                        .frame(width: 110, alignment: .leading)
                 }
             }
         }
@@ -675,6 +766,7 @@ public struct MacSvnChangesView: View {
         showCaseConflictRepairSheet = false
         showIgnoreSheet = false
         showCopyMoveSheet = false
+        showChangelistSheet = false
         confirmDelete = false
         confirmRevert = false
         confirmMarkResolved = false
@@ -719,6 +811,57 @@ public struct MacSvnChangesView: View {
             changesVM.filter = .items([.modified, .added, .deleted, .replaced, .missing])
         case .conflicts:
             changesVM.filter = .conflicts
+        }
+    }
+
+    private func consumePendingChangelistIntent() {
+        guard let intent = navigator?.consumePendingChangelistIntent() else { return }
+        if !intent.paths.isEmpty {
+            selectedPaths = Set(intent.paths)
+            prepareChangelistSheet()
+        } else {
+            statusBanner = "请选择路径后使用“变更列表…”管理归属"
+        }
+    }
+
+    private func prepareChangelistSheet() {
+        let selectedEntries = changesVM?.entries.filter { selectedPaths.contains($0.path) } ?? []
+        let existingNames = Set(selectedEntries.compactMap(\.changelist))
+        changelistName = existingNames.count == 1 ? existingNames.first ?? "" : ""
+        changelistOperation = .assign
+        changelistDepth = .empty
+        showChangelistSheet = true
+    }
+
+    private func runChangelistOperation() async {
+        guard let record = workspaceController.selectedRecord,
+              let changesVM else { return }
+        let wc = URL(fileURLWithPath: record.localPath)
+        let paths = Array(selectedPaths).sorted()
+        do {
+            switch changelistOperation {
+            case .assign:
+                try await svnService.assignChangelist(
+                    wc: wc,
+                    name: changelistName,
+                    paths: paths,
+                    depth: changelistDepth
+                )
+                statusBanner = "已将 \(paths.count) 项移动到变更列表 \(changelistName.trimmingCharacters(in: .whitespacesAndNewlines))"
+            case .remove:
+                try await svnService.removeFromChangelists(
+                    wc: wc,
+                    paths: paths,
+                    depth: changelistDepth
+                )
+                statusBanner = "已将 \(paths.count) 项移出变更列表"
+            }
+            showChangelistSheet = false
+            displayMode = .changelists
+            changesVM.displayMode = .changelists
+            await changesVM.refresh()
+        } catch {
+            statusBanner = "变更列表操作失败：\(error.localizedDescription)"
         }
     }
 

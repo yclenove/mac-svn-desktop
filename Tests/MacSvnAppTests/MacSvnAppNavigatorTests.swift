@@ -4,6 +4,20 @@ import MacSvnCore
 
 @MainActor
 final class MacSvnAppNavigatorTests: XCTestCase {
+    func testChangeListsCommandNavigatesToChangesWithAtomicManagementIntent() {
+        let navigator = MacSvnAppNavigator(selectedRoute: .log)
+
+        let result = navigator.perform(command: .changeLists, paths: ["a.swift", "b.swift"])
+
+        XCTAssertEqual(result, .navigated(to: .changes))
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.consumePendingChangelistIntent(),
+            PendingChangelistIntent(paths: ["a.swift", "b.swift"])
+        )
+        XCTAssertNil(navigator.pendingChangelistIntent)
+    }
+
     func testDeepLinkOpenSetsChangesAndPendingPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .settings)
         navigator.handle(deepLink: .open(path: "/tmp/wc"))

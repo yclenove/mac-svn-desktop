@@ -40,6 +40,20 @@ final class ChangesViewModelTests: XCTestCase {
         XCTAssertEqual(sources.children.map(\.itemStatus), [.conflicted, .modified])
     }
 
+    func testChangelistGroupsKeepNamedListsAndUnassignedEntriesSeparate() {
+        let statuses = [
+            FileStatus(path: "b.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "release"),
+            FileStatus(path: "a.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "release"),
+            FileStatus(path: "scratch.swift", itemStatus: .modified, revision: 1, isTreeConflict: false)
+        ]
+
+        let groups = ChangelistPolicy.groups(from: statuses)
+
+        XCTAssertEqual(groups.map(\.name), ["release", nil])
+        XCTAssertEqual(groups[0].entries.map(\.path), ["a.swift", "b.swift"])
+        XCTAssertEqual(groups[1].entries.map(\.path), ["scratch.swift"])
+    }
+
     @MainActor
     func testRefreshLoadsStatusesAndExposesVisibleFlatEntries() async {
         let provider = FakeStatusProvider(result: .success(sampleStatuses()))

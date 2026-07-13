@@ -185,6 +185,21 @@ final class SvnCommandBuilderTests: XCTestCase {
         XCTAssertEqual(command.arguments, ["add", "--non-interactive", "a.txt", "dir/b.txt"])
     }
 
+    func testChangelistAssignAndRemoveUseDepthAndSelectedPaths() {
+        XCTAssertEqual(
+            SvnCommandBuilder.assignChangelist(
+                name: "release",
+                paths: ["Sources", "README.md"],
+                depth: .infinity
+            ).arguments,
+            ["changelist", "release", "--depth", "infinity", "--non-interactive", "Sources", "README.md"]
+        )
+        XCTAssertEqual(
+            SvnCommandBuilder.removeFromChangelists(paths: ["README.md"], depth: .empty).arguments,
+            ["changelist", "--remove", "--depth", "empty", "--non-interactive", "README.md"]
+        )
+    }
+
     func testWorkingCopyMoveSchedulesWithoutCommitMessage() {
         let command = SvnCommandBuilder.workingCopyMove(source: "old.txt", destination: "new.txt")
         XCTAssertEqual(

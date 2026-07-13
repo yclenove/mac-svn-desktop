@@ -3,6 +3,30 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testChangelistAssignmentAndRemovalRoundTripThroughStatusXML() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        try await service.assignChangelist(
+            wc: fixture.workingCopy,
+            name: "release",
+            paths: ["README.txt"]
+        )
+        var statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertEqual(
+            statuses.first(where: { $0.path == "README.txt" })?.changelist,
+            "release"
+        )
+
+        try await service.removeFromChangelists(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"]
+        )
+        statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertNil(statuses.first(where: { $0.path == "README.txt" })?.changelist)
+    }
+
     @MainActor
     func testRevisionGraphBuildsCopyEdgeAndLoadsNodeDiffFromRealRepository() async throws {
         let fixture = try makeFixture()

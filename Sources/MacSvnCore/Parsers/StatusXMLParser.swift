@@ -23,6 +23,7 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentRevision: Revision?
     private var currentTreeConflict = false
     private var currentRemoteItemStatus: ItemStatus?
+    private var currentChangelist: String?
 
     func parser(
         _ parser: XMLParser,
@@ -32,6 +33,8 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
         attributes attributeDict: [String: String] = [:]
     ) {
         switch elementName {
+        case "changelist":
+            currentChangelist = attributeDict["name"]
         case "entry":
             currentPath = attributeDict["path"]
             currentItemStatus = nil
@@ -56,6 +59,10 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
         namespaceURI: String?,
         qualifiedName qName: String?
     ) {
+        if elementName == "changelist" {
+            currentChangelist = nil
+            return
+        }
         guard elementName == "entry", let currentPath, let currentItemStatus else {
             return
         }
@@ -65,7 +72,8 @@ private final class StatusXMLParserDelegate: NSObject, XMLParserDelegate {
             itemStatus: currentItemStatus,
             revision: currentRevision,
             isTreeConflict: currentTreeConflict,
-            remoteItemStatus: currentRemoteItemStatus
+            remoteItemStatus: currentRemoteItemStatus,
+            changelist: currentChangelist
         ))
 
         self.currentPath = nil

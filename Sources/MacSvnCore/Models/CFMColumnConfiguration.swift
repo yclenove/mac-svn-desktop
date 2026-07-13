@@ -7,6 +7,7 @@ public enum CFMColumnID: String, Codable, CaseIterable, Equatable, Sendable {
     case remoteStatus
     case revision
     case treeConflict
+    case changelist
 
     public var displayName: String {
         switch self {
@@ -15,6 +16,7 @@ public enum CFMColumnID: String, Codable, CaseIterable, Equatable, Sendable {
         case .remoteStatus: return "远端"
         case .revision: return "修订"
         case .treeConflict: return "树冲突"
+        case .changelist: return "变更列表"
         }
     }
 }

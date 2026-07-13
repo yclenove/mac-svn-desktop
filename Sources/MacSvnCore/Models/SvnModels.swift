@@ -86,19 +86,23 @@ public struct FileStatus: Equatable, Sendable {
     public let isTreeConflict: Bool
     /// 对照仓库时的远端状态（`status -u` 的 `repos-status`）；未检查仓库时为 `nil`
     public let remoteItemStatus: ItemStatus?
+    /// 工作副本 changelist 归属；未分配时为 `nil`。
+    public let changelist: String?
 
     public init(
         path: String,
         itemStatus: ItemStatus,
         revision: Revision?,
         isTreeConflict: Bool,
-        remoteItemStatus: ItemStatus? = nil
+        remoteItemStatus: ItemStatus? = nil,
+        changelist: String? = nil
     ) {
         self.path = path
         self.itemStatus = itemStatus
         self.revision = revision
         self.isTreeConflict = isTreeConflict
         self.remoteItemStatus = remoteItemStatus
+        self.changelist = changelist
     }
 }
 

@@ -63,7 +63,8 @@ public enum CommitSelectionPolicy {
         Set(candidates(from: statuses).compactMap { status in
             guard status.itemStatus != .conflicted,
                   status.itemStatus != .unversioned,
-                  !status.isTreeConflict else {
+                  !status.isTreeConflict,
+                  !ChangelistPolicy.isIgnoredOnCommit(status.changelist) else {
                 return nil
             }
 
@@ -94,6 +95,7 @@ public final class CommitViewModel {
     public private(set) var guardIssues: [CommitGuardIssue] = []
     public let candidateStatuses: [FileStatus]
     public var selectedPaths: Set<String>
+    public private(set) var selectedChangelist: String?
     public var message = ""
     /// Keep locks：提交后保留锁（`svn commit --no-unlock`）
     public var keepLocks = false
@@ -121,6 +123,27 @@ public final class CommitViewModel {
         candidateStatuses.map(\.path).filter { selectedPaths.contains($0) }
     }
 
+    public var availableChangelists: [String] {
+        Array(Set(candidateStatuses.compactMap(\.changelist))).sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+    }
+
+    public func selectChangelist(_ name: String?) {
+        selectedChangelist = name
+        guard let name else {
+            selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: candidateStatuses)
+            return
+        }
+        selectedPaths = Set(candidateStatuses.compactMap { status in
+            guard status.changelist == name,
+                  status.itemStatus != .conflicted,
+                  status.itemStatus != .unversioned,
+                  !status.isTreeConflict else { return nil }
+            return status.path
+        })
+    }
+
     public var canCommit: Bool {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !orderedSelectedPaths.isEmpty
@@ -129,6 +152,7 @@ public final class CommitViewModel {
     }
 
     public func setSelected(_ isSelected: Bool, for path: String) {
+        selectedChangelist = nil
         if isSelected {
             selectedPaths.insert(path)
         } else {

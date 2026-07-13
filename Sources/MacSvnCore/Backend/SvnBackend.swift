@@ -11,6 +11,8 @@ public protocol SvnBackend: Sendable {
     func mergeTwoTrees(wc: URL, from: String, to: String, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
     func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision
     func add(wc: URL, paths: [String]) async throws
+    func assignChangelist(wc: URL, name: String, paths: [String], depth: SvnDepth) async throws
+    func removeFromChangelists(wc: URL, paths: [String], depth: SvnDepth) async throws
     func delete(wc: URL, paths: [String]) async throws
     /// CFM Repair Move：`svn move`（工作副本内，不提交）
     func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws
@@ -82,6 +84,14 @@ public protocol SvnBackend: Sendable {
 }
 
 public extension SvnBackend {
+    func assignChangelist(wc: URL, name: String, paths: [String], depth: SvnDepth) async throws {
+        throw SvnError.other(code: nil, stderr: "changelistUnavailable")
+    }
+
+    func removeFromChangelists(wc: URL, paths: [String], depth: SvnDepth) async throws {
+        throw SvnError.other(code: nil, stderr: "changelistUnavailable")
+    }
+
     func diffWithURL(
         wc: URL,
         target: String,

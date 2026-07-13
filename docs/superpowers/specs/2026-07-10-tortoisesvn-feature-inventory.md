@@ -55,7 +55,7 @@
 | D08 | Conflicts | 文件/属性/树冲突、编辑、resolved | ✅ 文本三路/树/属性面板 + 批量 Resolved；外置合并工具仍可增强 | T2 |
 | D09 | Check for Modifications | 本地+远端、颜色、Repair、列配置 | ✅ | T1 |
 | D10 | Diff | BASE、双文件、EOL/空白、文件夹比较、外置工具 | ✅ T1 核心；EOL/文件夹 T2 | T1/T2 |
-| D11 | Change Lists | 分组、提交按列表 | ❌ | T3 |
+| D11 | Change Lists | 分组、提交按列表 | ✅ status XML 归属；CFM 列/分组与列表移入/移出；Commit 按列表选择并保留 `ignore-on-commit` 语义 | T3 |
 | D12 | Shelving | 官方 svn shelve V2/V3 选项 | 🟡 本地≠官方 | T3 |
 | D13 | Show Log | 三栏、过滤、统计、离线、右键动作全集 | 🟡 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13) ✅；统计/离线/L15–L16 仍开 | T2/T3 |
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
@@ -117,7 +117,7 @@
 | 35 | Properties | 属性 CRUD + 模板 | svn:/tsvn: 编辑器 | ✅ CRUD、多行值、删除确认、文件/目录模板、CFM/⌘K 路径意图 | T2 |
 | 36 | Copy / Move | `copy`/`move` | 目标路径 | ✅ | T1 |
 | 37 | Shelve / Unshelve | 官方 shelving | V2/V3 设置 | 🟡 | T3 |
-| 38 | Change Lists | changelist 分组 | 提交按列表 | ❌ | T3 |
+| 38 | Change Lists | changelist 分组 | 提交按列表 | ✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证 | T3 |
 | 39 | Externals | `svn:externals` | 编辑器、更新行为 | ❌ | T3 |
 | 40 | Compare revisions / Blame differences | 日志/Blame 高级 | 双修订 | ❌ | T3 |
 | 41 | Save revision / Open / Open with | 取历史文件 | 另存、打开 | ✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开 | T2 |
@@ -150,7 +150,7 @@
 - [x] **Check Repository** → `status -u`  
 - [x] 颜色：仅本地 / 仅远端 / 双方 / 冲突  
 - [x] Repair Move / Repair Copy  
-- [ ] Changelist 列与分组（可与 T3 同期）  
+- [x] Changelist 列与分组；列表移入/移出；Commit 按列表选择（含 `ignore-on-commit`）
 - [x] 列宽/可见列持久化  
 - [ ] 显示未修改 / 忽略项（可配）  
 - [ ] 启动时是否自动联系仓库（可配）  

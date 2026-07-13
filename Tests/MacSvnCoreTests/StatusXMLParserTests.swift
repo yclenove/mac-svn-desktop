@@ -2,6 +2,21 @@ import XCTest
 @testable import MacSvnCore
 
 final class StatusXMLParserTests: XCTestCase {
+    func testParsesChangelistAssociationWithoutLeakingToFollowingEntries() throws {
+        let xml = """
+        <status><target path=".">
+          <changelist name="release">
+            <entry path="Sources/App.swift"><wc-status item="modified" revision="7"/></entry>
+          </changelist>
+          <entry path="README.md"><wc-status item="modified" revision="7"/></entry>
+        </target></status>
+        """
+
+        let statuses = try StatusXMLParser.parse(Data(xml.utf8))
+
+        XCTAssertEqual(statuses.map(\.changelist), ["release", nil])
+    }
+
     func testParsesMixedStatusesAndTreeConflict() throws {
         let xml = """
         <?xml version="1.0" encoding="UTF-8"?>

@@ -102,6 +102,18 @@ public struct MacSvnCommitView: View {
     private func candidateList(_ viewModel: CommitViewModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                if !viewModel.availableChangelists.isEmpty {
+                    Picker("范围", selection: Binding<String?>(
+                        get: { viewModel.selectedChangelist },
+                        set: { viewModel.selectChangelist($0) }
+                    )) {
+                        Text("全部可提交").tag(nil as String?)
+                        ForEach(viewModel.availableChangelists, id: \.self) { name in
+                            Text(name).tag(Optional(name))
+                        }
+                    }
+                    .frame(maxWidth: 220)
+                }
                 Button("Diff") {
                     diffSelected(viewModel)
                 }
@@ -132,6 +144,12 @@ public struct MacSvnCommitView: View {
                                 Text(status.itemStatus.rawValue)
                                 if status.itemStatus == .unversioned {
                                     Text("提交前将 add")
+                                }
+                                if let changelist = status.changelist {
+                                    Text(changelist)
+                                        .foregroundStyle(
+                                            ChangelistPolicy.isIgnoredOnCommit(changelist) ? .orange : .secondary
+                                        )
                                 }
                             }
                             .font(.caption2)

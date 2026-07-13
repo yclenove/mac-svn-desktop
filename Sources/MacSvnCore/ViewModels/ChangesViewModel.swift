@@ -16,6 +16,7 @@ extension StatusProviding {
 public enum ChangesDisplayMode: Equatable, Sendable {
     case tree
     case flat
+    case changelists
 }
 
 public enum StatusFilter: Equatable, Sendable {
@@ -218,6 +219,10 @@ public final class ChangesViewModel {
 
     public var visibleTreeEntries: [FileStatusNode] {
         FileStatusListBuilder.tree(from: visibleFlatEntries)
+    }
+
+    public var visibleChangelistGroups: [ChangelistGroup] {
+        ChangelistPolicy.groups(from: visibleFlatEntries)
     }
 
     public var visibleColumns: [CFMColumnID] {

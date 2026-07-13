@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-13T09:15:46Z",
+  "generated_at": "2026-07-13T09:42:38Z",
   "total": 114,
-  "done": 71,
+  "done": 73,
   "partial": 14,
-  "missing": 29,
-  "coverage": 0.622807,
-  "coverage_percent": 62.28,
+  "missing": 27,
+  "coverage": 0.640351,
+  "coverage_percent": 64.04,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 18,
+      "done": 19,
       "partial": 7,
-      "missing": 3
+      "missing": 2
     },
     "command": {
       "total": 46,
-      "done": 37,
+      "done": 38,
       "partial": 1,
-      "missing": 8
+      "missing": 7
     },
     "log": {
       "total": 20,
@@ -114,8 +114,8 @@
       "key": "D11",
       "section": "domain",
       "title": "Change Lists",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ status XML 归属；CFM 列/分组与列表移入/移出；Commit 按列表选择并保留 `ignore-on-commit` 语义",
+      "status": "done"
     },
     {
       "key": "D12",
@@ -499,8 +499,8 @@
       "key": "cmd.38",
       "section": "command",
       "title": "Change Lists",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证",
+      "status": "done"
     },
     {
       "key": "cmd.39",

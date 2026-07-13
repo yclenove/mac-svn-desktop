@@ -61,6 +61,14 @@ public struct PendingBlameIntent: Equatable, Sendable {
     }
 }
 
+public struct PendingChangelistIntent: Equatable, Sendable {
+    public let paths: [String]
+
+    public init(paths: [String]) {
+        self.paths = paths
+    }
+}
+
 public struct PendingTransferIntent: Equatable, Sendable {
     public let command: SvnCommandID
     public let path: String?
@@ -105,6 +113,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     /// 历史 / Revision Graph → Blame（L07 / #9）。
     @Published public var pendingBlameIntent: PendingBlameIntent?
     @Published public var pendingRevisionGraphLog: PendingRevisionGraphLogIntent?
+    @Published public var pendingChangelistIntent: PendingChangelistIntent?
     /// CFM / ⌘K → 属性页预选路径（#35）。
     @Published public var pendingPropertyPath: String?
     /// CFM / 更新后 → 冲突工作区预选路径（#11）。
@@ -164,10 +173,12 @@ public final class MacSvnAppNavigator: ObservableObject {
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
         let isPathInspectorCommand = command == .blame || command == .properties
+        let isChangelistCommand = command == .changeLists
         let canInferWorkingCopyPath = command != .diffWithURL || (
             paths.count >= 2 && (paths[0] as NSString).isAbsolutePath
         )
-        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand, canInferWorkingCopyPath,
+        if !isLockCommand, !isPatchCommand, !isPathInspectorCommand, !isChangelistCommand,
+           canInferWorkingCopyPath,
            let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
         }
@@ -210,6 +221,10 @@ public final class MacSvnAppNavigator: ObservableObject {
 
         if command == .merge {
             pendingMergeWizard = true
+        }
+
+        if command == .changeLists {
+            pendingChangelistIntent = PendingChangelistIntent(paths: paths.filter { !$0.isEmpty })
         }
 
         if [.checkout, .export, .importToRepository, .importInPlace, .relocate, .removeFromVersionControl].contains(command) {
@@ -268,7 +283,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .update, .updateToRevision, .checkForModifications, .add, .delete, .revert, .cleanup,
              .rename, .addToIgnoreList, .copyMove, .repairMoveCopy:
             return .changes
-        case .repairFilenameCaseConflict:
+        case .repairFilenameCaseConflict, .changeLists:
             return .changes
         case .diff, .diffWithURL:
             return .diff
@@ -297,7 +312,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         case .export, .importToRepository, .importInPlace, .relocate,
              .removeFromVersionControl:
             return .repositoryBrowser
-        case .createRepositoryHere, .changeLists, .deleteKeepLocal, .deleteUnversioned:
+        case .createRepositoryHere, .deleteKeepLocal, .deleteUnversioned:
             return nil
         case .logCompareWithWorkingCopy, .logCompareWithPrevious, .logCompareAndBlame,
              .logShowUnifiedDiff, .logSaveRevisionTo, .logOpen, .logBlame, .logBrowseRepository,
@@ -421,6 +436,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingRevisionGraphLog() -> PendingRevisionGraphLogIntent? {
         let value = pendingRevisionGraphLog
         pendingRevisionGraphLog = nil
+        return value
+    }
+
+    public func consumePendingChangelistIntent() -> PendingChangelistIntent? {
+        let value = pendingChangelistIntent
+        pendingChangelistIntent = nil
         return value
     }
 

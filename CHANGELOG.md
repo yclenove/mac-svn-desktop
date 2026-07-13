@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T3.3：Change Lists（#38、D11、CFM §4.2）
+- Affected: ChangelistPolicy, FileStatus/StatusXMLParser, SvnCommandBuilder/Backend/Service, ChangesViewModel, CommitViewModel, MacSvnChangesView, MacSvnCommitView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
+- Impact: 解析并展示 SVN changelist 归属；CFM 支持变更列表列、分组和按深度移入/移出；Commit 提供按列表选择并默认排除 `ignore-on-commit`；cmd.38 从 CFM/⌘K 可达且不会误打开相对路径；真实 SVN 往返验证；全量 730 绿；覆盖率 73/114；下一 T3.4
+
 - Summary: Tortoise 完美 Loop T3.2：Revision Graph 核心与设置（#9、D25、S07、§4.6）
 - Affected: RevisionGraphModels/Builder/PathClassifier/NodeActionPolicy/ViewModel, SvnCommandBuilder/Backend/Service, MacSvnRevisionGraphView, MacSvnSettingsView, MacSvnAppNavigator, Tests/*, docs/*
 - Impact: 从仓库根 `svn log -v` 构建 history/copy 图，支持 trunk/branches/tags glob 分类、颜色与 copy 混色、标签/未分类/已删除剪枝、拓扑/时间线、分页/All；节点 Log/Checkout/Blame/Diff 经原子 intent 与认证重试接入现有工作流；真实 SVN 验证 copy-edge 和跨位置 Diff；覆盖率 71/114；全量 724 绿；下一 T3.3

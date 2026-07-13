@@ -609,6 +609,35 @@ public actor SvnService {
         }
     }
 
+    public func assignChangelist(
+        wc: URL,
+        name: String,
+        paths: [String],
+        depth: SvnDepth = .empty
+    ) async throws {
+        let normalizedName = try ChangelistPolicy.validatedName(name)
+        let normalizedPaths = try ChangelistPolicy.validatedPaths(paths)
+        try await withWriteLock(wc: wc, operation: "assignChangelist") {
+            try await backend.assignChangelist(
+                wc: wc,
+                name: normalizedName,
+                paths: normalizedPaths,
+                depth: depth
+            )
+        }
+    }
+
+    public func removeFromChangelists(
+        wc: URL,
+        paths: [String],
+        depth: SvnDepth = .empty
+    ) async throws {
+        let normalizedPaths = try ChangelistPolicy.validatedPaths(paths)
+        try await withWriteLock(wc: wc, operation: "removeFromChangelists") {
+            try await backend.removeFromChangelists(wc: wc, paths: normalizedPaths, depth: depth)
+        }
+    }
+
     public func delete(wc: URL, paths: [String]) async throws {
         try await withWriteLock(wc: wc, operation: "delete") {
             try await backend.delete(wc: wc, paths: paths)
