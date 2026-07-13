@@ -26,13 +26,14 @@ final class MacSvnFinderSync: FIFinderSync {
         let builder = presentationBuilder
         let cache = statusCache
         Task {
-            guard let root = await cache.workingCopyRoot(containing: path) else {
+            guard let context = await cache.requestContext(containing: path) else {
                 await MainActor.run {
                     FIFinderSyncController.default().setBadgeIdentifier("", for: url)
                 }
                 return
             }
 
+            let root = context.root
             let relative = MacSvnFinderSync.relativePath(of: path, under: root) ?? "."
             guard await cache.collectsBadges() else {
                 await MainActor.run {
@@ -46,7 +47,11 @@ final class MacSvnFinderSync: FIFinderSync {
                 }
                 return
             }
-            let presentation = builder.presentation(for: relative, statuses: statuses)
+            let presentation = builder.presentation(
+                for: relative,
+                statuses: statuses,
+                overlaySettings: context.overlaySettings
+            )
             await MainActor.run {
                 FIFinderSyncController.default().setBadgeIdentifier(presentation.badge.rawValue, for: url)
             }
@@ -121,7 +126,9 @@ final class MacSvnFinderSync: FIFinderSync {
         let configuration = loadConfiguration()
         let cache = statusCache
         let directoryURLs = Set(
-            configuration.roots.map { URL(fileURLWithPath: $0, isDirectory: true) }
+            configuration.overlaySettings
+                .monitoredDirectories(for: configuration.roots)
+                .map { URL(fileURLWithPath: $0, isDirectory: true) }
         )
         Task {
             await cache.updateConfiguration(configuration)
@@ -203,20 +210,29 @@ private struct MenuPayload {
     let path: String
 }
 
+private struct FinderSyncRequestContext: Sendable {
+    let root: String
+    let overlaySettings: FinderSyncOverlaySettings
+}
+
 /// 按 WC 根缓存 `svn status --xml` 结果，避免 Finder 刷角标时频繁打进程。
 actor FinderSyncStatusCache {
     private var roots: [String] = []
     private var mode: FinderSyncCacheMode = .defaultCache
+    private var overlaySettings = FinderSyncOverlaySettings()
     private var cache: [String: (date: Date, statuses: [FileStatus])] = [:]
     private var inFlight: [String: Task<[FileStatus], Never>] = [:]
     private var configurationGeneration = 0
 
     func updateConfiguration(_ configuration: FinderSyncRootsFile) {
         let normalizedRoots = configuration.roots.map { ($0 as NSString).standardizingPath }
-        guard roots != normalizedRoots || mode != configuration.cacheMode else { return }
+        guard roots != normalizedRoots
+                || mode != configuration.cacheMode
+                || overlaySettings != configuration.overlaySettings else { return }
         configurationGeneration += 1
         roots = normalizedRoots
         mode = configuration.cacheMode
+        overlaySettings = configuration.overlaySettings
         cache.removeAll()
         inFlight.values.forEach { $0.cancel() }
         inFlight.removeAll()
@@ -226,11 +242,13 @@ actor FinderSyncStatusCache {
         FinderSyncCachePolicy(mode: mode).collectsBadges
     }
 
-    func workingCopyRoot(containing path: String) -> String? {
+    fileprivate func requestContext(containing path: String) -> FinderSyncRequestContext? {
         let normalized = (path as NSString).standardizingPath
-        return roots
+        guard overlaySettings.allows(path: normalized) else { return nil }
+        let matchingRoots = roots
             .filter { normalized == $0 || normalized.hasPrefix($0 + "/") }
-            .max(by: { $0.count < $1.count })
+        guard let root = matchingRoots.max(by: { $0.count < $1.count }) else { return nil }
+        return FinderSyncRequestContext(root: root, overlaySettings: overlaySettings)
     }
 
     func cachedStatuses(for key: String, ttl: TimeInterval) -> [FileStatus]? {

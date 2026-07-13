@@ -107,6 +107,45 @@ final class FinderSyncRootsExporterTests: XCTestCase {
         XCTAssertEqual(configuration.roots, ["/tmp/new"])
     }
 
+    func testExportAndLoadPreservesOverlaySettings() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        let overlaySettings = FinderSyncOverlaySettings(
+            includedPaths: ["/tmp/include"],
+            excludedPaths: ["/tmp/include/.build"],
+            enabledBadges: [.modified, .normal]
+        )
+
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/wc-a")],
+            cacheMode: .shell,
+            overlaySettings: overlaySettings,
+            to: fileURL
+        )
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.overlaySettings, overlaySettings)
+    }
+
+    func testRootOnlyExportPreservesExistingOverlaySettings() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        let overlaySettings = FinderSyncOverlaySettings(includedPaths: ["/tmp/include"])
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/old")],
+            cacheMode: .defaultCache,
+            overlaySettings: overlaySettings,
+            to: fileURL
+        )
+
+        try FinderSyncRootsExporter.export(records: [record(path: "/tmp/new")], to: fileURL)
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.overlaySettings, overlaySettings)
+    }
+
     private func temporaryDirectory() -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("finder-roots-\(UUID().uuidString)", isDirectory: true)

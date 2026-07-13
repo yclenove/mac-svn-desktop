@@ -145,6 +145,7 @@ public final class MacSvnAppSession: ObservableObject {
         try? FinderSyncRootsExporter.export(
             records: workspaces,
             cacheMode: settings.finderSyncCacheMode,
+            overlaySettings: settings.finderSyncOverlaySettings,
             to: FinderSyncRootsExporter.fileURL(in: directory)
         )
 

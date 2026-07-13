@@ -14,6 +14,9 @@ public struct MacSvnSettingsView: View {
     @State private var logCacheRetentionDays = 90
     @State private var logCacheMaxEntries = 20_000
     @State private var finderSyncCacheMode: FinderSyncCacheMode = .defaultCache
+    @State private var finderSyncIncludedPaths = ""
+    @State private var finderSyncExcludedPaths = ""
+    @State private var finderSyncEnabledBadges = Set(FinderSyncBadge.allCases)
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -80,6 +83,21 @@ public struct MacSvnSettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                patternEditor("包含路径（每行一个；留空包含全部工作副本）", text: $finderSyncIncludedPaths)
+                patternEditor("排除路径（每行一个；优先于包含路径）", text: $finderSyncExcludedPaths)
+                DisclosureGroup("显示的角标种类") {
+                    HStack {
+                        Button("全选") {
+                            finderSyncEnabledBadges = Set(FinderSyncBadge.allCases)
+                        }
+                        Button("清空") {
+                            finderSyncEnabledBadges.removeAll()
+                        }
+                    }
+                    ForEach(FinderSyncBadge.allCases, id: \.self) { badge in
+                        Toggle(badge.displayName, isOn: finderSyncBadgeBinding(badge))
+                    }
+                }
             }
             Section("分支布局") {
                 TextField("trunk", text: $trunk)
@@ -138,6 +156,9 @@ public struct MacSvnSettingsView: View {
         logCacheRetentionDays = settings.logCachePolicy.retentionDays
         logCacheMaxEntries = settings.logCachePolicy.maxEntriesPerTarget
         finderSyncCacheMode = settings.finderSyncCacheMode
+        finderSyncIncludedPaths = settings.finderSyncOverlaySettings.includedPaths.joined(separator: "\n")
+        finderSyncExcludedPaths = settings.finderSyncOverlaySettings.excludedPaths.joined(separator: "\n")
+        finderSyncEnabledBadges = settings.finderSyncOverlaySettings.enabledBadges
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -169,6 +190,11 @@ public struct MacSvnSettingsView: View {
             maxEntriesPerTarget: logCacheMaxEntries
         )
         settings.finderSyncCacheMode = finderSyncCacheMode
+        settings.finderSyncOverlaySettings = FinderSyncOverlaySettings(
+            includedPaths: patterns(from: finderSyncIncludedPaths),
+            excludedPaths: patterns(from: finderSyncExcludedPaths),
+            enabledBadges: finderSyncEnabledBadges
+        )
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
         settings.revisionGraph = RevisionGraphSettings(
@@ -205,6 +231,7 @@ public struct MacSvnSettingsView: View {
             try FinderSyncRootsExporter.export(
                 records: records,
                 cacheMode: settings.finderSyncCacheMode,
+                overlaySettings: settings.finderSyncOverlaySettings,
                 to: FinderSyncRootsExporter.fileURL(in: session.supportDirectory)
             )
         } catch {
@@ -242,6 +269,19 @@ public struct MacSvnSettingsView: View {
                 set: { hex.wrappedValue = $0.rgbHex }
             ),
             supportsOpacity: false
+        )
+    }
+
+    private func finderSyncBadgeBinding(_ badge: FinderSyncBadge) -> Binding<Bool> {
+        Binding(
+            get: { finderSyncEnabledBadges.contains(badge) },
+            set: { isEnabled in
+                if isEnabled {
+                    finderSyncEnabledBadges.insert(badge)
+                } else {
+                    finderSyncEnabledBadges.remove(badge)
+                }
+            }
         )
     }
 

@@ -127,6 +127,37 @@ final class FinderSyncPresentationBuilderTests: XCTestCase {
         XCTAssertEqual(presentation.badge, .normal)
     }
 
+    func testDisabledBadgeFallsBackToNextEnabledDirectoryStatus() {
+        let builder = FinderSyncPresentationBuilder()
+        let settings = FinderSyncOverlaySettings(enabledBadges: [.modified, .normal])
+
+        let presentation = builder.presentation(
+            for: ".",
+            statuses: [
+                FileStatus(path: "conflict.txt", itemStatus: .modified, revision: Revision(2), isTreeConflict: true),
+                FileStatus(path: "changed.txt", itemStatus: .modified, revision: Revision(2), isTreeConflict: false)
+            ],
+            overlaySettings: settings
+        )
+
+        XCTAssertEqual(presentation.badge, .modified)
+    }
+
+    func testDisabledBadgeIsNotPresentedForAnExactFile() {
+        let builder = FinderSyncPresentationBuilder()
+        let settings = FinderSyncOverlaySettings(enabledBadges: [.normal])
+
+        let presentation = builder.presentation(
+            for: "conflict.txt",
+            statuses: [
+                FileStatus(path: "conflict.txt", itemStatus: .conflicted, revision: Revision(2), isTreeConflict: false)
+            ],
+            overlaySettings: settings
+        )
+
+        XCTAssertEqual(presentation.badge, .normal)
+    }
+
     private func enabledActionIDs(in presentation: FinderSyncPresentation) -> [FinderSyncMenuActionID] {
         presentation.menuActions.filter(\.isEnabled).map(\.id)
     }

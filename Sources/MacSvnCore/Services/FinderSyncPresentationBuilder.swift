@@ -1,6 +1,6 @@
 import Foundation
 
-public enum FinderSyncBadge: String, Equatable, Sendable {
+public enum FinderSyncBadge: String, Codable, CaseIterable, Equatable, Hashable, Sendable {
     case normal
     case modified
     case added
@@ -19,6 +19,29 @@ public enum FinderSyncBadge: String, Equatable, Sendable {
     case nested
     case switched
     case mergeInfo
+
+    public var displayName: String {
+        switch self {
+        case .normal: return "正常"
+        case .modified: return "已修改"
+        case .added: return "已添加"
+        case .deleted: return "已删除"
+        case .missing: return "缺失"
+        case .conflicted: return "冲突"
+        case .replaced: return "已替换"
+        case .unversioned: return "未版本控制"
+        case .ignored: return "已忽略"
+        case .external: return "外部项"
+        case .incomplete: return "不完整"
+        case .obstructed: return "阻碍"
+        case .locked: return "已锁定"
+        case .needsLock: return "需要锁定"
+        case .shallow: return "稀疏深度"
+        case .nested: return "嵌套工作副本"
+        case .switched: return "已切换"
+        case .mergeInfo: return "仅合并信息"
+        }
+    }
 }
 
 public enum FinderSyncMenuActionID: String, Codable, Equatable, Hashable, Sendable {
@@ -59,13 +82,20 @@ public struct FinderSyncPresentation: Equatable, Sendable {
 public struct FinderSyncPresentationBuilder: Sendable {
     public init() {}
 
-    public func presentation(for targetPath: String, statuses: [FileStatus]) -> FinderSyncPresentation {
+    public func presentation(
+        for targetPath: String,
+        statuses: [FileStatus],
+        overlaySettings: FinderSyncOverlaySettings = FinderSyncOverlaySettings()
+    ) -> FinderSyncPresentation {
         let normalizedTarget = Self.normalize(targetPath)
         let matchedStatuses = Self.statusesMatching(targetPath: normalizedTarget, statuses: statuses)
         let dominantStatus = matchedStatuses.sorted {
-            Self.priority(Self.badge(for: $0)) > Self.priority(Self.badge(for: $1))
+            Self.priority(Self.badge(for: $0, enabledBadges: overlaySettings.enabledBadges))
+                > Self.priority(Self.badge(for: $1, enabledBadges: overlaySettings.enabledBadges))
         }.first
-        let badge = dominantStatus.map(Self.badge) ?? .normal
+        let badge = dominantStatus.map {
+            Self.badge(for: $0, enabledBadges: overlaySettings.enabledBadges)
+        } ?? .normal
 
         return FinderSyncPresentation(
             targetPath: normalizedTarget,
@@ -84,8 +114,14 @@ public struct FinderSyncPresentationBuilder: Sendable {
         }
     }
 
-    private static func badge(for status: FileStatus) -> FinderSyncBadge {
-        badges(for: status).max { priority($0) < priority($1) } ?? .normal
+    private static func badge(
+        for status: FileStatus,
+        enabledBadges: Set<FinderSyncBadge> = Set(FinderSyncBadge.allCases)
+    ) -> FinderSyncBadge {
+        badges(for: status)
+            .filter(enabledBadges.contains)
+            .max { priority($0) < priority($1) }
+            ?? .normal
     }
 
     private static func badges(for status: FileStatus) -> [FinderSyncBadge] {

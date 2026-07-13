@@ -5,21 +5,25 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
     public var version: Int
     public var roots: [String]
     public var cacheMode: FinderSyncCacheMode
+    public var overlaySettings: FinderSyncOverlaySettings
 
     public init(
-        version: Int = 2,
+        version: Int = 3,
         roots: [String] = [],
-        cacheMode: FinderSyncCacheMode = .defaultCache
+        cacheMode: FinderSyncCacheMode = .defaultCache,
+        overlaySettings: FinderSyncOverlaySettings = FinderSyncOverlaySettings()
     ) {
         self.version = version
         self.roots = roots
         self.cacheMode = cacheMode
+        self.overlaySettings = overlaySettings
     }
 
     private enum CodingKeys: String, CodingKey {
         case version
         case roots
         case cacheMode
+        case overlaySettings
     }
 
     public init(from decoder: Decoder) throws {
@@ -28,6 +32,10 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
         roots = try container.decodeIfPresent([String].self, forKey: .roots) ?? []
         cacheMode = try container.decodeIfPresent(FinderSyncCacheMode.self, forKey: .cacheMode)
             ?? .defaultCache
+        overlaySettings = try container.decodeIfPresent(
+            FinderSyncOverlaySettings.self,
+            forKey: .overlaySettings
+        ) ?? FinderSyncOverlaySettings()
     }
 }
 
@@ -41,8 +49,13 @@ public enum FinderSyncRootsExporter {
 
     /// 仅导出有效工作副本路径，去重并排序，便于扩展稳定注册。
     public static func export(records: [WorkingCopyRecord], to fileURL: URL) throws {
-        let existingMode = (try? loadConfiguration(from: fileURL).cacheMode) ?? .defaultCache
-        try export(records: records, cacheMode: existingMode, to: fileURL)
+        let existing = try? loadConfiguration(from: fileURL)
+        try export(
+            records: records,
+            cacheMode: existing?.cacheMode ?? .defaultCache,
+            overlaySettings: existing?.overlaySettings ?? FinderSyncOverlaySettings(),
+            to: fileURL
+        )
     }
 
     public static func export(
@@ -50,10 +63,30 @@ public enum FinderSyncRootsExporter {
         cacheMode: FinderSyncCacheMode,
         to fileURL: URL
     ) throws {
+        let existingOverlaySettings = (try? loadConfiguration(from: fileURL).overlaySettings)
+            ?? FinderSyncOverlaySettings()
+        try export(
+            records: records,
+            cacheMode: cacheMode,
+            overlaySettings: existingOverlaySettings,
+            to: fileURL
+        )
+    }
+
+    public static func export(
+        records: [WorkingCopyRecord],
+        cacheMode: FinderSyncCacheMode,
+        overlaySettings: FinderSyncOverlaySettings,
+        to fileURL: URL
+    ) throws {
         let roots = Array(
             Set(records.filter(\.isValid).map(\.localPath))
         ).sorted()
-        let payload = FinderSyncRootsFile(roots: roots, cacheMode: cacheMode)
+        let payload = FinderSyncRootsFile(
+            roots: roots,
+            cacheMode: cacheMode,
+            overlaySettings: overlaySettings
+        )
         let data = try JSONEncoder().encode(payload)
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),

@@ -117,6 +117,22 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.finderSyncCacheMode, .shell)
     }
 
+    func testFinderSyncOverlaySettingsPersistWithSettings() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.finderSyncOverlaySettings = FinderSyncOverlaySettings(
+            includedPaths: ["/tmp/include"],
+            excludedPaths: ["/tmp/include/.build"],
+            enabledBadges: [.modified, .normal]
+        )
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.finderSyncOverlaySettings, settings.finderSyncOverlaySettings)
+    }
+
     func testResetRestoresDefaults() async throws {
         let root = temporaryRoot()
         let store = makeStore(root: root)

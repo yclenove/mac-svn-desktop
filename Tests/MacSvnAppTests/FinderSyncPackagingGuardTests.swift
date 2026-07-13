@@ -71,6 +71,26 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("cacheMode: settings.finderSyncCacheMode"))
     }
 
+    func testSettingsExportsFinderSyncOverlayFiltersAndEnabledBadges() throws {
+        let featureSource = try Self.readFeatureSource(named: "MacSvnSettingsView.swift")
+        let sessionSource = try Self.readRepoSource(at: "Sources/MacSvnApp/App/MacSvnAppSession.swift")
+
+        XCTAssertTrue(featureSource.contains("finderSyncOverlaySettings"))
+        XCTAssertTrue(featureSource.contains("finderSyncIncludedPaths"))
+        XCTAssertTrue(featureSource.contains("finderSyncExcludedPaths"))
+        XCTAssertTrue(featureSource.contains("finderSyncEnabledBadges"))
+        XCTAssertTrue(sessionSource.contains("overlaySettings: settings.finderSyncOverlaySettings"))
+    }
+
+    func testExtensionAppliesFinderSyncOverlaySettingsBeforeCollectingBadges() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("overlaySettings.allows(path: normalized)"))
+        XCTAssertTrue(source.contains("configuration.overlaySettings"))
+        XCTAssertTrue(source.contains(".monitoredDirectories(for: configuration.roots)"))
+        XCTAssertTrue(source.contains("overlaySettings: context.overlaySettings"))
+    }
+
     private static func readFinderSyncSource() throws -> String {
         try readRepoSource(at: "Packaging/FinderSync/MacSvnFinderSync.swift")
     }
