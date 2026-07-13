@@ -165,6 +165,13 @@ public actor SvnService {
         }
     }
 
+    public func listWithLocks(url: String, depth: SvnDepth, auth: Credential? = nil) async throws -> [RemoteEntry] {
+        let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
+        return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+            try await backend.listWithLocks(url: url, depth: depth, auth: auth)
+        }
+    }
+
     public func cat(
         url: String,
         revision: Revision? = nil,

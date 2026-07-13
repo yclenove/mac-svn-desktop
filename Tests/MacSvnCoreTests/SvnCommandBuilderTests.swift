@@ -363,6 +363,21 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testRemoteInfoUsesXmlDepthAuthAndUrl() {
+        let command = SvnCommandBuilder.remoteInfo(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            authArguments: ["--username", "u", "--password-from-stdin"]
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "info", "--xml", "--non-interactive",
+            "--depth", "immediates",
+            "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+    }
+
     func testCatUsesRevisionAuthenticationAndUrl() {
         let command = SvnCommandBuilder.cat(
             url: "file:///repo/trunk/README.txt",

@@ -47,6 +47,7 @@ public protocol SvnBackend: Sendable {
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func remoteLogFromHead(url: String, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
     func checkout(url: String, to destination: URL, depth: SvnDepth, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws
     func export(url: String, to destination: URL, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws
@@ -63,6 +64,10 @@ public protocol SvnBackend: Sendable {
 }
 
 public extension SvnBackend {
+    func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, auth: auth)
+    }
+
     func blame(
         wc: URL,
         target: String,

@@ -35,12 +35,15 @@ public struct MacSvnRepoBrowserView: View {
     @State private var remoteWriteName = ""
     @State private var remoteWriteDestination = ""
     @State private var remoteWriteMessage = ""
+    @State private var pendingRemoteWriteConfirmation: RepoRemoteWriteConfirmation?
+    @State private var showRemoteWriteConfirmation = false
 
     private enum RemoteWriteKind: String, Identifiable {
         case mkdir = "新建目录"
         case delete = "删除"
         case copy = "复制"
         case move = "移动"
+        case rename = "重命名"
 
         var id: String { rawValue }
     }
@@ -88,6 +91,21 @@ public struct MacSvnRepoBrowserView: View {
         }
         .sheet(isPresented: $showTransferSheet) {
             transferSheet
+        }
+        .alert(
+            "确认远端\(remoteWriteKind.rawValue)",
+            isPresented: $showRemoteWriteConfirmation,
+            presenting: pendingRemoteWriteConfirmation
+        ) { _ in
+            Button("确认\(remoteWriteKind.rawValue)", role: .destructive) {
+                Task { await executeRemoteWrite(confirmed: true) }
+            }
+            Button("取消", role: .cancel) {
+                browserVM?.cancelRemoteOperationConfirmation()
+                pendingRemoteWriteConfirmation = nil
+            }
+        } message: { confirmation in
+            Text(remoteWriteConfirmationSummary(confirmation))
         }
     }
 
@@ -141,6 +159,18 @@ public struct MacSvnRepoBrowserView: View {
                     .foregroundStyle(.secondary)
                     .padding(8)
             }
+            HStack(spacing: 8) {
+                Text("名称")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("锁")
+                    .frame(width: 150, alignment: .leading)
+                Text("修订")
+                    .frame(width: 56, alignment: .trailing)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
             List(selection: Binding(
                 get: { selectedEntry?.path },
                 set: { path in
@@ -150,14 +180,31 @@ public struct MacSvnRepoBrowserView: View {
                 }
             )) {
                 ForEach(browserVM?.children(of: rootURL) ?? [], id: \.path) { entry in
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: entry.kind == .directory ? "folder" : "doc")
                         Text(entry.name)
                         Spacer()
+                        if let lock = entry.lock {
+                            HStack(spacing: 4) {
+                                Image(systemName: "lock.fill")
+                                    .foregroundStyle(.orange)
+                                Text(lock.owner ?? "已锁定")
+                                    .lineLimit(1)
+                            }
+                            .frame(width: 150, alignment: .leading)
+                            .help(lockSummary(lock))
+                        } else {
+                            Text("")
+                                .frame(width: 150)
+                        }
                         if let revision = entry.revision {
                             Text("r\(revision.value)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                                .frame(width: 56, alignment: .trailing)
+                        } else {
+                            Text("")
+                                .frame(width: 56)
                         }
                     }
                     .tag(entry.path)
@@ -188,6 +235,8 @@ public struct MacSvnRepoBrowserView: View {
                 .disabled(selectedEntry == nil)
             Button("移动") { presentRemoteWrite(.move) }
                 .disabled(selectedEntry == nil)
+            Button("重命名") { presentRemoteWrite(.rename) }
+                .disabled(selectedEntry == nil)
             Spacer()
         }
         .padding(.horizontal, 8)
@@ -203,6 +252,18 @@ public struct MacSvnRepoBrowserView: View {
                 LabeledContent("类型", value: selectedEntry.kind == .directory ? "目录" : "文件")
                 if let author = selectedEntry.author {
                     LabeledContent("作者", value: author)
+                }
+                if let lock = selectedEntry.lock {
+                    Divider()
+                    LabeledContent("锁持有者", value: lock.owner ?? "未知")
+                    if let comment = lock.comment, !comment.isEmpty {
+                        LabeledContent("锁说明", value: comment)
+                    }
+                    if let created = lock.created {
+                        LabeledContent("锁定时间") {
+                            Text(created, format: .dateTime.year().month().day().hour().minute())
+                        }
+                    }
                 }
 
                 Picker("检出深度", selection: $selectedDepth) {
@@ -257,6 +318,12 @@ public struct MacSvnRepoBrowserView: View {
                 }
                 TextField("目标 URL", text: $remoteWriteDestination)
                     .textFieldStyle(.roundedBorder)
+            case .rename:
+                if let selectedEntry {
+                    LabeledContent("原名称", value: selectedEntry.name)
+                }
+                TextField("新名称", text: $remoteWriteName)
+                    .textFieldStyle(.roundedBorder)
             }
 
             TextField("提交说明（必填）", text: $remoteWriteMessage)
@@ -265,8 +332,8 @@ public struct MacSvnRepoBrowserView: View {
             HStack {
                 Spacer()
                 Button("取消") { showRemoteWriteSheet = false }
-                Button("执行并提交") {
-                    Task { await executeRemoteWrite() }
+                Button(requiresRemoteWriteConfirmation ? "继续" : "执行并提交") {
+                    Task { await executeRemoteWrite(confirmed: false) }
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canSubmitRemoteWrite)
@@ -391,13 +458,26 @@ public struct MacSvnRepoBrowserView: View {
         case .copy, .move:
             return selectedEntry != nil
                 && !remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .rename:
+            return selectedEntry != nil
+                && !remoteWriteName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private var requiresRemoteWriteConfirmation: Bool {
+        switch remoteWriteKind {
+        case .delete, .move, .rename:
+            return true
+        case .mkdir, .copy:
+            return false
         }
     }
 
     private func presentRemoteWrite(_ kind: RemoteWriteKind) {
         remoteWriteKind = kind
         remoteWriteMessage = ""
-        remoteWriteName = ""
+        remoteWriteName = kind == .rename ? selectedEntry?.name ?? "" : ""
+        pendingRemoteWriteConfirmation = nil
         if let selectedEntry {
             remoteWriteDestination = join(rootURL, selectedEntry.name + (kind == .copy ? "-copy" : "-moved"))
         } else {
@@ -406,7 +486,7 @@ public struct MacSvnRepoBrowserView: View {
         showRemoteWriteSheet = true
     }
 
-    private func executeRemoteWrite() async {
+    private func executeRemoteWrite(confirmed: Bool) async {
         guard let browserVM else { return }
         let message = remoteWriteMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         switch remoteWriteKind {
@@ -414,7 +494,12 @@ public struct MacSvnRepoBrowserView: View {
             await browserVM.createDirectory(named: remoteWriteName, in: rootURL, message: message)
         case .delete:
             guard let selectedEntry else { return }
-            await browserVM.delete(entry: selectedEntry, baseURL: rootURL, message: message)
+            await browserVM.delete(
+                entry: selectedEntry,
+                baseURL: rootURL,
+                message: message,
+                confirmed: confirmed
+            )
         case .copy:
             guard let selectedEntry else { return }
             await browserVM.copy(
@@ -429,13 +514,29 @@ public struct MacSvnRepoBrowserView: View {
                 entry: selectedEntry,
                 baseURL: rootURL,
                 to: remoteWriteDestination.trimmingCharacters(in: .whitespacesAndNewlines),
-                message: message
+                message: message,
+                confirmed: confirmed
             )
+        case .rename:
+            guard let selectedEntry else { return }
+            await browserVM.rename(
+                entry: selectedEntry,
+                baseURL: rootURL,
+                to: remoteWriteName,
+                message: message,
+                confirmed: confirmed
+            )
+        }
+        if case .confirmationRequired(let confirmation) = browserVM.remoteOperationState {
+            pendingRemoteWriteConfirmation = confirmation
+            showRemoteWriteConfirmation = true
+            return
         }
         applyRemoteOperationStatus(browserVM.remoteOperationState)
         if case .completed = browserVM.remoteOperationState {
             showRemoteWriteSheet = false
             selectedEntry = nil
+            pendingRemoteWriteConfirmation = nil
         }
     }
 
@@ -445,6 +546,8 @@ public struct MacSvnRepoBrowserView: View {
             statusText = "\(label(for: op))成功 r\(revision.value)"
         case .error(let message):
             statusText = "远端写失败：\(message)"
+        case .confirmationRequired:
+            statusText = "等待确认远端\(remoteWriteKind.rawValue)"
         case .running(let op):
             statusText = "正在\(label(for: op))…"
         case .idle:
@@ -458,7 +561,26 @@ public struct MacSvnRepoBrowserView: View {
         case .delete: return "删除"
         case .copy: return "复制"
         case .move: return "移动"
+        case .rename: return "重命名"
         }
+    }
+
+    private func remoteWriteConfirmationSummary(_ confirmation: RepoRemoteWriteConfirmation) -> String {
+        if let destination = confirmation.destinationURL {
+            return "源：\(confirmation.sourceURL)\n目标：\(destination)\n确认后将立即提交到仓库。"
+        }
+        return "目标：\(confirmation.sourceURL)\n确认后将立即提交到仓库，且不能通过工作副本撤销。"
+    }
+
+    private func lockSummary(_ lock: RemoteLockInfo) -> String {
+        var parts = ["持有者：\(lock.owner ?? "未知")"]
+        if let comment = lock.comment, !comment.isEmpty {
+            parts.append("说明：\(comment)")
+        }
+        if let created = lock.created {
+            parts.append("时间：\(created.formatted(date: .abbreviated, time: .shortened))")
+        }
+        return parts.joined(separator: "\n")
     }
 
     private func bootstrap() async {

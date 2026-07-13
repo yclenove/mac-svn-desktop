@@ -68,7 +68,7 @@
 | D21 | Locking | lock/unlock/break、needs-lock、锁钩子 | ✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5 | T2 |
 | D22 | Patch | create/apply patch | ✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口 | T2 |
 | D23 | Blame | blame + blame differences | 🟡 Blame 修订范围/悬停日志 ✅；Blame differences 仍属 T3.9 | T2/T3 |
-| D24 | Repo Browser | 浏览+远端写操作+锁信息 | 🟡 | T2 |
+| D24 | Repo Browser | 浏览+远端写操作+锁信息 | ✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created | T2 |
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ❌ | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
 | D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ❌ | T5 |
@@ -89,7 +89,7 @@
 | 7 | Show Log | `log -v [--limit][--stop-on-copy]` | 见 §5 日志动作 | ✅ 过滤/stop/Next·All/Actions/L01–L12+L14+L17(除L03/L13)；L15–L16→T3 | T2 |
 | 8 | Check for Modifications | `status -v` / `status -u -v` | Check Repository、颜色、Repair | ✅ | T1 |
 | 9 | Revision Graph | `log -v` @ repo root 分析 | 分类模式、节点菜单 | ❌ | T3 |
-| 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | 🟡 | T2 |
+| 10 | Repo Browser | `list -v`、`info`（含锁） | 远端 mkdir/delete/copy/move/rename | ✅ `svn info --xml --depth immediates` 返回锁详情；mkdir/delete/copy/move/rename 均需提交说明，delete/move/rename 二次确认 | T2 |
 | 11 | Edit Conflicts | 外置/内置三路 | mine/theirs/base | ✅ CFM/冲突工作区入口；内置三路+树/属性；外置工具可增强 | T2 |
 | 12 | Resolved | `resolved` | 多选 | ✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除 | T2 |
 | 13 | Rename | `rename` | 新名校验 | ✅ | T1 |
@@ -173,8 +173,8 @@
 - [ ] 任意 URL@rev；不可高于 repo root  
 - [ ] 预取子目录 / 显示 externals（可关，防弱服务器）  
 - [ ] Checkout / Export / Log / Blame  
-- [ ] 远端：创建文件夹、删除、复制、移动、重命名（高危确认）  
-- [ ] 锁信息列  
+- [x] 远端：创建文件夹、删除、复制、移动、重命名（高危确认）
+- [x] 锁信息列：owner / comment / created；未锁条目不发起逐项查询
 
 ### 4.6 Revision Graph（必须，T3）
 

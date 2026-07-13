@@ -42,6 +42,41 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testListWithLocksRunsRemoteInfoOnceAndParsesLockDetails() async throws {
+        let xml = """
+        <info>
+          <entry path="trunk" revision="3" kind="dir"><url>file:///repo/trunk</url></entry>
+          <entry path="locked.txt" revision="3" kind="file" size="4">
+            <url>file:///repo/trunk/locked.txt</url>
+            <lock><token>token</token><owner>alice</owner><comment>note</comment><created>2026-07-13T04:02:50.061286Z</created></lock>
+          </entry>
+        </info>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(xml.utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let entries = try await backend.listWithLocks(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(entries.first?.lock?.owner, "alice")
+        XCTAssertEqual(entries.first?.lock?.comment, "note")
+        XCTAssertEqual(runner.calls.count, 1)
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertNil(runner.calls.single?.currentDirectory)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "info", "--xml", "--non-interactive", "--depth", "immediates",
+            "--username", "u", "--password-from-stdin", "file:///repo/trunk"
+        ])
+    }
+
     func testBlameRunsInWorkingCopyAndParsesXml() async throws {
         let xml = """
         <blame><target path="README.txt"><entry line-number="1"><commit revision="7"><author>yangchao</author><date>2026-07-09T06:00:00.000000Z</date></commit></entry></target></blame>

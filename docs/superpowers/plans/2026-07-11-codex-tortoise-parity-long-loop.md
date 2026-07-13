@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.11，当前继续 T2.12。
+> **交接时刻：** 2026-07-11（UTC+8）；Codex 已完成 T2.8–T2.12，当前继续 T2.13。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T2.12 Repo Browser 远端写 + 高危确认 + 锁列（#10）
+当前第一个未完成项：T2.13 Filename case conflict repair（#46）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T2.11 已提交，工作区应干净 |
-| 最近功能 tip | `c4a6682` feat(T2.11) Properties / Blame |
-| 覆盖率 | **63/114 = 55.26%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **664** 绿（2026-07-13） |
-| Wave | **G0 ✅ · G1 ✅ · T2 进行中**（T2.1–T2.11 ✅，下一 **T2.12**） |
+| 工作区 | T2.12 已提交，工作区应干净 |
+| 最近功能 tip | （提交后回填） feat(T2.12) Repo Browser 远端写 / 锁列 |
+| 覆盖率 | **65/114 = 57.02%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **671** 绿（2026-07-13） |
+| Wave | **G0 ✅ · G1 ✅ · T2 进行中**（T2.1–T2.12 ✅，下一 **T2.13**） |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -57,7 +57,7 @@
 | **T2.9** | Export / Import / Import in Place / Relocate / Remove from VC | ✅ |
 | **T2.10** | Create / Apply Patch | ✅ |
 | **T2.11** | Properties 模板；Blame 悬停 | ✅ |
-| T2.12 | Repo Browser 远端写 + 高危确认 + 锁列 | |
+| **T2.12** | Repo Browser 远端写 + 高危确认 + 锁列 | ✅ |
 | T2.13 | Filename case conflict repair | |
 | T2.14 | Progress Auto-close 基础 | |
 | **T2.15 / G2** | T2 出门闸门 | |
@@ -104,7 +104,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T2.12**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T2.13**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -223,6 +223,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.9 | aad330a | Export/Import/Import in Place/Relocate/Remove VC；覆盖率 57/114；下一刀 T2.10 |
 | 2026-07-13 | T2.10 | ab0d64a | Create/Apply Patch；真实 SVN 往返和 `.rej` 冲突报告；覆盖率 60/114；下一刀 T2.11 |
 | 2026-07-13 | T2.11 | c4a6682 | Properties 模板/多行编辑；Blame 修订范围/悬停日志；覆盖率 63/114；下一刀 T2.12 |
+| 2026-07-13 | T2.12 | （提交后回填） | Repo Browser 远端写与高危确认；`svn info --xml --depth immediates` 锁列；真实 SVN 写操作/锁信息集成测；下一刀 T2.13 |
 
 ---
 

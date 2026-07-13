@@ -63,7 +63,7 @@
 - [x] Export / Import / Import in Place / Relocate / Remove from VC（#26,#27,#30,#43,#44）：导出含忽略外部项、导入/就地导入、From/To 重新定位、安全移除 `.svn`
 - [x] Create / Apply Patch（#33,#34）：按勾选路径生成 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口
 - [x] Properties + Blame 悬停（#35,#31）：属性 CRUD/模板/多行编辑；Blame 修订范围、行悬停 revision 日志
-- [ ] Repo Browser 远端写 + 高危确认（#10）
+- [x] Repo Browser 远端写 + 高危确认 + 锁列（#10、D24）：mkdir/delete/copy/move/rename；delete/move/rename 二次确认；列表展示 owner/comment/created
 - [ ] Filename case conflict repair（#46）
 - [ ] Progress Auto-close 基础策略（§4.7）
 - [ ] **G2**：inventory T2 范围全 ✅；本节勾选；全量测试绿

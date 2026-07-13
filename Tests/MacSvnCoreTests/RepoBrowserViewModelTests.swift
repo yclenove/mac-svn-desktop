@@ -305,7 +305,7 @@ final class RepoBrowserViewModelTests: XCTestCase {
         )
 
         await viewModel.createDirectory(named: " docs ", in: "file:///repo/trunk", message: "创建目录：docs")
-        await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件")
+        await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件", confirmed: true)
         await viewModel.copy(
             entry: entry,
             baseURL: "file:///repo/trunk",
@@ -316,7 +316,8 @@ final class RepoBrowserViewModelTests: XCTestCase {
             entry: entry,
             baseURL: "file:///repo/trunk",
             to: "file:///repo/trunk/new.txt",
-            message: "移动旧文件"
+            message: "移动旧文件",
+            confirmed: true
         )
         let operationCalls = await provider.recordedRemoteOperationCalls()
         let listCalls = await provider.recordedListCalls()
@@ -381,6 +382,107 @@ final class RepoBrowserViewModelTests: XCTestCase {
 
         await remoteViewModel.createDirectory(named: "  ", in: "file:///repo/trunk", message: "创建目录")
         XCTAssertEqual(remoteViewModel.remoteOperationState, .error("emptyRemoteEntryName"))
+    }
+
+    @MainActor
+    func testDeleteRequiresConfirmationAndCancelDoesNotCallProvider() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(2))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(
+            name: "obsolete.txt",
+            path: "obsolete.txt",
+            kind: .file,
+            size: 4,
+            revision: Revision(1),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.delete(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            message: "删除旧文件"
+        )
+
+        XCTAssertEqual(
+            viewModel.remoteOperationState,
+            .confirmationRequired(RepoRemoteWriteConfirmation(
+                operation: .delete,
+                sourceURL: "file:///repo/trunk/obsolete.txt",
+                destinationURL: nil
+            ))
+        )
+        viewModel.cancelRemoteOperationConfirmation()
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(viewModel.remoteOperationState, .idle)
+        XCTAssertEqual(calls, [])
+    }
+
+    @MainActor
+    func testRenameRequiresConfirmationThenUsesRemoteMove() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(3))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(
+            name: "old.txt",
+            path: "old.txt",
+            kind: .file,
+            size: 4,
+            revision: Revision(1),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.rename(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "new.txt",
+            message: "重命名",
+            confirmed: false
+        )
+        XCTAssertEqual(
+            viewModel.remoteOperationState,
+            .confirmationRequired(RepoRemoteWriteConfirmation(
+                operation: .rename,
+                sourceURL: "file:///repo/trunk/old.txt",
+                destinationURL: "file:///repo/trunk/new.txt"
+            ))
+        )
+
+        await viewModel.rename(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "new.txt",
+            message: "重命名",
+            confirmed: true
+        )
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(viewModel.remoteOperationState, .completed(.rename, revision: Revision(3)))
+        XCTAssertEqual(calls, [
+            RepoRemoteOperationCall(
+                operation: .move,
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/trunk/new.txt",
+                message: "重命名",
+                auth: nil
+            )
+        ])
     }
 
     private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {

@@ -421,6 +421,25 @@ public struct SvnCliBackend: SvnBackend {
         return try ListXMLParser.parse(result.stdout)
     }
 
+    public func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        auth: Credential? = nil
+    ) async throws -> [RemoteEntry] {
+        let authArguments = try AuthArguments.build(credential: auth)
+        let normalizedURL = normalizedRemoteURL(url)
+        let result = try await run(
+            SvnCommandBuilder.remoteInfo(
+                url: normalizedURL,
+                depth: depth,
+                authArguments: authArguments.arguments
+            ),
+            currentDirectory: nil,
+            stdin: authArguments.stdin
+        )
+        return try RemoteInfoXMLParser.parseDirectoryEntries(result.stdout, targetURL: normalizedURL)
+    }
+
     public func cat(
         url: String,
         revision: Revision? = nil,

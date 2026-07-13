@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-07-13T03:58:45Z",
+  "generated_at": "2026-07-13T04:36:10Z",
   "total": 114,
-  "done": 63,
-  "partial": 16,
+  "done": 65,
+  "partial": 14,
   "missing": 35,
-  "coverage": 0.552632,
-  "coverage_percent": 55.26,
+  "coverage": 0.570175,
+  "coverage_percent": 57.02,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 16,
-      "partial": 8,
+      "done": 17,
+      "partial": 7,
       "missing": 4
     },
     "command": {
       "total": 46,
-      "done": 32,
-      "partial": 2,
+      "done": 33,
+      "partial": 1,
       "missing": 12
     },
     "log": {
@@ -205,8 +205,8 @@
       "key": "D24",
       "section": "domain",
       "title": "Repo Browser",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created",
+      "status": "done"
     },
     {
       "key": "D25",
@@ -303,8 +303,8 @@
       "key": "cmd.10",
       "section": "command",
       "title": "Repo Browser",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ `svn info --xml --depth immediates` 返回锁详情；mkdir/delete/copy/move/rename 均需提交说明，delete/move/rename 二次确认",
+      "status": "done"
     },
     {
       "key": "cmd.11",

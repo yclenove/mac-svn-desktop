@@ -399,6 +399,31 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertNotNil(entries.first(where: { $0.name == "README.txt" })?.revision)
     }
 
+    func testListWithLocksReturnsRemoteLockOwnerAndComment() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await service.lock(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "Repo Browser lock",
+            force: false
+        )
+
+        let entries = try await service.listWithLocks(
+            url: fixture.trunkURL,
+            depth: .immediates,
+            auth: nil
+        )
+        let locked = try XCTUnwrap(entries.first { $0.name == "README.txt" })
+
+        XCTAssertEqual(locked.lock?.owner, NSUserName())
+        XCTAssertEqual(locked.lock?.comment, "Repo Browser lock")
+        XCTAssertNotNil(locked.lock?.created)
+        XCTAssertNil(entries.first { $0.name == "src" }?.lock)
+    }
+
     func testCatRemoteFileReturnsUtf8Contents() async throws {
         let fixture = try makeFixture()
 

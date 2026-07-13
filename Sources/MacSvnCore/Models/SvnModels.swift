@@ -650,6 +650,20 @@ public enum RemoteEntryKind: Equatable, Sendable {
     }
 }
 
+public struct RemoteLockInfo: Equatable, Sendable {
+    public let token: String?
+    public let owner: String?
+    public let comment: String?
+    public let created: Date?
+
+    public init(token: String?, owner: String?, comment: String?, created: Date?) {
+        self.token = token
+        self.owner = owner
+        self.comment = comment
+        self.created = created
+    }
+}
+
 public struct RemoteEntry: Equatable, Sendable {
     public let name: String
     public let path: String
@@ -658,6 +672,7 @@ public struct RemoteEntry: Equatable, Sendable {
     public let revision: Revision?
     public let author: String?
     public let date: Date?
+    public let lock: RemoteLockInfo?
 
     public init(
         name: String,
@@ -666,7 +681,8 @@ public struct RemoteEntry: Equatable, Sendable {
         size: Int?,
         revision: Revision?,
         author: String?,
-        date: Date?
+        date: Date?,
+        lock: RemoteLockInfo? = nil
     ) {
         self.name = name
         self.path = path
@@ -675,6 +691,7 @@ public struct RemoteEntry: Equatable, Sendable {
         self.revision = revision
         self.author = author
         self.date = date
+        self.lock = lock
     }
 }
 

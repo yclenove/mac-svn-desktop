@@ -328,6 +328,17 @@ public enum SvnCommandBuilder {
         ] + authArguments + [url])
     }
 
+    public static func remoteInfo(
+        url: String,
+        depth: SvnDepth,
+        authArguments: [String] = []
+    ) -> SvnCommand {
+        SvnCommand(arguments: [
+            "info", "--xml", "--non-interactive",
+            "--depth", depth.rawValue
+        ] + authArguments + [url])
+    }
+
     public static func cat(
         url: String,
         revision: Revision? = nil,
