@@ -93,7 +93,7 @@
 - [x] Status Cache 三模式（Default：整棵 WC/8s；Shell：请求目标/2s；None：禁用状态采集但保留 Finder 菜单）（S08）
 - [x] 包含/排除卷与路径（exclude 优先）；18 类角标种类可选
 - [x] Finder 右键：普通 +「更多命令…」（扩展菜单；统一 `SvnCommandCatalog` 与 `svnstudio://command` 深链）
-- [ ] 多选批量
+- [x] 多选批量（Finder 全部选中项保序进入统一 command 深链与 Navigator 批量入口）
 - [ ] 属性页等价（revision/作者/URL/锁/属性摘要）
 - [ ] Context Menu 设置（S02）
 - [ ] **G4**：Overlay + S02/S08 ✅；Finder 冒烟；全量测试绿

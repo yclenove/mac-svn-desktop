@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T4.5：Finder 多选批量命令
+- Affected: MacSvnFinderSync, FinderSyncDeepLinkBuilder, MacSvnDeepLinkParser, MacSvnDeepLinkAction, MacSvnAppNavigator, Tests/*, docs/*
+- Impact: Finder 菜单优先捕获全部选中项，无选中项时回退 targeted URL；统一 command 深链使用重复 `path` query 保序传递，Parser 不再覆盖重复路径，Navigator 原样交给既有 `perform(command:paths:)` 批量入口；单路径构建 API 保持兼容；全量 842 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 100/114；下一 T4.6
+
 - Summary: Tortoise 完美 Loop T4.4：Finder 普通与「更多命令…」扩展菜单
 - Affected: MacSvnFinderSync, FinderSyncDeepLinkBuilder, MacSvnDeepLinkParser, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
 - Impact: Finder Sync 提供更新、提交、日志、Diff、还原、解决冲突普通菜单，以及添加、删除和 Catalog 标记扩展命令；所有菜单动作统一使用 `SvnCommandID` 与 `svnstudio://command` 深链，复用主应用既有命令执行入口；全量 839 绿，Finder Sync target 构建及 appex 嵌入校验通过；覆盖率 100/114；下一 T4.5

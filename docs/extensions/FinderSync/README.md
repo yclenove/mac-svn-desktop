@@ -26,6 +26,7 @@
 - 普通菜单包括更新、提交、日志、Diff、还原、解决冲突。
 - 扩展菜单包括添加、删除，以及 Catalog 标记的 Shift 扩展命令（Diff with URL、删除保留本地、删除未版本项、打断锁、重新整合合并）。
 - 深链命令通过 `SvnCommandID` 校验后交给主应用既有 `perform(command:paths:)` 执行。
+- Finder 多选时为每个选中项生成一个 `path` 参数并保持 Finder 顺序；无选中项时回退到当前 targeted URL。
 
 ## 构建与校验
 
@@ -50,3 +51,4 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] Status Cache Default / Shell / None；设置持久化、v1 配置迁移、原子热更新与旧任务隔离
 - [x] 包含/排除卷与路径（exclude 优先）；18 类角标可在设置中选择并影响目录聚合
 - [x] Finder 普通菜单与「更多命令…」扩展菜单；菜单命令共用 `SvnCommandCatalog`，并通过统一 command 深链唤起主应用
+- [x] Finder 多选路径批量传递；重复 `path` query 保序解析并进入 Navigator 批量命令入口
