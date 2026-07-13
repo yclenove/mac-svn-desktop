@@ -251,7 +251,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-10 | T2.6 | 4f25cc2 | Edit Conflicts + Resolved；属性/树入口 | #11/#12、D08 ✅ | 下一 T2.7 Lock |
 | 2026-07-10 | T2.7 | a877356 | Lock/Unlock/Break lock + CFM 入口 | #19–21、D21 ✅ | needs-lock→T4；下一 T2.8 |
 | 2026-07-11 | 交接 | 425cba7 | Cursor→Codex 长程说明书 | 无功能变更 | 下一刀仍 T2.8；见 codex-tortoise-parity-long-loop.md |
-| 2026-07-13 | T2.8 | （提交后回填） | Branch/Switch/Merge 单测 + 真实 SVN 两树/Diff 集成测；全量 638 绿 | #22–24、D19/D20 ✅；§4.4 核心勾选 | reintegrate 仍属 T3.6；下一 T2.9 |
+| 2026-07-13 | T2.8 | c8a2ff0 | Branch/Switch/Merge 单测 + 真实 SVN 两树/Diff 集成测；全量 638 绿 | #22–24、D19/D20 ✅；§4.4 核心勾选 | reintegrate 仍属 T3.6；下一 T2.9 |
 
 ---
 
