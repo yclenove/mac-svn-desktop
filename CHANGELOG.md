@@ -2,6 +2,10 @@
 
 ## 2026-07-13
 
+- Summary: Tortoise 完美 Loop T2.14：Progress Auto-close 基础策略（§4.7）
+- Affected: ProgressAutoClosePolicy, AppSettings/SettingsStore, MacSvnSettingsView, MacSvnChangesView, Tests/*, docs/*
+- Impact: 提供手动/无合并增删/无冲突/无错误四档持久化策略；更新结果按冲突与合并增删判定，本地成功操作可自动收起，错误提示始终保留；下一 T2.15/G2
+
 - Summary: Tortoise 完美 Loop T2.13：Filename case conflict repair（#46）
 - Affected: FilenameCaseConflictRepairPolicy, SvnBackend/Cli/Service, WorkingCopyActionsViewModel, MacSvnChangesView, MacSvnAppNavigator, SvnCommandCatalog, Tests/*, docs/*
 - Impact: 新增同目录仅大小写改名修复向导；通过唯一临时 SVN 路径中转适配大小写不敏感文件系统，第二步失败会尝试恢复原名；CFM/⌘K 可达，真实 SVN 工作副本提交验证；下一 T2.14

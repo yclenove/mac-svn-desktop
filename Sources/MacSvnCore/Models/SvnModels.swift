@@ -1008,6 +1008,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var aiPrivacy: AIPrivacySettings
     /// Check for Modifications 列配置（可见列与顺序）
     public var cfmColumns: CFMColumnConfiguration
+    /// Progress 完成后的自动关闭策略。
+    public var progressAutoCloseMode: ProgressAutoCloseMode
 
     public init(
         svnPath: String? = nil,
@@ -1017,7 +1019,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         externalDiffTool: ExternalDiffToolConfiguration? = nil,
         commitGuardHardBlockConflictMarkers: Bool = false,
         aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
-        cfmColumns: CFMColumnConfiguration = .default
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
@@ -1027,6 +1030,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
         self.aiPrivacy = aiPrivacy
         self.cfmColumns = cfmColumns
+        self.progressAutoCloseMode = progressAutoCloseMode
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1038,6 +1042,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case commitGuardHardBlockConflictMarkers
         case aiPrivacy
         case cfmColumns
+        case progressAutoCloseMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -1050,6 +1055,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         commitGuardHardBlockConflictMarkers = try container.decodeIfPresent(Bool.self, forKey: .commitGuardHardBlockConflictMarkers) ?? false
         aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
         cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
+        progressAutoCloseMode = try container.decodeIfPresent(ProgressAutoCloseMode.self, forKey: .progressAutoCloseMode) ?? .noConflicts
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1062,6 +1068,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(commitGuardHardBlockConflictMarkers, forKey: .commitGuardHardBlockConflictMarkers)
         try container.encode(aiPrivacy, forKey: .aiPrivacy)
         try container.encode(cfmColumns, forKey: .cfmColumns)
+        try container.encode(progressAutoCloseMode, forKey: .progressAutoCloseMode)
     }
 }
 

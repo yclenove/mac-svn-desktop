@@ -65,7 +65,7 @@
 - [x] Properties + Blame 悬停（#35,#31）：属性 CRUD/模板/多行编辑；Blame 修订范围、行悬停 revision 日志
 - [x] Repo Browser 远端写 + 高危确认 + 锁列（#10、D24）：mkdir/delete/copy/move/rename；delete/move/rename 二次确认；列表展示 owner/comment/created
 - [x] Filename case conflict repair（#46）：同目录仅大小写改名向导、临时 SVN 改名中转、第二步失败回滚、真实 WC 提交验证
-- [ ] Progress Auto-close 基础策略（§4.7）
+- [x] Progress Auto-close 基础策略（§4.7）：四档策略持久化；更新结果按错误/冲突/合并增删判定；本地成功操作自动收起
 - [ ] **G2**：inventory T2 范围全 ✅；本节勾选；全量测试绿
 
 ---

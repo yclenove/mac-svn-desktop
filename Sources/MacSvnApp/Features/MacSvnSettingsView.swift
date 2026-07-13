@@ -7,6 +7,7 @@ public struct MacSvnSettingsView: View {
     @State private var svnPath: String = ""
     @State private var logBatchSize: Int = 100
     @State private var processTimeout: Double = 120
+    @State private var progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
     @State private var hardBlockConflictMarkers = false
     @State private var trunk = "trunk"
     @State private var branches = "branches"
@@ -30,6 +31,14 @@ public struct MacSvnSettingsView: View {
                 Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
                 Stepper("进程超时 \(Int(processTimeout)) 秒", value: $processTimeout, in: 30...600, step: 30)
                 Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
+                Picker("进度完成后", selection: $progressAutoCloseMode) {
+                    ForEach(ProgressAutoCloseMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                Text("更新/合并出现错误、冲突或合并增删时，进度提示会按策略保留。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("分支布局") {
                 TextField("trunk", text: $trunk)
@@ -72,6 +81,7 @@ public struct MacSvnSettingsView: View {
         svnPath = settings.svnPath ?? ""
         logBatchSize = settings.logBatchSize
         processTimeout = settings.processTimeout
+        progressAutoCloseMode = settings.progressAutoCloseMode
         hardBlockConflictMarkers = settings.commitGuardHardBlockConflictMarkers
         trunk = settings.branchLayout.trunk
         branches = settings.branchLayout.branches
@@ -86,6 +96,7 @@ public struct MacSvnSettingsView: View {
         settings.svnPath = trimmed.isEmpty ? nil : trimmed
         settings.logBatchSize = logBatchSize
         settings.processTimeout = processTimeout
+        settings.progressAutoCloseMode = progressAutoCloseMode
         settings.commitGuardHardBlockConflictMarkers = hardBlockConflictMarkers
         settings.branchLayout = BranchLayout(trunk: trunk, branches: branches, tags: tags)
         let toolName = externalDiffName.trimmingCharacters(in: .whitespacesAndNewlines)

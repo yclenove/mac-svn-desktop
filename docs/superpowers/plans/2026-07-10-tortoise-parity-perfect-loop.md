@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T2.14** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T2.15** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.13 ✅；**下一 T2.14**；覆盖率 **66/114（57.89%）** |
+| 当前状态（2026-07-13） | T0–T1 + G0/G1 ✅；T2.1–T2.14 ✅；**下一 T2.15/G2**；覆盖率 **66/114（57.89%）** |
 
 ---
 
@@ -153,7 +153,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T2.11** Properties 模板与编辑（#35）；Blame 悬停日志（#31）
 - [x] **T2.12** Repo Browser 远端写 + 高危确认 + 锁列（#10 + §4.5）
 - [x] **T2.13** Filename case conflict repair（#46）
-- [ ] **T2.14** Progress Auto-close 策略（§4.7 基础）
+- [x] **T2.14** Progress Auto-close 策略（§4.7 基础）
 - [ ] **T2.15** **闸门 G2**：inventory T2 范围 → ✅；H-tortoise T2；全量测试
 
 ### Wave T3 — 专业能力
@@ -257,6 +257,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T2.11 | c4a6682 | Properties CRUD/模板/多行编辑；Blame `-r` 范围与悬停日志；CFM/⌘K 路径意图；真实 SVN 测试 | #31/#35、D17 ✅；D23 保持 🟡 | Blame differences→T3.9；下一 T2.12 |
 | 2026-07-13 | T2.12 | 4acd365 + 1f444a5 | Repo Browser 远端 mkdir/delete/copy/move/rename；pending 确认快照；远端 owner/comment/created 锁列；全量 673 绿，含真实 SVN 写操作/锁信息集成测 | #10、D24 ✅；§4.5 远端写/锁列 ✅ | 下一 T2.13 |
 | 2026-07-13 | T2.13 | e646b1d | Filename case conflict repair：策略校验、临时 SVN 改名中转、失败回滚、CFM/⌘K 向导与真实 SVN 提交验证 | #46、D15 ✅；全量 683 绿 | 下一 T2.14 |
+| 2026-07-13 | T2.14 | （提交后回填） | Progress Auto-close 四档策略、设置持久化、更新/本地操作完成提示接线 | §4.3/§4.7 Auto-close ✅；全量 688 绿 | 下一 T2.15/G2 |
 
 ---
 

@@ -749,9 +749,15 @@ public struct MacSvnChangesView: View {
             ignoreExternals: updateIgnoreExternals
         )
         await syncAfterAction(actionsVM, changesVM)
-        if case .updateCompleted = actionsVM.state {
-            let revLabel = revision.map { "r\($0.value)" } ?? "HEAD"
-            statusBanner = "已更新到 \(revLabel)"
+        if case .updateCompleted(let summary) = actionsVM.state {
+            let shouldClose = await shouldAutoCloseProgress(
+                outcome: progressOutcome(for: summary),
+                isLocalOperation: false
+            )
+            if !shouldClose {
+                let revLabel = revision.map { "r\($0.value)" } ?? "HEAD"
+                statusBanner = "已更新到 \(revLabel)"
+            }
         }
     }
 
@@ -760,8 +766,14 @@ public struct MacSvnChangesView: View {
         let paths = Array(selectedPaths)
         await actionsVM.update(paths: paths, setDepth: setDepth)
         await syncAfterAction(actionsVM, changesVM)
-        if case .updateCompleted = actionsVM.state {
-            statusBanner = "已设置深度 \(String(describing: setDepth))"
+        if case .updateCompleted(let summary) = actionsVM.state {
+            let shouldClose = await shouldAutoCloseProgress(
+                outcome: progressOutcome(for: summary),
+                isLocalOperation: true
+            )
+            if !shouldClose {
+                statusBanner = "已设置深度 \(String(describing: setDepth))"
+            }
         }
     }
 
@@ -1214,7 +1226,13 @@ public struct MacSvnChangesView: View {
     ) async {
         switch actionsVM.state {
         case .updateCompleted(let summary):
-            statusBanner = "更新完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
+            let shouldClose = await shouldAutoCloseProgress(
+                outcome: progressOutcome(for: summary),
+                isLocalOperation: false
+            )
+            statusBanner = shouldClose
+                ? nil
+                : "更新完成：更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted)"
             await refreshAfterMutation(changesVM)
             selectedPaths = []
             if summary.conflicted > 0 {
@@ -1222,7 +1240,11 @@ public struct MacSvnChangesView: View {
                 navigator?.lastAutomationMessage = "更新产生 \(summary.conflicted) 个冲突，已切换到冲突工作区"
             }
         case .completed(let op):
-            statusBanner = "\(label(for: op)) 完成"
+            let shouldClose = await shouldAutoCloseProgress(
+                outcome: .successful,
+                isLocalOperation: true
+            )
+            statusBanner = shouldClose ? nil : "\(label(for: op)) 完成"
             await refreshAfterMutation(changesVM)
             selectedPaths = []
         case .error(let message):
@@ -1234,6 +1256,27 @@ public struct MacSvnChangesView: View {
         default:
             break
         }
+    }
+
+    private func shouldAutoCloseProgress(
+        outcome: ProgressOperationOutcome,
+        isLocalOperation: Bool
+    ) async -> Bool {
+        guard let session else { return false }
+        let mode = await session.settingsStore.settings().progressAutoCloseMode
+        return ProgressAutoClosePolicy.shouldClose(
+            mode: mode,
+            outcome: outcome,
+            isLocalOperation: isLocalOperation
+        )
+    }
+
+    private func progressOutcome(for summary: UpdateSummary) -> ProgressOperationOutcome {
+        ProgressOperationOutcome(
+            hasErrors: false,
+            hasConflicts: summary.conflicted > 0,
+            hasMerges: summary.merged > 0 || summary.added > 0 || summary.deleted > 0
+        )
     }
 
     /// 写操作后刷新：若当前处于「已对照仓库」则继续 `-u`，避免丢失远端高亮。
