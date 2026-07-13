@@ -5,7 +5,7 @@ import MacSvnCore
 /// 历史页：左侧修订列表，右侧详情（说明 / 变更路径 / 操作）。
 ///
 /// T2.2：过滤 / stop-on-copy / Next·All / Actions。
-/// T2.3：变更路径右键 L01–L08（L03 属 T3，菜单不提供）。
+/// 变更路径右键 L01–L14。
 public struct MacSvnLogView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
@@ -586,6 +586,17 @@ public struct MacSvnLogView: View {
             navigator.pendingLogDiff = PendingLogDiffIntent(path: path, revision: rev, kind: .previous)
             navigator.selectMode(.changes)
             statusText = "与上一修订比较：\(path) @ r\(rev.value)"
+            navigator.lastAutomationMessage = statusText
+
+        case .compareAndBlame(let path, let fromRevision, let toRevision):
+            navigator.pendingBlameIntent = PendingBlameIntent(
+                path: path,
+                fromRevision: fromRevision,
+                toRevision: toRevision,
+                mode: .differences
+            )
+            navigator.selectMode(.blame)
+            statusText = "Blame 差异：\(path) r\(fromRevision.value)–r\(toRevision.value)"
             navigator.lastAutomationMessage = statusText
 
         case .showUnifiedDiff(let path, let rev):

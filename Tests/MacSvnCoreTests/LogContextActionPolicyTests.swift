@@ -50,15 +50,29 @@ final class LogContextActionPolicyTests: XCTestCase {
         )
     }
 
-    func testL03IsNotResolvedInT2Policy() {
-        XCTAssertNil(
+    func testL03ComparesSelectedRevisionWithPreviousRevision() {
+        XCTAssertEqual(
             LogContextActionPolicy.intent(
                 command: .logCompareAndBlame,
                 changedPath: "/trunk/a.swift",
-                revision: Revision(1),
+                revision: Revision(8),
                 workingCopyURL: "file:///repo/trunk"
+            ),
+            .compareAndBlame(
+                path: "file:///repo/trunk/a.swift",
+                fromRevision: Revision(7),
+                toRevision: Revision(8)
             )
         )
+    }
+
+    func testL03RejectsRevisionWithoutPreviousHistory() {
+        XCTAssertNil(LogContextActionPolicy.intent(
+            command: .logCompareAndBlame,
+            changedPath: "/trunk/a.swift",
+            revision: Revision(1),
+            workingCopyURL: "file:///repo/trunk"
+        ))
     }
 
     func testCreateBranchTagUsesPegURL() {

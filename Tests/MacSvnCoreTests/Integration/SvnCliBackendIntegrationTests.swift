@@ -461,6 +461,45 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(viewModel.hoveredLog?.message, "initial import")
     }
 
+    @MainActor
+    func testBlameDifferencesAlignRealContentAndAttributionAcrossRevisions() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        try "first change\n".write(to: readme, atomically: true, encoding: .utf8)
+        _ = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "first readme change",
+            auth: nil
+        )
+        try "second change\nadded line\n".write(to: readme, atomically: true, encoding: .utf8)
+        let latestRevision = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "second readme change",
+            auth: nil
+        )
+        let viewModel = BlameDifferenceViewModel(
+            workingCopy: fixture.workingCopy,
+            target: "\(fixture.trunkURL)/README.txt",
+            provider: service
+        )
+
+        await viewModel.load(from: Revision(1), to: latestRevision)
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.summary.contentModified, 1)
+        XCTAssertEqual(viewModel.summary.added, 1)
+        let modified = try XCTUnwrap(viewModel.rows.first(where: { $0.kind == .contentModified }))
+        XCTAssertEqual(modified.left?.revision, Revision(1))
+        XCTAssertEqual(modified.right?.revision, latestRevision)
+        XCTAssertEqual(modified.left?.text, "hello")
+        XCTAssertEqual(modified.right?.text, "second change")
+    }
+
     func testPropertiesSetListGetDeleteOnWorkingCopyFile() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)

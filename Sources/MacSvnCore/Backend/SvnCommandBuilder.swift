@@ -313,7 +313,14 @@ public enum SvnCommandBuilder {
         } else if let endRevision {
             arguments += ["-r", "1:\(endRevision)"]
         }
-        arguments.append(target)
+        if let endRevision {
+            arguments.append(LogChangedPathPolicy.pegURL(
+                workingCopyURL: LogContextActionPolicy.stripPegRevision(from: target),
+                revision: endRevision
+            ))
+        } else {
+            arguments.append(target)
+        }
         return SvnCommand(arguments: arguments)
     }
 

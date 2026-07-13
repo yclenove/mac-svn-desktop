@@ -611,7 +611,7 @@ final class SvnCommandBuilderTests: XCTestCase {
         )
 
         XCTAssertEqual(command.arguments, [
-            "blame", "--xml", "--non-interactive", "-r", "3:9", "README.txt"
+            "blame", "--xml", "--non-interactive", "-r", "3:9", "README.txt@9"
         ])
     }
 

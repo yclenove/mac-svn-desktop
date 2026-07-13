@@ -343,6 +343,33 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertEqual(navigator.consumePendingPropertyPath(), "src")
     }
 
+    func testCompareRevisionsCarriesAtomicBlameDifferenceIntent() {
+        let navigator = MacSvnAppNavigator()
+
+        XCTAssertEqual(
+            navigator.perform(
+                command: .compareRevisions,
+                paths: ["README.txt"],
+                options: SvnCommandOptions(
+                    revision: Revision(9),
+                    extras: ["fromRevision": "4"]
+                )
+            ),
+            .navigated(to: .blame)
+        )
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.consumePendingBlameIntent(),
+            PendingBlameIntent(
+                path: "README.txt",
+                fromRevision: Revision(4),
+                toRevision: Revision(9),
+                mode: .differences
+            )
+        )
+        XCTAssertNil(navigator.consumePendingBlameIntent())
+    }
+
     func testMergeConflictNavigationPreservesFirstConflictPath() {
         let navigator = MacSvnAppNavigator(selectedRoute: .changes)
 

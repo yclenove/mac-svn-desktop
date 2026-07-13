@@ -40,14 +40,24 @@ public enum LogChangedPathPolicy: Sendable {
         let base = workingCopyURL.trimmingCharacters(in: .whitespacesAndNewlines)
         return "\(base)@\(revision.value)"
     }
+
+    public static func repositoryURL(workingCopyURL: String, relativePath: String) -> String {
+        if let base = URL(string: workingCopyURL) {
+            return base.appendingPathComponent(relativePath, isDirectory: false).absoluteString
+        }
+        return workingCopyURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            + "/" + relativePath
+    }
 }
 
-/// 日志右键动作意图（L01–L14；L03/L13 属 T3，本策略不产出）。
+/// 日志右键动作意图（L01–L14）。
 public enum LogContextActionIntent: Equatable, Sendable {
     /// L01：修订 vs 工作副本（`svn diff -r REV`）
     case compareWithWorkingCopy(path: String, revision: Revision)
     /// L02：与上一修订比（`PREV:REV`）
     case compareWithPrevious(path: String, revision: Revision)
+    /// L03：比较上一修订与当前修订的内容及 blame 归属。
+    case compareAndBlame(path: String, fromRevision: Revision, toRevision: Revision)
     /// L04：统一 Diff 文本（默认 PREV:REV）
     case showUnifiedDiff(path: String, revision: Revision)
     /// L05：另存该修订内容
@@ -74,10 +84,11 @@ public enum LogContextActionIntent: Equatable, Sendable {
 
 /// 从 Catalog ID + 上下文解析可执行意图。
 public enum LogContextActionPolicy: Sendable {
-    /// T2.3 文件级动作（L01–L08，不含 L03）。
+    /// 文件级动作（L01–L08，含 T3 补齐的 L03）。
     public static let t2FileActionIDs: [SvnCommandID] = [
         .logCompareWithWorkingCopy,
         .logCompareWithPrevious,
+        .logCompareAndBlame,
         .logShowUnifiedDiff,
         .logSaveRevisionTo,
         .logOpen,
@@ -186,6 +197,16 @@ public enum LogContextActionPolicy: Sendable {
             return .compareWithWorkingCopy(path: relative, revision: revision)
         case .logCompareWithPrevious:
             return .compareWithPrevious(path: relative, revision: revision)
+        case .logCompareAndBlame:
+            guard revision.value > 1 else { return nil }
+            return .compareAndBlame(
+                path: LogChangedPathPolicy.repositoryURL(
+                    workingCopyURL: workingCopyURL,
+                    relativePath: relative
+                ),
+                fromRevision: Revision(revision.value - 1),
+                toRevision: revision
+            )
         case .logShowUnifiedDiff:
             return .showUnifiedDiff(path: relative, revision: revision)
         case .logSaveRevisionTo:
@@ -195,8 +216,10 @@ public enum LogContextActionPolicy: Sendable {
         case .logBlame:
             return .blame(path: relative, revision: revision)
         case .logBrowseRepository:
-            let base = workingCopyURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            let url = "\(base)/\(relative)"
+            let url = LogChangedPathPolicy.repositoryURL(
+                workingCopyURL: workingCopyURL,
+                relativePath: relative
+            )
             return .browseRepository(path: relative, revision: revision, repositoryURL: url)
         default:
             return nil

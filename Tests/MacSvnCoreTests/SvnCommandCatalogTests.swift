@@ -55,7 +55,7 @@ final class SvnCommandCatalogTests: XCTestCase {
             .update, .commit, .diff, .add, .delete, .revert, .cleanup,
             .rename, .addToIgnoreList, .copyMove, .repairMoveCopy,
             .branchTag, .switchBranch, .merge, .blame, .properties,
-            .repairFilenameCaseConflict, .revisionGraph, .changeLists, .externals
+            .compareRevisions, .repairFilenameCaseConflict, .revisionGraph, .changeLists, .externals
         ]))
         let renameHits = SvnCommandCatalog.searchDailyCFM(query: "rename")
         XCTAssertEqual(renameHits.first?.id, .rename)

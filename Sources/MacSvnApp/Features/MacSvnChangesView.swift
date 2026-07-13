@@ -577,7 +577,7 @@ public struct MacSvnChangesView: View {
 
     private func menuTitle(for descriptor: SvnCommandDescriptor) -> String {
         switch descriptor.id {
-        case .rename, .copyMove, .addToIgnoreList, .add, .cleanup, .revert:
+        case .rename, .copyMove, .addToIgnoreList, .add, .cleanup, .revert, .compareRevisions:
             return "\(descriptor.displayName)…"
         case .resolved:
             return "\(descriptor.displayName)…"
@@ -597,6 +597,8 @@ public struct MacSvnChangesView: View {
         case .commit, .diff, .showLog, .editConflicts:
             return true
         case .diffWithURL:
+            return selectedPaths.count == 1 && actionsVM?.isRunning != true
+        case .compareRevisions:
             return selectedPaths.count == 1 && actionsVM?.isRunning != true
         case .resolved:
             return !selectedMarkResolvedPaths.isEmpty && actionsVM?.isRunning != true

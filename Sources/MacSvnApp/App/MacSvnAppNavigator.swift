@@ -51,13 +51,37 @@ public struct PendingRevisionGraphLogIntent: Equatable, Sendable {
     }
 }
 
+public enum PendingBlameMode: Equatable, Sendable {
+    case standard
+    case differences
+}
+
 public struct PendingBlameIntent: Equatable, Sendable {
     public let path: String
     public let revision: Revision?
+    public let fromRevision: Revision?
+    public let toRevision: Revision?
+    public let mode: PendingBlameMode
 
     public init(path: String, revision: Revision?) {
         self.path = path
         self.revision = revision
+        self.fromRevision = nil
+        self.toRevision = revision
+        self.mode = .standard
+    }
+
+    public init(
+        path: String,
+        fromRevision: Revision?,
+        toRevision: Revision?,
+        mode: PendingBlameMode
+    ) {
+        self.path = path
+        self.revision = toRevision
+        self.fromRevision = fromRevision
+        self.toRevision = toRevision
+        self.mode = mode
     }
 }
 
@@ -193,7 +217,8 @@ public final class MacSvnAppNavigator: ObservableObject {
         // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
-        let isPathInspectorCommand = command == .blame || command == .properties || command == .externals
+        let isPathInspectorCommand = command == .blame || command == .compareRevisions
+            || command == .properties || command == .externals
             || command == .deleteKeepLocal || command == .deleteUnversioned
         let isChangelistCommand = command == .changeLists
         let canInferWorkingCopyPath = command != .diffWithURL || (
@@ -277,6 +302,22 @@ public final class MacSvnAppNavigator: ObservableObject {
 
         if command == .deleteKeepLocal || command == .deleteUnversioned {
             pendingDeleteIntent = PendingDeleteIntent(command: command, paths: paths)
+        }
+
+        if command == .compareRevisions {
+            let fromRevision = options.extras["fromRevision"].flatMap(Int.init).flatMap {
+                $0 > 0 ? Revision($0) : nil
+            }
+            let toRevision = options.revision
+                ?? options.extras["toRevision"].flatMap(Int.init).flatMap {
+                    $0 > 0 ? Revision($0) : nil
+                }
+            pendingBlameIntent = PendingBlameIntent(
+                path: paths.first ?? "",
+                fromRevision: fromRevision,
+                toRevision: toRevision,
+                mode: .differences
+            )
         }
 
         if let path = paths.first, !path.isEmpty {

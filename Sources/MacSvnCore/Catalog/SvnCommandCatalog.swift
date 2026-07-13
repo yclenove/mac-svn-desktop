@@ -185,6 +185,7 @@ public enum SvnCommandCatalog: Sendable {
         .switchBranch,
         .merge,
         .blame,
+        .compareRevisions,
         .properties,
         .repairFilenameCaseConflict,
         .revisionGraph,
