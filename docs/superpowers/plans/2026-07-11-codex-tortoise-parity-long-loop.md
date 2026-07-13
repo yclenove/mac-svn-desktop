@@ -33,7 +33,7 @@
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
 | 工作区 | T3.1 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | T3.1 功能提交后回填；前一闸门为 `4d5fff6` |
+| 最近功能 tip | `7e5b1e0`（T3.1 Diff with URL）；前一闸门为 `4d5fff6` |
 | 覆盖率 | **68/114 = 59.65%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **710** 绿（2026-07-13；含真实 SVN T3.1 跨 URL 集成测） |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅**；T3.1 ✅；下一 **T3.2** |
@@ -228,7 +228,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T2.13 | e646b1d | 大小写冲突修复策略、两步临时 SVN 改名、失败回滚、CFM/⌘K 向导；真实 SVN 提交验证；全量 683 绿；下一刀 T2.14 |
 | 2026-07-13 | T2.14 | 5a418c9 | Progress Auto-close 四档策略、设置持久化、更新/本地成功操作完成提示接线；全量 688 绿；下一刀 T2.15/G2 |
 | 2026-07-13 | T2.15/G2 | 4d5fff6 | #41 Save/Open 实现核验；#15/#16 对齐 T3.8；T2 inventory/H 闸门审计；全量 688 绿；下一刀 T3.1 |
-| 2026-07-13 | T3.1 | （提交后回填） | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
+| 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision/peg 校验、认证 stdin/重试、原子导航 intent、真实 SVN 跨 URL 集成测；覆盖率 68/114；全量 710 绿；下一刀 T3.2 |
 
 ---
 

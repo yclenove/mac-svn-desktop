@@ -259,7 +259,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T2.13 | e646b1d | Filename case conflict repair：策略校验、临时 SVN 改名中转、失败回滚、CFM/⌘K 向导与真实 SVN 提交验证 | #46、D15 ✅；全量 683 绿 | 下一 T2.14 |
 | 2026-07-13 | T2.14 | 5a418c9 | Progress Auto-close 四档策略、设置持久化、更新/本地操作完成提示接线 | §4.3/§4.7 Auto-close ✅；全量 688 绿 | 下一 T2.15/G2 |
 | 2026-07-13 | T2.15/G2 | 4d5fff6 | 审计 T2 独占范围；确认 #41 已由 L05/L06 覆盖；#15/#16 波次纠正为计划中的 T3.8 | #41 ✅；H-T2/G2 ✅；全量 688 绿 | 下一 T3.1 |
-| 2026-07-13 | T3.1 | （提交后回填） | Diff with URL：URL+revision 表单、peg/user@host 校验、认证 stdin/重试、原子导航 intent、Unified/左右分栏、真实 SVN 跨 URL 测试 | #6 ✅；H-T3 对应项 ✅；覆盖率 68/114；全量 710 绿 | 下一 T3.2 |
+| 2026-07-13 | T3.1 | 7e5b1e0 | Diff with URL：URL+revision 表单、peg/user@host 校验、认证 stdin/重试、原子导航 intent、Unified/左右分栏、真实 SVN 跨 URL 测试 | #6 ✅；H-T3 对应项 ✅；覆盖率 68/114；全量 710 绿 | 下一 T3.2 |
 
 ---
 
