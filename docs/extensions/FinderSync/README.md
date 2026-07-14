@@ -7,7 +7,7 @@
 | 项 | 值 |
 |----|-----|
 | Xcode Target | `MacSVN.xcodeproj` → `SVNStudioFinderSync`（嵌入 `SVNStudio.app/Contents/PlugIns/`） |
-| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v3；v1/v2 缺失字段按默认值迁移） |
+| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v4；v1/v2/v3 缺失字段按默认值迁移） |
 | Bundle ID | `dev.yclenove.svnstudio.FinderSync` |
 
 ## Status Cache
@@ -19,6 +19,14 @@
 模式可在设置的 Finder 角标区域切换；扩展监听配置目录，连续原子保存可热更新。配置切换会清空缓存并使旧的并发采集结果失效。
 
 包含路径为空时覆盖所有已登记工作副本；填写后只监视工作副本内匹配的卷/路径。排除路径优先于包含路径，路径按标准化绝对路径的子树匹配。
+
+## Context Menu 设置
+
+- 设置页可选择哪些命令提升到 Finder 顶层，其余日常命令进入「更多命令…」；配置与角标设置一起原子导出。
+- `needs-lock` 且目标只读、未被仓库锁定时，Lock 会自动提升到顶层；状态尚未进入同步快照时保持保守，不会误隐藏菜单。
+- 可隐藏全部目标均为已知未版本/已忽略状态的菜单，并可按标准化绝对路径配置排除路径。
+- Finder 菜单回调只读取线程安全状态快照，不同步执行 SVN；状态采集完成后更新下一次菜单规划。
+- Finder Sync 没有 Windows 右键拖拽回调，Copy/Move 通过菜单深链携带绝对路径，主应用选择对应工作副本、转换相对路径并自动打开 Copy/Move 向导，作为平台等价入口。
 
 ## 深链
 
@@ -54,3 +62,5 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] Finder 普通菜单与「更多命令…」扩展菜单；菜单命令共用 `SvnCommandCatalog`，并通过统一 command 深链唤起主应用
 - [x] Finder 多选路径批量传递；重复 `path` query 保序解析并进入 Navigator 批量命令入口
 - [x] Finder 属性命令与应用内 SVN 信息面板；绝对路径定位 WC，展示状态/revision/作者/URL/锁/属性摘要
+- [x] Context Menu 设置：顶层/子菜单提升、needs-lock Lock 提升、未版本/已忽略隐藏、排除路径；配置 v4 兼容旧版本
+- [x] Copy/Move 平台等价入口：Finder 菜单深链自动选择 WC 相对路径并打开应用内向导

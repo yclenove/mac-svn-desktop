@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-14
+
+- Summary: Tortoise 完美 Loop T4.7：Finder Context Menu 设置与 Copy/Move 平台等价入口
+- Affected: FinderSyncContextMenuSettings, FinderSyncContextMenuBuilder, FinderSyncRootsExporter, MacSvnFinderSync, MacSvnSettingsView, MacSvnAppNavigator, MacSvnChangesView, Tests/*, docs/*
+- Impact: 设置页支持选择 Finder 顶层提升命令、needs-lock 自动提升 Lock、隐藏已知未版本/已忽略路径菜单与菜单排除路径；`finder-sync-roots.json` 升级 v4 并兼容旧配置；Finder 同步回调只读线程安全状态快照，未知状态保守不隐藏；Copy/Move 通过 Finder 菜单深链携带绝对路径，主应用自动选择工作副本、转换相对路径并打开既有向导，作为无右拖回调时的平台等价入口；S02、D02 升为 ✅；全量 862 绿，Xcode Debug 构建与 Finder appex 校验通过；覆盖率 103/114；下一 T4.8/G4
+
 ## 2026-07-13
 
 - Summary: Tortoise 完美 Loop T4.6：Finder SVN 信息面板

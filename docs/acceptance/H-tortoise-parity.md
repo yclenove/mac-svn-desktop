@@ -95,7 +95,7 @@
 - [x] Finder 右键：普通 +「更多命令…」（扩展菜单；统一 `SvnCommandCatalog` 与 `svnstudio://command` 深链）
 - [x] 多选批量（Finder 全部选中项保序进入统一 command 深链与 Navigator 批量入口）
 - [x] 属性页等价（Finder 属性命令深链打开应用内面板；WC 状态/revision/作者/URL/锁/属性摘要）
-- [ ] Context Menu 设置（S02）
+- [x] Context Menu 设置（S02）：设置页可选择顶层提升命令、needs-lock 自动提升 Lock、隐藏未版本/已忽略菜单、配置排除路径；Finder 同步状态快照按规划器生成菜单；Copy/Move 通过 Finder 菜单深链打开应用内向导作为平台等价入口
 - [ ] **G4**：Overlay + S02/S08 ✅；Finder 冒烟；全量测试绿
 
 ---

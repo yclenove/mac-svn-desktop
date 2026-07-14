@@ -46,7 +46,7 @@
 | 域 ID | DUG 章节 | 必须覆盖的能力要点 | Studio | 波次 |
 |-------|----------|-------------------|--------|------|
 | D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | ✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要 | T4 |
-| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | 🟡 CFM/⌘K、Finder 普通+扩展菜单与多选批量 ✅；Finder 拖拽 T4 | T1/T4 |
+| D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | ✅ CFM/⌘K、Finder 普通+扩展菜单、多选批量；Finder 以 Copy/Move 菜单深链进入应用内向导提供平台等价入口（Finder Sync 无右拖回调） | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
 | D05 | Checkout | depth、revision、ignore-externals、pristines | ✅ depth/rev/omit-ext；pristines 进阶仍开 | T2 |
@@ -224,7 +224,7 @@
 | S# | 小乌龟设置页 | 必须等价项 | Studio | 波次 |
 |----|--------------|------------|--------|------|
 | S01 | General | 语言、检查更新、全局 ignore、last-commit-time、编辑 svn config、externals 本地修改策略 | 弱 | T5 |
-| S02 | Context Menu | 主菜单/子菜单提升、needs-lock 时提升 Lock、隐藏未版本路径菜单、排除路径 | ❌ | T4 |
+| S02 | Context Menu | 主菜单/子菜单提升、needs-lock 时提升 Lock、隐藏未版本路径菜单、排除路径 | ✅ 设置持久化；Finder 同步快照按设置规划顶层/子菜单、needs-lock 自动提升 Lock、未知状态保守不隐藏未版本菜单、排除路径边界匹配 | T4 |
 | S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | ❌ | T5 |
 | S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | ❌ | T5 |
 | S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
