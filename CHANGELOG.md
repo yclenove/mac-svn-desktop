@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T5.2：客户端 pre-commit / post-update 钩子
+- Affected: ClientHookService, AppSettings, SvnService, MacSvnAppSession, MacSvnSettingsView, ClientHookServiceTests, SettingsStoreTests, SvnServiceTests, docs/*
+- Impact: Saved Data 支持按工作副本祖先路径配置启用状态、类型、脚本、参数与超时；执行器按 Tortoise 官方顺序生成 UTF-8 PATH/DEPTH/MESSAGEFILE/REVISION/ERROR/CWD/RESULTPATH 参数，临时文件权限 0600；pre-commit 在 add/commit 前同步阻断，post-update 覆盖 Update/Switch/Checkout 的成功与失败路径且 SVN 原始错误优先；配置持久化并兼容旧 settings；S11 保持 🟡，认证缓存清理待 T5.4；全量 879 绿，覆盖率 103/114；下一 T5.3
+
 - Summary: Tortoise 完美 Loop T5.1：设置分类信息架构
 - Affected: MacSvnSettingsCategory, MacSvnSettingsView, SettingsInformationArchitectureTests, inventory, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: 设置页改为 General / Dialogs / Colours / Network / External Programs / Saved Data 稳定侧栏，并为 Finder / Revision Graph / AI 保留独立分类；现有 SVN、对话框、日志缓存、Finder、修订图、外置 Diff 与 AI 设置按领域迁入，保存/加载契约不变，并以分类模型和双向映射守卫防回归；D28 与 S01/S03/S04/S06/S09/S10/S11 诚实升为 🟡，未提前宣称代理、钩子、认证清理或按扩展名外置工具完成；全量 871 绿，覆盖率 103/114；下一 T5.2

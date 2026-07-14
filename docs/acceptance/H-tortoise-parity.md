@@ -103,7 +103,7 @@
 ## T5 — 设置 / 钩子 / 品牌 / 分发
 
 - [x] 设置 IA：General / Dialogs / Colours / Network / External Programs / Saved Data 六类稳定侧栏；原 Finder / Revision Graph / AI 设置迁入独立分类，保存/加载契约保持（S01,S03–S06,S09–S11）
-- [ ] 客户端钩子：pre-commit、post-update（S11）
+- [x] 客户端钩子：设置页按 WC 根配置 pre-commit / post-update；官方 PATH/DEPTH/MESSAGEFILE/REVISION/ERROR/CWD/RESULTPATH 参数顺序；pre-commit 非零阻断且不残留 add；post-update 覆盖 Update/Switch/Checkout 成败路径（S11）
 - [ ] Bugtraq / `bugtraq:*` / 关键 `tsvn:*`（S12）
 - [ ] 清认证缓存 / 清日志缓存
 - [ ] 外置 Diff/Merge/Blame 按扩展名（S10）

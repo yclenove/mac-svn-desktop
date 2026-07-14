@@ -989,6 +989,88 @@ final class SvnServiceTests: XCTestCase {
         _ = try await firstTask.value
         XCTAssertEqual(backend.calls.map(\.name), ["update", "update"])
     }
+
+    func testPreCommitHookFailureBlocksAddAndCommit() async {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+        let hook = FakeClientHookRunner(preCommitError: ClientHookError.failed(
+            type: .preCommit,
+            exitCode: 2,
+            message: "blocked"
+        ))
+        let service = SvnService(backend: backend, clientHooks: hook)
+
+        do {
+            _ = try await service.commit(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["new.txt"],
+                message: "message",
+                auth: nil
+            )
+            XCTFail("Expected hook failure")
+        } catch let error as ClientHookError {
+            XCTAssertEqual(error, .failed(type: .preCommit, exitCode: 2, message: "blocked"))
+        } catch {
+            XCTFail("Expected ClientHookError, got \(error)")
+        }
+
+        XCTAssertEqual(backend.calls.map(\.name), ["status"])
+        let hookCalls = await hook.preCommitCalls()
+        XCTAssertEqual(hookCalls.count, 1)
+    }
+
+    func testPostUpdateHookRunsAfterSuccessfulUpdate() async throws {
+        let backend = MockSvnBackend()
+        backend.updateResult = UpdateSummary(updated: 1, revision: Revision(12))
+        let hook = FakeClientHookRunner()
+        let service = SvnService(backend: backend, clientHooks: hook)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let summary = try await service.update(
+            wc: wc,
+            paths: ["Sources"],
+            revision: Revision(12),
+            setDepth: .files
+        )
+
+        XCTAssertEqual(summary.revision, Revision(12))
+        let hookCalls = await hook.postUpdateCalls()
+        XCTAssertEqual(hookCalls, [ClientHookPostUpdateCall(
+            wc: wc,
+            paths: ["Sources"],
+            depth: .files,
+            revision: Revision(12),
+            errorMessage: "",
+            touchedPaths: ["Sources"]
+        )])
+    }
+
+    func testPostUpdateHookAlsoRunsWhenUpdateFailsAndOriginalErrorWins() async {
+        let backend = MockSvnBackend()
+        backend.updateErrors = [.conflict(paths: ["a.txt"])]
+        let hook = FakeClientHookRunner(postUpdateError: ClientHookError.failed(
+            type: .postUpdate,
+            exitCode: 3,
+            message: "cleanup failed"
+        ))
+        let service = SvnService(backend: backend, clientHooks: hook)
+
+        do {
+            _ = try await service.update(wc: URL(fileURLWithPath: "/tmp/wc"), paths: ["a.txt"])
+            XCTFail("Expected update failure")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .conflict(paths: ["a.txt"]))
+        } catch {
+            XCTFail("Expected original SvnError, got \(error)")
+        }
+
+        let calls = await hook.postUpdateCalls()
+        XCTAssertEqual(calls.count, 1)
+        XCTAssertNil(calls[0].revision)
+        XCTAssertFalse(calls[0].errorMessage.isEmpty)
+    }
 }
 
 private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
@@ -1882,6 +1964,71 @@ private actor FakeCommitGuardProvider: CommitGuardChecking {
     func recordedCalls() -> [CommitGuardCall] {
         calls
     }
+}
+
+private struct ClientHookPreCommitCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let message: String
+    let depth: SvnDepth
+}
+
+private struct ClientHookPostUpdateCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let depth: SvnDepth
+    let revision: Revision?
+    let errorMessage: String
+    let touchedPaths: [String]
+}
+
+private actor FakeClientHookRunner: ClientHookRunning {
+    private let preCommitError: Error?
+    private let postUpdateError: Error?
+    private var recordedPreCommitCalls: [ClientHookPreCommitCall] = []
+    private var recordedPostUpdateCalls: [ClientHookPostUpdateCall] = []
+
+    init(preCommitError: Error? = nil, postUpdateError: Error? = nil) {
+        self.preCommitError = preCommitError
+        self.postUpdateError = postUpdateError
+    }
+
+    func runPreCommit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        depth: SvnDepth
+    ) async throws {
+        recordedPreCommitCalls.append(ClientHookPreCommitCall(
+            wc: wc,
+            paths: paths,
+            message: message,
+            depth: depth
+        ))
+        if let preCommitError { throw preCommitError }
+    }
+
+    func runPostUpdate(
+        wc: URL,
+        paths: [String],
+        depth: SvnDepth,
+        revision: Revision?,
+        errorMessage: String,
+        touchedPaths: [String]
+    ) async throws {
+        recordedPostUpdateCalls.append(ClientHookPostUpdateCall(
+            wc: wc,
+            paths: paths,
+            depth: depth,
+            revision: revision,
+            errorMessage: errorMessage,
+            touchedPaths: touchedPaths
+        ))
+        if let postUpdateError { throw postUpdateError }
+    }
+
+    func preCommitCalls() -> [ClientHookPreCommitCall] { recordedPreCommitCalls }
+    func postUpdateCalls() -> [ClientHookPostUpdateCall] { recordedPostUpdateCalls }
 }
 
 private actor AsyncGate {

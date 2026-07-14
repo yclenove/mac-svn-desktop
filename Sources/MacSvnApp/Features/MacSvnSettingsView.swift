@@ -14,6 +14,7 @@ public struct MacSvnSettingsView: View {
     @State private var logCacheEnabled = true
     @State private var logCacheRetentionDays = 90
     @State private var logCacheMaxEntries = 20_000
+    @State private var clientHooks: [ClientHookConfiguration] = []
     @State private var finderSyncCacheMode: FinderSyncCacheMode = .defaultCache
     @State private var finderSyncIncludedPaths = ""
     @State private var finderSyncExcludedPaths = ""
@@ -181,6 +182,20 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var savedDataSettings: some View {
+        Section("Hook Scripts") {
+            ForEach($clientHooks) { $hook in
+                clientHookEditor($hook)
+            }
+            Button {
+                clientHooks.append(ClientHookConfiguration(
+                    type: .preCommit,
+                    workingCopyPath: "",
+                    executablePath: ""
+                ))
+            } label: {
+                Label("添加钩子", systemImage: "plus")
+            }
+        }
         Section("日志缓存") {
             Toggle("启用日志缓存", isOn: $logCacheEnabled)
             Stepper("保留 \(logCacheRetentionDays) 天", value: $logCacheRetentionDays, in: 1...365)
@@ -196,6 +211,55 @@ public struct MacSvnSettingsView: View {
                 Task { await clearLogCache() }
             }
         }
+    }
+
+    @ViewBuilder
+    private func clientHookEditor(_ hook: Binding<ClientHookConfiguration>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Toggle("启用", isOn: hook.isEnabled)
+                Picker("类型", selection: hook.type) {
+                    ForEach(ClientHookType.allCases, id: \.self) { type in
+                        Text(type.displayName).tag(type)
+                    }
+                }
+                .frame(maxWidth: 240)
+                Spacer()
+                Button(role: .destructive) {
+                    clientHooks.removeAll { $0.id == hook.wrappedValue.id }
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .help("删除钩子")
+            }
+            HStack {
+                TextField("工作副本根路径", text: hook.workingCopyPath)
+                Button {
+                    chooseDirectory(for: hook.workingCopyPath)
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .help("选择工作副本根目录")
+            }
+            HStack {
+                TextField("脚本或可执行文件", text: hook.executablePath)
+                Button {
+                    chooseExecutable(for: hook.executablePath)
+                } label: {
+                    Image(systemName: "doc.badge.gearshape")
+                }
+                .help("选择脚本或可执行文件")
+            }
+            patternEditor("自定义参数（每行一个；官方钩子参数会自动追加）", text: hookArgumentsBinding(hook))
+            Stepper(
+                "超时 \(Int(hook.wrappedValue.timeout)) 秒",
+                value: hook.timeout,
+                in: 1...600,
+                step: 5
+            )
+        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
@@ -267,6 +331,7 @@ public struct MacSvnSettingsView: View {
         logCacheEnabled = settings.logCachePolicy.enabled
         logCacheRetentionDays = settings.logCachePolicy.retentionDays
         logCacheMaxEntries = settings.logCachePolicy.maxEntriesPerTarget
+        clientHooks = settings.clientHooks
         finderSyncCacheMode = settings.finderSyncCacheMode
         finderSyncIncludedPaths = settings.finderSyncOverlaySettings.includedPaths.joined(separator: "\n")
         finderSyncExcludedPaths = settings.finderSyncOverlaySettings.excludedPaths.joined(separator: "\n")
@@ -293,6 +358,15 @@ public struct MacSvnSettingsView: View {
     }
 
     private func save() async {
+        if let invalidHook = clientHooks.first(where: {
+            $0.isEnabled && (
+                $0.workingCopyPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || $0.executablePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+        }) {
+            statusText = "无法保存：\(invalidHook.type.displayName) 钩子需要工作副本路径和脚本路径。"
+            return
+        }
         var settings = await session.settingsStore.settings()
         let trimmed = svnPath.trimmingCharacters(in: .whitespacesAndNewlines)
         settings.svnPath = trimmed.isEmpty ? nil : trimmed
@@ -305,6 +379,7 @@ public struct MacSvnSettingsView: View {
             retentionDays: logCacheRetentionDays,
             maxEntriesPerTarget: logCacheMaxEntries
         )
+        settings.clientHooks = clientHooks
         settings.finderSyncCacheMode = finderSyncCacheMode
         settings.finderSyncOverlaySettings = FinderSyncOverlaySettings(
             includedPaths: patterns(from: finderSyncIncludedPaths),
@@ -363,7 +438,7 @@ public struct MacSvnSettingsView: View {
             statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"
             return
         }
-        statusText = "已保存。svn 路径、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
+        statusText = "已保存。svn 路径、客户端钩子、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
     }
 
     private func clearLogCache() async {
@@ -427,6 +502,35 @@ public struct MacSvnSettingsView: View {
         text.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+    }
+
+    private func hookArgumentsBinding(
+        _ hook: Binding<ClientHookConfiguration>
+    ) -> Binding<String> {
+        Binding(
+            get: { hook.wrappedValue.arguments.joined(separator: "\n") },
+            set: { hook.wrappedValue.arguments = patterns(from: $0) }
+        )
+    }
+
+    private func chooseDirectory(for path: Binding<String>) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            path.wrappedValue = url.path
+        }
+    }
+
+    private func chooseExecutable(for path: Binding<String>) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            path.wrappedValue = url.path
+        }
     }
 
     private func normalizedHex(_ value: String, fallback: String) -> String {

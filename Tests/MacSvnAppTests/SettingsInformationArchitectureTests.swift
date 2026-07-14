@@ -55,6 +55,7 @@ final class SettingsInformationArchitectureTests: XCTestCase {
             ("logCacheEnabled", "settings.logCachePolicy"),
             ("logCacheRetentionDays", "settings.logCachePolicy"),
             ("logCacheMaxEntries", "settings.logCachePolicy"),
+            ("clientHooks", "settings.clientHooks"),
             ("finderSyncCacheMode", "settings.finderSyncCacheMode"),
             ("finderSyncIncludedPaths", "settings.finderSyncOverlaySettings"),
             ("finderSyncExcludedPaths", "settings.finderSyncOverlaySettings"),

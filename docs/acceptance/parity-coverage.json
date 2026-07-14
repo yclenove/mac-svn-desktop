@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T07:04:21Z",
+  "generated_at": "2026-07-14T07:19:42Z",
   "total": 114,
   "done": 103,
   "partial": 9,
@@ -772,7 +772,7 @@
       "key": "S11",
       "section": "settings",
       "title": "Saved Data / Hook Scripts",
-      "raw_status": "🟡 Saved Data IA、日志缓存策略与清理已有；认证缓存清理及客户端钩子待 T5.2/T5.4",
+      "raw_status": "🟡 Saved Data IA、日志缓存策略与清理、按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子已有；官方 UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调已接线；认证缓存清理待 T5.4",
       "status": "partial"
     },
     {

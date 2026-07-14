@@ -233,7 +233,7 @@
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5 | T1/T5 |
-| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | 🟡 Saved Data IA、日志缓存策略与清理已有；认证缓存清理及客户端钩子待 T5.2/T5.4 | T5 |
+| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | 🟡 Saved Data IA、日志缓存策略与清理、按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子已有；官方 UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调已接线；认证缓存清理待 T5.4 | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ❌ | T5 |
 | S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |
 

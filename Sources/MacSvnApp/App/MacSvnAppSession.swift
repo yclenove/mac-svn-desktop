@@ -187,7 +187,11 @@ public final class MacSvnAppSession: ObservableObject {
         let svnService = SvnService(
             backend: backend,
             credentialProvider: MacSvnInteractiveCredentialProvider(),
-            commitGuard: CommitGuardService(configuration: guardConfig)
+            commitGuard: CommitGuardService(configuration: guardConfig),
+            clientHooks: ClientHookService(
+                configurations: settings.clientHooks,
+                runner: ProcessRunner()
+            )
         )
         let branchListService = BranchListService(listProvider: svnService)
         let conflictService = ConflictService(

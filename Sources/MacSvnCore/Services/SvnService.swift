@@ -17,16 +17,19 @@ public actor SvnService {
     private let backend: any SvnBackend
     private let credentialProvider: (any CredentialProviding)?
     private let commitGuard: (any CommitGuardChecking)?
+    private let clientHooks: (any ClientHookRunning)?
     private var activeWriteOperations: [URL: String] = [:]
 
     public init(
         backend: any SvnBackend,
         credentialProvider: (any CredentialProviding)? = nil,
-        commitGuard: (any CommitGuardChecking)? = nil
+        commitGuard: (any CommitGuardChecking)? = nil,
+        clientHooks: (any ClientHookRunning)? = nil
     ) {
         self.backend = backend
         self.credentialProvider = credentialProvider
         self.commitGuard = commitGuard
+        self.clientHooks = clientHooks
     }
 
     public func status(wc: URL) async throws -> [FileStatus] {
@@ -264,22 +267,45 @@ public actor SvnService {
         ignoreExternals: Bool = false
     ) async throws -> UpdateSummary {
         try await withWriteLock(wc: wc, operation: "update") {
-            try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
-                var effectiveRevision = revision
-                // 同仓多路径：先钉 HEAD，再统一 -r，避免更新间隙产生 mixed-rev（对齐小乌龟）
-                if UpdateRevisionPolicy.shouldPinRepositoryHead(paths: paths, revision: revision) {
-                    let probe = UpdateRevisionPolicy.headProbeTarget(paths: paths)
-                    effectiveRevision = try await backend.repositoryHeadRevision(wc: wc, target: probe)
+            let summary: UpdateSummary
+            do {
+                summary = try await retryingAuthentication(wc: wc, initialAuth: nil) { auth in
+                    var effectiveRevision = revision
+                    // 同仓多路径：先钉 HEAD，再统一 -r，避免更新间隙产生 mixed-rev（对齐小乌龟）
+                    if UpdateRevisionPolicy.shouldPinRepositoryHead(paths: paths, revision: revision) {
+                        let probe = UpdateRevisionPolicy.headProbeTarget(paths: paths)
+                        effectiveRevision = try await backend.repositoryHeadRevision(wc: wc, target: probe)
+                    }
+                    return try await backend.update(
+                        wc: wc,
+                        paths: paths,
+                        revision: effectiveRevision,
+                        setDepth: setDepth,
+                        ignoreExternals: ignoreExternals,
+                        auth: auth
+                    )
                 }
-                return try await backend.update(
+            } catch {
+                // SVN 失败是主错误；post-update 仍按 Tortoise 语义运行，但不得覆盖原始错误。
+                try? await clientHooks?.runPostUpdate(
                     wc: wc,
                     paths: paths,
-                    revision: effectiveRevision,
-                    setDepth: setDepth,
-                    ignoreExternals: ignoreExternals,
-                    auth: auth
+                    depth: setDepth ?? .infinity,
+                    revision: nil,
+                    errorMessage: String(describing: error),
+                    touchedPaths: paths
                 )
+                throw error
             }
+            try await clientHooks?.runPostUpdate(
+                wc: wc,
+                paths: paths,
+                depth: setDepth ?? .infinity,
+                revision: summary.revision,
+                errorMessage: "",
+                touchedPaths: paths
+            )
+            return summary
         }
     }
 
@@ -299,9 +325,31 @@ public actor SvnService {
             }
 
             let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
-            return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
-                try await backend.switchTo(wc: wc, url: url, revision: revision, auth: auth)
+            let summary: UpdateSummary
+            do {
+                summary = try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
+                    try await backend.switchTo(wc: wc, url: url, revision: revision, auth: auth)
+                }
+            } catch {
+                try? await clientHooks?.runPostUpdate(
+                    wc: wc,
+                    paths: [],
+                    depth: .infinity,
+                    revision: nil,
+                    errorMessage: String(describing: error),
+                    touchedPaths: []
+                )
+                throw error
             }
+            try await clientHooks?.runPostUpdate(
+                wc: wc,
+                paths: [],
+                depth: .infinity,
+                revision: summary.revision,
+                errorMessage: "",
+                touchedPaths: []
+            )
+            return summary
         }
     }
 
@@ -404,16 +452,36 @@ public actor SvnService {
         auth: Credential? = nil
     ) async throws {
         try await withWriteLock(wc: destination, operation: "checkout") {
-            try await retryingAuthentication(wc: destination, initialAuth: auth) { auth in
-                try await backend.checkout(
-                    url: url,
-                    to: destination,
+            do {
+                try await retryingAuthentication(wc: destination, initialAuth: auth) { auth in
+                    try await backend.checkout(
+                        url: url,
+                        to: destination,
+                        depth: depth,
+                        revision: revision,
+                        ignoreExternals: ignoreExternals,
+                        auth: auth
+                    )
+                }
+            } catch {
+                try? await clientHooks?.runPostUpdate(
+                    wc: destination,
+                    paths: [],
                     depth: depth,
-                    revision: revision,
-                    ignoreExternals: ignoreExternals,
-                    auth: auth
+                    revision: nil,
+                    errorMessage: String(describing: error),
+                    touchedPaths: []
                 )
+                throw error
             }
+            try await clientHooks?.runPostUpdate(
+                wc: destination,
+                paths: [],
+                depth: depth,
+                revision: revision,
+                errorMessage: "",
+                touchedPaths: []
+            )
         }
     }
 
@@ -639,6 +707,13 @@ public actor SvnService {
             if !warningIssues.isEmpty, !skipGuardWarnings {
                 throw SvnServiceError.commitGuardWarnings(warningIssues)
             }
+
+            try await clientHooks?.runPreCommit(
+                wc: wc,
+                paths: paths,
+                message: message,
+                depth: .infinity
+            )
 
             // 勾选未版本项：Guard 通过后、commit 前在同一写锁内 add
             let unversionedToAdd = paths.filter { statusesByPath[$0]?.itemStatus == .unversioned }

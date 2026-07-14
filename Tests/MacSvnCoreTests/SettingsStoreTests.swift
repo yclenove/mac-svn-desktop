@@ -26,6 +26,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(settings.logCachePolicy, LogCachePolicy())
         XCTAssertEqual(settings.finderSyncCacheMode, .defaultCache)
         XCTAssertEqual(settings.finderSyncContextMenuSettings, FinderSyncContextMenuSettings())
+        XCTAssertEqual(settings.clientHooks, [])
     }
 
     func testUpdatePersistsSettings() async throws {
@@ -153,6 +154,30 @@ final class SettingsStoreTests: XCTestCase {
             reloaded.finderSyncContextMenuSettings,
             settings.finderSyncContextMenuSettings
         )
+    }
+
+    func testClientHooksPersistAndLegacySettingsDefaultToEmpty() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.clientHooks = [ClientHookConfiguration(
+            type: .preCommit,
+            workingCopyPath: "/tmp/project",
+            executablePath: "/usr/local/bin/pre-commit",
+            arguments: ["--strict"],
+            timeout: 45
+        )]
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.clientHooks, settings.clientHooks)
+
+        let legacy = """
+        {"version":1,"settings":{"logBatchSize":100,"branchLayout":{"trunk":"trunk","branches":"branches","tags":"tags"},"processTimeout":120}}
+        """
+        let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.settings.clientHooks, [])
     }
 
     func testResetRestoresDefaults() async throws {
