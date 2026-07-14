@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.5 功能提交待创建；哈希回填提交后应干净 |
-| 最近功能 tip | T5.5 待提交（按扩展名外置工具） |
+| 工作区 | T5.5 功能提交已创建；哈希回填提交后应干净 |
+| 最近功能 tip | 92efa39（T5.5 按扩展名外置工具） |
 | 覆盖率 | **108/114 = 94.74%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **937** 绿（2026-07-14）；外置工具规则、启动边界与既有真实 SVN 集成通过 |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅ · T5.4 ✅ · T5.5 ✅**；下一 **T5.6** |
@@ -286,7 +286,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 客户端钩子；官方参数文件/顺序、WC 路径匹配、退出码与超时；Commit 阻断、Update/Switch/Checkout 成败回调；设置 UI/持久化；S11 保持 🟡（认证清理待 T5.4）；覆盖率 103/114；全量 879 绿；下一刀 T5.3 |
 | 2026-07-14 | T5.3 | b3a528b | Bugtraq/tsvn 项目属性策略与 App 接线；祖先属性合并、文本内 issue 高亮/链接与输入、提交/锁说明门控、`^/` 根 URL 失败诊断；通用及所有操作模板、LCID/locale 原生拼写检查、属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；并发刷新保持写操作门控、夺锁确认保留说明；覆盖率 105/114；全量 917 绿；下一刀 T5.4 |
 | 2026-07-14 | T5.4 | 874122f | Saved Data 二次确认；配置 SVN 的 `auth --remove '*'` 覆盖 auth 文件与 macOS Keychain；E200009 空缓存幂等、命令失败不删文件；AI Provider Keychain 隔离，日志缓存清理防重入；D03/S11/H-T5 ✅；全量 924 绿；覆盖率 107/114；下一刀 T5.5 |
-| 2026-07-14 | T5.5 | （提交后回填） | 外置 Diff/Merge/Blame 按用途和扩展名规则持久化；精确扩展名大小写无关优先，留空/`*`/`*.*` 为默认；Diff 兼容旧配置，Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 严格限制工作副本边界；S10/H-T5 ✅；全量 937 绿；覆盖率 108/114；下一刀 T5.6 |
+| 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 按用途和扩展名规则持久化；精确扩展名大小写无关优先，留空/`*`/`*.*` 为默认；Diff 兼容旧配置，Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 严格限制工作副本边界；S10/H-T5 ✅；全量 937 绿；覆盖率 108/114；下一刀 T5.6 |
 
 ---
 
