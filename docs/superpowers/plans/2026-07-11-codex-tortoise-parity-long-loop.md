@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.3 功能提交待回填；哈希回填提交后应干净 |
-| 最近功能 tip | pending（T5.3 Bugtraq 项目属性） |
+| 工作区 | T5.3 功能提交已创建；哈希回填提交后应干净 |
+| 最近功能 tip | b3a528b（T5.3 Bugtraq 项目属性） |
 | 覆盖率 | **105/114 = 92.11%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **917** 绿（2026-07-14）；Bugtraq/tsvn 项目属性策略、App 接线、真实 SVN 集成通过 |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅**；下一 **T5.4** |
@@ -283,7 +283,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox 与扩展容器配置镜像；Homebrew SVN/工作副本只读例外；真实 `status/info/proplist` 绿，Added/Modified 不同角标；appex/深层签名校验；覆盖率 103/114；全量 868 绿；G4 ✅；下一刀 T5.1 |
 | 2026-07-14 | T5.1 | c113d7d | General / Dialogs / Colours / Network / External Programs / Saved Data 稳定分类 IA；保留 Finder / Revision Graph / AI 分类和既有保存契约；D28、S01/S03/S04/S06/S09/S10/S11 升 🟡；H-T5 设置 IA ✅；覆盖率 103/114；全量 871 绿；下一刀 T5.2 |
 | 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 客户端钩子；官方参数文件/顺序、WC 路径匹配、退出码与超时；Commit 阻断、Update/Switch/Checkout 成败回调；设置 UI/持久化；S11 保持 🟡（认证清理待 T5.4）；覆盖率 103/114；全量 879 绿；下一刀 T5.3 |
-| 2026-07-14 | T5.3 | pending | Bugtraq/tsvn 项目属性策略与 App 接线；祖先属性合并、文本内 issue 高亮/链接与输入、提交/锁说明门控、`^/` 根 URL 失败诊断；通用及所有操作模板、LCID/locale 原生拼写检查、属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；并发刷新保持写操作门控、夺锁确认保留说明；覆盖率 105/114；全量 917 绿；下一刀 T5.4 |
+| 2026-07-14 | T5.3 | b3a528b | Bugtraq/tsvn 项目属性策略与 App 接线；祖先属性合并、文本内 issue 高亮/链接与输入、提交/锁说明门控、`^/` 根 URL 失败诊断；通用及所有操作模板、LCID/locale 原生拼写检查、属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；并发刷新保持写操作门控、夺锁确认保留说明；覆盖率 105/114；全量 917 绿；下一刀 T5.4 |
 
 ---
 
