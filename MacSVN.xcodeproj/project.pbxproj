@@ -15,6 +15,7 @@
 		A10000000000000000000006 /* MacSvnQuickLookPreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* MacSvnQuickLookPreviewProvider.swift */; };
 		A10000000000000000000007 /* MacSvnCore in Frameworks */ = {isa = PBXBuildFile; productRef = A30000000000000000000003 /* MacSvnCore */; };
 		A10000000000000000000008 /* SVNStudioQuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* SVNStudioQuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000009 /* SVNStudio.icns in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* SVNStudio.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +60,7 @@
 		A20000000000000000000007 /* MacSvnQuickLookPreviewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSvnQuickLookPreviewProvider.swift; sourceTree = "<group>"; };
 		A20000000000000000000008 /* SVNStudioQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SVNStudioQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000009 /* QuickLookInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000010 /* SVNStudio.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SVNStudio.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000002 /* Info.plist */,
+				A20000000000000000000010 /* SVNStudio.icns */,
 			);
 			path = SVNStudio;
 			sourceTree = "<group>";
@@ -276,6 +279,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000009 /* SVNStudio.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

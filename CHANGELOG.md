@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-15
+
+- Summary: Tortoise 完美 Loop T5.6：App Icon、首次空态与关于页
+- Affected: SVNStudio.icns, generate-app-icon.swift, ProductBranding, MacSvnWorkingCopyShellView, MacSvnAboutView, MacSvnDesktopApp, macOS packaging scripts, Xcode project, BrandingExperienceTests, docs/*
+- Impact: 新增可重复生成的多尺寸原生 macOS App Icon，并由 SwiftPM release 包装与 Xcode target 统一嵌入、逐字节校验；首次无工作副本空态提供可执行的添加工作副本与设置入口；应用菜单以独立单例窗口展示实际应用图标、版本/build 和项目主页，关闭全部主窗口后仍可打开。新增品牌体验与包装资源契约测试；全量 941 绿，SwiftPM release 包装和 Xcode Debug 构建通过；inventory 无状态变化，覆盖率保持 108/114；下一 T5.7
+
 ## 2026-07-14
 
 - Summary: Tortoise 完美 Loop T5.5：按扩展名配置外置 Diff / Merge / Blame

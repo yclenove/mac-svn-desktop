@@ -56,18 +56,49 @@ public struct MacSvnWorkingCopyShellView: View {
     }
 
     private var emptyNoWorkingCopies: some View {
-        ContentUnavailableView {
-            Label("添加工作副本", systemImage: "externaldrive.badge.plus")
-        } description: {
-            Text("将本地 SVN 目录拖到左侧列表，或点击下方按钮选择目录。也可先打开「工具 → 设置」。")
-        } actions: {
-            Button("添加工作副本…") {
-                workspaceController.presentAddPanel()
+        MacSvnWelcomeView {
+            workspaceController.presentAddPanel()
+        } onOpenSettings: {
+            navigator.selectMode(.settings)
+        }
+    }
+
+    private struct MacSvnWelcomeView: View {
+        let onAddWorkingCopy: () -> Void
+        let onOpenSettings: () -> Void
+
+        var body: some View {
+            VStack(spacing: 18) {
+                Image(systemName: "externaldrive.badge.plus")
+                    .font(.system(size: 46, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 72, height: 72)
+
+                VStack(spacing: 6) {
+                    Text("添加第一个工作副本")
+                        .font(.title2.weight(.semibold))
+                    Text("从本机选择一个已有的 Subversion 工作副本。")
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 12) {
+                    Button {
+                        onAddWorkingCopy()
+                    } label: {
+                        Label("添加工作副本…", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut("o", modifiers: [.command, .shift])
+
+                    Button {
+                        onOpenSettings()
+                    } label: {
+                        Label("打开设置", systemImage: "gearshape")
+                    }
+                }
             }
-            .keyboardShortcut("o", modifiers: [.command, .shift])
-            Button("打开设置") {
-                navigator.selectMode(.settings)
-            }
+            .padding(32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

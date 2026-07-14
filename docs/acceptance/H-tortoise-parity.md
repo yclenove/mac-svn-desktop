@@ -107,7 +107,7 @@
 - [x] Bugtraq / `bugtraq:*` / 关键 `tsvn:*`（S12）：提交页读取 WC 祖先项目属性；支持 issue 输入/追加、文本内正则高亮/链接、提交/锁说明最小长度门控、宽度提示、全部操作模板、macOS 项目拼写语言与属性草稿诊断
 - [x] 清认证缓存 / 清日志缓存：Saved Data 以二次确认调用配置 SVN 的 `auth --remove '*'` 清理 auth 文件和 macOS Keychain 凭据，空缓存幂等、命令失败不删文件且不影响 AI Provider Keychain；日志缓存保留策略与全量清理入口
 - [x] 外置 Diff/Merge/Blame 按扩展名（S10）：精确扩展名（大小写无关）优先默认规则，支持留空、`*`、`*.*`；Diff 保留统一查看器与旧设置兼容，文本冲突 Merge 传入 base/mine/theirs/result 且须由用户显式标记已解决，Blame 只启动工作副本内文件
-- [ ] App Icon / 空态 / 关于页
+- [x] App Icon / 空态 / 关于页：可重复生成多尺寸 `SVNStudio.icns`，SwiftPM/Xcode 包装均嵌入并校验同一图标；首次无工作副本时可直接添加或打开设置；应用菜单独立单例关于窗口展示实际图标、版本/build 与项目主页
 - [ ] `SVNStudio.app` 冒烟；公证（有证书则做）
 - [ ] **G5**：设置全表 ✅；本节勾选；全量测试绿
 

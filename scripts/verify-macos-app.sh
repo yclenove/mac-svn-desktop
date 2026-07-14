@@ -7,12 +7,17 @@ if [[ -z "$APP_PATH" ]]; then
   echo "usage: $0 /path/to/SVNStudio.app" >&2
   exit 2
 fi
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APP_ICON="$ROOT/Packaging/SVNStudio/SVNStudio.icns"
 
 fail() { echo "verify-macos-app: $*" >&2; exit 1; }
 
 [[ -d "$APP_PATH" ]] || fail "不是目录: $APP_PATH"
 [[ -f "$APP_PATH/Contents/Info.plist" ]] || fail "缺少 Info.plist"
 [[ -x "$APP_PATH/Contents/MacOS/SVNStudio" ]] || fail "缺少可执行文件 Contents/MacOS/SVNStudio"
+[[ -f "$APP_PATH/Contents/Resources/SVNStudio.icns" ]] || fail "缺少应用图标 Contents/Resources/SVNStudio.icns"
+[[ -f "$APP_ICON" ]] || fail "缺少规范应用图标 $APP_ICON"
+cmp -s "$APP_ICON" "$APP_PATH/Contents/Resources/SVNStudio.icns" || fail "产物应用图标与规范资源不一致"
 
 BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)"
 [[ "$BUNDLE_ID" == "dev.yclenove.svnstudio" ]] || fail "CFBundleIdentifier 期望 dev.yclenove.svnstudio，实际: ${BUNDLE_ID:-empty}"
@@ -25,6 +30,9 @@ SCHEME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchem
 
 DISPLAY="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)"
 [[ "$DISPLAY" == "SVN Studio" ]] || fail "CFBundleDisplayName 期望 SVN Studio，实际: ${DISPLAY:-empty}"
+
+ICON="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)"
+[[ "$ICON" == "SVNStudio.icns" ]] || fail "CFBundleIconFile 期望 SVNStudio.icns，实际: ${ICON:-empty}"
 
 file "$APP_PATH/Contents/MacOS/SVNStudio" | grep -q "Mach-O" || fail "SVNStudio 不是 Mach-O 可执行文件"
 

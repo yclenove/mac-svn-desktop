@@ -20,6 +20,15 @@ public enum ProductBranding: Sendable {
     public static let keychainService = "SVNStudio.AIProvider"
     /// Keychain account / ref 前缀
     public static let keychainRefPrefix = "svnstudio.ai-provider."
+    /// 主应用图标资源名（Info.plist、SwiftPM 包装与 Xcode target 共用）。
+    public static let iconResourceName = "SVNStudio.icns"
+    /// 单例关于窗口的稳定 Scene ID。
+    public static let aboutWindowID = "about"
+    public static var aboutWindowTitle: String { "关于 \(displayName)" }
+    /// About 面板中的项目主页。
+    public static let sourceRepositoryURL = URL(
+        string: "https://github.com/yclenove/mac-svn-desktop"
+    )!
 
     public static var supportDirectoryURL: URL {
         get throws {

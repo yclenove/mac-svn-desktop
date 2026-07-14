@@ -4,6 +4,7 @@ import MacSvnCore
 
 @main
 struct MacSvnDesktopApplication: App {
+    @Environment(\.openWindow) private var openWindow
     @StateObject private var bootstrap = MacSvnBootstrapModel()
 
     var body: some Scene {
@@ -42,6 +43,19 @@ struct MacSvnDesktopApplication: App {
                 bootstrap.handleOpenURL(url)
             }
         }
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button(ProductBranding.aboutWindowTitle) {
+                    openWindow(id: ProductBranding.aboutWindowID)
+                }
+            }
+        }
+
+        Window(ProductBranding.aboutWindowTitle, id: ProductBranding.aboutWindowID) {
+            MacSvnAboutView()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
 
         MenuBarExtra {
             if case .ready(_, let navigator, let menuBar) = bootstrap.phase {

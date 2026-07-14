@@ -8,6 +8,7 @@ ARCH_TRIPLE="$(swift -print-target-info 2>/dev/null | python3 -c 'import json,sy
 OUT_DIR="${OUT_DIR:-$ROOT/dist}"
 APP_NAME="SVNStudio"
 APP_PATH="$OUT_DIR/${APP_NAME}.app"
+APP_ICON="$ROOT/Packaging/SVNStudio/SVNStudio.icns"
 
 cd "$ROOT"
 
@@ -25,6 +26,10 @@ if [[ -z "$BIN" || ! -x "$BIN" ]]; then
   echo "error: 未找到 MacSvnDesktopApp 可执行文件" >&2
   exit 1
 fi
+if [[ ! -f "$APP_ICON" ]]; then
+  echo "error: 缺少应用图标 $APP_ICON" >&2
+  exit 1
+fi
 
 echo "==> 使用二进制: $BIN"
 rm -rf "$APP_PATH"
@@ -39,6 +44,7 @@ Path("$APP_PATH/Contents/Info.plist").write_text(src, encoding="utf-8")
 PY
 
 cp "$BIN" "$APP_PATH/Contents/MacOS/SVNStudio"
+cp "$APP_ICON" "$APP_PATH/Contents/Resources/SVNStudio.icns"
 chmod +x "$APP_PATH/Contents/MacOS/SVNStudio"
 echo -n "APPL????" > "$APP_PATH/Contents/PkgInfo"
 
