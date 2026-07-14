@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-14（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4 与 T5.1–T5.2，当前继续 T5.3。
+> **交接时刻：** 2026-07-14（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4 与 T5.1–T5.3，当前继续 T5.4。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T5.3 Bugtraq / issue 正则 + `bugtraq:*` / 关键 `tsvn:*` 项目属性（S12）
+当前第一个未完成项：T5.4 清认证缓存 / 清日志缓存（S11）
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.2 功能提交 `c488dd5`；哈希回填提交后应干净 |
-| 最近功能 tip | `c488dd5`（T5.2 客户端钩子） |
-| 覆盖率 | **103/114 = 90.35%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **879** 绿（2026-07-14）；客户端钩子参数/事务/持久化、真实 SVN 集成与 Xcode Debug 构建通过 |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅**；下一 **T5.3** |
+| 工作区 | T5.3 功能提交待回填；哈希回填提交后应干净 |
+| 最近功能 tip | pending（T5.3 Bugtraq 项目属性） |
+| 覆盖率 | **105/114 = 92.11%**（`python3 scripts/parity-coverage.py`） |
+| 测试 | 全量 **917** 绿（2026-07-14）；Bugtraq/tsvn 项目属性策略、App 接线、真实 SVN 集成通过 |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅**；下一 **T5.4** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -95,7 +95,8 @@
 | T4.* | Overlay / Finder / Status Cache | |
 | **T5.1** | General / Dialogs / Colours / Network / External Programs / Saved Data 设置 IA | ✅ |
 | **T5.2** | 客户端 pre-commit / post-update 钩子（S11） | ✅ |
-| **T5.3** | Bugtraq / issue 正则与项目属性（S12） | 下一项 |
+| **T5.3** | Bugtraq / issue 正则与项目属性（S12） | ✅ |
+| **T5.4** | 清认证缓存 / 清日志缓存（S11） | 下一项 |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
 | **GP.*** | 100% 覆盖率收口后停 loop | |
 
@@ -137,7 +138,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T5.3**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T5.4**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -282,6 +283,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox 与扩展容器配置镜像；Homebrew SVN/工作副本只读例外；真实 `status/info/proplist` 绿，Added/Modified 不同角标；appex/深层签名校验；覆盖率 103/114；全量 868 绿；G4 ✅；下一刀 T5.1 |
 | 2026-07-14 | T5.1 | c113d7d | General / Dialogs / Colours / Network / External Programs / Saved Data 稳定分类 IA；保留 Finder / Revision Graph / AI 分类和既有保存契约；D28、S01/S03/S04/S06/S09/S10/S11 升 🟡；H-T5 设置 IA ✅；覆盖率 103/114；全量 871 绿；下一刀 T5.2 |
 | 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 客户端钩子；官方参数文件/顺序、WC 路径匹配、退出码与超时；Commit 阻断、Update/Switch/Checkout 成败回调；设置 UI/持久化；S11 保持 🟡（认证清理待 T5.4）；覆盖率 103/114；全量 879 绿；下一刀 T5.3 |
+| 2026-07-14 | T5.3 | pending | Bugtraq/tsvn 项目属性策略与 App 接线；祖先属性合并、文本内 issue 高亮/链接与输入、提交/锁说明门控、`^/` 根 URL 失败诊断；通用及所有操作模板、LCID/locale 原生拼写检查、属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；并发刷新保持写操作门控、夺锁确认保留说明；覆盖率 105/114；全量 917 绿；下一刀 T5.4 |
 
 ---
 

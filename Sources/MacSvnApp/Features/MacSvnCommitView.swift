@@ -10,6 +10,7 @@ public struct MacSvnCommitView: View {
 
     @State private var viewModel: CommitViewModel?
     @State private var statusText: String?
+    @State private var bugtraqIssueInput = ""
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -64,6 +65,10 @@ public struct MacSvnCommitView: View {
             guard newValue != nil else { return }
             applyPendingCommitMessage()
         }
+        .onChange(of: viewModel?.selectedPaths) { _, _ in
+            guard let viewModel else { return }
+            Task { await viewModel.refreshProjectProperties() }
+        }
         .task {
             await reloadCandidates()
             applyPendingCommitMessage()
@@ -113,6 +118,7 @@ public struct MacSvnCommitView: View {
                         }
                     }
                     .frame(maxWidth: 220)
+                    .disabled(viewModel.state == .committing || viewModel.state == .reverting)
                 }
                 Button("Diff") {
                     diffSelected(viewModel)
@@ -156,7 +162,12 @@ public struct MacSvnCommitView: View {
                             .foregroundStyle(.secondary)
                         }
                     }
-                    .disabled(status.itemStatus == .conflicted || status.isTreeConflict)
+                    .disabled(
+                        status.itemStatus == .conflicted
+                            || status.isTreeConflict
+                            || viewModel.state == .committing
+                            || viewModel.state == .reverting
+                    )
                     .contextMenu {
                         Button("Diff") {
                             _ = navigator.perform(command: .diff, paths: [status.path])
@@ -181,19 +192,19 @@ public struct MacSvnCommitView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("提交说明")
                 .font(.headline)
-            TextEditor(text: Binding(
+            BugtraqIssueTextEditor(text: Binding(
                 get: { viewModel.message },
                 set: { viewModel.message = $0 }
-            ))
-            .font(.body)
+            ), regexPatterns: viewModel.projectProperties.bugtraq.regexPatterns, spellcheckLanguage: ProjectSpellcheckLanguage.resolve(viewModel.projectProperties.projectLanguage))
             .frame(minHeight: embedded ? 80 : 160)
-            .border(Color.secondary.opacity(0.3))
 
             Toggle("Keep locks（提交后保留锁）", isOn: Binding(
                 get: { viewModel.keepLocks },
                 set: { viewModel.keepLocks = $0 }
             ))
             .font(.callout)
+
+            projectPropertyPanel(viewModel)
 
             if !viewModel.recentMessages.isEmpty {
                 Text("最近说明")
@@ -249,6 +260,77 @@ public struct MacSvnCommitView: View {
     }
 
     @ViewBuilder
+    private func projectPropertyPanel(_ viewModel: CommitViewModel) -> some View {
+        let properties = viewModel.projectProperties
+        if properties.commit.minimumMessageLength != nil
+            || properties.commit.widthMarker != nil
+            || properties.projectLanguage != nil
+            || properties.bugtraq.usesInputMode
+            || !viewModel.issueReferences.isEmpty
+            || viewModel.projectPropertyLoadError != nil
+            || !properties.diagnostics.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                if let minimum = properties.commit.minimumMessageLength {
+                    Text("最少 \(minimum) 个字符")
+                        .font(.caption)
+                        .foregroundStyle(CommitMessagePolicy.validationError(
+                            for: viewModel.message,
+                            properties: properties
+                        ) == nil ? Color.secondary : Color.red)
+                }
+                if !viewModel.overlongMessageLineNumbers.isEmpty {
+                    Text("超过宽度标记的行：\(viewModel.overlongMessageLineNumbers.map(String.init).joined(separator: ", "))")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                if let language = properties.projectLanguage {
+                    Text("项目拼写语言：\(ProjectSpellcheckLanguage.resolve(language) ?? language)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let loadError = viewModel.projectPropertyLoadError {
+                    Text("项目属性读取失败，已阻止提交：\(loadError)")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                if properties.bugtraq.usesInputMode {
+                    HStack(spacing: 8) {
+                        TextField("Issue", text: $bugtraqIssueInput)
+                            .textFieldStyle(.roundedBorder)
+                        Button(properties.bugtraq.appendMessage ? "追加" : "插入") {
+                            if viewModel.applyBugtraqIssueInput(bugtraqIssueInput) {
+                                bugtraqIssueInput = ""
+                            }
+                        }
+                        .disabled(bugtraqIssueInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+                if !viewModel.issueReferences.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(viewModel.issueReferences) { issue in
+                            if let url = issue.url, let link = URL(string: url) {
+                                Link(issue.identifier, destination: link)
+                                    .font(.caption)
+                            } else {
+                                Text(issue.identifier)
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                }
+                ForEach(Array(properties.diagnostics.enumerated()), id: \.offset) { _, diagnostic in
+                    Text(projectPropertyDiagnosticText(diagnostic))
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(8)
+            .background(Color.secondary.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    @ViewBuilder
     private func aiStatusSection(_ viewModel: CommitViewModel) -> some View {
         if case .generating = viewModel.aiCommitMessageState {
             ProgressView("AI 正在生成提交说明…")
@@ -288,6 +370,12 @@ public struct MacSvnCommitView: View {
         let wc = URL(fileURLWithPath: record.localPath)
         do {
             let statuses = try await session.svnService.status(wc: wc)
+            let candidates = CommitSelectionPolicy.candidates(from: statuses)
+            let projectProperties = try await MacSvnProjectPropertyLoader.load(
+                svnService: session.svnService,
+                workingCopy: wc,
+                relativePaths: candidates.map(\.path)
+            )
             let vm = CommitViewModel(
                 workingCopy: wc,
                 statuses: statuses,
@@ -295,7 +383,15 @@ public struct MacSvnCommitView: View {
                 statusProvider: session.svnService,
                 aiCommitMessageGenerator: session.aiCommitMessageGenerator,
                 aiPreCommitReviewer: session.aiPreCommitReviewer,
-                commitMessageHistoryProvider: session.commitMessageHistoryStore
+                commitMessageHistoryProvider: session.commitMessageHistoryStore,
+                projectPropertyLoader: { [svnService = session.svnService] paths in
+                    try await MacSvnProjectPropertyLoader.load(
+                        svnService: svnService,
+                        workingCopy: wc,
+                        relativePaths: paths
+                    )
+                },
+                projectProperties: projectProperties
             )
             viewModel = vm
             await vm.loadRecentMessages()
@@ -346,6 +442,25 @@ public struct MacSvnCommitView: View {
         await viewModel.runAIPreCommitReview(privacySettings: privacy)
         if case .reviewed = viewModel.aiPreCommitReviewState {
             statusText = "AI 预检完成"
+        }
+    }
+
+    private func projectPropertyDiagnosticText(_ diagnostic: ProjectPropertyDiagnostic) -> String {
+        switch diagnostic {
+        case .invalidNonNegativeInteger(let name, let value):
+            return "\(name) 需要非负整数：\(value)"
+        case .invalidBoolean(let name, let value):
+            return "\(name) 需要 true/false：\(value)"
+        case .invalidBugtraqRegex(let value):
+            return "bugtraq:logregex 无效：\(value)"
+        case .invalidBugtraqRegexLineCount(let count):
+            return "bugtraq:logregex 需要 1 或 2 行，当前 \(count) 行"
+        case .bugtraqMessageMissingPlaceholder:
+            return "bugtraq:message 缺少 %BUGID%"
+        case .bugtraqRepositoryRootUnavailable:
+            return "bugtraq:url 使用 ^/，但无法读取仓库根 URL"
+        case .conflictingProjectProperty(let name):
+            return "选中路径的 \(name) 配置不一致，已使用保守规则"
         }
     }
 }

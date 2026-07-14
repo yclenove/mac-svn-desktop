@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-14T07:19:42Z",
+  "generated_at": "2026-07-14T12:05:43Z",
   "total": 114,
-  "done": 103,
+  "done": 105,
   "partial": 9,
-  "missing": 2,
-  "coverage": 0.903509,
-  "coverage_percent": 90.35,
+  "missing": 0,
+  "coverage": 0.921053,
+  "coverage_percent": 92.11,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 25,
+      "done": 26,
       "partial": 2,
-      "missing": 1
+      "missing": 0
     },
     "command": {
       "total": 46,
@@ -28,9 +28,9 @@
     },
     "settings": {
       "total": 13,
-      "done": 5,
+      "done": 6,
       "partial": 7,
-      "missing": 1
+      "missing": 0
     },
     "overlay": {
       "total": 7,
@@ -156,7 +156,7 @@
       "key": "D17",
       "section": "domain",
       "title": "Properties",
-      "raw_status": "✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板",
+      "raw_status": "✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板，项目属性草稿诊断",
       "status": "done"
     },
     {
@@ -226,8 +226,8 @@
       "key": "D27",
       "section": "domain",
       "title": "Bugtraq / Repo Viewer 集成",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `bugtraq:logregex` 单/双阶段提取 issue，`bugtraq:url` 与 `^/` 仓库根 URL 展开，提交页展示 issue 链接",
+      "status": "done"
     },
     {
       "key": "D28",
@@ -779,8 +779,8 @@
       "key": "S12",
       "section": "settings",
       "title": "Bugtraq / Issue tracker",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断",
+      "status": "done"
     },
     {
       "key": "S13",

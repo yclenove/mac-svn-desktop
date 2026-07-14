@@ -82,6 +82,8 @@ public final class CommitViewModel {
     private let aiCommitMessageGenerator: (any AICommitMessageGenerating)?
     private let aiPreCommitReviewer: (any AIPreCommitReviewing)?
     private let commitMessageHistoryProvider: (any CommitMessageHistoryProviding)?
+    private let projectPropertyLoader: ProjectPropertyLoading?
+    private var projectPropertyLoadGeneration = 0
 
     public private(set) var state: CommitViewState = .idle
     public private(set) var aiCommitMessageState: AICommitMessageViewState = .idle
@@ -93,6 +95,8 @@ public final class CommitViewModel {
     public private(set) var recentMessages: [String] = []
     public private(set) var refreshedStatuses: [FileStatus] = []
     public private(set) var guardIssues: [CommitGuardIssue] = []
+    public private(set) var projectProperties: ProjectPropertyPolicy
+    public private(set) var projectPropertyLoadError: String?
     public let candidateStatuses: [FileStatus]
     public var selectedPaths: Set<String>
     public private(set) var selectedChangelist: String?
@@ -107,7 +111,9 @@ public final class CommitViewModel {
         statusProvider: any StatusProviding,
         aiCommitMessageGenerator: (any AICommitMessageGenerating)? = nil,
         aiPreCommitReviewer: (any AIPreCommitReviewing)? = nil,
-        commitMessageHistoryProvider: (any CommitMessageHistoryProviding)? = nil
+        commitMessageHistoryProvider: (any CommitMessageHistoryProviding)? = nil,
+        projectPropertyLoader: ProjectPropertyLoading? = nil,
+        projectProperties: ProjectPropertyPolicy = ProjectPropertyPolicy(properties: [])
     ) {
         self.workingCopy = workingCopy
         self.commitProvider = commitProvider
@@ -115,8 +121,11 @@ public final class CommitViewModel {
         self.aiCommitMessageGenerator = aiCommitMessageGenerator
         self.aiPreCommitReviewer = aiPreCommitReviewer
         self.commitMessageHistoryProvider = commitMessageHistoryProvider
+        self.projectPropertyLoader = projectPropertyLoader
+        self.projectProperties = projectProperties
         self.candidateStatuses = CommitSelectionPolicy.candidates(from: statuses)
         self.selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
+        self.message = projectProperties.commit.initialMessage ?? ""
     }
 
     public var orderedSelectedPaths: [String] {
@@ -147,8 +156,25 @@ public final class CommitViewModel {
     public var canCommit: Bool {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !orderedSelectedPaths.isEmpty
+            && projectPropertyLoadError == nil
+            && CommitMessagePolicy.validationError(for: message, properties: projectProperties) == nil
             && state != .committing
             && state != .reverting
+    }
+
+    public var overlongMessageLineNumbers: [Int] {
+        CommitMessagePolicy.overlongLineNumbers(in: message, properties: projectProperties)
+    }
+
+    public var issueReferences: [BugtraqIssueReference] {
+        projectProperties.bugtraq.issueReferences(in: message)
+    }
+
+    @discardableResult
+    public func applyBugtraqIssueInput(_ input: String) -> Bool {
+        guard let updated = projectProperties.bugtraq.applyingIssueInput(input, to: message) else { return false }
+        message = updated
+        return true
     }
 
     public func setSelected(_ isSelected: Bool, for path: String) {
@@ -157,6 +183,23 @@ public final class CommitViewModel {
             selectedPaths.insert(path)
         } else {
             selectedPaths.remove(path)
+        }
+    }
+
+    /// 选择变化后刷新提示；实际提交仍会重新读取，避免异步 UI 刷新造成门控绕过。
+    public func refreshProjectProperties(for paths: [String]? = nil) async {
+        let generation = beginProjectPropertyLoad()
+        do {
+            let properties = try await loadProjectProperties(for: paths ?? orderedSelectedPaths)
+            guard generation == projectPropertyLoadGeneration else { return }
+            projectProperties = properties
+            projectPropertyLoadError = nil
+            if message.isEmpty, let template = projectProperties.commit.initialMessage {
+                message = template
+            }
+        } catch {
+            guard generation == projectPropertyLoadGeneration else { return }
+            projectPropertyLoadError = "projectPropertiesLoadFailed"
         }
     }
 
@@ -249,6 +292,24 @@ public final class CommitViewModel {
         }
 
         state = .committing
+        let properties: ProjectPropertyPolicy
+        let generation = beginProjectPropertyLoad()
+        do {
+            properties = try await loadProjectProperties(for: paths)
+            if generation == projectPropertyLoadGeneration {
+                projectProperties = properties
+                projectPropertyLoadError = nil
+            }
+        } catch {
+            projectPropertyLoadError = "projectPropertiesLoadFailed"
+            state = .error("projectPropertiesLoadFailed")
+            return
+        }
+
+        if let validationError = CommitMessagePolicy.validationError(for: message, properties: properties) {
+            state = .error("logMessageTooShort:\(validationError.required)")
+            return
+        }
 
         do {
             let revision = try await commitProvider.commit(
@@ -306,6 +367,16 @@ public final class CommitViewModel {
         } catch {
             messageHistoryState = .error(String(describing: error))
         }
+    }
+
+    private func loadProjectProperties(for paths: [String]) async throws -> ProjectPropertyPolicy {
+        guard let projectPropertyLoader else { return projectProperties }
+        return try await projectPropertyLoader(paths)
+    }
+
+    private func beginProjectPropertyLoad() -> Int {
+        projectPropertyLoadGeneration += 1
+        return projectPropertyLoadGeneration
     }
 }
 

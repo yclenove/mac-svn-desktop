@@ -109,6 +109,189 @@ final class CommitViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCommitBlocksProjectMinimumMessageLengthBeforeCallingProvider() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectProperties: ProjectPropertyPolicy(properties: [
+                SvnProperty(target: ".", name: "tsvn:logminsize", value: "12")
+            ])
+        )
+        viewModel.message = "too short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:12"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitReloadsProjectPropertiesForCurrentSingleDirectorySelection() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: [
+                FileStatus(path: "Features/A/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+                FileStatus(path: "Features/B/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false)
+            ],
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                ProjectPropertyPolicy(properties: paths == ["Features/A/file.swift"]
+                    ? [SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")]
+                    : [])
+            }
+        )
+        viewModel.setSelected(false, for: "Features/B/file.swift")
+        viewModel.message = "short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 20)
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:20"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitBlocksWhenAnySelectedDirectoryHasStricterProjectConstraint() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let policyA = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")
+        ])
+        let policyB = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/B", name: "tsvn:logminsize", value: "8")
+        ])
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: [
+                FileStatus(path: "Features/A/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+                FileStatus(path: "Features/B/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false)
+            ],
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in ProjectPropertyPolicy.combining([policyA, policyB]) }
+        )
+        viewModel.message = "short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 20)
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:20"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitBlocksWhenProjectPropertyLoadingFails() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in throw ProjectPropertyLoaderTestError.unavailable }
+        )
+        viewModel.message = "valid message"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testLaterProjectPropertyRefreshWinsOverEarlierSlowRefresh() async throws {
+        let policyA = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")
+        ])
+        let policyB = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/B", name: "tsvn:logminsize", value: "8")
+        ])
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                if paths == ["Features/A/file.swift"] {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    return policyA
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000)
+                return policyB
+            }
+        )
+
+        let firstRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["Features/A/file.swift"])
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+        let secondRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["Features/B/file.swift"])
+        }
+
+        await firstRefresh.value
+        await secondRefresh.value
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 8)
+    }
+
+    @MainActor
+    func testFailedBackgroundPropertyRefreshDoesNotInterruptCommitInProgress() async throws {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                if paths == ["refresh.swift"] {
+                    throw ProjectPropertyLoaderTestError.unavailable
+                }
+                try await Task.sleep(nanoseconds: 80_000_000)
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+        viewModel.message = "valid message"
+
+        let commitTask = Task { @MainActor in
+            await viewModel.commit(auth: nil)
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+        await viewModel.refreshProjectProperties(for: ["refresh.swift"])
+
+        XCTAssertEqual(viewModel.state, .committing)
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+
+        await commitTask.value
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(42)))
+    }
+
+    @MainActor
+    func testRefreshProjectPropertiesFillsEmptyMessageWithTemplate() async {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in ProjectPropertyPolicy(properties: [
+                SvnProperty(target: "Features/A", name: "tsvn:logtemplatecommit", value: "Feature template")
+            ]) }
+        )
+
+        await viewModel.refreshProjectProperties(for: ["Features/A/file.swift"])
+
+        XCTAssertEqual(viewModel.message, "Feature template")
+    }
+
+    @MainActor
     func testCommitRejectsEmptySelectionBeforeCallingProvider() async {
         let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
         let statusProvider = FakeStatusProvider(result: .success([]))
@@ -479,6 +662,10 @@ private struct CommitCall: Equatable, Sendable {
     let auth: Credential?
     let skipGuardWarnings: Bool
     let keepLocks: Bool
+}
+
+private enum ProjectPropertyLoaderTestError: Error {
+    case unavailable
 }
 
 private actor FakeCommitProvider: CommitProviding {

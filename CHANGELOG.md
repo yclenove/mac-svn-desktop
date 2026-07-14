@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T5.3：Bugtraq / tsvn 项目属性
+- Affected: ProjectPropertyPolicy, CommitViewModel, LockViewModel, PropertyViewModel, MacSvnCommitView, MacSvnLocksView, MacSvnBranchesView, MacSvnRepoBrowserView, MacSvnPropertiesView, BugtraqIssueTextEditor, MacSvnProjectPropertyLoader, Tests, docs/*
+- Impact: 解析并诊断 `bugtraq:url/message/number/append/logregex` 与关键 `tsvn:*` 项目属性；支持 WC 祖先属性合并、`^/` 仓库根 URL 展开与失败诊断、单/双阶段 issue 文本内高亮/提取/链接、输入模式插入/追加 issue、提交说明最小长度阻断与宽度提示、通用及全部操作模板、Windows LCID/locale 到 macOS 原生拼写检查、锁说明最小长度和锁模板；属性页可在保存前提示无效 Bugtraq/tsvn 草稿并将属性模板带入提交。属性加载器按实际节点类型处理无扩展名文件与带点目录；缺少 `%BUGID%` 的模板保留诊断并禁用无效输入入口；多选严格合并、属性读取 fail-closed、陈旧刷新不打断写操作、夺锁确认保留原说明；全量 917 绿，覆盖率 105/114；下一 T5.4
+
 - Summary: Tortoise 完美 Loop T5.2：客户端 pre-commit / post-update 钩子
 - Affected: ClientHookService, AppSettings, SvnService, MacSvnAppSession, MacSvnSettingsView, ClientHookServiceTests, SettingsStoreTests, SvnServiceTests, docs/*
 - Impact: Saved Data 支持按工作副本祖先路径配置启用状态、类型、脚本、参数与超时；执行器按 Tortoise 官方顺序生成 UTF-8 PATH/DEPTH/MESSAGEFILE/REVISION/ERROR/CWD/RESULTPATH 参数，临时文件权限 0600；pre-commit 在 add/commit 前同步阻断，post-update 覆盖 Update/Switch/Checkout 的成功与失败路径且 SVN 原始错误优先；配置持久化并兼容旧 settings；S11 保持 🟡，认证缓存清理待 T5.4；全量 879 绿，覆盖率 103/114；下一 T5.3

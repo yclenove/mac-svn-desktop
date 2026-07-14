@@ -61,7 +61,7 @@
 | D14 | Add / Ignore | 递归可添加、ignore 通配、global-ignores | ✅ 文件名/通配；global-ignores T5 | T1 |
 | D15 | Copy/Move/Rename/Delete | rename、delete keep local、清未版本、Repair rename、大小写冲突 | ✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local 确认与未版本预览勾选/路径复核齐全 | T1/T2/T3 |
 | D16 | Revert / Cleanup | 勾选 revert、回收站安全网、cleanup 选项 | ✅ | T1 |
-| D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板 | T2/T5 |
+| D17 | Properties | svn: + tsvn: 项目属性、属性编辑器 | ✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板，项目属性草稿诊断 | T2/T5 |
 | D18 | Externals | 文件夹/文件 externals、拖拽创建 | ✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals | T3 |
 | D19 | Branch/Tag / Switch | 三种 copy 源、switch 警告 | ✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达 | T2 |
 | D20 | Merge | 范围/树/reintegrate、dry-run、mergeinfo、冲突 | ✅ 范围/两树/现代 complete merge（reintegrate）/dry-run/Unified Diff/mergeinfo/冲突回跳；日志单修订合并也已接入 | T2/T3 |
@@ -71,7 +71,7 @@
 | D24 | Repo Browser | 浏览+远端写操作+锁信息 | ✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created | T2 |
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作 | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
-| D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ❌ | T5 |
+| D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ✅ `bugtraq:logregex` 单/双阶段提取 issue，`bugtraq:url` 与 `^/` 仓库根 URL 展开，提交页展示 issue 链接 | T5 |
 | D28 | Settings 全页 | 见 §6 | 🟡 General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 已形成，并保留 Finder / Revision Graph / AI 专页；各分类完整能力仍按 S01–S13 逐项补齐 | T4/T5 |
 
 ---
@@ -140,8 +140,8 @@
 - [x] 最近日志消息历史（条数可配）  
 - [ ] 路径/关键字自动完成（可配超时）  
 - [x] Keep locks → `--no-unlock`  
-- [ ] Bugtraq / issue 正则高亮与校验（T5）  
-- [ ] 客户端 pre-commit 钩子（T5）  
+- [x] Bugtraq / issue 正则高亮与校验：输入模式插入/追加 issue；编辑器内正则高亮、提取并显示可点击 issue 链接；非法项目属性诊断（T5）
+- [x] 客户端 pre-commit 钩子：按 WC 祖先路径匹配、官方参数文件、非零退出阻断提交（T5）
 - [ ] 提交后若仍有未提交项可重开对话框（可配）  
 
 ### 4.2 Check for Modifications（必须）
@@ -234,7 +234,7 @@
 | S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | 🟡 Saved Data IA、日志缓存策略与清理、按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子已有；官方 UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调已接线；认证缓存清理待 T5.4 | T5 |
-| S12 | Bugtraq / Issue tracker | 正则、消息模板 | ❌ | T5 |
+| S12 | Bugtraq / Issue tracker | 正则、消息模板 | ✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断 | T5 |
 | S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |
 
 ---
@@ -257,10 +257,10 @@
 
 | 属性族 | 用途 | Studio | 波次 |
 |--------|------|--------|------|
-| `bugtraq:*` | issue 号、URL、消息正则 | ❌ | T5 |
-| `tsvn:logminsize` / `logwidthmarker` 等 | 提交说明约束 | ❌ | T5 |
-| `tsvn:projectlanguage` | 拼写检查语言 | ❌ | T5 |
-| `tsvn:lockmsgminsize` | 锁说明强制 | ❌ | T2/T5 |
+| `bugtraq:*` | issue 号、URL、消息正则 | ✅ `message/number/append/logregex/url`，单/双正则文本内高亮与提取、输入模式、URL 链接与诊断 | T5 |
+| `tsvn:logminsize` / `logwidthmarker` 等 | 提交说明约束 | ✅ `logminsize` 阻断提交；`logwidthmarker` 行号提示；通用及 commit/branch/import/delete/move/mkdir/propset/lock 操作模板均接线 | T5 |
+| `tsvn:projectlanguage` | 拼写检查语言 | ✅ 将 Windows LCID/locale 映射至 macOS 原生拼写检查语言，并在提交编辑器生效 | T5 |
+| `tsvn:lockmsgminsize` | 锁说明强制 | ✅ 获取锁说明最小长度门控；`tsvn:logtemplatelock` 预填锁说明 | T2/T5 |
 | 自动属性（svn config） | 新增文件自动 props | 弱（可编辑 config） | T5 |
 
 ---

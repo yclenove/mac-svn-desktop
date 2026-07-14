@@ -53,7 +53,16 @@ final class PropertyViewModelTests: XCTestCase {
         XCTAssertTrue(names.contains("svn:global-ignores"))
         XCTAssertTrue(names.contains("svn:mergeinfo"))
         XCTAssertTrue(names.contains("tsvn:logminsize"))
+        XCTAssertTrue(names.contains("tsvn:logwidthmarker"))
+        XCTAssertTrue(names.contains("tsvn:logtemplate"))
+        XCTAssertTrue(names.contains("tsvn:logtemplatecommit"))
+        XCTAssertTrue(names.contains("tsvn:projectlanguage"))
+        XCTAssertTrue(names.contains("tsvn:lockmsgminsize"))
         XCTAssertTrue(names.contains("bugtraq:url"))
+        XCTAssertTrue(names.contains("bugtraq:message"))
+        XCTAssertTrue(names.contains("bugtraq:number"))
+        XCTAssertTrue(names.contains("bugtraq:append"))
+        XCTAssertTrue(names.contains("bugtraq:logregex"))
     }
 
     func testTemplateScopeFlagsMatchSVNPropertySemantics() {
@@ -65,6 +74,7 @@ final class PropertyViewModelTests: XCTestCase {
         XCTAssertEqual(templates["svn:keywords"]?.appliesToFile, true)
         XCTAssertEqual(templates["svn:externals"]?.appliesToDirectory, true)
         XCTAssertEqual(templates["tsvn:logminsize"]?.appliesToFile, false)
+        XCTAssertEqual(templates["tsvn:lockmsgminsize"]?.appliesToDirectory, true)
         XCTAssertEqual(templates["bugtraq:url"]?.appliesToFile, false)
     }
 }

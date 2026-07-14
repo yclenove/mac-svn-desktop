@@ -26,6 +26,7 @@ public struct MacSvnRepoBrowserView: View {
     @State private var transferFromURL = ""
     @State private var transferToURL = ""
     @State private var transferMessage = ""
+    @State private var transferMessageTemplate: String?
     @State private var transferRevision = ""
     @State private var transferIgnoreExternals = false
 
@@ -35,6 +36,8 @@ public struct MacSvnRepoBrowserView: View {
     @State private var remoteWriteName = ""
     @State private var remoteWriteDestination = ""
     @State private var remoteWriteMessage = ""
+    @State private var remoteWriteMessageTemplate: String?
+    @State private var projectProperties = ProjectPropertyPolicy(properties: [])
     @State private var pendingRemoteWriteConfirmation: RepoRemoteWriteConfirmation?
     @State private var showRemoteWriteConfirmation = false
     @State private var createRepositoryVM: CreateRepositoryViewModel?
@@ -364,6 +367,7 @@ public struct MacSvnRepoBrowserView: View {
                 ForEach(TransferKind.allCases) { kind in Text(kind.rawValue).tag(kind) }
             }
             .pickerStyle(.segmented)
+            .onChange(of: transferKind) { _, _ in applyTransferMessageTemplate() }
 
             switch transferKind {
             case .export:
@@ -480,7 +484,9 @@ public struct MacSvnRepoBrowserView: View {
         transferFromURL = ""
         transferToURL = ""
         transferMessage = ""
+        transferMessageTemplate = nil
         transferRevision = ""
+        applyTransferMessageTemplate()
         showTransferSheet = true
     }
 
@@ -519,6 +525,8 @@ public struct MacSvnRepoBrowserView: View {
         transferPath = intent.path ?? workspaceController.selectedRecord?.localPath ?? ""
         transferURL = intent.url ?? rootURL
         transferMessage = intent.message ?? ""
+        transferMessageTemplate = nil
+        applyTransferMessageTemplate()
         if let revision = intent.revision { transferRevision = String(revision.value) }
         showTransferSheet = true
     }
@@ -571,6 +579,8 @@ public struct MacSvnRepoBrowserView: View {
     private func presentRemoteWrite(_ kind: RemoteWriteKind) {
         remoteWriteKind = kind
         remoteWriteMessage = ""
+        remoteWriteMessageTemplate = nil
+        applyRemoteWriteMessageTemplate()
         remoteWriteName = kind == .rename ? selectedEntry?.name ?? "" : ""
         pendingRemoteWriteConfirmation = nil
         if let selectedEntry {
@@ -659,6 +669,32 @@ public struct MacSvnRepoBrowserView: View {
         }
     }
 
+    private func applyTransferMessageTemplate() {
+        guard transferMessage.isEmpty || transferMessage == transferMessageTemplate else { return }
+        guard transferKind == .importProject || transferKind == .importInPlace else { return }
+        let template = projectProperties.initialMessage(for: .import)
+        transferMessageTemplate = template
+        transferMessage = template ?? ""
+    }
+
+    private func applyRemoteWriteMessageTemplate() {
+        guard remoteWriteMessage.isEmpty || remoteWriteMessage == remoteWriteMessageTemplate else { return }
+        let operation: ProjectLogTemplateOperation
+        switch remoteWriteKind {
+        case .mkdir:
+            operation = .mkdir
+        case .delete:
+            operation = .delete
+        case .copy:
+            operation = .branch
+        case .move, .rename:
+            operation = .move
+        }
+        let template = projectProperties.initialMessage(for: operation)
+        remoteWriteMessageTemplate = template
+        remoteWriteMessage = template ?? ""
+    }
+
     private func label(for op: RepoRemoteOperation) -> String {
         switch op {
         case .mkdir: return "新建目录"
@@ -704,6 +740,14 @@ public struct MacSvnRepoBrowserView: View {
             infoProvider: session.svnService
         )
         transferVM = ImportExportViewModel(provider: session.svnService)
+        if let record = workspaceController.selectedRecord, record.isValid {
+            let workingCopy = URL(fileURLWithPath: record.localPath)
+            projectProperties = (try? await MacSvnProjectPropertyLoader.load(
+                svnService: session.svnService,
+                workingCopy: workingCopy,
+                relativePaths: ["."]
+            )) ?? ProjectPropertyPolicy(properties: [])
+        }
         await vm.loadBookmarks()
         if let first = workspaceController.selectedRecord?.repoURL {
             rootURL = first

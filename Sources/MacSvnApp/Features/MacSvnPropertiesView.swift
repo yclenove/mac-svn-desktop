@@ -9,6 +9,7 @@ public struct MacSvnPropertiesView: View {
     @State private var paths: [String] = ["."]
     @State private var selected: Set<String> = ["."]
     @State private var viewModel: PropertyViewModel?
+    @State private var projectProperties = ProjectPropertyPolicy(properties: [])
     @State private var itemInfo: SvnInfo?
     @State private var itemStatus: ItemStatus?
     @State private var infoError: String?
@@ -97,10 +98,18 @@ public struct MacSvnPropertiesView: View {
                                         RoundedRectangle(cornerRadius: 4)
                                             .stroke(Color.secondary.opacity(0.25))
                                     }
+                                ForEach(Array(propertyDraftDiagnostics.enumerated()), id: \.offset) { _, diagnostic in
+                                    Text(projectPropertyDiagnosticText(diagnostic))
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                }
                                 Button("保存") {
                                     Task { await saveProperty() }
                                 }
                                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                if projectProperties.initialMessage(for: .propset) != nil {
+                                    Button("提交属性更改…") { openCommitWithPropertyTemplate() }
+                                }
                             }
                         }
                         .formStyle(.grouped)
@@ -246,6 +255,14 @@ public struct MacSvnPropertiesView: View {
         }
     }
 
+    private var propertyDraftDiagnostics: [ProjectPropertyDiagnostic] {
+        let propertyName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard propertyName.hasPrefix("bugtraq:") || propertyName.hasPrefix("tsvn:") else { return [] }
+        return ProjectPropertyPolicy(properties: [
+            SvnProperty(target: selected.first ?? ".", name: propertyName, value: value)
+        ]).diagnostics
+    }
+
     private var selectedTargetIsDirectory: Bool {
         guard let record = workspaceController.selectedRecord, let path = selected.first else { return true }
         let target = SvnExternalsPolicy.targetURL(
@@ -287,6 +304,11 @@ public struct MacSvnPropertiesView: View {
         )
         async let statusRequest = session.svnService.status(wc: workingCopy)
         await vm.load()
+        let loadedProjectProperties = (try? await MacSvnProjectPropertyLoader.load(
+            svnService: session.svnService,
+            workingCopy: workingCopy,
+            relativePaths: [path]
+        )) ?? ProjectPropertyPolicy(properties: [])
         var loadedInfo: SvnInfo?
         var loadedInfoError: String?
         do {
@@ -307,6 +329,7 @@ public struct MacSvnPropertiesView: View {
         itemInfo = loadedInfo
         infoError = loadedInfoError
         itemStatus = loadedStatus
+        projectProperties = loadedProjectProperties
     }
 
     private static func relativeTarget(_ path: String, workingCopy: URL) -> String {
@@ -446,6 +469,33 @@ public struct MacSvnPropertiesView: View {
             }
         } else if case .error(let message) = viewModel?.state {
             statusText = "删除失败：\(message)"
+        }
+    }
+
+    private func openCommitWithPropertyTemplate() {
+        guard let record = workspaceController.selectedRecord else { return }
+        navigator.handle(cli: .commitUI(
+            path: record.localPath,
+            initialMessage: projectProperties.initialMessage(for: .propset)
+        ))
+    }
+
+    private func projectPropertyDiagnosticText(_ diagnostic: ProjectPropertyDiagnostic) -> String {
+        switch diagnostic {
+        case .invalidNonNegativeInteger(let name, let value):
+            return "\(name) 需要非负整数：\(value)"
+        case .invalidBoolean(let name, let value):
+            return "\(name) 需要 true/false：\(value)"
+        case .invalidBugtraqRegex(let value):
+            return "bugtraq:logregex 无效：\(value)"
+        case .invalidBugtraqRegexLineCount(let count):
+            return "bugtraq:logregex 需要 1 或 2 行，当前 \(count) 行"
+        case .bugtraqMessageMissingPlaceholder:
+            return "bugtraq:message 缺少 %BUGID%"
+        case .bugtraqRepositoryRootUnavailable:
+            return "bugtraq:url 使用 ^/，但无法读取仓库根 URL"
+        case .conflictingProjectProperty(let name):
+            return "选中路径的 \(name) 配置不一致，已使用保守规则"
         }
     }
 }

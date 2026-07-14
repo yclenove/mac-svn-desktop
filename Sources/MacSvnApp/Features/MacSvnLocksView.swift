@@ -11,6 +11,7 @@ public struct MacSvnLocksView: View {
     @State private var selected: Set<String> = []
     @State private var viewModel: LockViewModel?
     @State private var message = ""
+    @State private var automaticTemplateMessage: String?
     @State private var stealLock = false
     @State private var statusText: String?
     @State private var showGetLockSheet = false
@@ -36,6 +37,7 @@ public struct MacSvnLocksView: View {
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
                 Button("刷新") { Task { await reload() } }
+                    .disabled(isBusy)
                 Button("获取锁…") {
                     stealLock = false
                     showGetLockSheet = true
@@ -69,6 +71,7 @@ public struct MacSvnLocksView: View {
                 HSplitView {
                     MacSvnPathPicker(paths: paths, selection: $selected)
                         .frame(minWidth: 220)
+                        .disabled(isBusy)
                     List(viewModel?.locks ?? [], id: \.target) { lock in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
@@ -123,6 +126,14 @@ public struct MacSvnLocksView: View {
         }
         .onChange(of: navigator.pendingLockIntent) { _, _ in
             enqueueConsumePendingLockIntent()
+        }
+        .onChange(of: selected) { _, newSelection in
+            guard let viewModel else { return }
+            let targets = newSelection.isEmpty ? paths : Array(newSelection)
+            Task {
+                await viewModel.refreshProjectProperties(for: targets)
+                applyLockTemplate(viewModel.projectProperties.lock.initialMessage)
+            }
         }
         .sheet(isPresented: $showGetLockSheet) {
             getLockSheet
@@ -182,6 +193,16 @@ public struct MacSvnLocksView: View {
                 .foregroundStyle(.secondary)
             TextField("锁定注释（可选）", text: $message)
                 .textFieldStyle(.roundedBorder)
+            if let loadError = viewModel?.projectPropertyLoadError {
+                Text("项目属性读取失败，已阻止获取锁：\(loadError)")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            if let minimum = viewModel?.projectProperties.lock.minimumMessageLength {
+                Text("最少 \(minimum) 个字符")
+                    .font(.caption)
+                    .foregroundStyle(lockMessageIsLongEnough ? Color.secondary : Color.red)
+            }
             Toggle("夺锁（--force，若已被他人锁定）", isOn: $stealLock)
             HStack {
                 Button("取消") { showGetLockSheet = false }
@@ -191,10 +212,16 @@ public struct MacSvnLocksView: View {
                     Task { await runGetLock() }
                 }
                 .keyboardShortcut(.defaultAction)
+                .disabled(!lockMessageIsLongEnough || viewModel?.projectPropertyLoadError != nil)
             }
         }
         .padding(20)
         .frame(width: 420)
+    }
+
+    private var lockMessageIsLongEnough: Bool {
+        guard let projectProperties = viewModel?.projectProperties else { return true }
+        return LockMessagePolicy.validationError(for: message, properties: projectProperties) == nil
     }
 
     private func bootstrap() async {
@@ -205,8 +232,30 @@ public struct MacSvnLocksView: View {
         }
         let wc = URL(fileURLWithPath: record.localPath)
         paths = await MacSvnPathLoader.loadPaths(svnService: session.svnService, wc: wc)
-        viewModel = LockViewModel(workingCopy: wc, provider: session.svnService)
-        await reload()
+        do {
+            let projectProperties = try await MacSvnProjectPropertyLoader.load(
+                svnService: session.svnService,
+                workingCopy: wc,
+                relativePaths: selected.isEmpty ? paths : Array(selected)
+            )
+            applyLockTemplate(projectProperties.lock.initialMessage)
+            viewModel = LockViewModel(
+                workingCopy: wc,
+                provider: session.svnService,
+                projectPropertyLoader: { [svnService = session.svnService] paths in
+                    try await MacSvnProjectPropertyLoader.load(
+                        svnService: svnService,
+                        workingCopy: wc,
+                        relativePaths: paths
+                    )
+                },
+                projectProperties: projectProperties
+            )
+            await reload()
+        } catch {
+            viewModel = nil
+            statusText = "项目属性读取失败：\(error.localizedDescription)"
+        }
     }
 
     private func reload() async {
@@ -241,6 +290,10 @@ public struct MacSvnLocksView: View {
     }
 
     private func runGetLock() async {
+        guard viewModel?.projectPropertyLoadError == nil else {
+            statusText = "项目属性读取失败，无法获取锁"
+            return
+        }
         let paths = Array(selected).sorted()
         if stealLock {
             pendingConfirmPaths = paths
@@ -313,6 +366,12 @@ public struct MacSvnLocksView: View {
         case .releaseLock: return "释放锁"
         case .breakLock: return "打断锁"
         }
+    }
+
+    private func applyLockTemplate(_ template: String?) {
+        guard message.isEmpty || message == automaticTemplateMessage else { return }
+        automaticTemplateMessage = template
+        message = template ?? ""
     }
 
     private func lockBadge(_ lock: SvnLock) -> String {

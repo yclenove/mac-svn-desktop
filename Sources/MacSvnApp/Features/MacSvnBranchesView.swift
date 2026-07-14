@@ -12,6 +12,9 @@ public struct MacSvnBranchesView: View {
     @State private var mergeInfoVM: MergeInfoViewModel?
     @State private var newName = ""
     @State private var createMessage = "create branch"
+    @State private var createMessageTemplate: String?
+    @State private var createMessageAutomaticallyFilled = true
+    @State private var projectProperties = ProjectPropertyPolicy(properties: [])
     @State private var createKind: BranchReferenceKind = .branch
     @State private var createSourceMode: CopySourceMode = .head
     @State private var createRevisionText = ""
@@ -150,6 +153,11 @@ public struct MacSvnBranchesView: View {
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reload() }
         }
+        .onChange(of: createMessage) { _, message in
+            if message != createMessageTemplate {
+                createMessageAutomaticallyFilled = false
+            }
+        }
         .confirmationDialog(
             "存在未提交变更，确认仍要切换分支？",
             isPresented: $confirmLocalChanges,
@@ -198,6 +206,12 @@ public struct MacSvnBranchesView: View {
         copyVM = BranchCopyViewModel(copyProvider: session.svnService)
         switchVM = BranchSwitchViewModel(provider: session.svnService)
         let wc = URL(fileURLWithPath: record.localPath)
+        projectProperties = (try? await MacSvnProjectPropertyLoader.load(
+            svnService: session.svnService,
+            workingCopy: wc,
+            relativePaths: ["."]
+        )) ?? ProjectPropertyPolicy(properties: [])
+        applyCreateMessageTemplate()
         let mergeInfo = MergeInfoViewModel(workingCopy: wc, target: ".", provider: session.svnService)
         mergeInfoVM = mergeInfo
 
@@ -302,5 +316,12 @@ public struct MacSvnBranchesView: View {
         default:
             break
         }
+    }
+
+    private func applyCreateMessageTemplate() {
+        guard createMessageAutomaticallyFilled else { return }
+        let template = projectProperties.initialMessage(for: .branch) ?? "create branch"
+        createMessageTemplate = template
+        createMessage = template
     }
 }

@@ -31,20 +31,47 @@ public enum LockViewState: Equatable, Sendable {
 public final class LockViewModel {
     private let workingCopy: URL
     private let provider: any LockProviding
+    private let projectPropertyLoader: ProjectPropertyLoading?
     private var lastTargets: [String] = []
+    private var projectPropertyLoadGeneration = 0
+    private var pendingLockMessage: String?
 
     public private(set) var state: LockViewState = .idle
     public private(set) var locks: [SvnLock] = []
+    public private(set) var projectProperties: ProjectPropertyPolicy
+    public private(set) var projectPropertyLoadError: String?
 
-    public init(workingCopy: URL, provider: any LockProviding) {
+    public init(
+        workingCopy: URL,
+        provider: any LockProviding,
+        projectPropertyLoader: ProjectPropertyLoading? = nil,
+        projectProperties: ProjectPropertyPolicy = ProjectPropertyPolicy(properties: [])
+    ) {
         self.workingCopy = workingCopy
         self.provider = provider
+        self.projectPropertyLoader = projectPropertyLoader
+        self.projectProperties = projectProperties
     }
 
     public func load(targets: [String] = []) async {
+        guard state != .locking, state != .unlocking else { return }
         lastTargets = targets
         state = .loading
         await refreshLocks(targets: targets)
+    }
+
+    /// 选择变化后刷新说明长度提示；获取锁前会再次读取当前目标，确保门控精确。
+    public func refreshProjectProperties(for paths: [String]) async {
+        let generation = beginProjectPropertyLoad()
+        do {
+            let properties = try await loadProjectProperties(for: paths)
+            guard generation == projectPropertyLoadGeneration else { return }
+            projectProperties = properties
+            projectPropertyLoadError = nil
+        } catch {
+            guard generation == projectPropertyLoadGeneration else { return }
+            projectPropertyLoadError = "projectPropertiesLoadFailed"
+        }
     }
 
     /// 获取锁（#19）。`force` 为夺锁时需 `confirmed`。
@@ -54,17 +81,36 @@ public final class LockViewModel {
         force: Bool,
         confirmed: Bool = true
     ) async {
+        guard state != .locking, state != .unlocking else { return }
         let normalized = LockActionPolicy.pathsEligibleForGetLock(selected: paths)
         guard validate(paths: normalized) else {
             return
         }
 
-        if force && !confirmed {
-            state = .confirmationRequired(.stealLock, normalized)
+        state = .locking
+        let properties: ProjectPropertyPolicy
+        let generation = beginProjectPropertyLoad()
+        do {
+            properties = try await loadProjectProperties(for: normalized)
+            if generation == projectPropertyLoadGeneration {
+                projectProperties = properties
+                projectPropertyLoadError = nil
+            }
+        } catch {
+            projectPropertyLoadError = "projectPropertiesLoadFailed"
+            state = .error("projectPropertiesLoadFailed")
+            return
+        }
+        if let validationError = LockMessagePolicy.validationError(for: message, properties: properties) {
+            state = .error("lockMessageTooShort:\(validationError.required)")
             return
         }
 
-        state = .locking
+        if force && !confirmed {
+            pendingLockMessage = message
+            state = .confirmationRequired(.stealLock, normalized)
+            return
+        }
 
         do {
             try await provider.lock(wc: workingCopy, paths: normalized, message: message, force: force)
@@ -81,6 +127,7 @@ public final class LockViewModel {
         force: Bool = false,
         confirmed: Bool = true
     ) async {
+        guard state != .locking, state != .unlocking else { return }
         let normalized = LockActionPolicy.pathsEligibleForRelease(selected: paths, locks: locks)
         guard validate(paths: normalized) else {
             return
@@ -105,6 +152,7 @@ public final class LockViewModel {
 
     /// 打断锁（#21）：`svn unlock --force`，必须确认。
     public func breakLock(paths: [String], confirmed: Bool = false) async {
+        guard state != .locking, state != .unlocking else { return }
         let normalized = LockActionPolicy.pathsEligibleForBreak(selected: paths, locks: locks)
         guard validate(paths: normalized) else {
             return
@@ -135,7 +183,9 @@ public final class LockViewModel {
         case .lock:
             await lock(paths: paths, message: message, force: false, confirmed: true)
         case .stealLock:
-            await lock(paths: paths, message: message, force: true, confirmed: true)
+            let pendingMessage = message ?? pendingLockMessage
+            pendingLockMessage = nil
+            await lock(paths: paths, message: pendingMessage, force: true, confirmed: true)
         case .unlock:
             await unlock(paths: paths, force: false, confirmed: true)
         case .breakLock:
@@ -145,6 +195,7 @@ public final class LockViewModel {
 
     public func cancelConfirmation() {
         if case .confirmationRequired = state {
+            pendingLockMessage = nil
             state = locks.isEmpty ? .idle : .loaded
         }
     }
@@ -166,6 +217,16 @@ public final class LockViewModel {
             locks = []
             state = .error(String(describing: error))
         }
+    }
+
+    private func loadProjectProperties(for paths: [String]) async throws -> ProjectPropertyPolicy {
+        guard let projectPropertyLoader else { return projectProperties }
+        return try await projectPropertyLoader(paths)
+    }
+
+    private func beginProjectPropertyLoad() -> Int {
+        projectPropertyLoadGeneration += 1
+        return projectPropertyLoadGeneration
     }
 }
 

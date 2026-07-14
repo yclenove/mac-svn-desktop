@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T5.3** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T5.4** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-14） | T0–T4 + G0/G1/G2/G3/G4、T5.1–T5.2 ✅；**下一 T5.3**；覆盖率 **103/114（90.35%）**；全量 **879** 绿 |
+| 当前状态（2026-07-14） | T0–T4 + G0/G1/G2/G3/G4、T5.1–T5.3 ✅；**下一 T5.4**；覆盖率 **105/114（92.11%）**；全量 **917** 绿 |
 
 ---
 
@@ -186,7 +186,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 
 - [x] **T5.1** 设置 IA：General / Dialogs / Colours / Network / External Programs / Saved Data（S01,S03–S06,S09–S11）
 - [x] **T5.2** 客户端钩子：至少 pre-commit、post-update（S11）
-- [ ] **T5.3** Bugtraq / issue 正则 + `bugtraq:*` / 关键 `tsvn:*` 项目属性（S12, §8）
+- [x] **T5.3** Bugtraq / issue 正则 + `bugtraq:*` / 关键 `tsvn:*` 项目属性（S12, §8）
 - [ ] **T5.4** 清认证缓存 / 清日志缓存（S11）
 - [ ] **T5.5** 外置 Diff/Merge/Blame 按扩展名（S10 完善）
 - [ ] **T5.6** App Icon / 空态 / 关于页
@@ -281,6 +281,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox；配置镜像到扩展容器；Homebrew SVN 直接探测与只读执行前缀；真实 `status/info/proplist` 成功日志；Added/Modified 不同角标；appex/深层签名校验；全量 868 绿 | Overlay、S02、S08、H-T4/G4 ✅ | 覆盖率 103/114；下一 T5.1 |
 | 2026-07-14 | T5.1 | c113d7d | 设置页稳定分类侧栏与分区内容；原设置保存/加载契约保持；分类模型/映射守卫、存储、Finder packaging 测试及全量 871 绿；Xcode Debug 构建通过 | D28、S01/S03/S04/S06/S09/S10/S11 升为 🟡；H-T5 设置 IA ✅ | 覆盖率 103/114；下一 T5.2 |
 | 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 配置与 UTF-8 官方参数文件；WC 祖先路径匹配；非零退出/超时；Commit add 前阻断；Update/Switch/Checkout 成败回调；设置持久化与旧配置兼容；全量 879 绿 | H-T5 客户端钩子 ✅；S11 保持 🟡（认证清理待 T5.4） | 覆盖率 103/114；下一 T5.3 |
+| 2026-07-14 | T5.3 | pending | Bugtraq 项目属性解析；`bugtraq:message/number/append/logregex/url` 文本内高亮、链接、输入与诊断；`^/` 仓库根缺失显式诊断；通用及所有操作 `tsvn:logtemplate*` 接线；项目 LCID/locale 生效到 macOS 拼写检查；提交/锁定按每路径祖先属性 fail-closed、并发刷新不打断写操作、夺锁确认保留说明；属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；全量 917 绿 | D17、D27、S12、H-T5 Bugtraq ✅ | 覆盖率 105/114；下一 T5.4 |
 
 ---
 
