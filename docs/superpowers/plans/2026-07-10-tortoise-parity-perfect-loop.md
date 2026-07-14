@@ -284,7 +284,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-14 | T5.3 | b3a528b | Bugtraq 项目属性解析；`bugtraq:message/number/append/logregex/url` 文本内高亮、链接、输入与诊断；`^/` 仓库根缺失显式诊断；通用及所有操作 `tsvn:logtemplate*` 接线；项目 LCID/locale 生效到 macOS 拼写检查；提交/锁定按每路径祖先属性 fail-closed、并发刷新不打断写操作、夺锁确认保留说明；属性草稿诊断；无扩展名文件/带点目录节点类型覆盖；全量 917 绿 | D17、D27、S12、H-T5 Bugtraq ✅ | 覆盖率 105/114；下一 T5.4 |
 | 2026-07-14 | T5.4 | 874122f | 设置页二次确认清认证缓存；使用配置 SVN 的 `auth --remove '*'` 同时清理 auth 文件与 macOS Keychain；空缓存幂等，命令失败保留文件，AI Provider Keychain 隔离；日志缓存清理防重入；全量 924 绿 | D03、S11、H-T5 缓存清理 ✅ | 覆盖率 107/114（93.86%）；下一 T5.5 |
 | 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 规则按用途和扩展名持久化；大小写无关精确规则优先，留空/`*`/`*.*` 为默认；Diff 保留旧配置兜底，Merge 使用 base/mine/theirs/result 且不自动 resolve，Blame 限制工作副本边界；全量 937 绿 | S10、H-T5 外置工具 ✅ | 覆盖率 108/114（94.74%）；下一 T5.6 |
-| 2026-07-15 | T5.6 | （提交后回填） | 原生 AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；全量 941 绿，SwiftPM release 与 Xcode Debug 构建验证通过 | 无 inventory 状态变化；H-T5 品牌体验 ✅ | 覆盖率 108/114（94.74%）；下一 T5.7 |
+| 2026-07-15 | T5.6 | 8a2b80f | 原生 AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；全量 941 绿，SwiftPM release 与 Xcode Debug 构建验证通过 | 无 inventory 状态变化；H-T5 品牌体验 ✅ | 覆盖率 108/114（94.74%）；下一 T5.7 |
 
 ---
 
