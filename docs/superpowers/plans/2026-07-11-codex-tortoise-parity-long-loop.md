@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.2 已实现并验证；功能提交哈希待回填 |
-| 最近功能 tip | `（提交后回填）`（T5.2 客户端钩子） |
+| 工作区 | T5.2 功能提交 `c488dd5`；哈希回填提交后应干净 |
+| 最近功能 tip | `c488dd5`（T5.2 客户端钩子） |
 | 覆盖率 | **103/114 = 90.35%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **879** 绿（2026-07-14）；客户端钩子参数/事务/持久化、真实 SVN 集成与 Xcode Debug 构建通过 |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅**；下一 **T5.3** |
@@ -281,7 +281,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T4.7 | 69a820f | Context Menu 设置持久化与配置 v4；顶层/子菜单规划、needs-lock Lock 提升、未版本/已忽略隐藏、菜单排除路径；Finder 同步状态快照；Copy/Move 菜单深链自动选择 WC 相对路径并打开向导；S02/D02 ✅；覆盖率 103/114；全量 862 绿；Finder appex 构建与校验通过；下一刀 T4.8/G4 |
 | 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox 与扩展容器配置镜像；Homebrew SVN/工作副本只读例外；真实 `status/info/proplist` 绿，Added/Modified 不同角标；appex/深层签名校验；覆盖率 103/114；全量 868 绿；G4 ✅；下一刀 T5.1 |
 | 2026-07-14 | T5.1 | c113d7d | General / Dialogs / Colours / Network / External Programs / Saved Data 稳定分类 IA；保留 Finder / Revision Graph / AI 分类和既有保存契约；D28、S01/S03/S04/S06/S09/S10/S11 升 🟡；H-T5 设置 IA ✅；覆盖率 103/114；全量 871 绿；下一刀 T5.2 |
-| 2026-07-14 | T5.2 | （提交后回填） | pre-commit/post-update 客户端钩子；官方参数文件/顺序、WC 路径匹配、退出码与超时；Commit 阻断、Update/Switch/Checkout 成败回调；设置 UI/持久化；S11 保持 🟡（认证清理待 T5.4）；覆盖率 103/114；全量 879 绿；下一刀 T5.3 |
+| 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 客户端钩子；官方参数文件/顺序、WC 路径匹配、退出码与超时；Commit 阻断、Update/Switch/Checkout 成败回调；设置 UI/持久化；S11 保持 🟡（认证清理待 T5.4）；覆盖率 103/114；全量 879 绿；下一刀 T5.3 |
 
 ---
 

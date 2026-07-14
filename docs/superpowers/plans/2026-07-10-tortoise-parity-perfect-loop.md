@@ -280,7 +280,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-14 | T4.7 | 69a820f | Context Menu 设置模型与持久化；顶层/子菜单规划、needs-lock 自动提升 Lock、未版本/已忽略隐藏与排除路径；Finder 同步状态快照；Finder Copy/Move 菜单深链进入应用内向导；配置 v4 兼容旧版本；全量 862 绿；Finder appex 构建与校验通过 | S02、D02、H-T4.7 ✅；G4 仍待 Finder 冒烟与闸门审计 | 覆盖率 103/114；下一 T4.8/G4 |
 | 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox；配置镜像到扩展容器；Homebrew SVN 直接探测与只读执行前缀；真实 `status/info/proplist` 成功日志；Added/Modified 不同角标；appex/深层签名校验；全量 868 绿 | Overlay、S02、S08、H-T4/G4 ✅ | 覆盖率 103/114；下一 T5.1 |
 | 2026-07-14 | T5.1 | c113d7d | 设置页稳定分类侧栏与分区内容；原设置保存/加载契约保持；分类模型/映射守卫、存储、Finder packaging 测试及全量 871 绿；Xcode Debug 构建通过 | D28、S01/S03/S04/S06/S09/S10/S11 升为 🟡；H-T5 设置 IA ✅ | 覆盖率 103/114；下一 T5.2 |
-| 2026-07-14 | T5.2 | （提交后回填） | pre-commit/post-update 配置与 UTF-8 官方参数文件；WC 祖先路径匹配；非零退出/超时；Commit add 前阻断；Update/Switch/Checkout 成败回调；设置持久化与旧配置兼容；全量 879 绿 | H-T5 客户端钩子 ✅；S11 保持 🟡（认证清理待 T5.4） | 覆盖率 103/114；下一 T5.3 |
+| 2026-07-14 | T5.2 | c488dd5 | pre-commit/post-update 配置与 UTF-8 官方参数文件；WC 祖先路径匹配；非零退出/超时；Commit add 前阻断；Update/Switch/Checkout 成败回调；设置持久化与旧配置兼容；全量 879 绿 | H-T5 客户端钩子 ✅；S11 保持 🟡（认证清理待 T5.4） | 覆盖率 103/114；下一 T5.3 |
 
 ---
 
