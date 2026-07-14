@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T4.8/G4** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T5.1** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-14） | T0–T3 + G0/G1/G2/G3 ✅；T4.1–T4.7 ✅；**下一 T4.8/G4**；覆盖率 **103/114（90.35%）** |
+| 当前状态（2026-07-14） | T0–T4 + G0/G1/G2/G3/G4 ✅；**下一 T5.1**；覆盖率 **103/114（90.35%）**；全量 **868** 绿 |
 
 ---
 
@@ -180,7 +180,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T4.5** 多选批量命令
 - [x] **T4.6** 属性页等价：revision/作者/URL/锁/属性摘要（文件信息或应用内面板）
 - [x] **T4.7** Context Menu 设置：提升项、needs-lock 提升 Lock、隐藏未版本路径（S02）；Copy/Move 平台等价入口
-- [ ] **T4.8** **闸门 G4**：Overlay + S02/S08 → ✅；Finder 冒烟；全量测试
+- [x] **T4.8** **闸门 G4**：Overlay + S02/S08 → ✅；Finder 冒烟；全量测试
 
 ### Wave T5 — 设置、钩子、品牌、分发
 
@@ -278,6 +278,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T4.5 | f26cf1e | Finder 全部选中项保序传递；重复 `path` query 构建/解析；无选中项回退 targeted URL；Navigator 复用批量 `perform`；Finder Sync target/appex 校验；全量 842 绿 | H-T4.5 ✅；D02 保持 🟡（Finder 拖拽待 T4） | 覆盖率 100/114；下一 T4.6 |
 | 2026-07-13 | T4.6 | 5a21470 | Finder「更多命令…」属性入口；绝对子文件路径选择包含它的最深已登记 WC；应用内面板结构化解析 info commit/lock，展示 WC 状态、修订、作者、URL、锁与属性摘要；请求代次丢弃旧的异步 info/status 结果；真实 SVN 锁信息验证；全量 846 绿；Finder appex 校验通过 | D01、H-T4.6 ✅；D02 保持 🟡（Finder 拖拽待 T4） | 覆盖率 101/114；下一 T4.7 |
 | 2026-07-14 | T4.7 | 69a820f | Context Menu 设置模型与持久化；顶层/子菜单规划、needs-lock 自动提升 Lock、未版本/已忽略隐藏与排除路径；Finder 同步状态快照；Finder Copy/Move 菜单深链进入应用内向导；配置 v4 兼容旧版本；全量 862 绿；Finder appex 构建与校验通过 | S02、D02、H-T4.7 ✅；G4 仍待 Finder 冒烟与闸门审计 | 覆盖率 103/114；下一 T4.8/G4 |
+| 2026-07-14 | T4.8/G4 | （提交后回填） | Finder target App Sandbox；配置镜像到扩展容器；Homebrew SVN 直接探测与只读执行前缀；真实 `status/info/proplist` 成功日志；Added/Modified 不同角标；appex/深层签名校验；全量 868 绿 | Overlay、S02、S08、H-T4/G4 ✅ | 覆盖率 103/114；下一 T5.1 |
 
 ---
 

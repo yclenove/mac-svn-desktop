@@ -22,7 +22,7 @@ public struct MacSvnRootView: View {
             wrappedValue: MacSvnWorkspaceController(
                 workspaceStore: session.workspaceStore,
                 infoProvider: session.svnService,
-                supportDirectory: session.supportDirectory
+                finderSyncConfigurationFileURLs: session.finderSyncConfigurationFileURLs
             )
         )
     }

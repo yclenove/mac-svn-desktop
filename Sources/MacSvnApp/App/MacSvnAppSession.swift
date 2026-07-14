@@ -10,6 +10,7 @@ import MacSvnCore
 @MainActor
 public final class MacSvnAppSession: ObservableObject {
     public let supportDirectory: URL
+    public let finderSyncConfigurationFileURLs: [URL]
     public let settingsStore: SettingsStore
     public let workspaceStore: WorkspaceStore
     public let commitMessageHistoryStore: CommitMessageHistoryStore
@@ -42,6 +43,7 @@ public final class MacSvnAppSession: ObservableObject {
 
     public init(
         supportDirectory: URL,
+        finderSyncConfigurationFileURLs: [URL]? = nil,
         settingsStore: SettingsStore,
         workspaceStore: WorkspaceStore,
         commitMessageHistoryStore: CommitMessageHistoryStore,
@@ -73,6 +75,9 @@ public final class MacSvnAppSession: ObservableObject {
         aiToolAuditStore: AIToolAuditStore
     ) {
         self.supportDirectory = supportDirectory
+        self.finderSyncConfigurationFileURLs = finderSyncConfigurationFileURLs ?? [
+            FinderSyncRootsExporter.fileURL(in: supportDirectory)
+        ]
         self.settingsStore = settingsStore
         self.workspaceStore = workspaceStore
         self.commitMessageHistoryStore = commitMessageHistoryStore
@@ -112,9 +117,23 @@ public final class MacSvnAppSession: ObservableObject {
     }
 
     /// 从 support 目录引导会话：加载设置、创建后端与服务、确保持久化文件存在。
-    public static func bootstrap(supportDirectory: URL? = nil) async throws -> MacSvnAppSession {
+    public static func bootstrap(
+        supportDirectory: URL? = nil,
+        finderSyncExtensionSupportDirectory: URL? = nil
+    ) async throws -> MacSvnAppSession {
         let directory = try resolveSupportDirectory(supportDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var finderSyncConfigurationFileURLs = [FinderSyncRootsExporter.fileURL(in: directory)]
+        let extensionSupportDirectory = finderSyncExtensionSupportDirectory
+            ?? (supportDirectory == nil
+                ? FinderSyncRootsExporter.extensionContainerSupportDirectory()
+                : nil)
+        if let extensionSupportDirectory {
+            let extensionFileURL = FinderSyncRootsExporter.fileURL(in: extensionSupportDirectory)
+            if extensionFileURL.standardizedFileURL != finderSyncConfigurationFileURLs[0].standardizedFileURL {
+                finderSyncConfigurationFileURLs.append(extensionFileURL)
+            }
+        }
 
         let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
         let workspaceStore = WorkspaceStore(fileURL: directory.appendingPathComponent("workspaces.json"))
@@ -147,7 +166,7 @@ public final class MacSvnAppSession: ObservableObject {
             cacheMode: settings.finderSyncCacheMode,
             overlaySettings: settings.finderSyncOverlaySettings,
             contextMenuSettings: settings.finderSyncContextMenuSettings,
-            to: FinderSyncRootsExporter.fileURL(in: directory)
+            to: finderSyncConfigurationFileURLs
         )
 
         let svnPath = resolveSvnExecutablePath(configured: settings.svnPath)
@@ -266,6 +285,7 @@ public final class MacSvnAppSession: ObservableObject {
 
         return MacSvnAppSession(
             supportDirectory: directory,
+            finderSyncConfigurationFileURLs: finderSyncConfigurationFileURLs,
             settingsStore: settingsStore,
             workspaceStore: workspaceStore,
             commitMessageHistoryStore: commitMessageHistoryStore,

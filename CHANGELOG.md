@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T4.8 / G4：Finder App Sandbox 真实冒烟与 Shell 集成闸门
+- Affected: SVNStudioFinderSync target/entitlements, MacSvnFinderSync, FinderSyncRootsExporter, MacSvnAppSession, MacSvnWorkspaceController, verify-finder-sync-appex, Tests/*, docs/*
+- Impact: Finder target 启用 App Sandbox 后可由 `pluginkit` 正常登记；主应用将 v4 配置镜像到扩展容器；扩展直接探测 Homebrew/系统 SVN，并以只读例外访问常见工作副本根，OSLog 保留命令成功/失败诊断；真实 WC 中 `status/info/proplist` 全部成功，Added 与 Modified 显示不同 Finder 角标；appex、深层签名与 Xcode Debug 构建校验通过；全量 868 绿，覆盖率 103/114；G4 ✅，下一 T5.1
+
 - Summary: Tortoise 完美 Loop T4.7：Finder Context Menu 设置与 Copy/Move 平台等价入口
 - Affected: FinderSyncContextMenuSettings, FinderSyncContextMenuBuilder, FinderSyncRootsExporter, MacSvnFinderSync, MacSvnSettingsView, MacSvnAppNavigator, MacSvnChangesView, Tests/*, docs/*
 - Impact: 设置页支持选择 Finder 顶层提升命令、needs-lock 自动提升 Lock、隐藏已知未版本/已忽略路径菜单与菜单排除路径；`finder-sync-roots.json` 升级 v4 并兼容旧配置；Finder 同步回调只读线程安全状态快照，未知状态保守不隐藏；Copy/Move 通过 Finder 菜单深链携带绝对路径，主应用自动选择工作副本、转换相对路径并打开既有向导，作为无右拖回调时的平台等价入口；S02、D02 升为 ✅；全量 862 绿，Xcode Debug 构建与 Finder appex 校验通过；覆盖率 103/114；下一 T4.8/G4

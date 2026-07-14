@@ -45,7 +45,7 @@
 
 | 域 ID | DUG 章节 | 必须覆盖的能力要点 | Studio | 波次 |
 |-------|----------|-------------------|--------|------|
-| D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | ✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要 | T4 |
+| D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | ✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要；真实 Finder 冒烟确认 Added/Modified 使用不同角标 | T4 |
 | D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | ✅ CFM/⌘K、Finder 普通+扩展菜单、多选批量；Finder 以 Copy/Move 菜单深链进入应用内向导提供平台等价入口（Finder Sync 无右拖回调） | T1/T4 |
 | D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
@@ -230,7 +230,7 @@
 | S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
 | S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ❌ | T5 |
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
-| S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新 | T4 |
+| S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 弱 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 弱 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ❌ | T5 |
@@ -249,7 +249,7 @@
 | Ignored / Unversioned（可选显示） | ✅ `--no-ignore` 采集、独立角标与设置页可选显示 | T4 |
 | Depth shallow / Nested WC / Externals / Switched | ✅ info depth、嵌套 `.svn`、external/file-external、switched XML | T4 |
 | 仅 mergeinfo 属性变更 | ✅ current/BASE 全属性快照差集仅为 `svn:mergeinfo` 时使用独立角标 | T4 |
-| Status Cache 三模式 + 包含排除路径 | ✅ Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）；包含/排除卷与路径、exclude 优先 | T4 |
+| Status Cache 三模式 + 包含排除路径 | ✅ Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）；包含/排除卷与路径、exclude 优先；sandbox 内真实 SVN 状态采集与角标冒烟通过 | T4 |
 
 ---
 

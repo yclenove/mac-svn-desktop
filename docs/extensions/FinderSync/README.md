@@ -7,8 +7,9 @@
 | 项 | 值 |
 |----|-----|
 | Xcode Target | `MacSVN.xcodeproj` → `SVNStudioFinderSync`（嵌入 `SVNStudio.app/Contents/PlugIns/`） |
-| 根目录与缓存模式 | 主应用原子写入 `~/Library/Application Support/SVNStudio/finder-sync-roots.json`（v4；v1/v2/v3 缺失字段按默认值迁移） |
+| 根目录与缓存模式 | 主应用原子写入自身 Application Support，并镜像到 `~/Library/Containers/dev.yclenove.svnstudio.FinderSync/Data/Library/Application Support/SVNStudio/finder-sync-roots.json`（v4；v1/v2/v3 缺失字段按默认值迁移） |
 | Bundle ID | `dev.yclenove.svnstudio.FinderSync` |
+| Sandbox | Finder target 启用 App Sandbox；工作副本与 SVN 工具链仅授予只读访问 |
 
 ## Status Cache
 
@@ -19,6 +20,13 @@
 模式可在设置的 Finder 角标区域切换；扩展监听配置目录，连续原子保存可热更新。配置切换会清空缓存并使旧的并发采集结果失效。
 
 包含路径为空时覆盖所有已登记工作副本；填写后只监视工作副本内匹配的卷/路径。排除路径优先于包含路径，路径按标准化绝对路径的子树匹配。
+
+## Sandbox 与配置镜像
+
+- Finder Sync target 必须启用 App Sandbox，主应用把同一份配置同时写入主应用目录和扩展容器；两份文件使用同一 JSON payload。
+- 扩展只读访问常见工作副本根 `/Users/`、`/Volumes/`、`/private/tmp/`，不在 Finder 进程内执行任何 WC 写操作。
+- SVN 可执行文件按 `/opt/homebrew/bin/svn`、`/usr/local/bin/svn`、`/usr/bin/svn` 顺序探测并直接执行；Homebrew 前缀仅授予只读执行例外，不再经 `/usr/bin/env` 间接启动。
+- `status`、`info`、`proplist` 的成功与失败写入 `dev.yclenove.svnstudio.FinderSync/status` OSLog，打包校验会检查 sandbox 与全部只读前缀。
 
 ## Context Menu 设置
 
@@ -64,3 +72,5 @@ xcodebuild -project MacSVN.xcodeproj -scheme SVNStudio -configuration Debug \
 - [x] Finder 属性命令与应用内 SVN 信息面板；绝对路径定位 WC，展示状态/revision/作者/URL/锁/属性摘要
 - [x] Context Menu 设置：顶层/子菜单提升、needs-lock Lock 提升、未版本/已忽略隐藏、排除路径；配置 v4 兼容旧版本
 - [x] Copy/Move 平台等价入口：Finder 菜单深链自动选择 WC 相对路径并打开应用内向导
+- [x] App Sandbox 登记与配置镜像；扩展容器内读取 v4 配置，sandbox 中真实执行 `status/info/proplist`
+- [x] 真实 Finder WC 冒烟：Added 显示加号角标，Modified 显示铅笔角标；appex 与深层签名校验通过

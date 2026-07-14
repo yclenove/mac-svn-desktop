@@ -3,6 +3,26 @@ import XCTest
 import MacSvnCore
 
 final class MacSvnAppSessionTests: XCTestCase {
+    func testBootstrapMirrorsFinderConfigurationIntoInjectedExtensionSupport() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)
+        let primarySupport = root.appendingPathComponent("primary", isDirectory: true)
+        let extensionSupport = root.appendingPathComponent("extension", isDirectory: true)
+        try FileManager.default.createDirectory(at: primarySupport, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let session = try await MacSvnAppSession.bootstrap(
+            supportDirectory: primarySupport,
+            finderSyncExtensionSupportDirectory: extensionSupport
+        )
+
+        let primary = FinderSyncRootsExporter.fileURL(in: primarySupport)
+        let mirror = FinderSyncRootsExporter.fileURL(in: extensionSupport)
+        let configurationFileURLs = await session.finderSyncConfigurationFileURLs
+        XCTAssertEqual(configurationFileURLs, [primary, mirror])
+        XCTAssertEqual(try Data(contentsOf: primary), try Data(contentsOf: mirror))
+    }
+
     func testBootstrapCreatesSupportFilesAndLoadsDefaultSettings() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)

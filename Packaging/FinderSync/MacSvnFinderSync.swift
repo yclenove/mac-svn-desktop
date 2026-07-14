@@ -1,9 +1,10 @@
 import Cocoa
 import FinderSync
 import MacSvnCore
+import OSLog
 
 /// Finder Sync 扩展：角标 + 右键深链（FR-EX-05）。
-/// 注意：为读取任意 WC 并调用 `svn status`，本扩展关闭 App Sandbox（开发工具常见做法）。
+/// 扩展运行在 App Sandbox 中；主应用把配置镜像到扩展容器。
 final class MacSvnFinderSync: FIFinderSync {
     private let presentationBuilder = FinderSyncPresentationBuilder()
     private let deepLinkBuilder = FinderSyncDeepLinkBuilder()
@@ -178,15 +179,15 @@ final class MacSvnFinderSync: FIFinderSync {
     }
 
     private func loadConfiguration() -> FinderSyncRootsFile {
-        let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
+        guard let support = try? ProductBranding.supportDirectoryURL else {
+            return FinderSyncRootsFile()
+        }
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
         return (try? FinderSyncRootsExporter.loadConfiguration(from: fileURL)) ?? FinderSyncRootsFile()
     }
 
     private func watchRootsFile() {
-        let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
+        guard let support = try? ProductBranding.supportDirectoryURL else { return }
         try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
         let directoryPath = support.path
         let fd = open(directoryPath, O_EVTONLY)
@@ -313,8 +314,29 @@ private struct FinderSyncRequestContext: Sendable {
     let overlaySettings: FinderSyncOverlaySettings
 }
 
+private final class FinderSyncDataCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    func store(_ data: Data) {
+        lock.lock()
+        storage = data
+        lock.unlock()
+    }
+
+    func snapshot() -> Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+}
+
 /// 按 WC 根缓存 `svn status --xml` 结果，避免 Finder 刷角标时频繁打进程。
 actor FinderSyncStatusCache {
+    private static let logger = Logger(
+        subsystem: ProductBranding.finderSyncBundleIdentifier,
+        category: "status"
+    )
     private var roots: [String] = []
     private var mode: FinderSyncCacheMode = .defaultCache
     private var overlaySettings = FinderSyncOverlaySettings()
@@ -448,28 +470,77 @@ actor FinderSyncStatusCache {
         )
     }
 
+    private static func svnExecutableURL() -> URL? {
+        let candidates = [
+            "/opt/homebrew/bin/svn",
+            "/usr/local/bin/svn",
+            "/usr/bin/svn",
+        ]
+        guard let path = candidates.first(where: FileManager.default.isExecutableFile(atPath:)) else {
+            return nil
+        }
+        return URL(fileURLWithPath: path)
+    }
+
+    private static func drainOutput(
+        from pipe: Pipe,
+        into capture: FinderSyncDataCapture,
+        group: DispatchGroup
+    ) {
+        group.enter()
+        DispatchQueue.global(qos: .utility).async {
+            defer { group.leave() }
+            capture.store(pipe.fileHandleForReading.readDataToEndOfFile())
+        }
+    }
+
     private static func runSvn(arguments: [String], wc: URL) async -> Data? {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
+                guard let executableURL = svnExecutableURL() else {
+                    logger.error("svn command failed to launch: executable not found")
+                    continuation.resume(returning: nil)
+                    return
+                }
                 let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                process.arguments = ["svn"] + arguments
+                process.executableURL = executableURL
+                process.arguments = arguments
                 process.currentDirectoryURL = wc
                 process.environment = ProcessInfo.processInfo.environment.merging([
                     "LC_ALL": "C",
-                    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
-                        + (ProcessInfo.processInfo.environment["PATH"] ?? ""),
                 ]) { _, new in new }
 
                 let stdout = Pipe()
+                let stderr = Pipe()
                 process.standardOutput = stdout
-                process.standardError = FileHandle.nullDevice
+                process.standardError = stderr
                 do {
                     try process.run()
-                    let data = stdout.fileHandleForReading.readDataToEndOfFile()
+                    let stdoutCapture = FinderSyncDataCapture()
+                    let stderrCapture = FinderSyncDataCapture()
+                    let outputReaders = DispatchGroup()
+                    drainOutput(from: stdout, into: stdoutCapture, group: outputReaders)
+                    drainOutput(from: stderr, into: stderrCapture, group: outputReaders)
                     process.waitUntilExit()
-                    continuation.resume(returning: process.terminationStatus == 0 ? data : nil)
+                    outputReaders.wait()
+                    let data = stdoutCapture.snapshot()
+                    let errorData = stderrCapture.snapshot()
+                    let command = arguments.first ?? "unknown"
+                    guard process.terminationStatus == 0 else {
+                        let message = String(data: errorData, encoding: .utf8) ?? ""
+                        logger.error(
+                            "svn command failed: \(command, privacy: .public) exit=\(process.terminationStatus) stderr=\(String(message.prefix(500)), privacy: .public)"
+                        )
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    logger.debug("svn command succeeded: \(command, privacy: .public)")
+                    continuation.resume(returning: data)
                 } catch {
+                    let command = arguments.first ?? "unknown"
+                    logger.error(
+                        "svn command failed to launch: \(command, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+                    )
                     continuation.resume(returning: nil)
                 }
             }

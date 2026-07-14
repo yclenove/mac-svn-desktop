@@ -262,7 +262,7 @@ public struct MacSvnSettingsView: View {
                 cacheMode: settings.finderSyncCacheMode,
                 overlaySettings: settings.finderSyncOverlaySettings,
                 contextMenuSettings: settings.finderSyncContextMenuSettings,
-                to: FinderSyncRootsExporter.fileURL(in: session.supportDirectory)
+                to: session.finderSyncConfigurationFileURLs
             )
         } catch {
             statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"

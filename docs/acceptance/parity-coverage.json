@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T03:45:35Z",
+  "generated_at": "2026-07-14T05:27:17Z",
   "total": 114,
   "done": 103,
   "partial": 5,
@@ -44,7 +44,7 @@
       "key": "D01",
       "section": "domain",
       "title": "Icon Overlays / WC Status",
-      "raw_status": "✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要",
+      "raw_status": "✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要；真实 Finder 冒烟确认 Added/Modified 使用不同角标",
       "status": "done"
     },
     {
@@ -751,7 +751,7 @@
       "key": "S08",
       "section": "settings",
       "title": "Icon Overlays",
-      "raw_status": "✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新",
+      "raw_status": "✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过",
       "status": "done"
     },
     {
@@ -835,7 +835,7 @@
       "key": "overlay.07",
       "section": "overlay",
       "title": "Status Cache 三模式 + 包含排除路径",
-      "raw_status": "✅ Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）；包含/排除卷与路径、exclude 优先",
+      "raw_status": "✅ Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）；包含/排除卷与路径、exclude 优先；sandbox 内真实 SVN 状态采集与角标冒烟通过",
       "status": "done"
     }
   ]

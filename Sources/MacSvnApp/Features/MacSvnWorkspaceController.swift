@@ -11,17 +11,20 @@ public final class MacSvnWorkspaceController: ObservableObject {
 
     private let workspaceStore: WorkspaceStore
     private let infoProvider: any WorkingCopyInfoProviding
-    /// 用于导出 Finder Sync 根目录；测试可注入临时目录。
-    private let supportDirectory: URL?
+    /// 主应用与 sandbox 扩展各自读取的 Finder 配置文件。
+    private let finderSyncConfigurationFileURLs: [URL]
 
     public init(
         workspaceStore: WorkspaceStore,
         infoProvider: any WorkingCopyInfoProviding,
-        supportDirectory: URL? = nil
+        supportDirectory: URL? = nil,
+        finderSyncConfigurationFileURLs: [URL]? = nil
     ) {
         self.workspaceStore = workspaceStore
         self.infoProvider = infoProvider
-        self.supportDirectory = supportDirectory
+        self.finderSyncConfigurationFileURLs = finderSyncConfigurationFileURLs
+            ?? supportDirectory.map { [FinderSyncRootsExporter.fileURL(in: $0)] }
+            ?? []
     }
 
     public var selectedRecord: WorkingCopyRecord? {
@@ -106,8 +109,10 @@ public final class MacSvnWorkspaceController: ObservableObject {
 
     /// 将有效 WC 根目录导出给 Finder Sync 扩展读取。
     private func exportFinderSyncRootsIfPossible() {
-        guard let supportDirectory else { return }
-        let fileURL = FinderSyncRootsExporter.fileURL(in: supportDirectory)
-        try? FinderSyncRootsExporter.export(records: records, to: fileURL)
+        guard !finderSyncConfigurationFileURLs.isEmpty else { return }
+        try? FinderSyncRootsExporter.export(
+            records: records,
+            to: finderSyncConfigurationFileURLs
+        )
     }
 }

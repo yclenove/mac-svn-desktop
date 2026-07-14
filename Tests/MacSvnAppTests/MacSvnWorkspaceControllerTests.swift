@@ -16,6 +16,35 @@ private actor StubInfoProvider: WorkingCopyInfoProviding {
 
 final class MacSvnWorkspaceControllerTests: XCTestCase {
     @MainActor
+    func testReloadMirrorsFinderRootsToEveryConfiguredDestination() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("macsvn-wc-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workingCopy = root.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: workingCopy.appendingPathComponent(".svn", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        let store = WorkspaceStore(fileURL: root.appendingPathComponent("workspaces.json"))
+        _ = try await store.addWorkingCopy(
+            localPath: workingCopy,
+            repoURL: "file:///tmp/repo/trunk"
+        )
+        let primary = root.appendingPathComponent("primary/finder-sync-roots.json")
+        let mirror = root.appendingPathComponent("mirror/finder-sync-roots.json")
+        let controller = MacSvnWorkspaceController(
+            workspaceStore: store,
+            infoProvider: StubInfoProvider(),
+            finderSyncConfigurationFileURLs: [primary, mirror]
+        )
+
+        await controller.reload()
+
+        XCTAssertEqual(try Data(contentsOf: primary), try Data(contentsOf: mirror))
+        XCTAssertEqual(try FinderSyncRootsExporter.load(from: mirror), [workingCopy.path])
+    }
+
+    @MainActor
     func testOpenLocalPathSelectsRegisteredWorkingCopyContainingFinderFile() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("macsvn-wc-\(UUID().uuidString)", isDirectory: true)

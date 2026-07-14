@@ -2,6 +2,44 @@ import Foundation
 import XCTest
 
 final class FinderSyncPackagingGuardTests: XCTestCase {
+    func testFinderExtensionIsSandboxedAndUsesItsContainerSupportDirectory() throws {
+        let project = try Self.readRepoSource(at: "MacSVN.xcodeproj/project.pbxproj")
+        let source = try Self.readFinderSyncSource()
+        let verifier = try Self.readRepoSource(at: "scripts/verify-finder-sync-appex.sh")
+        let entitlements = try Self.readRepoSource(
+            at: "Packaging/FinderSync/SVNStudioFinderSync.entitlements"
+        )
+        let finderConfigurations = project
+            .components(separatedBy: "INFOPLIST_FILE = Packaging/FinderSync/Info.plist;")
+
+        XCTAssertEqual(finderConfigurations.count, 3)
+        for configurationPrefix in finderConfigurations.dropLast() {
+            XCTAssertTrue(configurationPrefix.suffix(700).contains("ENABLE_APP_SANDBOX = YES;"))
+            XCTAssertFalse(configurationPrefix.suffix(700).contains("ENABLE_APP_SANDBOX = NO;"))
+        }
+        XCTAssertTrue(source.contains("ProductBranding.supportDirectoryURL"))
+        XCTAssertFalse(source.contains("homeDirectoryForCurrentUser"))
+        XCTAssertFalse(source.contains("URL(fileURLWithPath: \"/usr/bin/env\")"))
+        XCTAssertTrue(source.contains("/opt/homebrew/bin/svn"))
+        XCTAssertTrue(source.contains("/usr/local/bin/svn"))
+        XCTAssertTrue(verifier.contains("com.apple.security.app-sandbox"))
+        XCTAssertTrue(verifier.contains("temporary-exception.files.absolute-path.read-only"))
+        XCTAssertTrue(entitlements.contains("com.apple.security.app-sandbox"))
+        XCTAssertTrue(entitlements.contains("temporary-exception.files.absolute-path.read-only"))
+        XCTAssertTrue(entitlements.contains("/opt/homebrew/"))
+        XCTAssertTrue(entitlements.contains("/usr/local/"))
+        for workingCopyPrefix in ["/Users/", "/Volumes/", "/private/tmp/"] {
+            XCTAssertTrue(
+                entitlements.contains(workingCopyPrefix),
+                "Finder Sync must be able to read working copies under \(workingCopyPrefix)"
+            )
+            XCTAssertTrue(
+                verifier.contains(workingCopyPrefix),
+                "appex verifier must enforce working-copy access for \(workingCopyPrefix)"
+            )
+        }
+    }
+
     func testExtensionRegistersEveryTortoiseParityBadge() throws {
         let source = try Self.readFinderSyncSource()
         let badges = [
@@ -33,6 +71,18 @@ final class FinderSyncPackagingGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("if let task = inFlight[key]"))
         XCTAssertTrue(source.contains("inFlight[key] = task"))
         XCTAssertTrue(source.contains("inFlight[key] = nil"))
+    }
+
+    func testExtensionDoesNotSilentlyDiscardStatusCommandFailures() throws {
+        let source = try Self.readFinderSyncSource()
+
+        XCTAssertTrue(source.contains("Logger("))
+        XCTAssertTrue(source.contains("process.standardError = stderr"))
+        XCTAssertTrue(source.contains("svn command failed"))
+        XCTAssertTrue(source.contains("svn command succeeded"))
+        XCTAssertTrue(source.contains("let outputReaders = DispatchGroup()"))
+        XCTAssertTrue(source.contains("drainOutput("))
+        XCTAssertTrue(source.contains("outputReaders.wait()"))
     }
 
     func testExtensionHonorsDefaultShellAndNoneCacheModes() throws {

@@ -51,19 +51,34 @@ public struct FinderSyncRootsFile: Codable, Equatable, Sendable {
 public enum FinderSyncRootsExporter {
     public static let fileName = "finder-sync-roots.json"
 
+    public static func extensionContainerSupportDirectory(
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) -> URL {
+        homeDirectory
+            .appendingPathComponent("Library/Containers", isDirectory: true)
+            .appendingPathComponent(ProductBranding.finderSyncBundleIdentifier, isDirectory: true)
+            .appendingPathComponent("Data/Library/Application Support", isDirectory: true)
+            .appendingPathComponent(ProductBranding.supportDirectoryName, isDirectory: true)
+    }
+
     public static func fileURL(in supportDirectory: URL) -> URL {
         supportDirectory.appendingPathComponent(fileName)
     }
 
     /// 仅导出有效工作副本路径，去重并排序，便于扩展稳定注册。
     public static func export(records: [WorkingCopyRecord], to fileURL: URL) throws {
-        let existing = try? loadConfiguration(from: fileURL)
+        try export(records: records, to: [fileURL])
+    }
+
+    public static func export(records: [WorkingCopyRecord], to fileURLs: [URL]) throws {
+        guard let primaryURL = fileURLs.first else { return }
+        let existing = try? loadConfiguration(from: primaryURL)
         try export(
             records: records,
             cacheMode: existing?.cacheMode ?? .defaultCache,
             overlaySettings: existing?.overlaySettings ?? FinderSyncOverlaySettings(),
             contextMenuSettings: existing?.contextMenuSettings ?? FinderSyncContextMenuSettings(),
-            to: fileURL
+            to: fileURLs
         )
     }
 
@@ -108,6 +123,22 @@ public enum FinderSyncRootsExporter {
         contextMenuSettings: FinderSyncContextMenuSettings,
         to fileURL: URL
     ) throws {
+        try export(
+            records: records,
+            cacheMode: cacheMode,
+            overlaySettings: overlaySettings,
+            contextMenuSettings: contextMenuSettings,
+            to: [fileURL]
+        )
+    }
+
+    public static func export(
+        records: [WorkingCopyRecord],
+        cacheMode: FinderSyncCacheMode,
+        overlaySettings: FinderSyncOverlaySettings,
+        contextMenuSettings: FinderSyncContextMenuSettings,
+        to fileURLs: [URL]
+    ) throws {
         let roots = Array(
             Set(records.filter(\.isValid).map(\.localPath))
         ).sorted()
@@ -118,11 +149,16 @@ public enum FinderSyncRootsExporter {
             contextMenuSettings: contextMenuSettings
         )
         let data = try JSONEncoder().encode(payload)
-        try FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(to: fileURL, options: [.atomic])
+        var writtenPaths = Set<String>()
+        for fileURL in fileURLs {
+            let normalizedURL = fileURL.standardizedFileURL
+            guard writtenPaths.insert(normalizedURL.path).inserted else { continue }
+            try FileManager.default.createDirectory(
+                at: normalizedURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: normalizedURL, options: [.atomic])
+        }
     }
 
     public static func load(from fileURL: URL) throws -> [String] {
