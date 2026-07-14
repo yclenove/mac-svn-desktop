@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.7 功能已完成；哈希回填提交后应干净 |
-| 最近功能 tip | （T5.7 功能提交后回填） |
+| 工作区 | T5.7 功能与验收哈希已回填；提交后应干净 |
+| 最近功能 tip | 71865b7（T5.7 Release 包装与冒烟） |
 | 覆盖率 | **108/114 = 94.74%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **948** 绿（2026-07-15）；分发包装、品牌体验、包装资源守卫与既有真实 SVN 集成通过 |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅ · T5.4 ✅ · T5.5 ✅ · T5.6 ✅ · T5.7 ✅**；下一 **T5.8/G5** |
@@ -291,7 +291,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T5.4 | 874122f | Saved Data 二次确认；配置 SVN 的 `auth --remove '*'` 覆盖 auth 文件与 macOS Keychain；E200009 空缓存幂等、命令失败不删文件；AI Provider Keychain 隔离，日志缓存清理防重入；D03/S11/H-T5 ✅；全量 924 绿；覆盖率 107/114；下一刀 T5.5 |
 | 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 按用途和扩展名规则持久化；精确扩展名大小写无关优先，留空/`*`/`*.*` 为默认；Diff 兼容旧配置，Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 严格限制工作副本边界；S10/H-T5 ✅；全量 937 绿；覆盖率 108/114；下一刀 T5.6 |
 | 2026-07-15 | T5.6 | 8a2b80f | AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；无 inventory 状态变化；H-T5 品牌体验 ✅；全量 941 绿；覆盖率 108/114；下一刀 T5.7 |
-| 2026-07-15 | T5.7 | （提交后回填） | Xcode Release 主 App/Finder Sync/Quick Look 双架构；包结构、扩展点、继承 run-path、递归包内依赖与深层签名校验、Foundation 用户目录隔离启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；Developer ID/公证/干净机因无证书与凭据明确阻塞；无 inventory 状态变化；H-T5 分发包装 ✅；全量 948 绿；覆盖率 108/114；下一刀 T5.8/G5 |
+| 2026-07-15 | T5.7 | 71865b7 | Xcode Release 主 App/Finder Sync/Quick Look 双架构；包结构、扩展点、继承 run-path、递归包内依赖与深层签名校验、Foundation 用户目录隔离启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；Developer ID/公证/干净机因无证书与凭据明确阻塞；无 inventory 状态变化；H-T5 分发包装 ✅；全量 948 绿；覆盖率 108/114；下一刀 T5.8/G5 |
 
 ---
 
