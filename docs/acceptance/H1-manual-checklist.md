@@ -35,7 +35,17 @@
 - [ ] 按 `docs/extensions/FinderSync/README.md` 在 Xcode 包装工程验证
 - [ ] 按 `docs/extensions/QuickLook/README.md` 验证预览
 
-## 干净机冒烟（V4）
+## Release 本机冒烟（T5.7）
+
+- [x] `build-release-app.sh` 产出含 Finder Sync / Quick Look 的 `arm64 x86_64` Release 包
+- [x] `verify-release-app.sh` 通过包结构、扩展点、双架构、继承 run-path、递归包内依赖与深层签名校验
+- [x] 隔离 Foundation 用户目录、`HOME` / `TMPDIR`、最小 `PATH` 下真实启动 5 秒且无致命日志；独立进程组限时退出
+
+实证见 [distribution-smoke-2026-07-15.md](distribution-smoke-2026-07-15.md)。当前产物是 ad-hoc 本机验证包，不可用于下面的 Gatekeeper 验收。
+
+## 干净机冒烟（V4 / T5.7 后续）
+
+> 2026-07-15 阻塞：当前机器没有 Developer ID Application 身份和公证 API Key；以下项目保持未勾选，解除方式见 [T5.7 分发记录](distribution-smoke-2026-07-15.md)。
 
 在**未安装 Xcode / 未开开发者模式**的 macOS 上（虚拟机或第二台机器），使用已 `stapler staple` 的 `SVNStudio.app`：
 

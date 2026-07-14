@@ -39,9 +39,13 @@ fi
 [[ -n "$SIGN_IDENTITY" ]] || fail "未设置 SVNSTUDIO_SIGN_IDENTITY"
 [[ -n "$APP_PATH" ]] || fail "未设置 SVNSTUDIO_APP_PATH"
 [[ -d "$APP_PATH" ]] || fail "SVNSTUDIO_APP_PATH 不是目录: $APP_PATH"
+case "$SIGN_IDENTITY" in
+  "Developer ID Application:"*) ;;
+  *) fail "签名身份必须是 Developer ID Application: $SIGN_IDENTITY" ;;
+esac
 
-if ! security find-identity -v -p codesigning 2>/dev/null | grep -F "$SIGN_IDENTITY" >/dev/null; then
-  echo "verify-signing-prereqs: 警告：当前钥匙串未匹配到身份（仍可继续，若证书在其他钥匙串请忽略）" >&2
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -F "\"$SIGN_IDENTITY\"" >/dev/null; then
+  fail "当前钥匙串未匹配到签名身份: $SIGN_IDENTITY"
 fi
 
 if [[ -n "$NOTARY_KEY_PATH" ]]; then
@@ -50,7 +54,7 @@ if [[ -n "$NOTARY_KEY_PATH" ]]; then
   [[ -n "$NOTARY_ISSUER_ID" ]] || fail "未设置 SVNSTUDIO_NOTARY_ISSUER_ID"
   ok "API Key 公证凭据路径检查通过"
 else
-  fail "未设置 SVNSTUDIO_NOTARY_KEY_PATH（或改用文档中的 Apple ID 方式自行扩展脚本）"
+  fail "未设置 SVNSTUDIO_NOTARY_KEY_PATH"
 fi
 
 ok "前置检查通过"

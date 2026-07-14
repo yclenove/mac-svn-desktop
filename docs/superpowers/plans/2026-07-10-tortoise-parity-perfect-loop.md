@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 每轮只取本文件**第一个未完成** `[ ]`；用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。  
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T5.7** 为准）。
+> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **T5.8** 为准）。
 
 | 项 | 内容 |
 |----|------|
@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-15） | T0–T4 + G0/G1/G2/G3/G4、T5.1–T5.6 ✅；**下一 T5.7**；覆盖率 **108/114（94.74%）**；全量 **941** 绿 |
+| 当前状态（2026-07-15） | T0–T4 + G0/G1/G2/G3/G4、T5.1–T5.7 ✅；**下一 T5.8 / G5**；覆盖率 **108/114（94.74%）**；全量 **948** 绿 |
 
 ---
 
@@ -190,7 +190,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **T5.4** 清认证缓存 / 清日志缓存（S11）
 - [x] **T5.5** 外置 Diff/Merge/Blame 按扩展名（S10 完善）
 - [x] **T5.6** App Icon / 空态 / 关于页
-- [ ] **T5.7** 包装 `SVNStudio.app` + 干净机/本机冒烟；公证（有证书则做，无则文档阻塞）
+- [x] **T5.7** 包装 `SVNStudio.app` + 干净机/本机冒烟；公证（有证书则做，无则文档阻塞）
 - [ ] **T5.8** **闸门 G5**：S 全表 → ✅；H-tortoise T5；全量测试
 
 ### Wave GP — 完美收口（强制）
@@ -285,6 +285,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-14 | T5.4 | 874122f | 设置页二次确认清认证缓存；使用配置 SVN 的 `auth --remove '*'` 同时清理 auth 文件与 macOS Keychain；空缓存幂等，命令失败保留文件，AI Provider Keychain 隔离；日志缓存清理防重入；全量 924 绿 | D03、S11、H-T5 缓存清理 ✅ | 覆盖率 107/114（93.86%）；下一 T5.5 |
 | 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 规则按用途和扩展名持久化；大小写无关精确规则优先，留空/`*`/`*.*` 为默认；Diff 保留旧配置兜底，Merge 使用 base/mine/theirs/result 且不自动 resolve，Blame 限制工作副本边界；全量 937 绿 | S10、H-T5 外置工具 ✅ | 覆盖率 108/114（94.74%）；下一 T5.6 |
 | 2026-07-15 | T5.6 | 8a2b80f | 原生 AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；全量 941 绿，SwiftPM release 与 Xcode Debug 构建验证通过 | 无 inventory 状态变化；H-T5 品牌体验 ✅ | 覆盖率 108/114（94.74%）；下一 T5.7 |
+| 2026-07-15 | T5.7 | （提交后回填） | Xcode Release 主 App/Finder Sync/Quick Look 均为 `arm64 x86_64`；结构、扩展点、继承 run-path、递归包内依赖与深层签名校验通过；Foundation 用户目录隔离、最小 PATH 启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；7 项契约/行为测试、全量 948 绿 | 无 inventory 状态变化；H-T5 分发包装 ✅；Developer ID/公证/干净机因 0 个签名身份及无凭据明确阻塞 | 覆盖率 108/114（94.74%）；下一 T5.8/G5 |
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-15（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4 与 T5.1–T5.6，当前继续 T5.7。
+> **交接时刻：** 2026-07-15（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4 与 T5.1–T5.7，当前继续 T5.8/G5。
 
 ---
 
@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：T5.7 包装 `SVNStudio.app` + 干净机/本机冒烟；公证
+当前第一个未完成项：T5.8 / G5 设置全表、H-tortoise T5 与全量测试闸门
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.6 功能已完成；哈希回填提交后应干净 |
-| 最近功能 tip | 8a2b80f（T5.6 App Icon / 空态 / 关于页） |
+| 工作区 | T5.7 功能已完成；哈希回填提交后应干净 |
+| 最近功能 tip | （T5.7 功能提交后回填） |
 | 覆盖率 | **108/114 = 94.74%**（`python3 scripts/parity-coverage.py`） |
-| 测试 | 全量 **941** 绿（2026-07-15）；品牌体验、包装资源守卫与既有真实 SVN 集成通过 |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅ · T5.4 ✅ · T5.5 ✅ · T5.6 ✅**；下一 **T5.7** |
+| 测试 | 全量 **948** 绿（2026-07-15）；分发包装、品牌体验、包装资源守卫与既有真实 SVN 集成通过 |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · T5.1 ✅ · T5.2 ✅ · T5.3 ✅ · T5.4 ✅ · T5.5 ✅ · T5.6 ✅ · T5.7 ✅**；下一 **T5.8/G5** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -99,7 +99,8 @@
 | **T5.4** | 清认证缓存 / 清日志缓存（S11） | ✅ |
 | **T5.5** | 外置 Diff/Merge/Blame 按扩展名（S10） | ✅ |
 | **T5.6** | App Icon / 空态 / 关于页 | ✅ |
-| **T5.7** | 包装 `SVNStudio.app` + 干净机/本机冒烟；公证 | |
+| **T5.7** | 双架构 `SVNStudio.app` 包装与隔离本机冒烟；Developer ID/公证/干净机无证书阻塞已记录 | ✅ |
+| **T5.8 / G5** | 设置全表、H-tortoise T5 与全量测试出门闸门 | |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
 | **GP.*** | 100% 覆盖率收口后停 loop | |
 
@@ -141,7 +142,7 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T5.7**）。
+1. 打开 perfect-loop → **第一个** `[ ]`（当前应为 **T5.8 / G5**）。
 2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
 3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
 
@@ -290,6 +291,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-14 | T5.4 | 874122f | Saved Data 二次确认；配置 SVN 的 `auth --remove '*'` 覆盖 auth 文件与 macOS Keychain；E200009 空缓存幂等、命令失败不删文件；AI Provider Keychain 隔离，日志缓存清理防重入；D03/S11/H-T5 ✅；全量 924 绿；覆盖率 107/114；下一刀 T5.5 |
 | 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 按用途和扩展名规则持久化；精确扩展名大小写无关优先，留空/`*`/`*.*` 为默认；Diff 兼容旧配置，Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 严格限制工作副本边界；S10/H-T5 ✅；全量 937 绿；覆盖率 108/114；下一刀 T5.6 |
 | 2026-07-15 | T5.6 | 8a2b80f | AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；无 inventory 状态变化；H-T5 品牌体验 ✅；全量 941 绿；覆盖率 108/114；下一刀 T5.7 |
+| 2026-07-15 | T5.7 | （提交后回填） | Xcode Release 主 App/Finder Sync/Quick Look 双架构；包结构、扩展点、继承 run-path、递归包内依赖与深层签名校验、Foundation 用户目录隔离启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；Developer ID/公证/干净机因无证书与凭据明确阻塞；无 inventory 状态变化；H-T5 分发包装 ✅；全量 948 绿；覆盖率 108/114；下一刀 T5.8/G5 |
 
 ---
 

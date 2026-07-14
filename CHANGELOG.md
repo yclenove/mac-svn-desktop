@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop T5.7：双架构 Release 包装、本机冒烟与公证审计
+- Affected: build-release-app.sh, verify-release-app.sh, verify-mach-o-dependencies.sh, smoke-test-macos-app.sh, sign-and-notarize.sh, verify-signing-prereqs.sh, DistributionPackagingTests, docs/packaging/*, docs/acceptance/*, perfect-loop/long-loop docs
+- Impact: 新增 Xcode Release `arm64 x86_64` 分发构建闭环，强制校验主应用、Finder Sync、Quick Look 的包结构、扩展点、架构、dyld run-path 继承、递归包内依赖与深层签名，并在隔离 Foundation 用户目录、HOME/TMPDIR、最小 PATH 下真实启动冒烟，超时会终止独立进程组。签名公证流程保留 Finder 专属 entitlements，限定 Developer ID Application 并核对三包 Team ID，要求 `notarytool` JSON 状态 `Accepted`，所有步骤在隐藏目录过闸后才原子发布最终 App/ZIP。当前机器无 Developer ID 身份及公证凭据，已如实记录 Gatekeeper/干净机阻塞；全量 948 绿，覆盖率保持 108/114；下一 T5.8/G5
+
 - Summary: Tortoise 完美 Loop T5.6：App Icon、首次空态与关于页
 - Affected: SVNStudio.icns, generate-app-icon.swift, ProductBranding, MacSvnWorkingCopyShellView, MacSvnAboutView, MacSvnDesktopApp, macOS packaging scripts, Xcode project, BrandingExperienceTests, docs/*
 - Impact: 新增可重复生成的多尺寸原生 macOS App Icon，并由 SwiftPM release 包装与 Xcode target 统一嵌入、逐字节校验；首次无工作副本空态提供可执行的添加工作副本与设置入口；应用菜单以独立单例窗口展示实际应用图标、版本/build 和项目主页，关闭全部主窗口后仍可打开。新增品牌体验与包装资源契约测试；全量 941 绿，SwiftPM release 包装和 Xcode Debug 构建通过；inventory 无状态变化，覆盖率保持 108/114；下一 T5.7
