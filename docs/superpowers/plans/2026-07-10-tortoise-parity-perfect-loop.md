@@ -278,7 +278,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-13 | T4.5 | f26cf1e | Finder 全部选中项保序传递；重复 `path` query 构建/解析；无选中项回退 targeted URL；Navigator 复用批量 `perform`；Finder Sync target/appex 校验；全量 842 绿 | H-T4.5 ✅；D02 保持 🟡（Finder 拖拽待 T4） | 覆盖率 100/114；下一 T4.6 |
 | 2026-07-13 | T4.6 | 5a21470 | Finder「更多命令…」属性入口；绝对子文件路径选择包含它的最深已登记 WC；应用内面板结构化解析 info commit/lock，展示 WC 状态、修订、作者、URL、锁与属性摘要；请求代次丢弃旧的异步 info/status 结果；真实 SVN 锁信息验证；全量 846 绿；Finder appex 校验通过 | D01、H-T4.6 ✅；D02 保持 🟡（Finder 拖拽待 T4） | 覆盖率 101/114；下一 T4.7 |
 | 2026-07-14 | T4.7 | 69a820f | Context Menu 设置模型与持久化；顶层/子菜单规划、needs-lock 自动提升 Lock、未版本/已忽略隐藏与排除路径；Finder 同步状态快照；Finder Copy/Move 菜单深链进入应用内向导；配置 v4 兼容旧版本；全量 862 绿；Finder appex 构建与校验通过 | S02、D02、H-T4.7 ✅；G4 仍待 Finder 冒烟与闸门审计 | 覆盖率 103/114；下一 T4.8/G4 |
-| 2026-07-14 | T4.8/G4 | （提交后回填） | Finder target App Sandbox；配置镜像到扩展容器；Homebrew SVN 直接探测与只读执行前缀；真实 `status/info/proplist` 成功日志；Added/Modified 不同角标；appex/深层签名校验；全量 868 绿 | Overlay、S02、S08、H-T4/G4 ✅ | 覆盖率 103/114；下一 T5.1 |
+| 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox；配置镜像到扩展容器；Homebrew SVN 直接探测与只读执行前缀；真实 `status/info/proplist` 成功日志；Added/Modified 不同角标；appex/深层签名校验；全量 868 绿 | Overlay、S02、S08、H-T4/G4 ✅ | 覆盖率 103/114；下一 T5.1 |
 
 ---
 

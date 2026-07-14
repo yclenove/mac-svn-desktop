@@ -32,8 +32,8 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T4.8/G4 实现与验收文档已更新，提交后应干净 |
-| 最近功能 tip | `69a820f`（T4.7；T4.8/G4 提交后回填） |
+| 工作区 | T4.8/G4 已提交；哈希回填提交后应干净 |
+| 最近功能 tip | `66ce3c1`（T4.8/G4 Finder 冒烟闸门） |
 | 覆盖率 | **103/114 = 90.35%**（`python3 scripts/parity-coverage.py`） |
 | 测试 | 全量 **868** 绿（2026-07-14）；Finder 真实角标、appex 与深层签名校验通过 |
 | Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅**；下一 **T5.1** |
@@ -277,7 +277,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-13 | T4.5 | f26cf1e | Finder 全部选中项保序传递；重复 `path` query 构建/解析；无选中项回退 targeted URL；Navigator 复用批量 `perform`；Finder Sync target/appex 校验；覆盖率 100/114；全量 842 绿；下一刀 T4.6 |
 | 2026-07-13 | T4.6 | 5a21470 | Finder 绝对子文件路径选择包含它的最深已登记 WC，并打开应用内属性页；展示 WC 状态/修订/作者/URL/锁/属性摘要；请求代次丢弃旧的异步 info/status 结果；真实 SVN 锁信息验证；D01 ✅；覆盖率 101/114；全量 846 绿；下一刀 T4.7 |
 | 2026-07-14 | T4.7 | 69a820f | Context Menu 设置持久化与配置 v4；顶层/子菜单规划、needs-lock Lock 提升、未版本/已忽略隐藏、菜单排除路径；Finder 同步状态快照；Copy/Move 菜单深链自动选择 WC 相对路径并打开向导；S02/D02 ✅；覆盖率 103/114；全量 862 绿；Finder appex 构建与校验通过；下一刀 T4.8/G4 |
-| 2026-07-14 | T4.8/G4 | （提交后回填） | Finder target App Sandbox 与扩展容器配置镜像；Homebrew SVN/工作副本只读例外；真实 `status/info/proplist` 绿，Added/Modified 不同角标；appex/深层签名校验；覆盖率 103/114；全量 868 绿；G4 ✅；下一刀 T5.1 |
+| 2026-07-14 | T4.8/G4 | 66ce3c1 | Finder target App Sandbox 与扩展容器配置镜像；Homebrew SVN/工作副本只读例外；真实 `status/info/proplist` 绿，Added/Modified 不同角标；appex/深层签名校验；覆盖率 103/114；全量 868 绿；G4 ✅；下一刀 T5.1 |
 
 ---
 
