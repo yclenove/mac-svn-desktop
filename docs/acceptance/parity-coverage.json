@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-07-14T05:27:17Z",
+  "generated_at": "2026-07-14T07:04:21Z",
   "total": 114,
   "done": 103,
-  "partial": 5,
-  "missing": 6,
+  "partial": 9,
+  "missing": 2,
   "coverage": 0.903509,
   "coverage_percent": 90.35,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
@@ -29,8 +29,8 @@
     "settings": {
       "total": 13,
       "done": 5,
-      "partial": 3,
-      "missing": 5
+      "partial": 7,
+      "missing": 1
     },
     "overlay": {
       "total": 7,
@@ -233,7 +233,7 @@
       "key": "D28",
       "section": "domain",
       "title": "Settings 全页",
-      "raw_status": "❌/弱",
+      "raw_status": "🟡 General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 已形成，并保留 Finder / Revision Graph / AI 专页；各分类完整能力仍按 S01–S13 逐项补齐",
       "status": "partial"
     },
     {
@@ -702,7 +702,7 @@
       "key": "S01",
       "section": "settings",
       "title": "General",
-      "raw_status": "弱",
+      "raw_status": "🟡 General IA、SVN 可执行路径与分支布局已有；语言、更新、全局 ignore、last-commit-time、配置编辑与 externals 策略待补",
       "status": "partial"
     },
     {
@@ -716,15 +716,15 @@
       "key": "S03",
       "section": "settings",
       "title": "Dialogs 1",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "🟡 Dialogs 1 IA、日志批量与 Auto-close 已有；字体/日期/双击、废纸篓与 checkout 默认值待补",
+      "status": "partial"
     },
     {
       "key": "S04",
       "section": "settings",
       "title": "Dialogs 2",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "🟡 Dialogs 2 IA 与提交冲突标记守护已有；递归未版本、自动完成、日志历史、自动勾选、提交后重开、CFM 联网与 Lock 选项待补",
+      "status": "partial"
     },
     {
       "key": "S05",
@@ -737,8 +737,8 @@
       "key": "S06",
       "section": "settings",
       "title": "Colours",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "🟡 Colours IA 与 Revision Graph 四类颜色已有；冲突/增/删/合并/改及暗色配色待补",
+      "status": "partial"
     },
     {
       "key": "S07",
@@ -758,22 +758,22 @@
       "key": "S09",
       "section": "settings",
       "title": "Network",
-      "raw_status": "弱",
+      "raw_status": "🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补",
       "status": "partial"
     },
     {
       "key": "S10",
       "section": "settings",
       "title": "External Programs",
-      "raw_status": "弱",
+      "raw_status": "🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5",
       "status": "partial"
     },
     {
       "key": "S11",
       "section": "settings",
       "title": "Saved Data / Hook Scripts",
-      "raw_status": "❌",
-      "status": "missing"
+      "raw_status": "🟡 Saved Data IA、日志缓存策略与清理已有；认证缓存清理及客户端钩子待 T5.2/T5.4",
+      "status": "partial"
     },
     {
       "key": "S12",

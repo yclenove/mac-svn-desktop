@@ -102,7 +102,7 @@
 
 ## T5 — 设置 / 钩子 / 品牌 / 分发
 
-- [ ] 设置 IA：General / Dialogs / Colours / Network / External / Saved Data（S01,S03–S06,S09–S11）
+- [x] 设置 IA：General / Dialogs / Colours / Network / External Programs / Saved Data 六类稳定侧栏；原 Finder / Revision Graph / AI 设置迁入独立分类，保存/加载契约保持（S01,S03–S06,S09–S11）
 - [ ] 客户端钩子：pre-commit、post-update（S11）
 - [ ] Bugtraq / `bugtraq:*` / 关键 `tsvn:*`（S12）
 - [ ] 清认证缓存 / 清日志缓存

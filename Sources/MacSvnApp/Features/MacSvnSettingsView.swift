@@ -5,6 +5,7 @@ import MacSvnCore
 /// 设置页：svn 路径、日志批量、超时、分支布局、外部 Diff、AI。
 public struct MacSvnSettingsView: View {
     @ObservedObject private var session: MacSvnAppSession
+    @State private var selectedCategory: MacSvnSettingsCategory? = .general
     @State private var svnPath: String = ""
     @State private var logBatchSize: Int = 100
     @State private var processTimeout: Double = 120
@@ -43,122 +44,216 @@ public struct MacSvnSettingsView: View {
     }
 
     public var body: some View {
-        Form {
-            Section("Subversion") {
-                TextField("svn 可执行路径", text: $svnPath)
-                LabeledContent("当前会话路径", value: session.svnExecutablePath)
-                Picker("官方 Shelve 实现", selection: $shelvingVersion) {
-                    ForEach(SvnShelvingVersion.allCases, id: \.rawValue) { version in
-                        Text(version.displayName).tag(version)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                List(selection: $selectedCategory) {
+                    ForEach(MacSvnSettingsCategory.allCases) { category in
+                        Label(category.title, systemImage: category.systemImage)
+                            .tag(category)
                     }
                 }
-                .pickerStyle(.segmented)
-            }
-            Section("行为") {
-                Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
-                Stepper("进程超时 \(Int(processTimeout)) 秒", value: $processTimeout, in: 30...600, step: 30)
-                Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
-                Picker("进度完成后", selection: $progressAutoCloseMode) {
-                    ForEach(ProgressAutoCloseMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
+                .listStyle(.sidebar)
+                .frame(minWidth: 176, idealWidth: 190, maxWidth: 210)
+
+                Divider()
+
+                Form {
+                    categoryContent
                 }
-                Text("更新/合并出现错误、冲突或合并增删时，进度提示会按策略保留。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .formStyle(.grouped)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            Section("日志缓存") {
-                Toggle("启用日志缓存", isOn: $logCacheEnabled)
-                Stepper("保留 \(logCacheRetentionDays) 天", value: $logCacheRetentionDays, in: 1...365)
-                    .disabled(!logCacheEnabled)
-                Stepper("每个目标最多 \(logCacheMaxEntries) 条", value: $logCacheMaxEntries, in: 100...100_000, step: 100)
-                    .disabled(!logCacheEnabled)
-                Button("清理全部日志缓存") {
-                    Task { await clearLogCache() }
+
+            Divider()
+
+            HStack(spacing: 12) {
+                if let statusText {
+                    Text(statusText)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
-                Text("在线日志会按仓库与目标隔离保存；网络不可用时可回退到最近缓存。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section("Finder 角标") {
-                Picker("Status Cache", selection: $finderSyncCacheMode) {
-                    ForEach(FinderSyncCacheMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
+                Spacer()
+                Button("保存") {
+                    Task { await save() }
                 }
-                .pickerStyle(.segmented)
-                patternEditor("包含路径（每行一个；留空包含全部工作副本）", text: $finderSyncIncludedPaths)
-                patternEditor("排除路径（每行一个；优先于包含路径）", text: $finderSyncExcludedPaths)
-                DisclosureGroup("显示的角标种类") {
-                    HStack {
-                        Button("全选") {
-                            finderSyncEnabledBadges = Set(FinderSyncBadge.allCases)
-                        }
-                        Button("清空") {
-                            finderSyncEnabledBadges.removeAll()
-                        }
-                    }
-                    ForEach(FinderSyncBadge.allCases, id: \.self) { badge in
-                        Toggle(badge.displayName, isOn: finderSyncBadgeBinding(badge))
-                    }
-                }
+                .keyboardShortcut(.defaultAction)
             }
-            Section("Finder 菜单") {
-                DisclosureGroup("提升到顶层的命令") {
-                    ForEach(SvnCommandCatalog.dailyCFMCommands, id: \.id) { descriptor in
-                        Toggle(
-                            descriptor.displayName,
-                            isOn: finderSyncPromotedCommandBinding(descriptor.id)
-                        )
-                    }
-                }
-                Toggle("needs-lock 文件自动提升 Lock", isOn: $finderSyncPromoteLockForNeedsLock)
-                Toggle("未版本控制/已忽略路径隐藏菜单", isOn: $finderSyncHideUnversionedMenus)
-                patternEditor("菜单排除路径（每行一个）", text: $finderSyncMenuExcludedPaths)
-            }
-            Section("分支布局") {
-                TextField("trunk", text: $trunk)
-                TextField("branches", text: $branches)
-                TextField("tags", text: $tags)
-            }
-            Section("修订图") {
-                patternEditor("主干 pattern（每行一个）", text: $graphTrunkPatterns)
-                patternEditor("分支 pattern（每行一个）", text: $graphBranchPatterns)
-                patternEditor("标签 pattern（每行一个）", text: $graphTagPatterns)
-                Toggle("复制节点混合源颜色", isOn: $graphBlendCopyColors)
-                colorPicker("主干颜色", hex: $graphTrunkHex)
-                colorPicker("分支颜色", hex: $graphBranchHex)
-                colorPicker("标签颜色", hex: $graphTagHex)
-                colorPicker("未分类颜色", hex: $graphUnclassifiedHex)
-            }
-            Section("外部 Diff 工具（可选）") {
-                TextField("名称（如 Kaleidoscope）", text: $externalDiffName)
-                TextField("可执行路径", text: $externalDiffPath)
-            }
-            Section("AI") {
-                Button("打开 AI Provider / 隐私 / 连通性测试…") {
-                    showAISettings = true
-                }
-                Text("本机可先运行 scripts/seed-volcengine-ark.sh 注入火山方舟（Key 仅进 Keychain）")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if let statusText {
-                Text(statusText)
-                    .foregroundStyle(.secondary)
-            }
-            Button("保存") {
-                Task { await save() }
-            }
-            .keyboardShortcut(.defaultAction)
+            .padding(12)
         }
-        .formStyle(.grouped)
-        .padding()
-        .navigationTitle("设置")
+        .frame(minWidth: 720, minHeight: 520)
+        .navigationTitle("设置 · \((selectedCategory ?? .general).title)")
         .task { await load() }
         .sheet(isPresented: $showAISettings) {
             MacSvnAIProviderSettingsView(session: session)
                 .frame(minWidth: 640, minHeight: 520)
+        }
+    }
+
+    @ViewBuilder
+    private var categoryContent: some View {
+        switch selectedCategory ?? .general {
+        case .general:
+            generalSettings
+        case .dialogs:
+            dialogSettings
+        case .colours:
+            colourSettings
+        case .network:
+            networkSettings
+        case .externalPrograms:
+            externalProgramSettings
+        case .savedData:
+            savedDataSettings
+        case .finder:
+            finderSettings
+        case .revisionGraph:
+            revisionGraphSettings
+        case .ai:
+            aiSettings
+        }
+    }
+
+    @ViewBuilder
+    private var generalSettings: some View {
+        Section("Subversion") {
+            TextField("svn 可执行路径", text: $svnPath)
+            LabeledContent("当前会话路径", value: session.svnExecutablePath)
+        }
+        Section("分支布局") {
+            TextField("trunk", text: $trunk)
+            TextField("branches", text: $branches)
+            TextField("tags", text: $tags)
+        }
+    }
+
+    @ViewBuilder
+    private var dialogSettings: some View {
+        Section("Dialogs 1") {
+            Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
+            Picker("进度完成后", selection: $progressAutoCloseMode) {
+                ForEach(ProgressAutoCloseMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+        }
+        Section("Dialogs 2") {
+            Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
+        }
+        Section("Dialogs 3") {
+            Picker("官方 Shelve 实现", selection: $shelvingVersion) {
+                ForEach(SvnShelvingVersion.allCases, id: \.rawValue) { version in
+                    Text(version.displayName).tag(version)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    @ViewBuilder
+    private var colourSettings: some View {
+        Section("Revision Graph") {
+            colorPicker("主干颜色", hex: $graphTrunkHex)
+            colorPicker("分支颜色", hex: $graphBranchHex)
+            colorPicker("标签颜色", hex: $graphTagHex)
+            colorPicker("未分类颜色", hex: $graphUnclassifiedHex)
+        }
+    }
+
+    @ViewBuilder
+    private var networkSettings: some View {
+        Section("Subversion Network") {
+            Stepper(
+                "进程超时 \(Int(processTimeout)) 秒",
+                value: $processTimeout,
+                in: 30...600,
+                step: 30
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var externalProgramSettings: some View {
+        Section("Diff") {
+            TextField("名称（如 Kaleidoscope）", text: $externalDiffName)
+            TextField("可执行路径", text: $externalDiffPath)
+        }
+    }
+
+    @ViewBuilder
+    private var savedDataSettings: some View {
+        Section("日志缓存") {
+            Toggle("启用日志缓存", isOn: $logCacheEnabled)
+            Stepper("保留 \(logCacheRetentionDays) 天", value: $logCacheRetentionDays, in: 1...365)
+                .disabled(!logCacheEnabled)
+            Stepper(
+                "每个目标最多 \(logCacheMaxEntries) 条",
+                value: $logCacheMaxEntries,
+                in: 100...100_000,
+                step: 100
+            )
+            .disabled(!logCacheEnabled)
+            Button("清理全部日志缓存") {
+                Task { await clearLogCache() }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var finderSettings: some View {
+        Section("Finder 角标") {
+            Picker("Status Cache", selection: $finderSyncCacheMode) {
+                ForEach(FinderSyncCacheMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            patternEditor("包含路径（每行一个；留空包含全部工作副本）", text: $finderSyncIncludedPaths)
+            patternEditor("排除路径（每行一个；优先于包含路径）", text: $finderSyncExcludedPaths)
+            DisclosureGroup("显示的角标种类") {
+                HStack {
+                    Button("全选") {
+                        finderSyncEnabledBadges = Set(FinderSyncBadge.allCases)
+                    }
+                    Button("清空") {
+                        finderSyncEnabledBadges.removeAll()
+                    }
+                }
+                ForEach(FinderSyncBadge.allCases, id: \.self) { badge in
+                    Toggle(badge.displayName, isOn: finderSyncBadgeBinding(badge))
+                }
+            }
+        }
+        Section("Finder 菜单") {
+            DisclosureGroup("提升到顶层的命令") {
+                ForEach(SvnCommandCatalog.dailyCFMCommands, id: \.id) { descriptor in
+                    Toggle(
+                        descriptor.displayName,
+                        isOn: finderSyncPromotedCommandBinding(descriptor.id)
+                    )
+                }
+            }
+            Toggle("needs-lock 文件自动提升 Lock", isOn: $finderSyncPromoteLockForNeedsLock)
+            Toggle("未版本控制/已忽略路径隐藏菜单", isOn: $finderSyncHideUnversionedMenus)
+            patternEditor("菜单排除路径（每行一个）", text: $finderSyncMenuExcludedPaths)
+        }
+    }
+
+    @ViewBuilder
+    private var revisionGraphSettings: some View {
+        Section("分类") {
+            patternEditor("主干 pattern（每行一个）", text: $graphTrunkPatterns)
+            patternEditor("分支 pattern（每行一个）", text: $graphBranchPatterns)
+            patternEditor("标签 pattern（每行一个）", text: $graphTagPatterns)
+            Toggle("复制节点混合源颜色", isOn: $graphBlendCopyColors)
+        }
+    }
+
+    @ViewBuilder
+    private var aiSettings: some View {
+        Section("AI Provider") {
+            Button("打开 AI Provider / 隐私 / 连通性测试…") {
+                showAISettings = true
+            }
         }
     }
 

@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T5.1：设置分类信息架构
+- Affected: MacSvnSettingsCategory, MacSvnSettingsView, SettingsInformationArchitectureTests, inventory, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: 设置页改为 General / Dialogs / Colours / Network / External Programs / Saved Data 稳定侧栏，并为 Finder / Revision Graph / AI 保留独立分类；现有 SVN、对话框、日志缓存、Finder、修订图、外置 Diff 与 AI 设置按领域迁入，保存/加载契约不变，并以分类模型和双向映射守卫防回归；D28 与 S01/S03/S04/S06/S09/S10/S11 诚实升为 🟡，未提前宣称代理、钩子、认证清理或按扩展名外置工具完成；全量 871 绿，覆盖率 103/114；下一 T5.2
+
 - Summary: Tortoise 完美 Loop T4.8 / G4：Finder App Sandbox 真实冒烟与 Shell 集成闸门
 - Affected: SVNStudioFinderSync target/entitlements, MacSvnFinderSync, FinderSyncRootsExporter, MacSvnAppSession, MacSvnWorkspaceController, verify-finder-sync-appex, Tests/*, docs/*
 - Impact: Finder target 启用 App Sandbox 后可由 `pluginkit` 正常登记；主应用将 v4 配置镜像到扩展容器；扩展直接探测 Homebrew/系统 SVN，并以只读例外访问常见工作副本根，OSLog 保留命令成功/失败诊断；真实 WC 中 `status/info/proplist` 全部成功，Added 与 Modified 显示不同 Finder 角标；appex、深层签名与 Xcode Debug 构建校验通过；全量 868 绿，覆盖率 103/114；G4 ✅，下一 T5.1

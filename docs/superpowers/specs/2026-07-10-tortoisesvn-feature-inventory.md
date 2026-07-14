@@ -72,7 +72,7 @@
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作 | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
 | D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ❌ | T5 |
-| D28 | Settings 全页 | 见 §6 | ❌/弱 | T4/T5 |
+| D28 | Settings 全页 | 见 §6 | 🟡 General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 已形成，并保留 Finder / Revision Graph / AI 专页；各分类完整能力仍按 S01–S13 逐项补齐 | T4/T5 |
 
 ---
 
@@ -223,17 +223,17 @@
 
 | S# | 小乌龟设置页 | 必须等价项 | Studio | 波次 |
 |----|--------------|------------|--------|------|
-| S01 | General | 语言、检查更新、全局 ignore、last-commit-time、编辑 svn config、externals 本地修改策略 | 弱 | T5 |
+| S01 | General | 语言、检查更新、全局 ignore、last-commit-time、编辑 svn config、externals 本地修改策略 | 🟡 General IA、SVN 可执行路径与分支布局已有；语言、更新、全局 ignore、last-commit-time、配置编辑与 externals 策略待补 | T5 |
 | S02 | Context Menu | 主菜单/子菜单提升、needs-lock 时提升 Lock、隐藏未版本路径菜单、排除路径 | ✅ 设置持久化；Finder 同步快照按设置规划顶层/子菜单、needs-lock 自动提升 Lock、未知状态保守不隐藏未版本菜单、排除路径边界匹配 | T4 |
-| S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | ❌ | T5 |
-| S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | ❌ | T5 |
+| S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | 🟡 Dialogs 1 IA、日志批量与 Auto-close 已有；字体/日期/双击、废纸篓与 checkout 默认值待补 | T5 |
+| S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | 🟡 Dialogs 2 IA 与提交冲突标记守护已有；递归未版本、自动完成、日志历史、自动勾选、提交后重开、CFM 联网与 Lock 选项待补 | T5 |
 | S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
-| S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ❌ | T5 |
+| S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | 🟡 Colours IA 与 Revision Graph 四类颜色已有；冲突/增/删/合并/改及暗色配色待补 | T5 |
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
-| S09 | Network | 代理、SSH 客户端等 | 弱 | T5 |
-| S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 弱 | T1/T5 |
-| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ❌ | T5 |
+| S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
+| S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5 | T1/T5 |
+| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | 🟡 Saved Data IA、日志缓存策略与清理已有；认证缓存清理及客户端钩子待 T5.2/T5.4 | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ❌ | T5 |
 | S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |
 
