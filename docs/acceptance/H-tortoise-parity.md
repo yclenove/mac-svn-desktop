@@ -105,7 +105,7 @@
 - [x] 设置 IA：General / Dialogs / Colours / Network / External Programs / Saved Data 六类稳定侧栏；原 Finder / Revision Graph / AI 设置迁入独立分类，保存/加载契约保持（S01,S03–S06,S09–S11）
 - [x] 客户端钩子：设置页按 WC 根配置 pre-commit / post-update；官方 PATH/DEPTH/MESSAGEFILE/REVISION/ERROR/CWD/RESULTPATH 参数顺序；pre-commit 非零阻断且不残留 add；post-update 覆盖 Update/Switch/Checkout 成败路径（S11）
 - [x] Bugtraq / `bugtraq:*` / 关键 `tsvn:*`（S12）：提交页读取 WC 祖先项目属性；支持 issue 输入/追加、文本内正则高亮/链接、提交/锁说明最小长度门控、宽度提示、全部操作模板、macOS 项目拼写语言与属性草稿诊断
-- [ ] 清认证缓存 / 清日志缓存
+- [x] 清认证缓存 / 清日志缓存：Saved Data 以二次确认调用配置 SVN 的 `auth --remove '*'` 清理 auth 文件和 macOS Keychain 凭据，空缓存幂等、命令失败不删文件且不影响 AI Provider Keychain；日志缓存保留策略与全量清理入口
 - [ ] 外置 Diff/Merge/Blame 按扩展名（S10）
 - [ ] App Icon / 空态 / 关于页
 - [ ] `SVNStudio.app` 冒烟；公证（有证书则做）

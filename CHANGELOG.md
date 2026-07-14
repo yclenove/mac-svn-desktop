@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T5.4：清理认证缓存与日志缓存
+- Affected: SvnAuthenticationCacheStore, MacSvnAppSession, MacSvnSettingsView, SvnAuthenticationCacheStoreTests, SettingsInformationArchitectureTests, docs/*
+- Impact: Saved Data 新增二次确认的 Subversion 认证缓存清理；通过用户配置的 SVN 客户端执行 `svn --config-dir … auth --remove '*'`，同时覆盖 auth 文件和 macOS Keychain 凭据，空缓存幂等成功，命令失败时保留文件缓存；明确隔离 AI Provider Keychain 凭据。已有日志缓存全量清理入口增加执行中防重入；全量 924 绿，覆盖率 107/114，D03/S11 升为 ✅；下一 T5.5
+
 - Summary: Tortoise 完美 Loop T5.3：Bugtraq / tsvn 项目属性
 - Affected: ProjectPropertyPolicy, CommitViewModel, LockViewModel, PropertyViewModel, MacSvnCommitView, MacSvnLocksView, MacSvnBranchesView, MacSvnRepoBrowserView, MacSvnPropertiesView, BugtraqIssueTextEditor, MacSvnProjectPropertyLoader, Tests, docs/*
 - Impact: 解析并诊断 `bugtraq:url/message/number/append/logregex` 与关键 `tsvn:*` 项目属性；支持 WC 祖先属性合并、`^/` 仓库根 URL 展开与失败诊断、单/双阶段 issue 文本内高亮/提取/链接、输入模式插入/追加 issue、提交说明最小长度阻断与宽度提示、通用及全部操作模板、Windows LCID/locale 到 macOS 原生拼写检查、锁说明最小长度和锁模板；属性页可在保存前提示无效 Bugtraq/tsvn 草稿并将属性模板带入提交。属性加载器按实际节点类型处理无扩展名文件与带点目录；缺少 `%BUGID%` 的模板保留诊断并禁用无效输入入口；多选严格合并、属性读取 fail-closed、陈旧刷新不打断写操作、夺锁确认保留原说明；全量 917 绿，覆盖率 105/114；下一 T5.4

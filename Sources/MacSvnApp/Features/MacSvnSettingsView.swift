@@ -39,6 +39,9 @@ public struct MacSvnSettingsView: View {
     @State private var externalDiffPath = ""
     @State private var statusText: String?
     @State private var showAISettings = false
+    @State private var showClearAuthenticationConfirmation = false
+    @State private var isClearingAuthenticationCache = false
+    @State private var isClearingLogCache = false
 
     public init(session: MacSvnAppSession) {
         self.session = session
@@ -87,6 +90,17 @@ public struct MacSvnSettingsView: View {
         .sheet(isPresented: $showAISettings) {
             MacSvnAIProviderSettingsView(session: session)
                 .frame(minWidth: 640, minHeight: 520)
+        }
+        .confirmationDialog(
+            "清除 Subversion 认证缓存？",
+            isPresented: $showClearAuthenticationConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("清除认证缓存", role: .destructive) {
+                Task { await clearAuthenticationCache() }
+            }
+        } message: {
+            Text("将清除当前用户 Subversion 客户端管理的 auth 文件和 Keychain 凭据。下次访问仓库时需要重新输入凭据。不会删除 AI Provider 凭据。")
         }
     }
 
@@ -182,6 +196,15 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var savedDataSettings: some View {
+        Section("认证缓存") {
+            Text("管理当前用户 Subversion 配置目录中的认证数据。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("清除 Subversion 认证缓存…", role: .destructive) {
+                showClearAuthenticationConfirmation = true
+            }
+            .disabled(isClearingAuthenticationCache)
+        }
         Section("Hook Scripts") {
             ForEach($clientHooks) { $hook in
                 clientHookEditor($hook)
@@ -210,6 +233,7 @@ public struct MacSvnSettingsView: View {
             Button("清理全部日志缓存") {
                 Task { await clearLogCache() }
             }
+            .disabled(isClearingLogCache)
         }
     }
 
@@ -442,11 +466,30 @@ public struct MacSvnSettingsView: View {
     }
 
     private func clearLogCache() async {
+        guard !isClearingLogCache else { return }
+        isClearingLogCache = true
+        defer { isClearingLogCache = false }
         do {
             try await session.logCacheStore.clearAll()
             statusText = "日志缓存已清理。"
         } catch {
             statusText = "清理日志缓存失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func clearAuthenticationCache() async {
+        guard !isClearingAuthenticationCache else { return }
+        isClearingAuthenticationCache = true
+        defer { isClearingAuthenticationCache = false }
+        do {
+            let result = try await session.svnAuthenticationCacheStore.clearAll()
+            if result.removedFileCacheItemCount == 0 {
+                statusText = "已完成 Subversion 认证缓存清理。"
+            } else {
+                statusText = "已完成 Subversion 认证缓存清理（移除 \(result.removedFileCacheItemCount) 项文件缓存）。"
+            }
+        } catch {
+            statusText = "清理 Subversion 认证缓存失败：\(error.localizedDescription)"
         }
     }
 

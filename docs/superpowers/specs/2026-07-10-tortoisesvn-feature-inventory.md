@@ -47,7 +47,7 @@
 |-------|----------|-------------------|--------|------|
 | D01 | Icon Overlays / WC Status | 全状态角标、递归传播、属性页状态 | ✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要；真实 Finder 冒烟确认 Added/Modified 使用不同角标 | T4 |
 | D02 | Context Menus / Drag-Drop | 普通+扩展菜单、拖拽 copy/move、快捷键 | ✅ CFM/⌘K、Finder 普通+扩展菜单、多选批量；Finder 以 Copy/Move 菜单深链进入应用内向导提供平台等价入口（Finder Sync 无右拖回调） | T1/T4 |
-| D03 | Authentication | 提示凭据、缓存、清缓存 | 🟡 | T2/T5 |
+| D03 | Authentication | 提示凭据、缓存、清缓存 | ✅ 交互凭据提示与缓存复用；Saved Data 通过当前配置的 `svn --config-dir … auth --remove '*'` 清理 SVN 管理的 auth 文件和 macOS Keychain 凭据，空缓存幂等成功，失败不删除残留文件；AI Provider Keychain 凭据隔离保留 | T2/T5 |
 | D04 | Import / Import in Place | import、就地导入 | ✅ `svn import` + 导入后临时检出替换，保留可用工作副本 | T2 |
 | D05 | Checkout | depth、revision、ignore-externals、pristines | ✅ depth/rev/omit-ext；pristines 进阶仍开 | T2 |
 | D06 | Commit | 勾选、changelist、部分提交、日志历史、进度 | ✅ | T1 |
@@ -233,7 +233,7 @@
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5 | T1/T5 |
-| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | 🟡 Saved Data IA、日志缓存策略与清理、按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子已有；官方 UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调已接线；认证缓存清理待 T5.4 | T5 |
+| S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ✅ Saved Data 提供日志缓存策略/清理，认证清理由配置 SVN 的官方 `auth --remove '*'` 同时覆盖 auth 文件与 Keychain（空缓存幂等、失败保留文件）；按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子、UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调均已接线 | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断 | T5 |
 | S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |
 

@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-14T12:05:43Z",
+  "generated_at": "2026-07-14T12:26:38Z",
   "total": 114,
-  "done": 105,
-  "partial": 9,
+  "done": 107,
+  "partial": 7,
   "missing": 0,
-  "coverage": 0.921053,
-  "coverage_percent": 92.11,
+  "coverage": 0.938596,
+  "coverage_percent": 93.86,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 26,
-      "partial": 2,
+      "done": 27,
+      "partial": 1,
       "missing": 0
     },
     "command": {
@@ -28,8 +28,8 @@
     },
     "settings": {
       "total": 13,
-      "done": 6,
-      "partial": 7,
+      "done": 7,
+      "partial": 6,
       "missing": 0
     },
     "overlay": {
@@ -58,8 +58,8 @@
       "key": "D03",
       "section": "domain",
       "title": "Authentication",
-      "raw_status": "🟡",
-      "status": "partial"
+      "raw_status": "✅ 交互凭据提示与缓存复用；Saved Data 通过当前配置的 `svn --config-dir … auth --remove '*'` 清理 SVN 管理的 auth 文件和 macOS Keychain 凭据，空缓存幂等成功，失败不删除残留文件；AI Provider Keychain 凭据隔离保留",
+      "status": "done"
     },
     {
       "key": "D04",
@@ -772,8 +772,8 @@
       "key": "S11",
       "section": "settings",
       "title": "Saved Data / Hook Scripts",
-      "raw_status": "🟡 Saved Data IA、日志缓存策略与清理、按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子已有；官方 UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调已接线；认证缓存清理待 T5.4",
-      "status": "partial"
+      "raw_status": "✅ Saved Data 提供日志缓存策略/清理，认证清理由配置 SVN 的官方 `auth --remove '*'` 同时覆盖 auth 文件与 Keychain（空缓存幂等、失败保留文件）；按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子、UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调均已接线",
+      "status": "done"
     },
     {
       "key": "S12",

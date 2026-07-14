@@ -87,6 +87,19 @@ final class SettingsInformationArchitectureTests: XCTestCase {
         }
     }
 
+    func testSavedDataKeepsAuthenticationAndLogCacheCleanupAvailable() throws {
+        let source = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift")
+
+        XCTAssertTrue(source.contains("Section(\"认证缓存\")"))
+        XCTAssertTrue(source.contains("Button(\"清除 Subversion 认证缓存…\", role: .destructive)"))
+        XCTAssertTrue(source.contains("清除 Subversion 认证缓存？"))
+        XCTAssertTrue(source.contains("session.svnAuthenticationCacheStore.clearAll()"))
+        XCTAssertTrue(source.contains("auth 文件和 Keychain 凭据"))
+        XCTAssertTrue(source.contains("不会删除 AI Provider 凭据。"))
+        XCTAssertTrue(source.contains("Button(\"清理全部日志缓存\")"))
+        XCTAssertTrue(source.contains("session.logCacheStore.clearAll()"))
+    }
+
     private static func readRepoSource(at path: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         let repoRoot = testsFile

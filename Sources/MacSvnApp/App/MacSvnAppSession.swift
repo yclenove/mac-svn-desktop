@@ -20,6 +20,7 @@ public final class MacSvnAppSession: ObservableObject {
     public let shelveService: ShelveService
     public let svnService: SvnService
     public let logCacheStore: LogCacheStore
+    public let svnAuthenticationCacheStore: SvnAuthenticationCacheStore
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
     public let repositoryCreator: SvnRepositoryCreator
@@ -53,6 +54,7 @@ public final class MacSvnAppSession: ObservableObject {
         shelveService: ShelveService,
         svnService: SvnService,
         logCacheStore: LogCacheStore? = nil,
+        svnAuthenticationCacheStore: SvnAuthenticationCacheStore? = nil,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String,
         repositoryCreator: SvnRepositoryCreator,
@@ -88,6 +90,9 @@ public final class MacSvnAppSession: ObservableObject {
         self.svnService = svnService
         self.logCacheStore = logCacheStore ?? LogCacheStore(
             fileURL: supportDirectory.appendingPathComponent("log-cache.json")
+        )
+        self.svnAuthenticationCacheStore = svnAuthenticationCacheStore ?? SvnAuthenticationCacheStore(
+            svnExecutable: svnExecutablePath
         )
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
@@ -174,6 +179,10 @@ public final class MacSvnAppSession: ObservableObject {
             svnadminExecutable: resolveSvnadminExecutablePath(svnExecutablePath: svnPath),
             runner: ProcessRunner(),
             timeout: settings.processTimeout
+        )
+        let svnAuthenticationCacheStore = SvnAuthenticationCacheStore(
+            svnExecutable: svnPath,
+            timeout: TimeInterval(settings.processTimeout)
         )
         let backend = SvnCliBackend(
             svnExecutable: svnPath,
@@ -299,6 +308,7 @@ public final class MacSvnAppSession: ObservableObject {
             shelveService: shelveService,
             svnService: svnService,
             logCacheStore: logCacheStore,
+            svnAuthenticationCacheStore: svnAuthenticationCacheStore,
             svnExecutablePath: svnPath,
             repositoryCreator: repositoryCreator,
             gitMigrationSourceAnalyzer: gitMigrationSourceAnalyzer,
