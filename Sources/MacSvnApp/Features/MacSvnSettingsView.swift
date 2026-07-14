@@ -37,6 +37,8 @@ public struct MacSvnSettingsView: View {
     @State private var graphUnclassifiedHex = "#616161"
     @State private var externalDiffName = ""
     @State private var externalDiffPath = ""
+    @State private var externalDiffArguments = ""
+    @State private var externalToolRules: [ExternalToolRule] = []
     @State private var statusText: String?
     @State private var showAISettings = false
     @State private var showClearAuthenticationConfirmation = false
@@ -188,9 +190,25 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var externalProgramSettings: some View {
-        Section("Diff") {
+        Section("Unified Diff Viewer") {
             TextField("名称（如 Kaleidoscope）", text: $externalDiffName)
             TextField("可执行路径", text: $externalDiffPath)
+            TextEditor(text: $externalDiffArguments)
+                .font(.system(.caption, design: .monospaced))
+                .frame(minHeight: 54)
+        }
+        Section("按扩展名") {
+            ForEach($externalToolRules) { rule in
+                externalToolRuleEditor(rule)
+            }
+            Button {
+                externalToolRules.append(ExternalToolRule(
+                    purpose: .diff,
+                    tool: ExternalDiffToolConfiguration(name: "", executablePath: "", arguments: [])
+                ))
+            } label: {
+                Label("添加规则", systemImage: "plus")
+            }
         }
     }
 
@@ -379,6 +397,8 @@ public struct MacSvnSettingsView: View {
         graphUnclassifiedHex = graph.palette.unclassifiedHex
         externalDiffName = settings.externalDiffTool?.name ?? ""
         externalDiffPath = settings.externalDiffTool?.executablePath ?? ""
+        externalDiffArguments = settings.externalDiffTool?.arguments.joined(separator: "\n") ?? ""
+        externalToolRules = settings.externalToolRules
     }
 
     private func save() async {
@@ -437,11 +457,16 @@ public struct MacSvnSettingsView: View {
         if !toolName.isEmpty, !toolPath.isEmpty {
             settings.externalDiffTool = ExternalDiffToolConfiguration(
                 name: toolName,
-                executablePath: toolPath
+                executablePath: toolPath,
+                arguments: externalToolArguments(from: externalDiffArguments)
             )
         } else {
             settings.externalDiffTool = nil
         }
+        guard let normalizedRules = normalizedExternalToolRules() else {
+            return
+        }
+        settings.externalToolRules = normalizedRules
         do {
             try await session.settingsStore.update(settings)
         } catch {
@@ -463,6 +488,97 @@ public struct MacSvnSettingsView: View {
             return
         }
         statusText = "已保存。svn 路径、客户端钩子、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
+    }
+
+    @ViewBuilder
+    private func externalToolRuleEditor(_ rule: Binding<ExternalToolRule>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Picker("用途", selection: rule.purpose) {
+                    ForEach(ExternalToolPurpose.allCases) { purpose in
+                        Text(purpose.displayName).tag(purpose)
+                    }
+                }
+                .frame(maxWidth: 180)
+                Spacer()
+                Button(role: .destructive) {
+                    externalToolRules.removeAll { $0.id == rule.wrappedValue.id }
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .help("删除规则")
+            }
+            TextField("扩展名（逗号分隔；留空为默认）", text: externalToolExtensionsText(rule))
+            TextField("名称", text: rule.tool.name)
+            TextField("可执行路径", text: rule.tool.executablePath)
+            TextEditor(text: externalToolArgumentsText(rule))
+                .font(.system(.caption, design: .monospaced))
+                .frame(minHeight: 48)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func externalToolExtensionsText(_ rule: Binding<ExternalToolRule>) -> Binding<String> {
+        Binding(
+            get: { rule.wrappedValue.fileExtensions.joined(separator: ", ") },
+            set: { rule.wrappedValue.fileExtensions = externalToolExtensions(from: $0) }
+        )
+    }
+
+    private func externalToolArgumentsText(_ rule: Binding<ExternalToolRule>) -> Binding<String> {
+        Binding(
+            get: { rule.wrappedValue.tool.arguments.joined(separator: "\n") },
+            set: { rule.wrappedValue.tool.arguments = externalToolArguments(from: $0) }
+        )
+    }
+
+    private func externalToolExtensions(from text: String) -> [String] {
+        text
+            .split(whereSeparator: { $0 == "," || $0 == "\n" })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func externalToolArguments(from text: String) -> [String] {
+        text
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func normalizedExternalToolRules() -> [ExternalToolRule]? {
+        var seenKeys = Set<String>()
+        var normalized: [ExternalToolRule] = []
+        for rule in externalToolRules {
+            let name = rule.tool.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let path = rule.tool.executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, !path.isEmpty else {
+                statusText = "无法保存：外置工具规则需要名称和可执行路径。"
+                return nil
+            }
+            var copy = rule
+            copy.fileExtensions = rule.fileExtensions.map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty }
+            copy.tool = ExternalDiffToolConfiguration(
+                name: name,
+                executablePath: path,
+                arguments: rule.tool.arguments.map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }.filter { !$0.isEmpty }
+            )
+            let keys = copy.fileExtensions.isEmpty ? ["*"] : copy.fileExtensions.map {
+                $0.lowercased().replacingOccurrences(of: "*.", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            }
+            for key in keys {
+                guard seenKeys.insert("\(copy.purpose.rawValue):\(key)").inserted else {
+                    statusText = "无法保存：同一用途不能重复配置扩展名 \(key)。"
+                    return nil
+                }
+            }
+            normalized.append(copy)
+        }
+        return normalized
     }
 
     private func clearLogCache() async {

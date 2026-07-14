@@ -130,7 +130,10 @@ public struct MacSvnDiffView: View {
                     .frame(minWidth: 220)
                     .onChange(of: selectedPath) { _, newValue in
                         guard let newValue else { return }
-                        Task { await loadDiff(path: newValue) }
+                        Task {
+                            await refreshExternalTool(for: newValue)
+                            await loadDiff(path: newValue)
+                        }
                     }
 
                     diffContent
@@ -241,9 +244,14 @@ public struct MacSvnDiffView: View {
         )
     }
 
-    private func refreshExternalTool() async {
+    private func refreshExternalTool(for path: String? = nil) async {
         let settings = await session.settingsStore.settings()
-        externalDiffTool = settings.externalDiffTool
+        externalDiffTool = ExternalToolRuleResolver.tool(
+            for: .diff,
+            path: path ?? selectedPath ?? "",
+            rules: settings.externalToolRules,
+            legacyDiffTool: settings.externalDiffTool
+        )
     }
 
     @ViewBuilder
@@ -330,12 +338,13 @@ public struct MacSvnDiffView: View {
             paths = statuses.map(\.path).sorted()
             viewModel = makeDiffViewModel(wc: wc)
             errorText = nil
-            await refreshExternalTool()
             if let selectedPath, paths.contains(selectedPath) {
+                await refreshExternalTool(for: selectedPath)
                 await loadDiff(path: selectedPath)
             } else {
                 selectedPath = paths.first
                 if let selectedPath {
+                    await refreshExternalTool(for: selectedPath)
                     await loadDiff(path: selectedPath)
                 }
             }
@@ -376,7 +385,7 @@ public struct MacSvnDiffView: View {
 
     private func openExternal() async {
         guard let viewModel, let selectedPath else { return }
-        await refreshExternalTool()
+        await refreshExternalTool(for: selectedPath)
         guard let tool = externalDiffTool else {
             errorText = "请先在设置中配置外置 Diff 工具"
             return

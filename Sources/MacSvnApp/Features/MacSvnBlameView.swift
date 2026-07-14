@@ -18,6 +18,7 @@ public struct MacSvnBlameView: View {
     @State private var displayMode: BlameDisplayMode = .standard
     @State private var showOnlyDifferences = true
     @State private var statusText: String?
+    @State private var externalBlameTool: ExternalDiffToolConfiguration?
 
     private enum BlameDisplayMode: String, CaseIterable, Identifiable {
         case standard = "Blame"
@@ -63,6 +64,10 @@ public struct MacSvnBlameView: View {
                     Task { await loadBlame() }
                 }
                     .disabled(selected.count != 1)
+                Button("外置 Blame") {
+                    Task { await openExternalBlame() }
+                }
+                .disabled(selected.count != 1 || externalBlameTool == nil)
             }
             .padding(24)
 
@@ -101,6 +106,9 @@ public struct MacSvnBlameView: View {
         }
         .onChange(of: navigator.pendingBlameIntent) { _, _ in
             Task { await consumePendingBlame() }
+        }
+        .onChange(of: selected) { _, _ in
+            Task { await refreshExternalBlameTool() }
         }
     }
 
@@ -386,6 +394,7 @@ public struct MacSvnBlameView: View {
             svnService: session.svnService,
             wc: URL(fileURLWithPath: record.localPath)
         )
+        await refreshExternalBlameTool()
     }
 
     /// 消费历史页 L03/L07 或命令面板注入的 Blame 路径与修订。
@@ -515,6 +524,42 @@ public struct MacSvnBlameView: View {
             return nil
         }
         return (start, end)
+    }
+
+    private func refreshExternalBlameTool() async {
+        let settings = await session.settingsStore.settings()
+        externalBlameTool = ExternalToolRuleResolver.tool(
+            for: .blame,
+            path: selected.first ?? "",
+            rules: settings.externalToolRules,
+            legacyDiffTool: settings.externalDiffTool
+        )
+    }
+
+    private func openExternalBlame() async {
+        guard let record = workspaceController.selectedRecord,
+              let path = selected.first else { return }
+        let settings = await session.settingsStore.settings()
+        guard let tool = ExternalToolRuleResolver.tool(
+            for: .blame,
+            path: path,
+            rules: settings.externalToolRules,
+            legacyDiffTool: settings.externalDiffTool
+        ) else {
+            statusText = "请先在设置中配置此扩展名的外置 Blame 工具。"
+            return
+        }
+        externalBlameTool = tool
+        do {
+            _ = try await ExternalToolLaunchService(timeout: settings.processTimeout).openBlame(
+                wc: URL(fileURLWithPath: record.localPath),
+                target: path,
+                tool: tool
+            )
+            statusText = "已打开外置 Blame（\(tool.name)）"
+        } catch {
+            statusText = "外置 Blame 失败：\(error.localizedDescription)"
+        }
     }
 
     private func runEvolutionExplain() async {

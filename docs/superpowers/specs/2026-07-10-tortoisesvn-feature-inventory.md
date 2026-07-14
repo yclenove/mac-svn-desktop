@@ -232,7 +232,7 @@
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
 | S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
-| S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | 🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5 | T1/T5 |
+| S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | ✅ Diff 保留统一查看器与旧配置兼容；按用途支持扩展名精确匹配（大小写无关）与默认规则（留空、`*`、`*.*`），Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 传入工作副本文件；参数模板、失败退出码、工作副本边界均有契约测试 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ✅ Saved Data 提供日志缓存策略/清理，认证清理由配置 SVN 的官方 `auth --remove '*'` 同时覆盖 auth 文件与 Keychain（空缓存幂等、失败保留文件）；按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子、UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调均已接线 | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断 | T5 |
 | S13 | Log Cache | 日志缓存策略 | ✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化 | T3 |

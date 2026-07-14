@@ -1094,12 +1094,87 @@ public struct ExternalDiffToolConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+public enum ExternalToolPurpose: String, Codable, CaseIterable, Identifiable, Sendable {
+    case diff
+    case merge
+    case blame
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .diff: return "Diff"
+        case .merge: return "Merge"
+        case .blame: return "Blame"
+        }
+    }
+}
+
+/// 外置程序的按扩展名规则。空扩展名表示该用途的默认规则。
+public struct ExternalToolRule: Codable, Equatable, Identifiable, Sendable {
+    public var id: UUID
+    public var purpose: ExternalToolPurpose
+    public var fileExtensions: [String]
+    public var tool: ExternalDiffToolConfiguration
+
+    public init(
+        id: UUID = UUID(),
+        purpose: ExternalToolPurpose,
+        fileExtensions: [String] = [],
+        tool: ExternalDiffToolConfiguration
+    ) {
+        self.id = id
+        self.purpose = purpose
+        self.fileExtensions = fileExtensions
+        self.tool = tool
+    }
+}
+
+public enum ExternalToolRuleResolver {
+    public static func tool(
+        for purpose: ExternalToolPurpose,
+        path: String,
+        rules: [ExternalToolRule],
+        legacyDiffTool: ExternalDiffToolConfiguration?
+    ) -> ExternalDiffToolConfiguration? {
+        let matchingPurpose = rules.filter { $0.purpose == purpose }
+        let fileExtension = normalizedExtension(URL(fileURLWithPath: path).pathExtension)
+
+        if !fileExtension.isEmpty,
+           let exactRule = matchingPurpose.first(where: {
+               $0.fileExtensions.contains { normalizedExtension($0) == fileExtension }
+           }) {
+            return exactRule.tool
+        }
+        if let defaultRule = matchingPurpose.first(where: { isDefaultRule($0) }) {
+            return defaultRule.tool
+        }
+        return purpose == .diff ? legacyDiffTool : nil
+    }
+
+    private static func isDefaultRule(_ rule: ExternalToolRule) -> Bool {
+        rule.fileExtensions.isEmpty || rule.fileExtensions.contains {
+            normalizedExtension($0) == "*"
+        }
+    }
+
+    private static func normalizedExtension(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "*.", with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var svnPath: String?
     public var logBatchSize: Int
     public var branchLayout: BranchLayout
     public var processTimeout: TimeInterval
     public var externalDiffTool: ExternalDiffToolConfiguration?
+    /// S10：按用途和扩展名匹配的外置 Diff / Merge / Blame 工具。
+    public var externalToolRules: [ExternalToolRule]
     /// 为 true 时，提交守护将冲突标记残留等规则升级为硬阻断（不可跳过警告提交）
     public var commitGuardHardBlockConflictMarkers: Bool
     /// AI 隐私：脱敏开关与自定义规则（随设置持久化）
@@ -1140,6 +1215,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.branchLayout = branchLayout
         self.processTimeout = processTimeout
         self.externalDiffTool = externalDiffTool
+        self.externalToolRules = []
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
         self.aiPrivacy = aiPrivacy
         self.cfmColumns = cfmColumns
@@ -1171,6 +1247,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.branchLayout = branchLayout
         self.processTimeout = processTimeout
         self.externalDiffTool = externalDiffTool
+        self.externalToolRules = []
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
         self.aiPrivacy = aiPrivacy
         self.cfmColumns = cfmColumns
@@ -1242,6 +1319,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case branchLayout
         case processTimeout
         case externalDiffTool
+        case externalToolRules
         case commitGuardHardBlockConflictMarkers
         case aiPrivacy
         case cfmColumns
@@ -1262,6 +1340,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         branchLayout = try container.decodeIfPresent(BranchLayout.self, forKey: .branchLayout) ?? BranchLayout()
         processTimeout = try container.decodeIfPresent(TimeInterval.self, forKey: .processTimeout) ?? 120
         externalDiffTool = try container.decodeIfPresent(ExternalDiffToolConfiguration.self, forKey: .externalDiffTool)
+        externalToolRules = try container.decodeIfPresent([ExternalToolRule].self, forKey: .externalToolRules) ?? []
         commitGuardHardBlockConflictMarkers = try container.decodeIfPresent(Bool.self, forKey: .commitGuardHardBlockConflictMarkers) ?? false
         aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
         cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
@@ -1289,6 +1368,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(branchLayout, forKey: .branchLayout)
         try container.encode(processTimeout, forKey: .processTimeout)
         try container.encodeIfPresent(externalDiffTool, forKey: .externalDiffTool)
+        try container.encode(externalToolRules, forKey: .externalToolRules)
         try container.encode(commitGuardHardBlockConflictMarkers, forKey: .commitGuardHardBlockConflictMarkers)
         try container.encode(aiPrivacy, forKey: .aiPrivacy)
         try container.encode(cfmColumns, forKey: .cfmColumns)

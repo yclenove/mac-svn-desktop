@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-14T12:26:38Z",
+  "generated_at": "2026-07-14T13:27:21Z",
   "total": 114,
-  "done": 107,
-  "partial": 7,
+  "done": 108,
+  "partial": 6,
   "missing": 0,
-  "coverage": 0.938596,
-  "coverage_percent": 93.86,
+  "coverage": 0.947368,
+  "coverage_percent": 94.74,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
@@ -28,8 +28,8 @@
     },
     "settings": {
       "total": 13,
-      "done": 7,
-      "partial": 6,
+      "done": 8,
+      "partial": 5,
       "missing": 0
     },
     "overlay": {
@@ -765,8 +765,8 @@
       "key": "S10",
       "section": "settings",
       "title": "External Programs",
-      "raw_status": "🟡 External Programs IA 与单一外置 Diff 已有；Merge/Blame/统一 Diff 查看器及按扩展名规则待 T5.5",
-      "status": "partial"
+      "raw_status": "✅ Diff 保留统一查看器与旧配置兼容；按用途支持扩展名精确匹配（大小写无关）与默认规则（留空、`*`、`*.*`），Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 传入工作副本文件；参数模板、失败退出码、工作副本边界均有契约测试",
+      "status": "done"
     },
     {
       "key": "S11",

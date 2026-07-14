@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+- Summary: Tortoise 完美 Loop T5.5：按扩展名配置外置 Diff / Merge / Blame
+- Affected: ExternalToolRuleResolver, ExternalToolLaunchService, ExternalDiffService, AppSettings, MacSvnSettingsView, MacSvnDiffView, MacSvnConflictWorkspaceView, MacSvnBlameView, Tests/*, docs/*
+- Impact: External Programs 支持按用途和文件扩展名保存外置工具；精确扩展名大小写无关匹配并优先于默认规则，留空、`*`、`*.*` 可作为默认规则。Diff 延续旧统一查看器配置作为兼容兜底；文本冲突 Merge 传入 base/mine/theirs/result 且不会自动执行 `svn resolve`；Blame 只接受工作副本内文件。统一参数替换和非零退出码处理，并覆盖规则解析、持久化、启动参数、路径边界和失败传播契约；全量 937 绿，覆盖率 108/114，S10 升为 ✅；下一 T5.6
+
 - Summary: Tortoise 完美 Loop T5.4：清理认证缓存与日志缓存
 - Affected: SvnAuthenticationCacheStore, MacSvnAppSession, MacSvnSettingsView, SvnAuthenticationCacheStoreTests, SettingsInformationArchitectureTests, docs/*
 - Impact: Saved Data 新增二次确认的 Subversion 认证缓存清理；通过用户配置的 SVN 客户端执行 `svn --config-dir … auth --remove '*'`，同时覆盖 auth 文件和 macOS Keychain 凭据，空缓存幂等成功，命令失败时保留文件缓存；明确隔离 AI Provider Keychain 凭据。已有日志缓存全量清理入口增加执行中防重入；全量 924 绿，覆盖率 107/114，D03/S11 升为 ✅；下一 T5.5

@@ -180,6 +180,34 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(decoded.settings.clientHooks, [])
     }
 
+    func testExternalToolRulesPersistAndLegacySettingsDefaultToEmpty() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.externalToolRules = [
+            ExternalToolRule(
+                purpose: .merge,
+                fileExtensions: ["swift", "m"],
+                tool: ExternalDiffToolConfiguration(
+                    name: "Kaleidoscope",
+                    executablePath: "/Applications/Kaleidoscope.app/Contents/MacOS/ksdiff",
+                    arguments: ["--merge", "{base}", "{mine}", "{theirs}", "{result}"]
+                )
+            )
+        ]
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.externalToolRules, settings.externalToolRules)
+
+        let legacy = """
+        {"version":1,"settings":{"logBatchSize":100,"branchLayout":{"trunk":"trunk","branches":"branches","tags":"tags"},"processTimeout":120}}
+        """
+        let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.settings.externalToolRules, [])
+    }
+
     func testResetRestoresDefaults() async throws {
         let root = temporaryRoot()
         let store = makeStore(root: root)

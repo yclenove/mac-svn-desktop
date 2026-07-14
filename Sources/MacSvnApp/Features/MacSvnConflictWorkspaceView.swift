@@ -18,6 +18,8 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var privacySettings = AIPrivacySettings()
     @State private var kindFilterPick: KindFilterPick = .all
     @State private var confirmMarkResolved = false
+    @State private var externalMergeTool: ExternalDiffToolConfiguration?
+    @State private var isOpeningExternalMerge = false
 
     private enum Tab: String, CaseIterable, Identifiable {
         case conflicts = "冲突列表"
@@ -246,9 +248,13 @@ public struct MacSvnConflictWorkspaceView: View {
                 MacSvnMergeEditorPane(
                     editorVM: editorVM,
                     privacySettings: privacySettings,
-                    statusText: $statusText
+                    statusText: $statusText,
+                    externalMergeTool: externalMergeTool,
+                    isOpeningExternalMerge: isOpeningExternalMerge
                 ) {
                     Task { await reloadConflicts() }
+                } onOpenExternalMerge: {
+                    Task { await openExternalMerge(conflict) }
                 }
             case .tree:
                 MacSvnTreeConflictPane(treeVM: treeVM) {
@@ -277,6 +283,7 @@ public struct MacSvnConflictWorkspaceView: View {
             treeVM = nil
             propertyVM = nil
             conflictBadgeCount = 0
+            externalMergeTool = nil
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
@@ -354,6 +361,7 @@ public struct MacSvnConflictWorkspaceView: View {
         switch conflict.kind {
         case .text:
             await editorVM?.load(conflict: conflict, wc: wc)
+            await refreshExternalMergeTool(for: conflict.path)
         case .tree:
             treeVM = TreeConflictViewModel(
                 conflict: conflict,
@@ -370,6 +378,44 @@ public struct MacSvnConflictWorkspaceView: View {
             await vm.load()
         default:
             break
+        }
+    }
+
+    private func refreshExternalMergeTool(for path: String) async {
+        let settings = await session.settingsStore.settings()
+        externalMergeTool = ExternalToolRuleResolver.tool(
+            for: .merge,
+            path: path,
+            rules: settings.externalToolRules,
+            legacyDiffTool: settings.externalDiffTool
+        )
+    }
+
+    private func openExternalMerge(_ conflict: ConflictInfo) async {
+        guard !isOpeningExternalMerge,
+              let record = workspaceController.selectedRecord else { return }
+        let settings = await session.settingsStore.settings()
+        guard let tool = ExternalToolRuleResolver.tool(
+            for: .merge,
+            path: conflict.path,
+            rules: settings.externalToolRules,
+            legacyDiffTool: settings.externalDiffTool
+        ) else {
+            statusText = "请先在设置中配置此扩展名的外置 Merge 工具。"
+            return
+        }
+        externalMergeTool = tool
+        isOpeningExternalMerge = true
+        defer { isOpeningExternalMerge = false }
+        do {
+            _ = try await ExternalToolLaunchService(timeout: settings.processTimeout).openMerge(
+                wc: URL(fileURLWithPath: record.localPath),
+                conflict: conflict,
+                tool: tool
+            )
+            statusText = "已打开外置 Merge（\(tool.name)），请确认结果后再标记已解决。"
+        } catch {
+            statusText = "外置 Merge 失败：\(error.localizedDescription)"
         }
     }
 
@@ -396,7 +442,10 @@ private struct MacSvnMergeEditorPane: View {
     let editorVM: MergeEditorViewModel?
     let privacySettings: AIPrivacySettings
     @Binding var statusText: String?
+    let externalMergeTool: ExternalDiffToolConfiguration?
+    let isOpeningExternalMerge: Bool
     let onSaved: () -> Void
+    let onOpenExternalMerge: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -408,6 +457,12 @@ private struct MacSvnMergeEditorPane: View {
                     Button("采用 Mine") { editorVM.resolveCurrent(.takeMine) }
                     Button("采用 Theirs") { editorVM.resolveCurrent(.takeTheirs) }
                     Button("双方(Mine先)") { editorVM.resolveCurrent(.takeBoth(mineFirst: true)) }
+                    Divider()
+                    Button(isOpeningExternalMerge ? "启动中…" : "外置 Merge") {
+                        onOpenExternalMerge()
+                    }
+                    .disabled(externalMergeTool == nil || isOpeningExternalMerge)
+                    .help(externalMergeTool?.name ?? "请先在设置中配置此扩展名的外置 Merge 工具")
                     Divider()
                     Button("AI 建议当前") {
                         Task {

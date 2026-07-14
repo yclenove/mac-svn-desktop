@@ -100,6 +100,26 @@ final class SettingsInformationArchitectureTests: XCTestCase {
         XCTAssertTrue(source.contains("session.logCacheStore.clearAll()"))
     }
 
+    func testExternalProgramRulesReachSettingsDiffMergeAndBlameWorkflows() throws {
+        let settings = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift")
+        let diff = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnDiffView.swift")
+        let conflicts = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnConflictWorkspaceView.swift")
+        let blame = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnBlameView.swift")
+
+        XCTAssertTrue(settings.contains("externalToolRules"))
+        XCTAssertTrue(settings.contains("ExternalToolPurpose.allCases"))
+        XCTAssertTrue(settings.contains("settings.externalToolRules"))
+        XCTAssertTrue(settings.contains("externalDiffArguments"))
+        XCTAssertTrue(diff.contains("ExternalToolRuleResolver.tool("))
+        XCTAssertTrue(diff.contains("for: .diff"))
+        XCTAssertTrue(conflicts.contains("外置 Merge"))
+        XCTAssertTrue(conflicts.contains("for: .merge"))
+        XCTAssertTrue(conflicts.contains("ExternalToolLaunchService"))
+        XCTAssertTrue(blame.contains("外置 Blame"))
+        XCTAssertTrue(blame.contains("for: .blame"))
+        XCTAssertTrue(blame.contains("ExternalToolLaunchService"))
+    }
+
     private static func readRepoSource(at path: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         let repoRoot = testsFile
