@@ -92,8 +92,9 @@ NavigationSplitView
 
 ```text
 WorkspaceSelectionState
-├── selectedPaths: Set<String>      // 当前多选，也是默认提交集合
+├── selectedPaths: Set<String>      // 变更列表当前多选
 ├── focusedPath: String?            // Diff 正在展示的单一文件
+├── commitPaths: Set<String>        // 当前待提交集合
 └── commitSelectionWasEdited: Bool  // 用户是否主动调整过提交集合
 ```
 
@@ -101,7 +102,7 @@ WorkspaceSelectionState
 
 1. 变更列表的单选或多选写入 `selectedPaths`，最近获得焦点的行写入 `focusedPath`；
 2. Diff 只读取 `focusedPath`，快速切换时取消或丢弃旧请求结果；
-3. 提交检查器默认同步 `selectedPaths`；用户在提交区主动增删候选后，设置 `commitSelectionWasEdited`，避免后续只切换 Diff 文件时意外覆盖提交集合；
+3. 提交检查器读取 `commitPaths`；在用户未编辑提交集合前，它随 `selectedPaths` 同步，用户主动增删候选后设置 `commitSelectionWasEdited`，避免后续只切换 Diff 文件时意外覆盖提交集合；
 4. 刷新状态后移除已不存在的路径，并保留仍有效的选择；
 5. 深链和历史页发起 Diff 时，原子设置工作副本、模式、选择路径与 revision 上下文。
 
@@ -244,4 +245,3 @@ U5 只有同时满足以下条件才完成：
 - 现有 SVN 能力、深链和命令面板无回归；
 - 全量测试、构建、打包验证通过；
 - 无 AttributeGraph 卡死、明显布局跳动、按钮退化为省略号或关键文本重叠。
-
