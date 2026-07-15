@@ -12,6 +12,8 @@ public struct MacSvnChangesView: View {
     private let embedded: Bool
     /// 深链 / ⌘K 注入的初始选中。
     private let initialSelectedPaths: Set<String>
+    /// 嵌入式工作区共享行选择、Diff 焦点与提交集合；独立页保持本地状态。
+    private let workspaceState: MacSvnWorkingCopyWorkspaceState?
     /// 选中变化时回调主路径（供同屏 Diff）。
     private let onFocusedPathChange: ((String?) -> Void)?
 
@@ -53,6 +55,7 @@ public struct MacSvnChangesView: View {
     @State private var changelistName = ""
     @State private var changelistDepth: SvnDepth = .empty
     @State private var changelistOperation: ChangelistOperation = .assign
+    @State private var showSearchPopover = false
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -76,12 +79,35 @@ public struct MacSvnChangesView: View {
         initialSelectedPaths: Set<String> = [],
         onFocusedPathChange: ((String?) -> Void)? = nil
     ) {
+        self.init(
+            workspaceController: workspaceController,
+            statusProvider: statusProvider,
+            navigator: navigator,
+            session: session,
+            embedded: embedded,
+            initialSelectedPaths: initialSelectedPaths,
+            workspaceState: nil,
+            onFocusedPathChange: onFocusedPathChange
+        )
+    }
+
+    init(
+        workspaceController: MacSvnWorkspaceController,
+        statusProvider: SvnService,
+        navigator: MacSvnAppNavigator?,
+        session: MacSvnAppSession,
+        embedded: Bool,
+        initialSelectedPaths: Set<String>,
+        workspaceState: MacSvnWorkingCopyWorkspaceState?,
+        onFocusedPathChange: ((String?) -> Void)?
+    ) {
         self.workspaceController = workspaceController
         self.svnService = statusProvider
         self.navigator = navigator
         self.session = session
         self.embedded = embedded
         self.initialSelectedPaths = initialSelectedPaths
+        self.workspaceState = workspaceState
         self.onFocusedPathChange = onFocusedPathChange
         _selectedPaths = State(initialValue: initialSelectedPaths)
     }
@@ -94,33 +120,35 @@ public struct MacSvnChangesView: View {
     }
 
     private var configuredBody: some View {
+        advancedSheetConfiguredBody
+    }
+
+    private var workspaceContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-            actionBar
+            primaryStatusBar
+            filterAndViewBar
+            primaryActions
             if let statusBanner {
                 Text(statusBanner)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
-            }
-            if let refreshed = changesVM?.lastRefreshedAt {
-                HStack(spacing: 8) {
-                    Text("本地 status 刷新于 \(Self.refreshFormatter.string(from: refreshed))")
-                    if changesVM?.includesRepositoryCheck == true {
-                        Text("· 已对照仓库")
-                            .foregroundStyle(.tint)
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, embedded ? 12 : 24)
-                .padding(.bottom, 4)
+                    .lineLimit(2)
+                    .padding(.horizontal, embedded ? 10 : 24)
+                    .padding(.bottom, 6)
             }
             content
         }
+    }
+
+    private var lifecycleConfiguredBody: some View {
+        workspaceContent
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await bindAndRefresh() }
+        }
+        .onChange(of: selectedPaths) { oldValue, newValue in
+            let newlySelected = newValue.subtracting(oldValue).sorted().first
+            workspaceState?.selectRows(newValue, focusedPath: newlySelected)
+            onFocusedPathChange?(workspaceState?.focusedPath ?? newValue.sorted().first)
         }
         .onChange(of: session.settingsSnapshot.dialogs) { _, dialogs in
             let shouldRefresh = changesVM?.updateSettings(
@@ -135,7 +163,9 @@ public struct MacSvnChangesView: View {
             // 深链 / ⌘K / 工作区种子路径会在 init 之后更新，必须同步选中
             guard !newValue.isEmpty else { return }
             selectedPaths = newValue
-            onFocusedPathChange?(newValue.sorted().first)
+            let focusedPath = newValue.sorted().first
+            workspaceState?.selectRows(newValue, focusedPath: focusedPath)
+            onFocusedPathChange?(focusedPath)
         }
         .onChange(of: navigator?.pendingChangelistIntent) { _, _ in
             consumePendingChangelistIntent()
@@ -149,6 +179,10 @@ public struct MacSvnChangesView: View {
             consumePendingDeleteIntent()
             consumePendingCopyMoveIntentIfReady()
         }
+    }
+
+    private var confirmationConfiguredBody: some View {
+        lifecycleConfiguredBody
         .confirmationDialog(
             "确认还原选中文件的本地修改？此操作不可撤销。",
             isPresented: $confirmRevert,
@@ -199,6 +233,10 @@ public struct MacSvnChangesView: View {
             }
             Button("取消", role: .cancel) {}
         }
+    }
+
+    private var standardSheetConfiguredBody: some View {
+        confirmationConfiguredBody
         .sheet(isPresented: $showAddSheet) {
             addSheet
         }
@@ -223,6 +261,10 @@ public struct MacSvnChangesView: View {
         .sheet(isPresented: $showCopyMoveSheet) {
             copyMoveSheet
         }
+    }
+
+    private var advancedSheetConfiguredBody: some View {
+        standardSheetConfiguredBody
         .sheet(isPresented: $showUpdateToRevisionSheet) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("更新到修订（svn update -r）")
@@ -299,185 +341,316 @@ public struct MacSvnChangesView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            if !embedded {
-                VStack(alignment: .leading, spacing: 4) {
+    private var primaryStatusBar: some View {
+        HStack(spacing: 8) {
+            if embedded {
+                Text("变更")
+                    .font(.headline)
+            } else {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("变更")
                         .font(.largeTitle.weight(.semibold))
                     if let path = workspaceController.selectedRecord?.localPath {
                         Text(path)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(path)
                     }
                 }
-            } else {
-                Text("变更")
-                    .font(.headline)
             }
-            Spacer()
-            Picker("筛选", selection: $filterMode) {
-                ForEach(FilterMode.allCases) { mode in
-                    Text(LocalizedStringKey(mode.rawValue)).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: embedded ? 220 : 280)
-            Picker("视图", selection: $displayMode) {
-                Text("平铺").tag(ChangesDisplayMode.flat)
-                Text("树").tag(ChangesDisplayMode.tree)
-                Text("列表").tag(ChangesDisplayMode.changelists)
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 210)
-            .onChange(of: displayMode) { _, newValue in
-                changesVM?.displayMode = newValue
-            }
-            TextField("搜索文件名", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: embedded ? 140 : 220)
-            Menu("列") {
-                ForEach(CFMColumnID.allCases, id: \.self) { column in
-                    Button {
-                        Task { await toggleColumn(column) }
-                    } label: {
-                        HStack {
-                            Text(LocalizedStringKey(column.displayName))
-                            if changesVM?.columnConfiguration.isVisible(column) == true {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    .disabled(column == .path)
-                }
-            }
-            .disabled(changesVM == nil)
-            Button("刷新") {
-                Task { await changesVM?.refresh() }
-            }
-            .disabled(changesVM == nil || actionsVM?.isRunning == true)
-            Button("检查仓库") {
-                Task { await changesVM?.checkRepository() }
-            }
-            .disabled(changesVM == nil || actionsVM?.isRunning == true)
-            .help("对照远端（svn status -u），按颜色区分仅本地/仅远端/双方变更")
-        }
-        .padding(embedded ? 12 : 24)
-        .onChange(of: filterMode) { _, _ in applyFilters() }
-        .onChange(of: searchText) { _, _ in applyFilters() }
-        .onChange(of: selectedPaths) { _, newValue in
-            onFocusedPathChange?(newValue.sorted().first)
-        }
-    }
 
-    private var actionBar: some View {
-        HStack(spacing: 10) {
-            Button("更新") {
-                Task { await runUpdate() }
+            if let count = visibleChangeCount {
+                Text("\(count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("\(count) 项可见变更")
             }
-            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
 
-            Button("清理") {
-                cleanupOptions = .default
-                showCleanupSheet = true
-            }
-            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+            Spacer(minLength: 8)
 
-            Button("添加") {
-                prepareAddSheet()
-                showAddSheet = true
-            }
-            .disabled(actionsVM?.isRunning == true || changesVM == nil)
-
-            Menu {
-                Button("删除", role: .destructive) {
-                    confirmDelete = true
-                }
-                .disabled(selectedPaths.isEmpty)
-                Button("删除（保留本地）", role: .destructive) {
-                    confirmDeleteKeepLocal = true
-                }
-                .disabled(selectedPaths.isEmpty)
-                Button("删除未版本项", role: .destructive) {
-                    Task { await prepareUnversionedDeletion() }
-                }
-            } label: {
-                Label("删除", systemImage: "trash")
-            }
-            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
-
-            Button("还原…") {
-                revertRecursive = false
-                showRevertSheet = true
-            }
-            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
-
-            Button("重命名…") {
-                prepareRenameSheet()
-                showRenameSheet = true
-            }
-            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
-
-            Button("修复大小写…") {
-                prepareCaseConflictRepairSheet()
-                showCaseConflictRepairSheet = true
-            }
-            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
-
-            Button("复制/移动…") {
-                prepareCopyMoveSheet()
-                showCopyMoveSheet = true
-            }
-            .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
-
-            Button("修复移动") {
-                Task { await runRepairMove() }
-            }
-            .disabled(!canRepairMove || actionsVM?.isRunning == true)
-
-            Button("修复复制") {
-                Task { await runRepairCopy() }
-            }
-            .disabled(!canRepairCopy || actionsVM?.isRunning == true)
-
-            Button("更新到修订…") {
-                updateToRevisionText = ""
-                updateIgnoreExternals = false
-                setDepth = .infinity
-                showUpdateToRevisionSheet = true
-            }
-            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
-
-            Button("忽略选中…") {
-                ignoreKind = .exactFilename
-                showIgnoreSheet = true
-            }
-            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
-
-            Button("变更列表…") {
-                prepareChangelistSheet()
-            }
-            .disabled(selectedPaths.isEmpty || changesVM == nil || actionsVM?.isRunning == true)
-
-            if let conflictCount = conflictCount, conflictCount > 0 {
-                Button("解决冲突 (\(conflictCount))") {
-                    navigator?.selectMode(.conflicts)
-                }
-                .tint(.red)
-            }
+            Text("已选 \(selectedPaths.count)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
 
             if actionsVM?.isRunning == true {
                 ProgressView()
                     .controlSize(.small)
+                    .accessibilityLabel("正在执行 SVN 操作")
             }
 
-            Spacer()
-            Text("已选 \(selectedPaths.count) 项")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Button {
+                Task { await changesVM?.refresh() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(changesVM == nil || actionsVM?.isRunning == true)
+            .help("刷新本地状态。\(refreshSummary)")
+            .accessibilityLabel("刷新本地状态")
+
+            Button {
+                Task { await changesVM?.checkRepository() }
+            } label: {
+                Image(systemName: "arrow.triangle.2.circlepath.icloud")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(changesVM == nil || actionsVM?.isRunning == true)
+            .help("检查仓库状态（svn status -u）")
+            .accessibilityLabel("检查仓库状态")
         }
-        .padding(.horizontal, embedded ? 12 : 24)
-        .padding(.bottom, embedded ? 8 : 12)
+        .padding(.horizontal, embedded ? 10 : 24)
+        .padding(.top, embedded ? 8 : 20)
+        .padding(.bottom, 6)
+        .frame(minHeight: embedded ? 42 : nil)
+    }
+
+    private var filterAndViewBar: some View {
+        Group {
+            if embedded {
+                ViewThatFits(in: .horizontal) {
+                    regularFilterAndViewBar
+                    compactFilterAndViewBar
+                }
+            } else {
+                regularFilterAndViewBar
+            }
+        }
+        .controlSize(.small)
+        .padding(.horizontal, embedded ? 10 : 24)
+        .padding(.bottom, 6)
+        .onChange(of: filterMode) { _, _ in applyFilters() }
+        .onChange(of: searchText) { _, _ in applyFilters() }
+        .onChange(of: displayMode) { _, newValue in
+            changesVM?.displayMode = newValue
+        }
+    }
+
+    private var regularFilterAndViewBar: some View {
+        HStack(spacing: 6) {
+            filterPicker
+                .frame(width: embedded ? 142 : 220)
+            displayModePicker
+                .frame(width: embedded ? 126 : 190)
+            TextField("搜索文件名", text: $searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 110, idealWidth: 150, maxWidth: 220)
+            columnsMenu
+        }
+    }
+
+    private var compactFilterAndViewBar: some View {
+        HStack(spacing: 6) {
+            filterPicker
+                .frame(width: 136)
+            displayModePicker
+                .frame(width: 120)
+            Spacer(minLength: 0)
+            Button {
+                showSearchPopover.toggle()
+            } label: {
+                Image(systemName: searchText.isEmpty ? "magnifyingglass" : "text.magnifyingglass")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help(searchText.isEmpty ? "搜索文件" : "当前搜索：\(searchText)")
+            .accessibilityLabel("搜索文件")
+            .popover(isPresented: $showSearchPopover, arrowEdge: .bottom) {
+                TextField("搜索文件名", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(12)
+                    .frame(width: 260)
+            }
+            columnsMenu
+        }
+    }
+
+    private var filterPicker: some View {
+        Picker("筛选", selection: $filterMode) {
+            ForEach(FilterMode.allCases) { mode in
+                Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var displayModePicker: some View {
+        Picker("视图", selection: $displayMode) {
+            Text("平铺").tag(ChangesDisplayMode.flat)
+            Text("树").tag(ChangesDisplayMode.tree)
+            Text("列表").tag(ChangesDisplayMode.changelists)
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var columnsMenu: some View {
+        Menu {
+            ForEach(CFMColumnID.allCases, id: \.self) { column in
+                Button {
+                    Task { await toggleColumn(column) }
+                } label: {
+                    HStack {
+                        Text(LocalizedStringKey(column.displayName))
+                        if changesVM?.columnConfiguration.isVisible(column) == true {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+                .disabled(column == .path)
+            }
+        } label: {
+            Label("列", systemImage: "rectangle.3.group")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .disabled(changesVM == nil)
+        .help("显示列")
+        .accessibilityLabel("显示列")
+    }
+
+    private var primaryActions: some View {
+        HStack(spacing: 6) {
+            Button {
+                Task { await runUpdate() }
+            } label: {
+                Label("更新", systemImage: "arrow.down.circle")
+            }
+            .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+
+            Button {
+                prepareAddSheet()
+                showAddSheet = true
+            } label: {
+                Label("添加", systemImage: "plus.circle")
+            }
+            .disabled(actionsVM?.isRunning == true || changesVM == nil)
+
+            Button {
+                revertRecursive = false
+                showRevertSheet = true
+            } label: {
+                Label("还原", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
+
+            deleteActionsMenu
+
+            Spacer(minLength: 0)
+
+            if let conflictCount, conflictCount > 0 {
+                Button {
+                    navigator?.selectMode(.conflicts)
+                } label: {
+                    Label("冲突 \(conflictCount)", systemImage: "exclamationmark.triangle.fill")
+                }
+                .foregroundStyle(.red)
+                .help("查看并解决冲突")
+            }
+
+            moreActionsMenu
+        }
+        .controlSize(.small)
+        .padding(.horizontal, embedded ? 10 : 24)
+        .padding(.bottom, embedded ? 7 : 12)
+    }
+
+    private var moreActionsMenu: some View {
+        Menu {
+            Section("工作副本") {
+                Button("清理工作副本…") {
+                    cleanupOptions = .default
+                    showCleanupSheet = true
+                }
+                .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+                Button("更新到修订…") {
+                    updateToRevisionText = ""
+                    updateIgnoreExternals = false
+                    setDepth = .infinity
+                    showUpdateToRevisionSheet = true
+                }
+                .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+            }
+            Section("所选文件") {
+                Button("重命名…") {
+                    prepareRenameSheet()
+                    showRenameSheet = true
+                }
+                .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+                Button("复制/移动…") {
+                    prepareCopyMoveSheet()
+                    showCopyMoveSheet = true
+                }
+                .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+                Button("忽略选中…") {
+                    ignoreKind = .exactFilename
+                    showIgnoreSheet = true
+                }
+                .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
+                Button("变更列表…") {
+                    prepareChangelistSheet()
+                }
+                .disabled(selectedPaths.isEmpty || changesVM == nil || actionsVM?.isRunning == true)
+            }
+            Section("修复") {
+                Button("修复大小写…") {
+                    prepareCaseConflictRepairSheet()
+                    showCaseConflictRepairSheet = true
+                }
+                .disabled(selectedPaths.count != 1 || actionsVM?.isRunning == true)
+                Button("修复移动") {
+                    Task { await runRepairMove() }
+                }
+                .disabled(!canRepairMove || actionsVM?.isRunning == true)
+                Button("修复复制") {
+                    Task { await runRepairCopy() }
+                }
+                .disabled(!canRepairCopy || actionsVM?.isRunning == true)
+            }
+        } label: {
+            Label("更多操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .help("更多操作")
+        .accessibilityLabel("更多操作")
+    }
+
+    private var deleteActionsMenu: some View {
+        Menu {
+            Button("删除", role: .destructive) {
+                confirmDelete = true
+            }
+            .disabled(selectedPaths.isEmpty)
+            Button("删除（保留本地）", role: .destructive) {
+                confirmDeleteKeepLocal = true
+            }
+            .disabled(selectedPaths.isEmpty)
+            Button("删除未版本项", role: .destructive) {
+                Task { await prepareUnversionedDeletion() }
+            }
+        } label: {
+            Label("删除", systemImage: "trash")
+        }
+        .disabled(actionsVM == nil || actionsVM?.isRunning == true)
+    }
+
+    private var visibleChangeCount: Int? {
+        guard let changesVM, case .loaded = changesVM.state else { return nil }
+        return changesVM.visibleFlatEntries.count
+    }
+
+    private var refreshSummary: String {
+        guard let refreshed = changesVM?.lastRefreshedAt else { return "尚未刷新" }
+        let time = Self.refreshFormatter.string(from: refreshed)
+        return changesVM?.includesRepositoryCheck == true
+            ? "刷新于 \(time)，已对照仓库"
+            : "刷新于 \(time)"
     }
 
     private var conflictCount: Int? {
@@ -727,6 +900,7 @@ public struct MacSvnChangesView: View {
     private func flatRow(_ entry: FileStatus) -> some View {
         let columns = changesVM?.visibleColumns ?? CFMColumnID.allCases
         return HStack(spacing: 8) {
+            commitSelectionToggle(entry)
             ForEach(columns, id: \.self) { column in
                 switch column {
                 case .textStatus:
@@ -773,6 +947,13 @@ public struct MacSvnChangesView: View {
 
     private func treeRow(_ node: FileStatusNode) -> some View {
         HStack {
+            if let status = node.fileStatus {
+                commitSelectionToggle(status)
+            } else if embedded {
+                Color.clear
+                    .frame(width: 16, height: 16)
+                    .accessibilityHidden(true)
+            }
             if !node.isDirectory {
                 Text(statusLabel(node.itemStatus))
                     .font(.caption.monospaced())
@@ -789,6 +970,35 @@ public struct MacSvnChangesView: View {
                     .font(.caption2)
                     .foregroundStyle(changeColour(.conflicted))
             }
+        }
+    }
+
+    @ViewBuilder
+    private func commitSelectionToggle(_ status: FileStatus) -> some View {
+        let isCandidate = !CommitSelectionPolicy.candidates(from: [status]).isEmpty
+        if embedded, isCandidate {
+            Toggle("提交 \(status.path)", isOn: Binding(
+                get: { workspaceState?.commitPaths.contains(status.path) == true },
+                set: {
+                    workspaceState?.setCommitSelected(
+                        $0,
+                        path: status.path,
+                        userInitiated: true
+                    )
+                }
+            ))
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .disabled(status.itemStatus == .conflicted || status.isTreeConflict)
+            .help(
+                status.itemStatus == .conflicted || status.isTreeConflict
+                    ? "请先解决冲突"
+                    : "勾选后纳入本次提交"
+            )
+        } else if embedded {
+            Color.clear
+                .frame(width: 16, height: 16)
+                .accessibilityHidden(true)
         }
     }
 
@@ -831,6 +1041,7 @@ public struct MacSvnChangesView: View {
         } else {
             await changes.refresh()
         }
+        reconcileWorkspaceRows(changes)
         consumePendingCopyMoveIntentIfReady()
     }
 
@@ -1603,6 +1814,16 @@ public struct MacSvnChangesView: View {
         } else {
             await changesVM.refresh()
         }
+        reconcileWorkspaceRows(changesVM)
+    }
+
+    private func reconcileWorkspaceRows(_ changesVM: ChangesViewModel) {
+        var availablePaths = Set(changesVM.entries.map(\.path))
+        availablePaths.formUnion(initialSelectedPaths)
+        if let pendingPath = navigator?.pendingLogDiff?.path {
+            availablePaths.insert(pendingPath)
+        }
+        workspaceState?.reconcileVisiblePaths(availablePaths)
     }
 
     private func label(for operation: WorkingCopyOperation) -> String {

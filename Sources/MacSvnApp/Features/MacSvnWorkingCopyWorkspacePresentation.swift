@@ -56,6 +56,13 @@ final class MacSvnWorkingCopyWorkspaceState {
             self.focusedPath = selectedPaths.sorted().first
         }
     }
+
+    func resetForWorkingCopy() {
+        selectedPaths = []
+        focusedPath = nil
+        commitPaths = []
+        commitSelectionWasEdited = false
+    }
 }
 
 enum MacSvnWorkspaceWidthClass: Equatable {

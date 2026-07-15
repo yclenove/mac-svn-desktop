@@ -300,7 +300,7 @@ git commit -m "feat(UI): 重排工作副本壳层与侧栏"
 - 修改：`Tests/MacSvnAppTests/HumanCenteredWorkingCopyWorkspaceTests.swift`
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 
-- [ ] **步骤 1：增加动作层级与提交复选框失败测试**
+- [x] **步骤 1：增加动作层级与提交复选框失败测试**
 
 ```swift
 func testEmbeddedChangesUsesTwoToolRowsAndSharedCommitCheckboxes() throws {
@@ -328,13 +328,13 @@ func testWorkspaceCompositionOwnsOneSharedInteractionState() throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`swift test --filter HumanCenteredWorkingCopyWorkspaceTests`
 
 预期：新源码门禁失败。
 
-- [ ] **步骤 3：让组合层持有共享状态**
+- [x] **步骤 3：让组合层持有共享状态**
 
 ```swift
 @State private var workspaceState = MacSvnWorkingCopyWorkspaceState()
@@ -352,7 +352,7 @@ MacSvnChangesView(
 
 深链种子改为调用 `workspaceState.seedFocusedPath(path)`，同时保留现有 pending intent 的消费顺序。
 
-- [ ] **步骤 4：拆分工具栏并压缩固定动作**
+- [x] **步骤 4：拆分工具栏并压缩固定动作**
 
 将现有 `header` 拆为 `primaryStatusBar` 和 `filterAndViewBar`。固定动作只保留更新、添加、还原、删除菜单、冲突入口；清理、重命名、大小写修复、复制/移动、Repair、更新到修订、忽略和变更列表进入分组的 `moreActionsMenu`。刷新和检查仓库改为图标按钮：
 
@@ -364,7 +364,7 @@ Button { Task { await changesVM?.refresh() } } label: {
 .accessibilityLabel("刷新本地状态")
 ```
 
-- [ ] **步骤 5：在可提交行加入独立复选框**
+- [x] **步骤 5：在可提交行加入独立复选框**
 
 ```swift
 @ViewBuilder
@@ -383,7 +383,7 @@ private func commitSelectionToggle(_ status: FileStatus) -> some View {
 
 `List` 行选择继续绑定 `selectedPaths`，其 setter 只调用 `workspaceState.selectRows`，不得写 `commitPaths`。
 
-- [ ] **步骤 6：保留性能门禁并运行测试**
+- [x] **步骤 6：保留性能门禁并运行测试**
 
 运行：
 
@@ -395,7 +395,7 @@ swift test --filter ChangesViewModelTests
 
 预期：全部通过；源码仍不包含 `VSplitView {` 或 `HSplitView {`。
 
-- [ ] **步骤 7：提交变更面板切片**
+- [x] **步骤 7：提交变更面板切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnWorkingCopyWorkspaceView.swift \

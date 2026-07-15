@@ -8,7 +8,7 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
 
-    @State private var focusedDiffPath: String?
+    @State private var workspaceState = MacSvnWorkingCopyWorkspaceState()
     @State private var seededSelection: Set<String> = []
 
     public init(
@@ -31,9 +31,13 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
                     session: session,
                     embedded: true,
                     initialSelectedPaths: seededSelection,
+                    workspaceState: workspaceState,
                     onFocusedPathChange: { path in
-                        guard path != focusedDiffPath else { return }
-                        focusedDiffPath = path
+                        guard let path else { return }
+                        workspaceState.selectRows(
+                            workspaceState.selectedPaths,
+                            focusedPath: path
+                        )
                     }
                 )
                 .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
@@ -45,7 +49,10 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
                     session: session,
                     navigator: navigator,
                     embedded: true,
-                    externalSelectedPath: $focusedDiffPath
+                    externalSelectedPath: Binding(
+                        get: { workspaceState.focusedPath },
+                        set: { _ in }
+                    )
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -71,23 +78,23 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
         .onChange(of: navigator.pendingLogDiff) { _, _ in
             applyPendingLogDiffSeed()
         }
+        .onChange(of: workspaceController.selectedID) { _, _ in
+            workspaceState.resetForWorkingCopy()
+            seededSelection = []
+        }
     }
 
     private func applyPendingDiffPathSeed() {
         // 工作区独占消费 pendingDiffPath，避免与嵌入 Diff 竞态
         guard let path = navigator.consumePendingDiffPath() else { return }
         seededSelection = [path]
-        if focusedDiffPath != path {
-            focusedDiffPath = path
-        }
+        workspaceState.seedFocusedPath(path)
     }
 
     /// 历史页原子 Diff：只同步 CFM 选中，修订由 DiffView 消费 `pendingLogDiff`。
     private func applyPendingLogDiffSeed() {
         guard let intent = navigator.pendingLogDiff else { return }
         seededSelection = [intent.path]
-        if focusedDiffPath != intent.path {
-            focusedDiffPath = intent.path
-        }
+        workspaceState.seedFocusedPath(intent.path)
     }
 }
