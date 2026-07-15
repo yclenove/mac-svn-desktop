@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop GP.4：README 功能矩阵与 inventory 对齐
+- Affected: README, docs/README, ReadmeParityTests, H-tortoise-parity, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: 根 README 将 Tortoise 对标拆为 D01–D28、命令 #1–#46、日志 L01–L20、设置 S01–S13 与 Overlay 7/7 五维矩阵，显式发布 114/114（100%）并链接 inventory、H-Tortoise 和覆盖率快照；移除旧交付分支、旧 main 收口状态与 Sparkle 误述，更新为当前 HTTPS GitHub Releases 检查和 T0–T6 波次；文档索引同步 GP.4 与覆盖率状态；新增 3 项 README 契约测试；全量 1015/1015 绿（真实 SVN 49/49），覆盖率门禁 114/114；下一 GP.5
+
 - Summary: Tortoise 完美 Loop GP.3：全测、H 环境与性能门禁
 - Affected: H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop, parity-coverage
 - Impact: 全量 `swift test` 1012/1012 绿，真实 SVN 集成 49/49；Xcode Debug App 在隔离 Foundation/HOME/TMPDIR 下稳定启动 8 秒；确认 `/usr/local/bin/svn` 1.14.5，并准备同时含 modified/unversioned 的临时可写真实 WC；空闲 CPU 每 2 秒采样 5 次均为 0.0%，大 Diff 与工作区 AttributeGraph 性能守卫继续通过；P-TEST/P-PERF 与 H 环境/T0–T5 汇总 ✅，下一 GP.4

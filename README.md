@@ -1,8 +1,8 @@
 # SVN Studio
 
-面向 macOS 的开源 Subversion（SVN）桌面客户端（产品名 **SVN Studio**，仓库目录仍为 `mac-svn-desktop`），目标对标商业客户端（Versions / Cornerstone）：工作副本管理、提交/更新、差异对比、日志、分支/标签、**内置三路合并**、**仓库浏览器**、blame 与锁定。
+面向 macOS 的开源 Subversion（SVN）桌面客户端。SVN Studio 覆盖工作副本管理、提交与更新、差异对比、日志、分支与合并、仓库浏览、冲突解决、Finder 集成和完整设置体系。
 
-> 当前阶段：SRS 缺口 Loop 已收口并合入 `main`（文档见 [docs 文档索引](docs/README.md)；验收清单见 [H1](docs/acceptance/H1-manual-checklist.md)）
+> 当前状态（2026-07-15）：TortoiseSVN inventory v2 必须行已完成 **114/114（100%）**。验收真相见 [能力清单](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，手工证据见 [H-Tortoise](docs/acceptance/H-tortoise-parity.md)，机器可读结果见 [覆盖率快照](docs/acceptance/parity-coverage.json)。
 
 ## 为什么做
 
@@ -14,10 +14,11 @@
 
 | 决策项 | 结论 |
 |--------|------|
-| 产品档位 | 替代商业客户端（全功能） |
+| 产品档位 | TortoiseSVN 平台等价全量对标，macOS 形态允许变化但不删能力 |
 | 冲突解决 | 内置三路合并编辑器（不依赖外部 merge 工具） |
 | 仓库浏览器 | 必备（免检出浏览远端、浅检出） |
 | 技术架构 | SwiftUI + svn CLI（`--xml`）混合架构，`SvnBackend` 协议预留 libsvn 替换点 |
+| 更新检查 | 内置 HTTPS GitHub Releases 检查，发现新版本后打开发布页，不直接下载或安装 |
 | 差异化创新 | 一键迁移 Git（git-svn 向导 + 增量同步）、AI 智能助手（提交说明/评审/冲突辅助/自然语言操作）、提交守护、本地搁置、Finder 集成 |
 
 > 注：曾评估 SVNKit，因其为纯 Java 库无法被 Swift 原生集成，已排除。
@@ -36,8 +37,8 @@
 └───────────────────────┬──────────────────────────────┘
 ┌───────────────────────▼──────────────────────────────┐
 │            SvnBackend（protocol, async）              │
-│   ├── SvnCliBackend   ← P1–P3（svn --xml + Process）  │
-│   └── LibSvnBackend   ← P4 可选（libsvn C API）       │
+│   ├── SvnCliBackend   ← 当前实现（svn --xml + Process） │
+│   └── LibSvnBackend   ← 可选（libsvn C API）            │
 └───────────────────────┬──────────────────────────────┘
                  svn CLI ≥ 1.14（Homebrew）
 ```
@@ -48,16 +49,17 @@
 - 认证复用 svn 自身 Keychain 凭据缓存，补输密码用 `--password-from-stdin`（svn ≥ 1.14），密码不上 argv
 - 三路合并基于工作副本冲突产物（base/mine/theirs），UI 与合并引擎自研
 
-## 路线图
+## 交付波次
 
-| 阶段 | 目标 | 核心交付 |
-|------|------|----------|
-| **P1 基础 WC** | 日常可用 | 添加 WC、Status 树、Update、Commit（UTF-8 中文）、Log、Unified Diff、认证 |
-| **P2 仓库浏览器 + 分支** | 分支工作流 | 远端目录树/log/预览、完整与浅检出、branch/tag 创建切换、merge 向导 |
-| **P3 内置三路合并** | 核心壁垒 | 冲突列表、三窗格合并编辑器、逐块采用/手改、resolve |
-| **P4 商业对标** | 完整体验 | Blame、属性与锁定、Diff 增强、提交守护、本地搁置、签名公证、Sparkle 自动更新 |
-| **P5 Git 迁移** | 平滑转 Git | 快照/历史保真迁移向导、authors 映射（AI 辅助）、过渡期增量同步、菜单栏常驻 |
-| **P6 AI 智能** | 大模型驱动 | 多 Provider 配置（含 Ollama 本地）、AI 提交说明/评审/冲突辅助、自然语言操作 SVN（分级确认+审计）、Finder 集成、命令面板 |
+| Wave | 范围 | 状态 |
+|------|------|------|
+| **T0** | 性能门禁、命令 Catalog、统一导航、可取消任务、覆盖率工具 | ✅ |
+| **T1** | 工作副本日常闭环与对话框级 Commit / Update / Diff / CFM | ✅ |
+| **T2** | 检出、日志动作、冲突、锁、分支、合并、补丁和仓库写操作 | ✅ |
+| **T3** | Revision Graph、Changelist、Externals、Shelve、Revprops 和日志缓存 | ✅ |
+| **T4** | Finder Sync、Overlay、Status Cache、上下文菜单与多选 | ✅ |
+| **T5** | 设置、钩子、Bugtraq、品牌、双架构 App 包装与分发流程 | ✅ |
+| **T6** | AI、Git 迁移与团队差异化能力，不计入 Tortoise 对标覆盖率 | 独立演进 |
 
 ## 如何运行
 
@@ -90,23 +92,35 @@ swift test
 
 对外分发签名与公证：见 [docs/packaging/signing-and-notarization.md](docs/packaging/signing-and-notarization.md)。
 
-## 功能矩阵（长程交付）
+## TortoiseSVN 功能矩阵
+
+下表与 [inventory v2](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md) 一一对应；范围计数相加即完整的 114 行强制验收口径。
+
+| Inventory 维度 | 范围 | 完成度 | SVN Studio 对应能力 |
+|----------------|------|--------|---------------------|
+| DUG 能力域 | D01–D28 | 28/28 ✅ | 工作副本、认证、提交、冲突、分支合并、仓库浏览、属性、锁、补丁、Revision Graph、Bugtraq 与设置全域 |
+| 主命令 | #1–#46 | 46/46 ✅ | Checkout 到大小写冲突修复；主窗口、Finder 右键与 ⌘K 统一路由 |
+| Show Log 动作 | L01–L20 | 20/20 ✅ | 比较、Blame、Unified Diff、分支、回滚、合并、Revprops、过滤统计与离线缓存 |
+| 设置页 | S01–S13 | 13/13 ✅ | General、Dialogs、Colours、Network、External Programs、Saved Data、Finder、Revision Graph 与 Log Cache |
+| Overlay 7/7 | 全状态与策略 | 7/7 ✅ | Finder 角标映射、递归聚合、三种 Cache 模式、包含/排除路径与可选角标 |
+| **总计** | **全部必须行** | **114/114（100%）** | partial=0，missing=0 |
+
+手工清单 [H-Tortoise](docs/acceptance/H-tortoise-parity.md) 记录真实 WC、Finder、App 启动与性能门禁；[parity-coverage.json](docs/acceptance/parity-coverage.json) 记录五类机器可读计数。可随时复跑：
+
+```bash
+python3 scripts/parity-coverage.py --fail-below 1.0
+swift test
+```
+
+### 差异化能力（不计入 Tortoise 覆盖率）
 
 | 能力 | 状态 |
 |------|------|
-| 工作副本 / 变更 / Update·Cleanup·Add·Delete·Revert | ✅ 可验收 |
-| 提交（UTF-8）+ Commit Guard + 说明历史 | ✅ 可验收 |
-| Diff / 日志 / 仓库浏览器 / Checkout / 分支标签 / Merge | ✅ 可验收 |
-| 冲突列表 + 内置三路合并 + 树冲突 | ✅ 可验收 |
-| Blame / 属性 / 锁定 / 搁置 | ✅ 可验收 |
-| Git 迁移向导 + 增量同步 | ✅ 可验收 |
-| 菜单栏角标 / FSEvents 近实时 / `svnstudio://` / CLI | ✅ 可验收 |
-| AI Provider（Keychain）/ Chat 写工具 / 提交·冲突·Blame·RN AI | ✅ 可验收 |
-| 命令面板 ⌘K（含无匹配转 Chat）/ 团队热力图 | ✅ 可验收 |
-| Finder Sync / Quick Look `.appex` | ✅ 可验收（嵌入 `SVNStudio.app`） |
-| `.app` 包装 / 签名公证流程 | ✅ 可验收（公证需 Developer 账号执行） |
-
-> 当前主干：`main` — SRS 缺口 Loop 已收口（见 [缺口 Loop](docs/superpowers/plans/2026-07-10-srs-gap-long-loop-backlog.md)）
+| Git 迁移向导、authors 映射与增量同步 | ✅ 可验收 |
+| AI Provider（Keychain）、提交/评审/冲突/Blame/发布说明助手 | ✅ 可验收 |
+| 自然语言 SVN 工具调用、分级确认与审计 | ✅ 可验收 |
+| 命令面板 ⌘K、菜单栏状态、团队热力图 | ✅ 可验收 |
+| Finder Sync / Quick Look `.appex` 与 `SVNStudio.app` 包装 | ✅ 可验收 |
 
 ## AI Provider（本机）
 
@@ -133,16 +147,15 @@ mac-svn-desktop/
 └── README.md
 ```
 
-## 合并回 main
+## 验收与发布
 
-长程功能在 `feat/long-loop-full-delivery`。全量 `swift test` 绿且 H1 清单抽检通过后：
+- 完整文档入口：[docs/README.md](docs/README.md)
+- Tortoise 手工验收：[docs/acceptance/H-tortoise-parity.md](docs/acceptance/H-tortoise-parity.md)
+- App 包装：[docs/packaging/README.md](docs/packaging/README.md)
+- Developer ID 签名与公证：[docs/packaging/signing-and-notarization.md](docs/packaging/signing-and-notarization.md)
 
-```bash
-git checkout main
-git merge --ff-only feat/long-loop-full-delivery
-git push origin main
-```
+当前机器没有 Developer ID Application 身份和公证凭据；仓库已提供签名、公证、Gatekeeper 与干净机流程，实际公证需要在持有凭据的发布环境执行。
 
 ## License
 
-MIT — 详见 [LICENSE](LICENSE)
+MIT，详见 [LICENSE](LICENSE)。
