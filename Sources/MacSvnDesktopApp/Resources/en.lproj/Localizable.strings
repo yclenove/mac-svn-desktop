@@ -883,3 +883,14 @@
 "Diff" = "Diff";
 "使用外置查看器" = "Use External Viewer";
 "关闭弹窗" = "Close Dialog";
+"修订操作" = "Revision Actions";
+"刷新历史" = "Refresh History";
+"加载历史" = "Load History";
+"加载更多历史" = "Load More History";
+"历史筛选" = "History Filters";
+"已启用 %@ 个条件" = "%@ filters active";
+"已启用 %@ 个筛选条件" = "%@ filters active";
+"搜索提交说明" = "Search Commit Messages";
+"显示 %@ 条修订" = "Showing %@ revisions";
+"更多历史操作" = "More History Actions";
+"清除筛选" = "Clear Filters";

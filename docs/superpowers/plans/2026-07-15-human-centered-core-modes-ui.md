@@ -144,7 +144,7 @@ git commit -m "feat(UI): 建立核心模式响应式展示策略（U6 任务 1/6
 - 修改：`Sources/MacSvnApp/Features/MacSvnLogView.swift`
 - 修改：`Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift`
 
-- [ ] **步骤 1：增加历史动作层级与组合筛选源码门禁**
+- [x] **步骤 1：增加历史动作层级与组合筛选源码门禁**
 
 在 `HumanCenteredCoreModesTests` 增加源码读取辅助方法和测试：
 
@@ -175,7 +175,7 @@ func testHistoryUsesCompactToolbarCombinableFiltersAndStableMasterDetail() throw
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认断言失败**
+- [x] **步骤 2：运行测试并确认断言失败**
 
 运行：
 
@@ -185,7 +185,7 @@ swift test --filter HumanCenteredCoreModesTests/testHistoryUsesCompactToolbarCom
 
 预期：断言失败，因为历史页仍使用 `logToolbar` / `logFilterBar` 和固定按钮堆叠。
 
-- [ ] **步骤 3：实现稳定历史工具栏**
+- [x] **步骤 3：实现稳定历史工具栏**
 
 将 `logToolbar` 改为 `historyToolbar`：
 
@@ -216,7 +216,7 @@ private var historyToolbar: some View {
 
 `historyLoadMenu` 保留 Next / Show All；`historyMoreActionsMenu` 保留统计与 AI Release Notes，均使用 icon-only label、`.menuStyle(.borderlessButton)`、`.menuIndicator(.hidden)`、tooltip 和 accessibility label。
 
-- [ ] **步骤 4：实现组合筛选栏与 popover**
+- [x] **步骤 4：实现组合筛选栏与 popover**
 
 新增：
 
@@ -236,7 +236,7 @@ private var historyToolbar: some View {
 }
 ```
 
-- [ ] **步骤 5：稳定主从布局和修订动作**
+- [x] **步骤 5：稳定主从布局和修订动作**
 
 修订 List 使用：
 
@@ -250,7 +250,7 @@ private var historyToolbar: some View {
 
 变更路径增加 `.lineLimit(1)`、`.truncationMode(.middle)` 和 `.help(change.path)`。`detailActions` 只固定“在变更区查看 Diff”，其余更新到修订、修订属性、编辑作者/说明、复制摘要进入 `Menu("修订操作", systemImage: "ellipsis.circle")`。
 
-- [ ] **步骤 6：运行历史、Localization 与性能测试**
+- [x] **步骤 6：运行历史、Localization 与性能测试**
 
 运行：
 
@@ -264,7 +264,7 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 
 预期：全部通过；离线、stop-on-copy、Next/All、统计、L01–L20 和 AI Release Notes 仍可达。
 
-- [ ] **步骤 7：提交历史切片**
+- [x] **步骤 7：提交历史切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnLogView.swift \

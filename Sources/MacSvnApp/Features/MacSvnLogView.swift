@@ -17,8 +17,10 @@ public struct MacSvnLogView: View {
     @State private var authorFilter = ""
     @State private var messageFilter = ""
     @State private var pathFilter = ""
+    @State private var showFilterPopover = false
     @State private var stopOnCopy = false
     @State private var offlineMode = false
+    @FocusState private var isMessageFilterFocused: Bool
     @State private var statusText: LocalizedStringKey?
     @State private var selectedRevision: Int?
     /// 当前 WC 的 `svn info` URL，供路径归一化与 Browse。
@@ -64,8 +66,8 @@ public struct MacSvnLogView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            logToolbar
-            logFilterBar
+            historyToolbar
+            historyFilterBar
 
             if let statusText {
                 Text(statusText).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16)
@@ -75,6 +77,12 @@ public struct MacSvnLogView: View {
             }
 
             content
+        }
+        .background {
+            Button("") { isMessageFilterFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             selectedRevision = nil
@@ -124,40 +132,101 @@ public struct MacSvnLogView: View {
     }
 
     @ViewBuilder
-    private var logToolbar: some View {
-        HStack {
-            Text("历史").font(.title2.weight(.semibold))
-            Spacer()
-            Button("AI Release Notes") {
-                guard let viewModel else { return }
-                let entries = filteredEntries(viewModel.entries)
-                navigator.pendingReleaseNotesEntries = entries
-                navigator.selectRoute(.releaseNotes)
-                navigator.lastAutomationMessage = "从历史带入 \(entries.count) 条生成 Release Notes"
+    private var historyToolbar: some View {
+        HStack(spacing: 8) {
+            Label("历史", systemImage: "clock.arrow.circlepath")
+                .font(.headline)
+            if let viewModel {
+                let visibleCount = filteredEntries(viewModel.entries).count
+                Text("\(visibleCount)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("显示 \(visibleCount) 条修订")
             }
-            .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
-            Button("刷新") { Task { await reload() } }
-            Button("Next") { Task { await viewModel?.loadMore() } }
-                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
-                .help("再加载一批（Tortoise Next）")
-            Button("Show All") { Task { await viewModel?.loadAll() } }
-                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
-                .help("循环拉取直至无更多（Tortoise Show All）")
-            Button("统计") { showStatisticsSheet = true }
-                .disabled(viewModel?.entries.isEmpty != false)
+            Spacer(minLength: 8)
+            Button {
+                Task { await reload() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel?.isLoading == true)
+            .help("刷新历史")
+            .accessibilityLabel("刷新历史")
+            historyLoadMenu
+            historyMoreActionsMenu
         }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .frame(height: MacSvnCoreModeMetrics.toolbarHeight)
     }
 
     @ViewBuilder
-    private var logFilterBar: some View {
-        HStack(spacing: 8) {
+    private var historyFilterBar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                TextField("搜索提交说明", text: $messageFilter)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($isMessageFilterFocused)
+                    .frame(minWidth: 180, idealWidth: 280, maxWidth: 360)
+                Button {
+                    showFilterPopover.toggle()
+                } label: {
+                    Image(
+                        systemName: activeFilterCount == 0
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill"
+                    )
+                    .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .help(activeFilterCount == 0 ? "筛选历史" : "已启用 \(activeFilterCount) 个筛选条件")
+                .accessibilityLabel("历史筛选")
+                .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
+                    historyFilterPopover
+                        .macSvnDismissiblePopover()
+                }
+                if activeFilterCount > 0 {
+                    Text("\(activeFilterCount)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("已启用 \(activeFilterCount) 个筛选条件")
+                }
+                Spacer(minLength: 8)
+                if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
+                    let shown = filteredEntries(viewModel.entries).count
+                    Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(logDataSourceLabel(viewModel.dataSource))
+                        .font(.caption2)
+                        .foregroundStyle(viewModel.dataSource == .live ? Color.secondary : Color.orange)
+                        .lineLimit(1)
+                }
+            }
+            if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
+                let shown = filteredEntries(viewModel.entries).count
+                if !pathFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   shown == 0, !viewModel.entries.isEmpty {
+                    Text("路径过滤无命中（需 verbose 路径明细）")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
+
+    private var historyFilterPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("历史筛选", systemImage: "line.3.horizontal.decrease.circle")
+                .font(.headline)
             TextField("作者过滤", text: $authorFilter)
-                .textFieldStyle(.roundedBorder).frame(maxWidth: 140)
-            TextField("说明关键字", text: $messageFilter)
-                .textFieldStyle(.roundedBorder).frame(maxWidth: 180)
+                .textFieldStyle(.roundedBorder)
             TextField("路径过滤", text: $pathFilter)
-                .textFieldStyle(.roundedBorder).frame(maxWidth: 200)
+                .textFieldStyle(.roundedBorder)
             Toggle("Stop on copy", isOn: $stopOnCopy)
                 .toggleStyle(.checkbox)
                 .help("svn log --stop-on-copy：在分支拷贝点停止")
@@ -170,22 +239,78 @@ public struct MacSvnLogView: View {
                 .onChange(of: offlineMode) { _, _ in
                     Task { await reload() }
                 }
-            if let viewModel, viewModel.state == .loaded || viewModel.state == .loadingMore {
-                let shown = filteredEntries(viewModel.entries).count
-                Text("显示 \(shown) / 已载 \(viewModel.entries.count)")
-                    .font(.caption).foregroundStyle(.secondary)
-                if !pathFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   shown == 0, !viewModel.entries.isEmpty {
-                    Text("路径过滤无命中（需 verbose 路径明细）")
-                        .font(.caption2).foregroundStyle(.orange)
-                }
-                Text(logDataSourceLabel(viewModel.dataSource))
-                    .font(.caption2)
-                    .foregroundStyle(viewModel.dataSource == .live ? Color.secondary : Color.orange)
+            HStack {
+                Text("已启用 \(activeFilterCount) 个条件")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("清除筛选") { clearHistoryFilters() }
+                    .disabled(activeFilterCount == 0)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        .padding(12)
+        .frame(width: 320)
+    }
+
+    private var activeFilterCount: Int {
+        MacSvnLogFilterSummary.activeCount(
+            author: authorFilter,
+            message: messageFilter,
+            path: pathFilter,
+            stopOnCopy: stopOnCopy,
+            offline: offlineMode
+        )
+    }
+
+    private func clearHistoryFilters() {
+        authorFilter = ""
+        messageFilter = ""
+        pathFilter = ""
+        stopOnCopy = false
+        offlineMode = false
+    }
+
+    private var historyLoadMenu: some View {
+        Menu {
+            Button("Next") { Task { await viewModel?.loadMore() } }
+                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+            Button("Show All") { Task { await viewModel?.loadAll() } }
+                .disabled(viewModel?.hasMore != true || viewModel?.isLoading == true)
+        } label: {
+            Label("加载历史", systemImage: "arrow.down.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("加载更多历史（Next / Show All）")
+        .accessibilityLabel("加载更多历史")
+    }
+
+    private var historyMoreActionsMenu: some View {
+        Menu {
+            Button("统计", systemImage: "chart.bar") {
+                showStatisticsSheet = true
+            }
+            .disabled(viewModel?.entries.isEmpty != false)
+            Divider()
+            Button("AI Release Notes", systemImage: "wand.and.stars") {
+                guard let viewModel else { return }
+                let entries = filteredEntries(viewModel.entries)
+                navigator.pendingReleaseNotesEntries = entries
+                navigator.selectRoute(.releaseNotes)
+                navigator.lastAutomationMessage = "从历史带入 \(entries.count) 条生成 Release Notes"
+            }
+            .disabled(viewModel == nil || (viewModel?.entries.isEmpty ?? true))
+        } label: {
+            Label("更多历史操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("更多历史操作")
+        .accessibilityLabel("更多历史操作")
     }
 
     @ViewBuilder
@@ -249,7 +374,11 @@ public struct MacSvnLogView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 280, idealWidth: 320, maxWidth: 400)
+                    .frame(
+                        minWidth: MacSvnCoreModeMetrics.masterMinimumWidth,
+                        idealWidth: MacSvnCoreModeMetrics.masterIdealWidth,
+                        maxWidth: MacSvnCoreModeMetrics.masterMaximumWidth
+                    )
 
                     Divider()
 
@@ -382,6 +511,9 @@ public struct MacSvnLogView: View {
             Text(change.path)
                 .font(.system(.body, design: .monospaced))
                 .textSelection(.enabled)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .help(change.path)
             Spacer()
             Button("Diff") {
                 Task {
@@ -406,7 +538,7 @@ public struct MacSvnLogView: View {
 
     @ViewBuilder
     private func detailActions(entry: LogEntry) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Button("在变更区查看 Diff") {
                 guard let first = entry.changedPaths.first?.path else { return }
                 Task {
@@ -418,17 +550,22 @@ public struct MacSvnLogView: View {
                 }
             }
             .disabled(entry.changedPaths.isEmpty)
-            Button("更新到此版本") {
-                Task { await updateTo(entry.revision) }
-            }
-            Button("修订属性") {
-                Task { await openRevisionProperties(revision: entry.revision, edit: false) }
-            }
-            Button("编辑作者 / 说明") {
-                Task { await openRevisionProperties(revision: entry.revision, edit: true) }
-            }
-            Button("复制摘要") {
-                copyLogEntryToClipboard(entry)
+            Menu {
+                Button("更新到此版本") {
+                    Task { await updateTo(entry.revision) }
+                }
+                Button("修订属性") {
+                    Task { await openRevisionProperties(revision: entry.revision, edit: false) }
+                }
+                Button("编辑作者 / 说明") {
+                    Task { await openRevisionProperties(revision: entry.revision, edit: true) }
+                }
+                Divider()
+                Button("复制摘要") {
+                    copyLogEntryToClipboard(entry)
+                }
+            } label: {
+                Label("修订操作", systemImage: "ellipsis.circle")
             }
         }
     }
