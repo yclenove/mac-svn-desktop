@@ -13,10 +13,10 @@
 
 ## 环境（每次验收前）
 
-- [ ] `swift run MacSvnDesktopApp` 或 `dist/SVNStudio.app` 可启动
-- [ ] 本机 `svn` ≥ 1.14（或设置中自定义路径）
-- [ ] 准备可写测试 WC（含若干修改/未版本文件更佳）
-- [ ] 空闲时 Activity Monitor 中 SVNStudio **无持续 100% CPU**（AttributeGraph 门禁）
+- [x] Xcode Debug `SVNStudio.app` 在隔离 Foundation/HOME/TMPDIR 下稳定启动 8 秒
+- [x] 本机 `/usr/local/bin/svn` = 1.14.5
+- [x] 临时可写真实 WC `/tmp/SVNStudio-GP3-WC.lLlNxk/wc` 已准备，含 modified 与 unversioned 文件
+- [x] SVNStudio 空闲 CPU 每 2 秒采样 5 次均为 0.0%，无持续 100% CPU（AttributeGraph 门禁）
 
 ---
 
@@ -118,8 +118,8 @@
 
 - [x] `python3 scripts/parity-coverage.py --fail-below 1.0` 通过（114/114，100%，partial=0，missing=0）
 - [x] 无用户可见「未实现」stub：生产源码关键字扫描为 0；Catalog 66/66 路由可达；死占位视图已删除
-- [ ] 全量 `swift test` 绿
-- [ ] 本文件 T0–T5 全部勾选
+- [x] 全量 `swift test` 1012/1012 绿（真实 SVN 49/49）
+- [x] 本文件 T0–T5 全部勾选
 - [ ] README 功能矩阵与 inventory 对齐
 - [ ] CHANGELOG 收口「Tortoise 全量对标完成」
 - [ ] 停止 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` 唤醒
@@ -134,3 +134,4 @@
 | 2026-07-15 | agent | T5/G5 | 通过 | 设置全表与运行时消费核验；覆盖率 114/114；`swift test` 1012 绿；Xcode/SwiftPM App 构建通过 |
 | 2026-07-15 | agent | GP.1 | 通过 | `parity-coverage --fail-below 1.0`：114/114（100%）；五类 partial/missing 均为 0 |
 | 2026-07-15 | agent | GP.2 | 通过 | Catalog 66/66 穷尽路由；生产源码无用户可见 stub 标记；Navigator 33 测、全量 1012 测绿；Xcode Debug 构建通过 |
+| 2026-07-15 | agent | GP.3 | 通过 | App 隔离启动 8 秒；svn 1.14.5；真实 WC M/?；空闲 CPU 5 次 0.0%；全量 1012 绿 |

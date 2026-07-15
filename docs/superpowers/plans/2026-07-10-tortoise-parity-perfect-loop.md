@@ -13,7 +13,7 @@
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-15） | T0–T5 + G0/G1/G2/G3/G4/G5、GP.1–GP.2 ✅；**下一 GP.3**；覆盖率 **114/114（100%）**；全量 **1012** 绿 |
+| 当前状态（2026-07-15） | T0–T5 + G0/G1/G2/G3/G4/G5、GP.1–GP.3 ✅；**下一 GP.4**；覆盖率 **114/114（100%）**；全量 **1012** 绿 |
 
 ---
 
@@ -37,10 +37,10 @@
 
 - [x] **P-INV**：inventory v2 中所有必须行（命令 #1–46、L01–L20、S01–S13、Overlay 表、域 D01–D28）状态均为 ✅（允许「平台等价形态」注释，禁止 ❌/🟡）
 - [x] **P-STUB**：不存在对用户可见的「未实现」stub（T0 骨架阶段临时 stub 必须在对应 Wave 清零）
-- [ ] **P-TEST**：全量 `swift test` 绿；关键路径有单测或等价契约测
+- [x] **P-TEST**：全量 `swift test` 绿；关键路径有单测或等价契约测
 - [ ] **P-H1**：`docs/acceptance/` 下 Tortoise 对标手工清单全部跑通（真实 WC）
 - [x] **P-COV**：覆盖率报表 `✅/必须行 = 100%`（由 T0 工具生成，CI 或脚本可复跑）
-- [ ] **P-PERF**：空闲无 AttributeGraph 死循环；大 Diff 不卡死（对照详设性能规范）
+- [x] **P-PERF**：空闲无 AttributeGraph 死循环；大 Diff 不卡死（对照详设性能规范）
 - [ ] **P-DOC**：README 功能矩阵与 inventory 一致；本文件全部 Wave `[x]`；CHANGELOG 有收口条目
 - [ ] **P-SHIP**（T5 末）：可安装 `SVNStudio.app` + Finder Sync 冒烟；公证可后置但须有明确阻塞记录（若暂无证书：记入风险但 **P-INV 仍须 100%**）
 
@@ -197,7 +197,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 
 - [x] **GP.1** 跑覆盖率：必须 = 100%；修任何残留 🟡/❌
 - [x] **GP.2** 清零所有用户可见 `unimplemented` stub
-- [ ] **GP.3** 全量 `swift test` + H-tortoise 全文勾选
+- [x] **GP.3** 全量 `swift test` + H-tortoise 全文勾选
 - [ ] **GP.4** README 功能矩阵与 inventory 对齐
 - [ ] **GP.5** 勾选 §2 PERFECT 全部项；CHANGELOG 收口「Tortoise 全量对标完成」
 - [ ] **GP.6** **停止 loop**：不再挂 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
@@ -289,6 +289,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-15 | T5.8/G5 | 03700a5 | S01/S03/S04/S05/S06/S09 补齐并接入运行时；SVN config-dir/代理密码 0600、Revert 废纸篓恢复、递归未版本取消/ignored/100,000 上限、自动完成索引、Repo 预取、设置热更新与并发代次守卫；动态中英文资源；`swift test` 1012 绿（真实 SVN 49/49），Xcode/SwiftPM Debug App 构建通过 | D28、S01/S03/S04/S05/S06/S09、H-T5/G5 ✅；设置 S01–S13 全表 ✅ | 覆盖率 114/114（100%）；下一 GP.1 |
 | 2026-07-15 | GP.1 | 991eb3b | `python3 scripts/parity-coverage.py --fail-below 1.0` 实跑通过；覆盖率脚本 2 项单测通过；命令、域、日志、设置、Overlay 五类均无 partial/missing | inventory 无状态变化；P-INV、P-COV、H-GP 覆盖率门禁 ✅ | 覆盖率 114/114（100%）；下一 GP.2 |
 | 2026-07-15 | GP.2 | 122cdbf | Catalog 全量命令路由改为非 Optional 穷尽映射；删除 T0 `.unimplemented` 兜底、无用 Core dispatch 枚举与死路由占位；设置启动期改为明确 loading 状态；生产源码 stub 关键字扫描为 0；Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过 | inventory 无状态变化；P-STUB、H-GP stub 门禁 ✅ | 下一 GP.3 |
+| 2026-07-15 | GP.3 | （提交后回填） | 全量 `swift test` 1012 绿（真实 SVN 49/49）；Xcode Debug App 隔离启动 8 秒；SVN 1.14.5；临时真实 WC 含 modified/unversioned；空闲 CPU 每 2 秒采样 5 次均 0.0%；大 Diff/工作区性能守卫绿 | inventory 无状态变化；P-TEST、P-PERF、H 环境与 T0–T5 汇总 ✅ | 下一 GP.4 |
 
 ---
 

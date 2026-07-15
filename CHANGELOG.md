@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop GP.3：全测、H 环境与性能门禁
+- Affected: H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop, parity-coverage
+- Impact: 全量 `swift test` 1012/1012 绿，真实 SVN 集成 49/49；Xcode Debug App 在隔离 Foundation/HOME/TMPDIR 下稳定启动 8 秒；确认 `/usr/local/bin/svn` 1.14.5，并准备同时含 modified/unversioned 的临时可写真实 WC；空闲 CPU 每 2 秒采样 5 次均为 0.0%，大 Diff 与工作区 AttributeGraph 性能守卫继续通过；P-TEST/P-PERF 与 H 环境/T0–T5 汇总 ✅，下一 GP.4
+
 - Summary: Tortoise 完美 Loop GP.2：清零用户可见未实现 stub
 - Affected: MacSvnAppNavigator, MacSvnRootView, MacSvnFeatureHostView, SvnCommandCatalog/Options, MacSvnDesktopApp, MacSvnAppNavigatorTests, docs/*
 - Impact: 将 66 个 Catalog ID 到真实功能页的路由改为非 Optional 穷尽映射，删除 T0 阶段 `.unimplemented` 结果与用户提示、未使用的 Core dispatch 枚举和死路由占位视图；设置 bootstrap 改为明确的加载状态。新增源码门禁，阻止 `.unimplemented`、用户可见“未实现”和死占位回归；生产源码扫描为 0，Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过；P-STUB/H-GP ✅，下一 GP.3
