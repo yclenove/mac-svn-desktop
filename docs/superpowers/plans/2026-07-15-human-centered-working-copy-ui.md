@@ -30,7 +30,7 @@
 - 创建：`Sources/MacSvnApp/Features/MacSvnWorkingCopyWorkspacePresentation.swift`
 - 创建：`Tests/MacSvnAppTests/HumanCenteredWorkingCopyWorkspaceTests.swift`
 
-- [ ] **步骤 1：编写共享选择与展示状态的失败测试**
+- [x] **步骤 1：编写共享选择与展示状态的失败测试**
 
 ```swift
 import XCTest
@@ -105,7 +105,7 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认类型尚不存在**
+- [x] **步骤 2：运行测试并确认类型尚不存在**
 
 运行：
 
@@ -115,7 +115,7 @@ swift test --filter HumanCenteredWorkingCopyWorkspaceTests
 
 预期：编译失败，报告 `cannot find 'MacSvnWorkingCopyWorkspaceState' in scope`。
 
-- [ ] **步骤 3：实现最小纯状态与策略类型**
+- [x] **步骤 3：实现最小纯状态与策略类型**
 
 ```swift
 import Foundation
@@ -192,13 +192,13 @@ enum MacSvnEmbeddedDiffPresentation: Equatable {
 }
 ```
 
-- [ ] **步骤 4：运行定向测试并确认通过**
+- [x] **步骤 4：运行定向测试并确认通过**
 
 运行：`swift test --filter HumanCenteredWorkingCopyWorkspaceTests`
 
 预期：4 个测试全部通过。
 
-- [ ] **步骤 5：提交策略切片**
+- [x] **步骤 5：提交策略切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnWorkingCopyWorkspacePresentation.swift \
