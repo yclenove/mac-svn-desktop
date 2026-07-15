@@ -10,6 +10,7 @@ final class MacSvnWorkingCopyWorkspaceState {
     private(set) var focusedPath: String?
     private(set) var commitPaths: Set<String> = []
     private(set) var commitSelectionWasEdited = false
+    private(set) var changesRefreshGeneration = 0
 
     func selectRows(_ paths: Set<String>, focusedPath requestedFocus: String?) {
         selectedPaths = paths
@@ -62,6 +63,10 @@ final class MacSvnWorkingCopyWorkspaceState {
         focusedPath = nil
         commitPaths = []
         commitSelectionWasEdited = false
+    }
+
+    func requestChangesRefresh() {
+        changesRefreshGeneration += 1
     }
 }
 

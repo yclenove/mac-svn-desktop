@@ -64,6 +64,15 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
         XCTAssertFalse(state.commitSelectionWasEdited)
     }
 
+    func testCommitCompletionRequestsAChangesRefresh() {
+        let state = MacSvnWorkingCopyWorkspaceState()
+
+        state.requestChangesRefresh()
+        state.requestChangesRefresh()
+
+        XCTAssertEqual(state.changesRefreshGeneration, 2)
+    }
+
     func testDiffPresentationTreatsIdleWithoutPathAsNoSelection() {
         XCTAssertEqual(
             MacSvnEmbeddedDiffPresentation.resolve(path: nil, state: .idle, diffText: ""),
@@ -149,6 +158,26 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
         )
         XCTAssertFalse(toolbar.contains("与 URL 比较"))
         XCTAssertTrue(source.contains("private var moreDiffActionsMenu"))
+    }
+
+    func testEmbeddedCommitIsCollapsibleAndKeepsAIInAssistanceMenu() throws {
+        let workspace = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnWorkingCopyWorkspaceView.swift"
+        )
+        let commit = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnCommitView.swift"
+        )
+
+        XCTAssertTrue(workspace.contains("isCommitInspectorExpanded"))
+        XCTAssertTrue(workspace.contains("MacSvnCommitInspectorMetrics.collapsedHeight"))
+        XCTAssertTrue(
+            commit.contains("Label(\"说明辅助\", systemImage: \"wand.and.stars\")")
+        )
+        XCTAssertFalse(commit.contains("Button(\"AI 生成说明\")"))
+        XCTAssertFalse(commit.contains("Button(\"AI 预检\")"))
+        XCTAssertTrue(commit.contains("workspaceState?.reconcileCommitCandidates"))
+        XCTAssertTrue(commit.contains("private var embeddedInspectorHeader"))
+        XCTAssertTrue(commit.contains(".buttonStyle(.borderedProminent)"))
     }
 
     private static let repoRoot = URL(fileURLWithPath: #filePath)

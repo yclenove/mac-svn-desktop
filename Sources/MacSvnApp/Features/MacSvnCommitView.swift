@@ -3,16 +3,20 @@ import MacSvnCore
 
 /// 提交页：接 CommitViewModel + 提交说明历史 + Commit Guard 警告。
 public struct MacSvnCommitView: View {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     @ObservedObject private var session: MacSvnAppSession
     private let embedded: Bool
+    private let workspaceState: MacSvnWorkingCopyWorkspaceState?
+    @Binding private var isExpanded: Bool
 
     @State private var viewModel: CommitViewModel?
     @State private var statusText: LocalizedStringKey?
     @State private var bugtraqIssueInput = ""
     @State private var completionCandidates: [String] = []
     @State private var completionGeneration = 0
+    @State private var showCandidatePopover = false
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -24,41 +28,33 @@ public struct MacSvnCommitView: View {
         self.session = session
         self.navigator = navigator
         self.embedded = embedded
+        self.workspaceState = nil
+        _isExpanded = .constant(true)
+    }
+
+    init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator,
+        embedded: Bool,
+        isExpanded: Binding<Bool>,
+        workspaceState: MacSvnWorkingCopyWorkspaceState
+    ) {
+        self.workspaceController = workspaceController
+        self.session = session
+        self.navigator = navigator
+        self.embedded = embedded
+        self.workspaceState = workspaceState
+        _isExpanded = isExpanded
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("提交")
-                    .font(embedded ? .headline : .largeTitle.weight(.semibold))
-                Spacer()
-                Button("AI 生成说明") {
-                    Task { await runAICommitMessage() }
-                }
-                .disabled(viewModel == nil)
-                Button("AI 预检") {
-                    Task { await runAIReview() }
-                }
-                .disabled(viewModel == nil)
-                Button("刷新候选") {
-                    Task { await reloadCandidates() }
-                }
-                Button("提交") {
-                    Task { await commit(skipWarnings: false) }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(viewModel?.canCommit != true)
+        Group {
+            if embedded {
+                embeddedInspector
+            } else {
+                standaloneLayout
             }
-            .padding(embedded ? 12 : 24)
-
-            if let statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, embedded ? 12 : 24)
-            }
-
-            content
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reloadCandidates() }
@@ -69,7 +65,14 @@ public struct MacSvnCommitView: View {
         }
         .onChange(of: viewModel?.selectedPaths) { _, _ in
             guard let viewModel else { return }
+            if let workspaceState, workspaceState.commitPaths != viewModel.selectedPaths {
+                workspaceState.replaceCommitPaths(viewModel.selectedPaths, userInitiated: true)
+            }
             Task { await viewModel.refreshProjectProperties() }
+        }
+        .onChange(of: workspaceState?.commitPaths) { _, newValue in
+            guard let viewModel, let newValue, viewModel.selectedPaths != newValue else { return }
+            viewModel.selectedPaths = newValue.intersection(Set(viewModel.candidateStatuses.map(\.path)))
         }
         .onChange(of: session.settingsSnapshot.dialogs) { oldDialogs, dialogs in
             Task { await applyDialogSettings(old: oldDialogs, new: dialogs) }
@@ -81,30 +84,203 @@ public struct MacSvnCommitView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private var embeddedInspector: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            embeddedInspectorHeader
+            if isExpanded {
+                Divider()
+                embeddedInspectorContent
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var embeddedInspectorHeader: some View {
+        HStack(spacing: 8) {
+            Button {
+                toggleInspector()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .frame(width: 14)
+                    Text("提交")
+                        .font(.headline)
+                }
+            }
+            .buttonStyle(.plain)
+            .help(isExpanded ? "收起提交检查器" : "展开提交检查器")
+            .accessibilityLabel(isExpanded ? "收起提交检查器" : "展开提交检查器")
+
+            Button {
+                showCandidatePopover.toggle()
+            } label: {
+                Label("\(selectedCommitCount) 个文件", systemImage: "checklist")
+                    .font(.callout)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel == nil)
+            .help("选择本次提交的文件")
+            .popover(isPresented: $showCandidatePopover, arrowEdge: .top) {
+                if let viewModel {
+                    candidateList(viewModel)
+                        .frame(width: 440, height: 360)
+                } else {
+                    ProgressView("加载提交候选…")
+                        .frame(width: 280, height: 180)
+                }
+            }
+
+            Text(inspectorReadinessText)
+                .font(.caption)
+                .foregroundStyle(inspectorReadinessColor)
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            assistanceMenu
+
+            Button {
+                Task { await reloadCandidates() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("刷新提交候选")
+            .accessibilityLabel("刷新提交候选")
+
+            Button("提交") {
+                Task { await commit(skipWarnings: false) }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(viewModel?.canCommit != true)
+            .help(viewModel?.canCommit == true ? "提交所选文件" : inspectorReadinessText)
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .frame(height: MacSvnCommitInspectorMetrics.collapsedHeight)
+    }
+
+    @ViewBuilder
+    private var embeddedInspectorContent: some View {
         if workspaceController.selectedRecord == nil {
             ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
         } else if let viewModel {
-            // 嵌入变更工作区禁止 HSplitView（AttributeGraph 风险）；独立页可用 Split
-            if embedded {
-                HStack(alignment: .top, spacing: 0) {
-                    candidateList(viewModel)
-                        .frame(minWidth: 200, idealWidth: 240, maxWidth: 280)
-                    Divider()
-                    messagePanel(viewModel)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else {
-                HSplitView {
-                    candidateList(viewModel)
-                        .frame(minWidth: 280)
-                    messagePanel(viewModel)
-                        .frame(minWidth: 360)
-                }
+            // 嵌入变更工作区禁止 HSplitView（AttributeGraph 风险）。
+            embeddedMessagePanel(viewModel)
+        } else {
+            ProgressView("加载提交候选…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var standaloneLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            standaloneHeader
+            if let statusText {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+            }
+            standaloneContent
+        }
+    }
+
+    private var standaloneHeader: some View {
+        HStack {
+            Text("提交")
+                .font(.largeTitle.weight(.semibold))
+            Spacer()
+            assistanceMenu
+            Button("刷新候选") {
+                Task { await reloadCandidates() }
+            }
+            Button("提交") {
+                Task { await commit(skipWarnings: false) }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(viewModel?.canCommit != true)
+        }
+        .padding(24)
+    }
+
+    @ViewBuilder
+    private var standaloneContent: some View {
+        if workspaceController.selectedRecord == nil {
+            ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
+        } else if let viewModel {
+            HSplitView {
+                candidateList(viewModel)
+                    .frame(minWidth: 280)
+                messagePanel(viewModel)
+                    .frame(minWidth: 360)
             }
         } else {
             ProgressView("加载变更…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var assistanceMenu: some View {
+        Menu {
+            Button("生成提交说明") {
+                Task { await runAICommitMessage() }
+            }
+            Button("运行 AI 预检") {
+                Task { await runAIReview() }
+            }
+            Divider()
+            if let viewModel, !viewModel.recentMessages.isEmpty {
+                Menu("最近说明") {
+                    ForEach(viewModel.recentMessages, id: \.self) { recent in
+                        Button(recent) {
+                            viewModel.reuseRecentMessage(recent)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("说明辅助", systemImage: "wand.and.stars")
+        }
+        .disabled(viewModel == nil)
+        .help("生成说明、AI 预检与最近说明")
+    }
+
+    private var selectedCommitCount: Int {
+        workspaceState?.commitPaths.count ?? viewModel?.orderedSelectedPaths.count ?? 0
+    }
+
+    private var inspectorReadinessText: String {
+        guard let viewModel else { return "正在加载候选" }
+        if viewModel.orderedSelectedPaths.isEmpty { return "未选择提交文件" }
+        if viewModel.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "请填写提交说明"
+        }
+        if let error = CommitMessagePolicy.validationError(
+            for: viewModel.message,
+            properties: viewModel.projectProperties
+        ) {
+            return "说明至少 \(error.required) 字，当前 \(error.actual) 字"
+        }
+        if viewModel.projectPropertyLoadError != nil { return "项目属性读取失败" }
+        if viewModel.state == .committing { return "正在提交" }
+        return "准备提交"
+    }
+
+    private var inspectorReadinessColor: Color {
+        viewModel?.canCommit == true ? .secondary : .orange
+    }
+
+    private func toggleInspector() {
+        if accessibilityReduceMotion {
+            isExpanded.toggle()
+        } else {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                isExpanded.toggle()
+            }
         }
     }
 
@@ -115,7 +291,13 @@ public struct MacSvnCommitView: View {
                 if !viewModel.availableChangelists.isEmpty {
                     Picker("范围", selection: Binding<String?>(
                         get: { viewModel.selectedChangelist },
-                        set: { viewModel.selectChangelist($0) }
+                        set: {
+                            viewModel.selectChangelist($0)
+                            workspaceState?.replaceCommitPaths(
+                                viewModel.selectedPaths,
+                                userInitiated: true
+                            )
+                        }
                     )) {
                         Text("全部可提交").tag(nil as String?)
                         ForEach(viewModel.availableChangelists, id: \.self) { name in
@@ -147,7 +329,14 @@ public struct MacSvnCommitView: View {
                 ForEach(viewModel.candidateStatuses, id: \.path) { status in
                     Toggle(isOn: Binding(
                         get: { viewModel.selectedPaths.contains(status.path) },
-                        set: { viewModel.setSelected($0, for: status.path) }
+                        set: {
+                            viewModel.setSelected($0, for: status.path)
+                            workspaceState?.setCommitSelected(
+                                $0,
+                                path: status.path,
+                                userInitiated: true
+                            )
+                        }
                     )) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(status.path)
@@ -192,22 +381,69 @@ public struct MacSvnCommitView: View {
         }
     }
 
+    private func embeddedMessagePanel(_ viewModel: CommitViewModel) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text("提交说明")
+                        .font(.subheadline.weight(.semibold))
+                    if let statusText {
+                        Text(statusText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                }
+                commitMessageEditor(viewModel, minHeight: 92)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("提交后保留锁", isOn: Binding(
+                        get: { viewModel.keepLocks },
+                        set: { viewModel.keepLocks = $0 }
+                    ))
+                    .font(.callout)
+
+                    projectPropertyPanel(viewModel)
+                    commitFeedbackSection(viewModel)
+                }
+                .padding(10)
+            }
+            .frame(width: 280)
+        }
+    }
+
+    private func commitMessageEditor(
+        _ viewModel: CommitViewModel,
+        minHeight: CGFloat
+    ) -> some View {
+        let dialogs = session.settingsSnapshot.dialogs
+        return BugtraqIssueTextEditor(text: Binding(
+            get: { viewModel.message },
+            set: { viewModel.message = $0 }
+        ), regexPatterns: viewModel.projectProperties.bugtraq.regexPatterns,
+           spellcheckLanguage: ProjectSpellcheckLanguage.resolve(
+               viewModel.projectProperties.projectLanguage
+           ),
+           completionCandidates: completionCandidates,
+           isAutoCompletionEnabled: dialogs.enableCommitAutoCompletion,
+           fontName: dialogs.logFontName,
+           fontSize: dialogs.logFontSize)
+        .frame(minHeight: minHeight)
+    }
+
     @ViewBuilder
     private func messagePanel(_ viewModel: CommitViewModel) -> some View {
-        let dialogs = session.settingsSnapshot.dialogs
         VStack(alignment: .leading, spacing: 12) {
             Text("提交说明")
                 .font(.headline)
-            BugtraqIssueTextEditor(text: Binding(
-                get: { viewModel.message },
-                set: { viewModel.message = $0 }
-            ), regexPatterns: viewModel.projectProperties.bugtraq.regexPatterns,
-               spellcheckLanguage: ProjectSpellcheckLanguage.resolve(viewModel.projectProperties.projectLanguage),
-               completionCandidates: completionCandidates,
-               isAutoCompletionEnabled: dialogs.enableCommitAutoCompletion,
-               fontName: dialogs.logFontName,
-               fontSize: dialogs.logFontSize)
-            .frame(minHeight: embedded ? 80 : 160)
+            commitMessageEditor(viewModel, minHeight: 160)
 
             Toggle("Keep locks（提交后保留锁）", isOn: Binding(
                 get: { viewModel.keepLocks },
@@ -342,6 +578,44 @@ public struct MacSvnCommitView: View {
     }
 
     @ViewBuilder
+    private func commitFeedbackSection(_ viewModel: CommitViewModel) -> some View {
+        if case .guardWarnings(let issues) = viewModel.state {
+            VStack(alignment: .leading, spacing: 5) {
+                Label("提交守护警告", systemImage: "exclamationmark.shield")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.orange)
+                ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
+                    Text(issue.message)
+                        .font(.caption)
+                }
+                Button("忽略警告并提交") {
+                    Task { await commit(skipWarnings: true) }
+                }
+            }
+        }
+        if case .committed(let revision) = viewModel.state {
+            Label("已提交 r\(revision.value)", systemImage: "checkmark.circle.fill")
+                .font(.callout)
+                .foregroundStyle(.green)
+        }
+        if case .reverted = viewModel.state {
+            Label("已还原选中项", systemImage: "arrow.uturn.backward.circle")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        if case .error(let message) = viewModel.state {
+            Label {
+                Text(message)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+            }
+            .font(.caption)
+            .foregroundStyle(.red)
+        }
+        aiStatusSection(viewModel)
+    }
+
+    @ViewBuilder
     private func aiStatusSection(_ viewModel: CommitViewModel) -> some View {
         if case .generating = viewModel.aiCommitMessageState {
             ProgressView("AI 正在生成提交说明…")
@@ -371,6 +645,9 @@ public struct MacSvnCommitView: View {
         guard let message = navigator.consumePendingCommitMessage(), !message.isEmpty else { return }
         viewModel.message = message
         statusText = "已填入预置提交说明"
+        if embedded, !isExpanded {
+            toggleInspector()
+        }
     }
 
     private func reloadCandidates() async {
@@ -418,6 +695,14 @@ public struct MacSvnCommitView: View {
                 selectItemsAutomatically: settings.dialogs.selectCommitItemsAutomatically,
                 useTrashWhenReverting: settings.dialogs.useTrashWhenReverting
             )
+            let availablePaths = Set(vm.candidateStatuses.map(\.path))
+            workspaceState?.reconcileCommitCandidates(
+                available: availablePaths,
+                defaultSelected: vm.selectedPaths
+            )
+            if let workspaceState {
+                vm.selectedPaths = workspaceState.commitPaths
+            }
             viewModel = vm
             await vm.loadRecentMessages()
             await rebuildCompletionCandidates(for: vm, dialogs: settings.dialogs)
@@ -451,8 +736,18 @@ public struct MacSvnCommitView: View {
         guard let viewModel else { return }
         await viewModel.commit(auth: nil, skipGuardWarnings: skipWarnings)
         if case .committed(let revision) = viewModel.state {
+            let remaining = CommitSelectionPolicy.candidates(from: viewModel.refreshedStatuses)
+            let remainingPaths = Set(remaining.map(\.path))
+            let defaultSelection = session.settingsSnapshot.dialogs.selectCommitItemsAutomatically
+                ? CommitSelectionPolicy.defaultSelectedPaths(from: remaining)
+                : []
+            workspaceState?.reconcileCommitCandidates(
+                available: remainingPaths,
+                defaultSelected: defaultSelection
+            )
+            workspaceState?.requestChangesRefresh()
             if session.settingsSnapshot.dialogs.reopenCommitAfterSuccessWithRemainingItems,
-               !CommitSelectionPolicy.candidates(from: viewModel.refreshedStatuses).isEmpty {
+               !remaining.isEmpty {
                 await reloadCandidates()
                 statusText = "提交成功 r\(revision.value)，仍有未提交项"
             } else {
@@ -501,6 +796,7 @@ public struct MacSvnCommitView: View {
         await viewModel.revertSelected()
         if case .reverted = viewModel.state {
             statusText = "已还原"
+            workspaceState?.requestChangesRefresh()
             await reloadCandidates()
         } else if case .error(let message) = viewModel.state {
             statusText = "还原失败：\(message)"

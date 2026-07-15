@@ -150,6 +150,12 @@ public struct MacSvnChangesView: View {
             workspaceState?.selectRows(newValue, focusedPath: newlySelected)
             onFocusedPathChange?(workspaceState?.focusedPath ?? newValue.sorted().first)
         }
+        .onChange(of: workspaceState?.changesRefreshGeneration) { oldValue, newValue in
+            guard oldValue != newValue, let changesVM else { return }
+            Task {
+                await refreshAfterMutation(changesVM)
+            }
+        }
         .onChange(of: session.settingsSnapshot.dialogs) { _, dialogs in
             let shouldRefresh = changesVM?.updateSettings(
                 recurseIntoUnversionedFolders: dialogs.recurseIntoUnversionedFolders

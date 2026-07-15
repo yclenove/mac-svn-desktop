@@ -10,6 +10,7 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
 
     @State private var workspaceState = MacSvnWorkingCopyWorkspaceState()
     @State private var seededSelection: Set<String> = []
+    @State private var isCommitInspectorExpanded = false
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -64,9 +65,21 @@ public struct MacSvnWorkingCopyWorkspaceView: View {
                 workspaceController: workspaceController,
                 session: session,
                 navigator: navigator,
-                embedded: true
+                embedded: true,
+                isExpanded: $isCommitInspectorExpanded,
+                workspaceState: workspaceState
             )
-            .frame(minHeight: 160, idealHeight: 200, maxHeight: 260)
+            .frame(
+                minHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.minimumExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight,
+                idealHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.idealExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight,
+                maxHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.maximumExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight
+            )
         }
         .task {
             applyPendingDiffPathSeed()

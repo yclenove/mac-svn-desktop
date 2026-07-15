@@ -495,7 +495,7 @@ git commit -m "feat(UI): 完善工作区 Diff 状态与操作层级"
 - 修改：`Tests/MacSvnAppTests/HumanCenteredWorkingCopyWorkspaceTests.swift`
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 
-- [ ] **步骤 1：增加检查器与 AI 层级失败测试**
+- [x] **步骤 1：增加检查器与 AI 层级失败测试**
 
 ```swift
 func testEmbeddedCommitIsCollapsibleAndKeepsAIInAssistanceMenu() throws {
@@ -511,13 +511,13 @@ func testEmbeddedCommitIsCollapsibleAndKeepsAIInAssistanceMenu() throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`swift test --filter HumanCenteredWorkingCopyWorkspaceTests/testEmbeddedCommitIsCollapsibleAndKeepsAIInAssistanceMenu`
 
 预期：源码断言失败。
 
-- [ ] **步骤 3：组合层增加稳定检查器容器**
+- [x] **步骤 3：组合层增加稳定检查器容器**
 
 ```swift
 @State private var isCommitInspectorExpanded = false
@@ -545,7 +545,7 @@ MacSvnCommitView(
 
 展开/折叠使用 `0.18 s` easeInOut，并在 Reduce Motion 下禁用动画。不得使用 VSplitView。
 
-- [ ] **步骤 4：同步 CommitViewModel 与共享提交集合**
+- [x] **步骤 4：同步 CommitViewModel 与共享提交集合**
 
 `reloadCandidates()` 创建 ViewModel 后调用：
 
@@ -558,7 +558,7 @@ applyWorkspaceCommitSelection(to: nextViewModel)
 
 候选 Toggle 的 setter 同时更新 ViewModel 和 `workspaceState.setCommitSelected(..., userInitiated: true)`；外部变化只在集合不同时回写 ViewModel，避免 onChange 循环。
 
-- [ ] **步骤 5：实现折叠头和紧凑展开内容**
+- [x] **步骤 5：实现折叠头和紧凑展开内容**
 
 折叠头显示展开按钮、提交文件数、说明状态、提交按钮。展开态不再常驻完整候选列表，改为“文件（N）” popover 管理复选框；主体保留说明编辑器、历史说明菜单、校验摘要、Keep locks 和提交按钮。
 
@@ -575,7 +575,7 @@ Menu {
 
 只有“提交”使用 `.borderedProminent`。AI 状态进入固定校验摘要/详情区，不新增主按钮。
 
-- [ ] **步骤 6：运行提交、性能和源码门禁测试**
+- [x] **步骤 6：运行提交、性能和源码门禁测试**
 
 运行：
 
@@ -588,7 +588,7 @@ swift test --filter SettingsInformationArchitectureTests/testCommitEditorConsume
 
 预期：全部通过；提交说明补全、Guard、Bugtraq、历史和 Keep locks 保持可达。
 
-- [ ] **步骤 7：提交检查器切片**
+- [x] **步骤 7：提交检查器切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnWorkingCopyWorkspaceView.swift \
