@@ -63,6 +63,23 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
         XCTAssertEqual(MacSvnWorkspaceWidthClass.resolve(width: 1_180), .regular)
     }
 
+    func testSidebarAndContextBarKeepStableHumanReadableLayout() throws {
+        let root = try Self.readRepoSource(at: "Sources/MacSvnApp/App/MacSvnRootView.swift")
+        let shell = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnWorkingCopyShellView.swift"
+        )
+
+        XCTAssertTrue(
+            root.contains("navigationSplitViewColumnWidth(min: 220, ideal: 252, max: 320)")
+        )
+        XCTAssertTrue(root.contains("private func showInFinder("))
+        XCTAssertTrue(root.contains("accessibilityLabel(\"添加工作副本\")"))
+        XCTAssertTrue(root.contains("在 Finder 中显示"))
+        XCTAssertTrue(shell.contains("private func repositoryContext("))
+        XCTAssertTrue(shell.contains("Label(\"更多功能\", systemImage: \"ellipsis.circle\")"))
+        XCTAssertTrue(shell.contains("Label(\"工具\", systemImage: \"wrench.and.screwdriver\")"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

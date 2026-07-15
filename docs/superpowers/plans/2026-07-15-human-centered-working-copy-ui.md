@@ -213,7 +213,7 @@ git commit -m "feat(UI): 建立工作区共享交互状态"
 - 修改：`Sources/MacSvnApp/Features/MacSvnWorkingCopyShellView.swift`
 - 测试：`Tests/MacSvnAppTests/HumanCenteredWorkingCopyWorkspaceTests.swift`
 
-- [ ] **步骤 1：增加侧栏和上下文栏源码门禁测试**
+- [x] **步骤 1：增加侧栏和上下文栏源码门禁测试**
 
 ```swift
 func testSidebarAndContextBarKeepStableHumanReadableLayout() throws {
@@ -229,13 +229,13 @@ func testSidebarAndContextBarKeepStableHumanReadableLayout() throws {
 }
 ```
 
-- [ ] **步骤 2：运行定向测试并确认失败**
+- [x] **步骤 2：运行定向测试并确认失败**
 
 运行：`swift test --filter HumanCenteredWorkingCopyWorkspaceTests/testSidebarAndContextBarKeepStableHumanReadableLayout`
 
 预期：断言失败，因为稳定列宽和新上下文栏尚未实现。
 
-- [ ] **步骤 3：实现侧栏稳定尺寸与上下文操作**
+- [x] **步骤 3：实现侧栏稳定尺寸与上下文操作**
 
 在 `MacSvnRootView`：
 
@@ -251,7 +251,7 @@ private func showInFinder(_ record: WorkingCopyRecord) {
 
 为添加/移除图标补齐 `frame(width: 28, height: 28)`、tooltip 和 accessibility label；侧栏行对名称、路径和仓库摘要使用单行布局、完整 tooltip 与固定最小行高；上下文菜单增加“在 Finder 中显示”。
 
-- [ ] **步骤 4：实现工作副本上下文优先的模式栏**
+- [x] **步骤 4：实现工作副本上下文优先的模式栏**
 
 在 `MacSvnWorkingCopyShellView` 将 `modeToolbar` 拆为 `repositoryContext`、主模式 Picker 和两个图标菜单：
 
@@ -271,7 +271,7 @@ private var repositoryContext: some View {
 
 紧凑宽度只隐藏 `repositorySubtitle`，不隐藏工作副本名称、主模式或菜单能力。
 
-- [ ] **步骤 5：运行定向与导航测试**
+- [x] **步骤 5：运行定向与导航测试**
 
 运行：
 
@@ -283,7 +283,7 @@ swift test --filter BrandingExperienceTests
 
 预期：全部通过。
 
-- [ ] **步骤 6：提交壳层切片**
+- [x] **步骤 6：提交壳层切片**
 
 ```bash
 git add Sources/MacSvnApp/App/MacSvnRootView.swift \

@@ -31,6 +31,7 @@ public struct MacSvnRootView: View {
         NavigationSplitView {
             workingCopySidebar
                 .navigationTitle(ProductBranding.displayName)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 252, max: 320)
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
                 if let message = navigator.lastAutomationMessage {
@@ -95,15 +96,21 @@ public struct MacSvnRootView: View {
                     workspaceController.presentAddPanel()
                 } label: {
                     Image(systemName: "plus")
+                        .frame(width: 28, height: 28)
                 }
+                .buttonStyle(.plain)
                 .help("添加工作副本")
+                .accessibilityLabel("添加工作副本")
                 Button {
                     confirmRemove = true
                 } label: {
                     Image(systemName: "minus")
+                        .frame(width: 28, height: 28)
                 }
+                .buttonStyle(.plain)
                 .disabled(workspaceController.selectedID == nil)
                 .help("移除选中工作副本")
+                .accessibilityLabel("移除选中工作副本")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -119,6 +126,23 @@ public struct MacSvnRootView: View {
                 ForEach(workspaceController.records) { record in
                     sidebarRow(record)
                         .tag(record.id)
+                        .contextMenu {
+                            Button {
+                                showInFinder(record)
+                            } label: {
+                                Label("在 Finder 中显示", systemImage: "folder")
+                            }
+                            Button {
+                                copyToPasteboard(record.localPath)
+                            } label: {
+                                Label("复制本地路径", systemImage: "doc.on.doc")
+                            }
+                            Divider()
+                            Button("移除工作副本…", role: .destructive) {
+                                workspaceController.selectedID = record.id
+                                confirmRemove = true
+                            }
+                        }
                 }
             }
             .listStyle(.sidebar)
@@ -139,32 +163,38 @@ public struct MacSvnRootView: View {
                 Text(record.name)
                     .font(.body.weight(.medium))
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(record.name)
                 if record.isValid == false {
-                    Text("无效")
-                        .font(.caption2)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color.orange.opacity(0.25))
-                        .clipShape(Capsule())
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .help("工作副本无效")
+                        .accessibilityLabel("工作副本无效")
                 }
             }
             Text(shortPath(record.localPath))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
+                .help(record.localPath)
             HStack(spacing: 6) {
                 if let revision = record.revision {
                     Text("r\(revision.value)")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                Text(record.repoURL)
+                Text(repositorySummary(record.repoURL))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(record.repoURL)
             }
         }
         .padding(.vertical, 2)
+        .frame(minHeight: 48, alignment: .leading)
         .opacity(record.isValid == false ? 0.55 : 1)
     }
 
@@ -207,6 +237,26 @@ public struct MacSvnRootView: View {
             return "~" + path.dropFirst(NSHomeDirectory().count)
         }
         return path
+    }
+
+    private func repositorySummary(_ value: String) -> String {
+        guard let url = URL(string: value) else { return value }
+        let repository = url.lastPathComponent
+        guard let host = url.host, !host.isEmpty else {
+            return repository.isEmpty ? value : repository
+        }
+        return repository.isEmpty ? host : "\(host)/\(repository)"
+    }
+
+    private func showInFinder(_ record: WorkingCopyRecord) {
+        NSWorkspace.shared.activateFileViewerSelecting([
+            URL(fileURLWithPath: record.localPath)
+        ])
+    }
+
+    private func copyToPasteboard(_ value: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {

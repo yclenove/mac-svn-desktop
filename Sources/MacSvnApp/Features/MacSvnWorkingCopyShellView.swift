@@ -103,74 +103,138 @@ public struct MacSvnWorkingCopyShellView: View {
     }
 
     private var modeToolbar: some View {
-        HStack(spacing: 8) {
-            // 仅当当前为 primary 时绑定 segmented；否则显示当前页标题，避免非法 tag
-            if MacSvnWorkspaceMode.primaryModes.contains(selectedMode) {
-                Picker("模式", selection: modeBinding) {
-                    ForEach(MacSvnWorkspaceMode.primaryModes) { mode in
-                        Text(LocalizedStringKey(mode.title)).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
+        ViewThatFits(in: .horizontal) {
+            modeToolbarContent(showsRepositorySubtitle: true)
+            modeToolbarContent(showsRepositorySubtitle: false)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(minHeight: 50)
+    }
+
+    private func modeToolbarContent(showsRepositorySubtitle: Bool) -> some View {
+        HStack(spacing: 10) {
+            repositoryContext(showsSubtitle: showsRepositorySubtitle)
+                .frame(
+                    width: showsRepositorySubtitle ? 210 : 150,
+                    alignment: .leading
+                )
+
+            Divider()
+                .frame(height: 24)
+
+            modeControl
                 .frame(maxWidth: 420)
-            } else {
-                HStack(spacing: 8) {
-                    Label {
-                        Text(LocalizedStringKey(selectedMode.title))
-                    } icon: {
-                        Image(systemName: selectedMode.systemImage)
-                    }
-                        .font(.headline)
-                    Button("返回变更") {
-                        navigator.selectMode(.changes)
-                    }
+                .layoutPriority(2)
+
+            Spacer(minLength: 4)
+
+            advancedFeaturesMenu
+            toolsMenu
+        }
+    }
+
+    @ViewBuilder
+    private var modeControl: some View {
+        // 仅当当前为 primary 时绑定 segmented；否则显示当前页标题，避免非法 tag。
+        if MacSvnWorkspaceMode.primaryModes.contains(selectedMode) {
+            Picker("模式", selection: modeBinding) {
+                ForEach(MacSvnWorkspaceMode.primaryModes) { mode in
+                    Text(LocalizedStringKey(mode.title)).tag(mode)
                 }
             }
-
-            Menu("更多") {
-                ForEach(MacSvnWorkspaceMode.advancedModes) { mode in
-                    Button {
-                        navigator.selectMode(mode)
-                    } label: {
-                        Label {
-                            Text(LocalizedStringKey(mode.title))
-                        } icon: {
-                            Image(systemName: mode.systemImage)
-                        }
-                    }
+            .pickerStyle(.segmented)
+        } else {
+            HStack(spacing: 8) {
+                Label {
+                    Text(LocalizedStringKey(selectedMode.title))
+                } icon: {
+                    Image(systemName: selectedMode.systemImage)
                 }
-            }
+                .font(.headline)
+                .lineLimit(1)
 
-            Menu("工具") {
-                ForEach(MacSvnWorkspaceMode.toolModes) { mode in
-                    Button {
-                        navigator.selectMode(mode)
-                    } label: {
-                        Label {
-                            Text(LocalizedStringKey(mode.title))
-                        } icon: {
-                            Image(systemName: mode.systemImage)
-                        }
-                    }
-                }
-            }
-
-            Spacer()
-
-            if let record = workspaceController.selectedRecord {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(record.name)
-                        .font(.caption.weight(.semibold))
-                    if let revision = record.revision {
-                        Text("r\(revision.value)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                Button("返回变更") {
+                    navigator.selectMode(.changes)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+    }
+
+    private func repositoryContext(showsSubtitle: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(workspaceController.selectedRecord?.name ?? "未选择工作副本")
+                .font(.callout.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(workspaceController.selectedRecord?.name ?? "未选择工作副本")
+
+            if showsSubtitle, let record = workspaceController.selectedRecord {
+                Text(repositorySubtitle(record))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(record.localPath)
+            }
+        }
+    }
+
+    private var advancedFeaturesMenu: some View {
+        Menu {
+            ForEach(MacSvnWorkspaceMode.advancedModes) { mode in
+                Button {
+                    navigator.selectMode(mode)
+                } label: {
+                    Label {
+                        Text(LocalizedStringKey(mode.title))
+                    } icon: {
+                        Image(systemName: mode.systemImage)
+                    }
+                }
+            }
+        } label: {
+            Label("更多功能", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .help("更多功能")
+        .accessibilityLabel("更多功能")
+    }
+
+    private var toolsMenu: some View {
+        Menu {
+            ForEach(MacSvnWorkspaceMode.toolModes) { mode in
+                Button {
+                    navigator.selectMode(mode)
+                } label: {
+                    Label {
+                        Text(LocalizedStringKey(mode.title))
+                    } icon: {
+                        Image(systemName: mode.systemImage)
+                    }
+                }
+            }
+        } label: {
+            Label("工具", systemImage: "wrench.and.screwdriver")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .help("工具")
+        .accessibilityLabel("工具")
+    }
+
+    private func repositorySubtitle(_ record: WorkingCopyRecord) -> String {
+        let path = shortPath(record.localPath)
+        guard let revision = record.revision else { return path }
+        return "r\(revision.value) · \(path)"
+    }
+
+    private func shortPath(_ path: String) -> String {
+        guard path.hasPrefix(NSHomeDirectory()) else { return path }
+        return "~" + path.dropFirst(NSHomeDirectory().count)
     }
 
     private var modeBinding: Binding<MacSvnWorkspaceMode> {
