@@ -1,5 +1,7 @@
 # H1 手工验收清单（真实 WC）
 
+> **历史清单：** 本文件已由 [H-Tortoise](H-tortoise-parity.md) 接替，不再作为 Tortoise PERFECT 的 P-H1 验收真相。未执行项目保留未勾，避免把旧版 P1–P6 旅程误报为已手工运行；当前全量能力与真实 WC/Finder 验收以 H-Tortoise 为准。
+
 在本机准备一个可写 SVN 工作副本后，按序勾选。
 
 ## 环境

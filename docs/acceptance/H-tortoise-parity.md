@@ -118,10 +118,11 @@
 
 - [x] `python3 scripts/parity-coverage.py --fail-below 1.0` 通过（114/114，100%，partial=0，missing=0）
 - [x] 无用户可见「未实现」stub：生产源码关键字扫描为 0；Catalog 66/66 路由可达；死占位视图已删除
-- [x] 全量 `swift test` 1015/1015 绿（真实 SVN 49/49）
+- [x] 全量 `swift test` 1016/1016 绿（真实 SVN 49/49）
 - [x] 本文件 T0–T5 全部勾选
 - [x] README 功能矩阵与 inventory 对齐：D01–D28、#1–#46、L01–L20、S01–S13、Overlay 7/7 与 114/114（100%）均显式发布，并链接 inventory、H-Tortoise 与覆盖率快照
-- [ ] CHANGELOG 收口「Tortoise 全量对标完成」
+- [x] CHANGELOG 收口「Tortoise 全量对标完成」
+- [x] PERFECT 的 P-H1/P-DOC/P-SHIP：T0–T5 真实 WC/Finder 清单全勾；Xcode Release 双架构 App 与扩展校验、隔离启动冒烟复跑通过；Developer ID/公证无证书阻塞已明确记录
 - [ ] 停止 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` 唤醒
 
 ---
@@ -136,3 +137,4 @@
 | 2026-07-15 | agent | GP.2 | 通过 | Catalog 66/66 穷尽路由；生产源码无用户可见 stub 标记；Navigator 33 测、全量 1012 测绿；Xcode Debug 构建通过 |
 | 2026-07-15 | agent | GP.3 | 通过 | App 隔离启动 8 秒；svn 1.14.5；真实 WC M/?；空闲 CPU 5 次 0.0%；全量 1012 绿 |
 | 2026-07-15 | agent | GP.4 | 通过 | README 五维功能矩阵与 114/114 总计对齐 inventory；证据链接齐全；3 项 README 契约测试与全量 1015/1015 绿 |
+| 2026-07-15 | agent | GP.5 | 通过 | P-H1/P-DOC/P-SHIP ✅；Xcode Release 双架构 App、Finder Sync、Quick Look、深层签名与隔离启动冒烟复跑通过；0 个 Developer ID 身份阻塞保持明示；全量 1016/1016 绿（真实 SVN 49/49） |

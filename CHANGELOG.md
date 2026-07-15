@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 全量对标完成（GP.5 PERFECT 收口）
+- Affected: README parity contract, H-tortoise-parity, distribution-smoke, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: PERFECT 的 P-INV、P-STUB、P-TEST、P-H1、P-COV、P-PERF、P-DOC、P-SHIP 全部满足：inventory 五维 114/114（100%），T0–T5 真实 WC/Finder/H 清单全勾，README 与验收证据对齐。重新构建 Xcode Release 双架构 App，主应用、Finder Sync、Quick Look 的包结构、Mach-O 依赖、深层签名与隔离启动冒烟全部通过，产物位于 `/tmp/svnstudio-gp5-release/SVNStudio.app`；Developer ID/公证因本机 0 个有效签名身份继续按计划明示阻塞，不降低 P-INV 或平台能力。新增 PERFECT 文档契约测试；全量 1016/1016 绿（真实 SVN 49/49），覆盖率 114/114（100%）；下一 GP.6 停止 Loop
+
 - Summary: Tortoise 完美 Loop GP.4：README 功能矩阵与 inventory 对齐
 - Affected: README, docs/README, ReadmeParityTests, H-tortoise-parity, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: 根 README 将 Tortoise 对标拆为 D01–D28、命令 #1–#46、日志 L01–L20、设置 S01–S13 与 Overlay 7/7 五维矩阵，显式发布 114/114（100%）并链接 inventory、H-Tortoise 和覆盖率快照；移除旧交付分支、旧 main 收口状态与 Sparkle 误述，更新为当前 HTTPS GitHub Releases 检查和 T0–T6 波次；文档索引同步 GP.4 与覆盖率状态；新增 3 项 README 契约测试；全量 1015/1015 绿（真实 SVN 49/49），覆盖率门禁 114/114；下一 GP.5

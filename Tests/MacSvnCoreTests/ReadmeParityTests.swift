@@ -45,11 +45,53 @@ final class ReadmeParityTests: XCTestCase {
 
     func testDocumentationIndexPublishesCurrentParityStatus() throws {
         let index = try repositoryDocument("docs/README.md")
+        let plan = try repositoryDocument(
+            "docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md"
+        )
+        let latestCompletedGP = try XCTUnwrap(
+            (1...6)
+                .map { "GP.\($0)" }
+                .last { plan.contains("- [x] **\($0)**") }
+        )
 
         XCTAssertTrue(index.contains("114/114"), "文档索引缺少当前覆盖率")
-        XCTAssertTrue(index.contains("GP.4"), "文档索引缺少当前 Perfect Loop 阶段")
+        XCTAssertTrue(
+            index.contains("\(latestCompletedGP) 已完成"),
+            "文档索引未精确发布当前已完成阶段：\(latestCompletedGP)"
+        )
         XCTAssertFalse(index.contains("执行中（T0.1 已完成）"), "文档索引仍停留在 T0.1")
         XCTAssertFalse(index.contains("| 骨架 |"), "文档索引仍将 H-tortoise 标为骨架")
+    }
+
+    func testPerfectClosurePublishesRequiredEvidence() throws {
+        let plan = try repositoryDocument(
+            "docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md"
+        )
+        let checklist = try repositoryDocument("docs/acceptance/H-tortoise-parity.md")
+        let legacyChecklist = try repositoryDocument("docs/acceptance/H1-manual-checklist.md")
+        let index = try repositoryDocument("docs/README.md")
+        let changelog = try repositoryDocument("CHANGELOG.md")
+
+        for criterion in [
+            "P-INV", "P-STUB", "P-TEST", "P-H1", "P-COV", "P-PERF", "P-DOC", "P-SHIP",
+        ] {
+            XCTAssertTrue(plan.contains("- [x] **\(criterion)**"), "PERFECT 尚未勾选：\(criterion)")
+        }
+        XCTAssertTrue(
+            plan.contains("**P-H1**：[H-Tortoise]"),
+            "P-H1 未明确绑定当前 Tortoise 手工验收清单"
+        )
+        XCTAssertTrue(
+            legacyChecklist.contains("已由 [H-Tortoise](H-tortoise-parity.md) 接替"),
+            "旧 H1 清单未声明已被当前 Tortoise 验收清单接替"
+        )
+        XCTAssertTrue(index.contains("旧版，已由 H-Tortoise 接替"), "文档索引仍将旧 H1 清单标为待跑通")
+        XCTAssertTrue(plan.contains("- [x] **GP.5**"), "Perfect Loop 尚未完成 GP.5")
+        XCTAssertTrue(
+            checklist.contains("- [x] CHANGELOG 收口「Tortoise 全量对标完成」"),
+            "H-Tortoise 尚未记录最终 CHANGELOG 收口"
+        )
+        XCTAssertTrue(changelog.contains("Tortoise 全量对标完成"), "CHANGELOG 缺少最终收口条目")
     }
 
     private func repositoryDocument(_ relativePath: String) throws -> String {

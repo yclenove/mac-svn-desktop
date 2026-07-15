@@ -81,3 +81,17 @@ exit_status=3
 3. 以本记录的双架构 Release 包执行 `./scripts/sign-and-notarize.sh`。
 4. 确认公证 JSON 状态为 `Accepted`、stapler validate 与本机 `spctl` 通过。
 5. 将 staple 后重新生成的 `SVNStudio.zip` 复制到未安装 Xcode、未关闭 Gatekeeper 的干净机，完成 [H1 手工清单](H1-manual-checklist.md) 的功能冒烟。
+
+## GP.5 PERFECT 复核
+
+2026-07-15 在独立 `/tmp` 路径重新执行：
+
+```bash
+SVNSTUDIO_DERIVED_DATA_PATH=/tmp/svnstudio-gp5-release-derived \
+SVNSTUDIO_RELEASE_OUT_DIR=/tmp/svnstudio-gp5-release \
+  ./scripts/build-release-app.sh
+```
+
+结果：Xcode Release `BUILD SUCCEEDED`；`verify-macos-app`、Finder Sync、Quick Look、Mach-O 递归依赖、`codesign --verify --deep --strict`、`verify-release-app` 与隔离启动冒烟全部通过。主 App 与两个扩展均为 `arm64 x86_64`，复核产物为 `/tmp/svnstudio-gp5-release/SVNStudio.app`。
+
+真实 WC `/tmp/SVNStudio-GP3-WC.lLlNxk/wc` 仍可写，`svn status` 同时返回 modified 与 unversioned；`security find-identity -v -p codesigning` 仍为 `0 valid identities found`。因此 P-SHIP 按计划以“可安装本机 App 与 Finder 冒烟通过、公证明示阻塞”验收，不把 ad-hoc 包描述为已公证公开分发包。
