@@ -35,7 +35,7 @@
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 - 修改：`Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings`
 
-- [ ] **步骤 1：编写路径边界和属性布局失败测试**
+- [x] **步骤 1：编写路径边界和属性布局失败测试**
 
 新增纯策略测试：
 
@@ -53,7 +53,7 @@ func testAuxiliaryPathPresentationOnlyRelativizesTargetsInsideWorkingCopy() {
 
 在性能守卫增加属性页两种 SplitView 均为 false 的断言。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：
 
@@ -64,7 +64,7 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests/testPropertiesWork
 
 预期：展示策略类型不存在，属性页仍使用 `HSplitView`，测试失败。
 
-- [ ] **步骤 3：实现辅助页尺寸和路径策略**
+- [x] **步骤 3：实现辅助页尺寸和路径策略**
 
 创建：
 
@@ -86,7 +86,7 @@ enum MacSvnAuxiliaryPathPresentation {
 
 使用 `standardizedFileURL`、根路径相等和带 `/` 的子路径前缀判断，禁止相邻目录误命中。
 
-- [ ] **步骤 4：重排属性页**
+- [x] **步骤 4：重排属性页**
 
 将页面拆为：
 
@@ -102,7 +102,7 @@ private var propertyEditor: some View
 
 主区使用 `HStack(spacing: 0)` 和固定 `300 pt` 主栏。主栏增加搜索、结果数、单行中部截断和 tooltip。详情稳定显示 SVN 信息、属性列表/空态和可滚动编辑器；保存为唯一强调按钮，删除继续确认。Finder 绝对路径在消费 pending intent 时先转换为相对路径。
 
-- [ ] **步骤 5：运行属性、性能、Finder 和 Localization 测试**
+- [x] **步骤 5：运行属性、性能、Finder 和 Localization 测试**
 
 运行：
 
@@ -116,9 +116,11 @@ swift test --filter LocalizationResourceTests
 
 预期：全部通过；属性读取/保存/删除、外部定义、信息 generation 隔离和 Finder 深链无回归。
 
-- [ ] **步骤 6：真实窗口验收并提交任务 1**
+- [x] **步骤 6：真实窗口验收并提交任务 1**
 
 在 `980 x 640`、`1180 x 760`、`1440 x 900` 检查根目录、长路径、空属性、已有属性、编辑和错误状态，保存 `artifacts/ui/u7-properties-*.png`。
+
+结果：U7/属性/Finder/性能/Localization 定向回归 `45/45` 通过；Release App 构建和结构校验通过。真实窗口证据为 `u7-properties-dark-980x640.png`、`u7-properties-light-1180x760.png`、`u7-properties-light-reduce-motion-1440x900.png`；截图驱动增加固定编辑器动作栏，保证三档窗口的保存按钮始终可达。
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnAuxiliaryWorkflowPresentation.swift \

@@ -16,6 +16,10 @@ public struct MacSvnPropertiesView: View {
     @State private var loadGeneration = 0
     @State private var name = ""
     @State private var value = ""
+    @State private var searchText = ""
+    @State private var selectedTemplateName = ""
+    @State private var selectedPropertyName: String?
+    @State private var loadedTargetPath: String?
     @State private var statusText: LocalizedStringKey?
     @State private var pendingDeleteProperty: String?
     @State private var showExternalsEditor = false
@@ -37,87 +41,17 @@ public struct MacSvnPropertiesView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("属性")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
-                Button("外部定义…", systemImage: "shippingbox") {
-                    prepareExternalsEditor()
-                }
-                .disabled(viewModel == nil || !selectedTargetIsDirectory)
-                Button("刷新") { Task { await loadProperties() } }
-            }
-            .padding(24)
+            propertiesToolbar
+            propertiesFeedback
 
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                HSplitView {
-                    MacSvnPathPicker(paths: paths, selection: $selected, allowsMultiple: false)
-                        .frame(minWidth: 200)
-                        .onChange(of: selected) { _, _ in
-                            Task { await loadProperties() }
-                        }
-                    VStack(alignment: .leading, spacing: 12) {
-                        if let statusText { Text(statusText).font(.caption).foregroundStyle(.secondary) }
-                        svnInfoPanel
-                        List(viewModel?.properties ?? [], id: \.name) { prop in
-                            VStack(alignment: .leading) {
-                                Text(prop.name).font(.headline)
-                                Text(prop.value).font(.caption.monospaced())
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                name = prop.name
-                                value = prop.value
-                            }
-                            .contextMenu {
-                                Button("删除", role: .destructive) {
-                                    pendingDeleteProperty = prop.name
-                                }
-                            }
-                        }
-                        Form {
-                            Section("新增/修改") {
-                                Picker("模板", selection: $name) {
-                                    Text("自定义").tag("")
-                                    ForEach(availableTemplates, id: \.name) { template in
-                                        Text(template.name).tag(template.name)
-                                    }
-                                }
-                                .onChange(of: name) { _, newValue in
-                                    if let template = availableTemplates.first(where: { $0.name == newValue }) {
-                                        value = template.defaultValue
-                                    }
-                                }
-                                TextField("名称", text: $name)
-                                TextEditor(text: $value)
-                                    .font(.system(.body, design: .monospaced))
-                                    .frame(minHeight: 90, maxHeight: 180)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(Color.secondary.opacity(0.25))
-                                    }
-                                ForEach(Array(propertyDraftDiagnostics.enumerated()), id: \.offset) { _, diagnostic in
-                                    Text(projectPropertyDiagnosticText(diagnostic))
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
-                                Button("保存") {
-                                    Task { await saveProperty() }
-                                }
-                                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                if projectProperties.initialMessage(for: .propset) != nil {
-                                    Button("提交属性更改…") { openCommitWithPropertyTemplate() }
-                                }
-                            }
-                        }
-                        .formStyle(.grouped)
-                    }
-                    .frame(minWidth: 360)
-                }
+                propertiesWorkspace
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             updateExternalsAfterSave = session.settingsSnapshot.general.applyLocalExternalsPropertyChanges
             await reloadPaths()
@@ -156,15 +90,137 @@ public struct MacSvnPropertiesView: View {
         }
     }
 
-    private var svnInfoPanel: some View {
-        GroupBox("SVN 信息") {
+    private var propertiesToolbar: some View {
+        HStack(spacing: 8) {
+            Label("属性", systemImage: "tag")
+                .font(.headline)
+            if let target = selected.first {
+                Text(MacSvnAuxiliaryPathPresentation.title(for: target))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(target)
+            }
+            Spacer(minLength: 8)
+            Button {
+                Task { await loadProperties() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("刷新属性")
+            .accessibilityLabel("刷新属性")
+
+            Menu {
+                Button("外部定义…", systemImage: "shippingbox") {
+                    prepareExternalsEditor()
+                }
+                .disabled(viewModel == nil || !selectedTargetIsDirectory)
+                if projectProperties.initialMessage(for: .propset) != nil {
+                    Button("提交属性更改…", systemImage: "checkmark.circle") {
+                        openCommitWithPropertyTemplate()
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .frame(width: 28, height: 28)
+            }
+            .menuIndicator(.hidden)
+            .menuStyle(.borderlessButton)
+            .help("更多属性操作")
+            .accessibilityLabel("更多属性操作")
+        }
+        .padding(.horizontal, 16)
+        .frame(height: MacSvnAuxiliaryWorkflowMetrics.toolbarHeight)
+        .background(.bar)
+    }
+
+    private var propertiesFeedback: some View {
+        HStack(spacing: 6) {
+            if let statusText {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Text(statusText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .frame(height: MacSvnAuxiliaryWorkflowMetrics.feedbackHeight)
+        .background(Color.secondary.opacity(0.04))
+    }
+
+    private var propertiesWorkspace: some View {
+        HStack(spacing: 0) {
+            propertiesMasterPane
+                .frame(width: MacSvnAuxiliaryWorkflowMetrics.masterWidth)
+            Divider()
+            VStack(spacing: 0) {
+                propertyInspector
+                Divider()
+                propertyList
+                Divider()
+                propertyEditor
+            }
+            .frame(
+                minWidth: MacSvnAuxiliaryWorkflowMetrics.detailMinimumWidth,
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .topLeading
+            )
+        }
+    }
+
+    private var propertiesMasterPane: some View {
+        MacSvnAuxiliaryPathList(
+            paths: paths,
+            selection: $selected,
+            searchText: $searchText,
+            allowsMultiple: false
+        )
+        .onChange(of: selected) { _, _ in
+            Task { await loadProperties() }
+        }
+    }
+
+    private var propertyInspector: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("目标信息")
+                    .font(.headline)
+                Spacer()
+                Text("属性摘要")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(propertySummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
-                infoRow("修订", itemInfo?.revision.map { "r\($0.value)" } ?? "-")
-                infoRow("最后作者", itemInfo?.lastChangedAuthor ?? "-")
-                infoRow("仓库 URL", itemInfo?.url ?? "-")
-                infoRow("工作副本状态", itemStatus?.rawValue ?? "-")
-                infoRow("锁定", lockSummary)
-                infoRow("属性摘要", propertySummary)
+                GridRow {
+                    infoLabel("修订")
+                    infoValue(itemInfo?.revision.map { "r\($0.value)" } ?? "-")
+                    infoLabel("工作副本状态")
+                    infoValue(itemStatus?.rawValue ?? "-")
+                }
+                GridRow {
+                    infoLabel("最后作者")
+                    infoValue(itemInfo?.lastChangedAuthor ?? "-")
+                    infoLabel("锁定")
+                    infoValue(lockSummary)
+                }
+                GridRow {
+                    infoLabel("仓库 URL")
+                    infoValue(itemInfo?.url ?? "-")
+                        .gridCellColumns(3)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let infoError {
@@ -173,13 +229,154 @@ public struct MacSvnPropertiesView: View {
                     .foregroundStyle(.red)
             }
         }
+        .padding(12)
     }
 
-    private func infoRow(_ label: String, _ value: String) -> some View {
-        GridRow {
-            Text(label).foregroundStyle(.secondary)
-            Text(value).textSelection(.enabled)
+    private func infoLabel(_ label: String) -> some View {
+        Text(label)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    private func infoValue(_ value: String) -> some View {
+        Text(value)
+            .font(.callout)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .textSelection(.enabled)
+            .help(value)
+    }
+
+    private var propertyList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("属性列表")
+                    .font(.headline)
+                Spacer()
+                Text("\(viewModel?.properties.count ?? 0)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+
+            if viewModel?.properties.isEmpty != false {
+                ContentUnavailableView("没有属性",
+                    systemImage: "tag.slash",
+                    description: Text("当前目标没有设置 SVN 属性")
+                )
+                .frame(maxWidth: .infinity, minHeight: 92, maxHeight: .infinity)
+            } else {
+                List(selection: $selectedPropertyName) {
+                    ForEach(viewModel?.properties ?? [], id: \.name) { property in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(property.name)
+                                .font(.callout.weight(.semibold))
+                                .lineLimit(1)
+                            Text(property.value.replacingOccurrences(of: "\n", with: " "))
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .help(property.value)
+                        }
+                        .tag(property.name)
+                        .contextMenu {
+                            Button("删除", role: .destructive) {
+                                pendingDeleteProperty = property.name
+                            }
+                        }
+                    }
+                }
+                .listStyle(.inset)
+                .onChange(of: selectedPropertyName) { _, newValue in
+                    selectProperty(named: newValue)
+                }
+            }
         }
+        .frame(minHeight: 130, idealHeight: 170, maxHeight: 190)
+    }
+
+    private var propertyEditor: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("新增/修改属性")
+                        .font(.headline)
+                    Picker("模板", selection: $selectedTemplateName) {
+                        Text("自定义").tag("")
+                        ForEach(availableTemplates, id: \.name) { template in
+                            Text(template.name).tag(template.name)
+                        }
+                    }
+                    .onChange(of: selectedTemplateName) { _, newValue in
+                        if let template = availableTemplates.first(where: { $0.name == newValue }) {
+                            name = template.name
+                            value = template.defaultValue
+                        }
+                    }
+                    TextField("名称", text: $name)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: name) { _, newValue in
+                            if !selectedTemplateName.isEmpty, selectedTemplateName != newValue {
+                                selectedTemplateName = ""
+                            }
+                        }
+                    Text("值")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $value)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 96, idealHeight: 120)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.secondary.opacity(0.25))
+                        }
+                    ForEach(Array(propertyDraftDiagnostics.enumerated()), id: \.offset) { _, diagnostic in
+                        Label(projectPropertyDiagnosticText(diagnostic), systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .padding(12)
+            }
+            Divider()
+            propertyEditorActions
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var propertyEditorActions: some View {
+        HStack {
+            if projectProperties.initialMessage(for: .propset) != nil {
+                Button("提交属性更改…") {
+                    openCommitWithPropertyTemplate()
+                }
+            }
+            Spacer()
+            Button("保存") {
+                Task { await saveProperty() }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(
+                viewModel == nil
+                    || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+    }
+
+    private func selectProperty(named propertyName: String?) {
+        guard let propertyName,
+              let property = viewModel?.properties.first(where: { $0.name == propertyName })
+        else { return }
+        selectedTemplateName = availableTemplates.contains { $0.name == property.name }
+            ? property.name
+            : ""
+        name = property.name
+        value = property.value
     }
 
     private var lockSummary: String {
@@ -293,6 +490,13 @@ public struct MacSvnPropertiesView: View {
         guard let record = workspaceController.selectedRecord,
               let path = selected.first
         else { return }
+        if loadedTargetPath != path {
+            loadedTargetPath = path
+            selectedPropertyName = nil
+            selectedTemplateName = ""
+            name = ""
+            value = ""
+        }
         let vm = PropertyViewModel(
             workingCopy: URL(fileURLWithPath: record.localPath),
             target: path,
@@ -335,28 +539,40 @@ public struct MacSvnPropertiesView: View {
     }
 
     private static func relativeTarget(_ path: String, workingCopy: URL) -> String {
-        guard (path as NSString).isAbsolutePath else { return path }
-        let rootPath = workingCopy.standardizedFileURL.path
-        let targetPath = URL(fileURLWithPath: path).standardizedFileURL.path
-        if targetPath == rootPath { return "." }
-        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
-        guard targetPath.hasPrefix(prefix) else { return path }
-        return String(targetPath.dropFirst(prefix.count))
+        MacSvnAuxiliaryPathPresentation.relativePath(path, workingCopy: workingCopy)
     }
 
     private func consumePendingProperty() async {
         guard let path = navigator.consumePendingPropertyPath() else { return }
-        if !paths.contains(path) {
-            paths.insert(path, at: 0)
+        let target: String
+        if let record = workspaceController.selectedRecord {
+            target = MacSvnAuxiliaryPathPresentation.relativePath(
+                path,
+                workingCopy: URL(fileURLWithPath: record.localPath, isDirectory: true)
+            )
+        } else {
+            target = path
         }
-        selected = [path]
-        statusText = "来自命令：\(path)"
+        if !paths.contains(target) {
+            paths.insert(target, at: 0)
+        }
+        selected = [target]
+        statusText = "来自命令：\(MacSvnAuxiliaryPathPresentation.title(for: target))"
         await loadProperties()
     }
 
     private func consumePendingExternals() async {
         guard let intent = navigator.consumePendingExternalsIntent() else { return }
-        let path = intent.path ?? "."
+        let rawPath = intent.path ?? "."
+        let path: String
+        if let record = workspaceController.selectedRecord {
+            path = MacSvnAuxiliaryPathPresentation.relativePath(
+                rawPath,
+                workingCopy: URL(fileURLWithPath: record.localPath, isDirectory: true)
+            )
+        } else {
+            path = rawPath
+        }
         if !paths.contains(path) { paths.insert(path, at: 0) }
         selected = [path]
         await loadProperties()
@@ -466,6 +682,7 @@ public struct MacSvnPropertiesView: View {
         if case .loaded = viewModel?.state {
             statusText = "已删除 \(propertyName)"
             if name == propertyName {
+                selectedTemplateName = ""
                 name = ""
                 value = ""
             }
