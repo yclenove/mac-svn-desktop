@@ -131,6 +131,26 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
         XCTAssertTrue(source.contains("workspaceState.resetForWorkingCopy()"))
     }
 
+    func testEmbeddedDiffShowsRealNoSelectionAndMovesRareActionsIntoMenu() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnDiffView.swift"
+        )
+        let toolbar = try Self.sourceSection(
+            source,
+            from: "private var embeddedToolbar",
+            to: "private var standaloneToolbar"
+        )
+
+        XCTAssertTrue(source.contains("MacSvnEmbeddedDiffPresentation.resolve"))
+        XCTAssertTrue(source.contains("选择一个文件查看差异"))
+        XCTAssertTrue(source.contains("此文件没有可显示的文本差异"))
+        XCTAssertTrue(
+            source.contains("Label(\"更多 Diff 操作\", systemImage: \"ellipsis.circle\")")
+        )
+        XCTAssertFalse(toolbar.contains("与 URL 比较"))
+        XCTAssertTrue(source.contains("private var moreDiffActionsMenu"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

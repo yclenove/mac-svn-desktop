@@ -47,103 +47,26 @@ public struct MacSvnDiffView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(embedded ? "差异" : "Diff")
-                    .font(embedded ? .headline : .largeTitle.weight(.semibold))
-                Spacer()
-                if !embedded {
-                    diffModePicker
-                        .frame(maxWidth: 220)
-                    TextField("r1", text: $r1Text)
-                        .frame(width: 72)
-                        .textFieldStyle(.roundedBorder)
-                    TextField("r2", text: $r2Text)
-                        .frame(width: 72)
-                        .textFieldStyle(.roundedBorder)
-                    Button("按 revision 加载") {
-                        Task { await reloadSelected() }
-                    }
-                    Button("对比 BASE") {
-                        Task { await loadAgainstBase() }
-                    }
-                    TextField("对比文件", text: $comparePath)
-                        .frame(width: 120)
-                        .textFieldStyle(.roundedBorder)
-                        .help("填写第二路径后点「双文件 Diff」")
-                    Button("双文件 Diff") {
-                        Task { await loadTwoFiles() }
-                    }
-                    .disabled(selectedPath == nil || comparePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("与 URL 比较…") {
-                        prepareURLDiff()
-                    }
-                    Button("外置查看器") {
-                        Task { await openExternal() }
-                    }
-                    .disabled(selectedPath == nil || externalDiffTool == nil)
-                    Button("刷新文件列表") {
-                        Task { await reloadPaths() }
-                    }
-                } else {
-                    diffModePicker
-                        .frame(width: 160)
-                    Button("对比 BASE") {
-                        Task { await loadAgainstBase() }
-                    }
-                    .disabled(selectedPath == nil)
-                    Button("与 URL 比较…") {
-                        prepareURLDiff()
-                    }
-                    Button("外置") {
-                        Task { await openExternal() }
-                    }
-                    .disabled(selectedPath == nil || externalDiffTool == nil)
-                    Button("刷新") {
-                        Task { await reloadSelected() }
-                    }
-                }
-            }
-            .padding(embedded ? 12 : 24)
-
-            if let statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, embedded ? 12 : 24)
-            }
-
-            if let errorText {
-                Text(errorText)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, embedded ? 12 : 24)
+            if embedded {
+                embeddedToolbar
+            } else {
+                standaloneToolbar
             }
 
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
             } else if embedded {
-                diffContent
+                embeddedDiffContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(alignment: .top) {
+                        transientErrorOverlay
+                    }
             } else {
-                HSplitView {
-                    List(paths, id: \.self, selection: $selectedPath) { path in
-                        Text(path)
-                    }
-                    .frame(minWidth: 220)
-                    .onChange(of: selectedPath) { _, newValue in
-                        guard let newValue else { return }
-                        Task {
-                            await refreshExternalTool(for: newValue)
-                            await loadDiff(path: newValue)
-                        }
-                    }
-
-                    diffContent
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+                standaloneContent
             }
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
-            Task { await reloadPaths() }
+            Task { await handleWorkingCopyChange() }
         }
         .onChange(of: externalSelectedPath) { _, newValue in
             guard embedded else { return }
@@ -184,6 +107,193 @@ public struct MacSvnDiffView: View {
         }
         .sheet(isPresented: $showURLDiffSheet) {
             urlDiffSheet
+        }
+    }
+
+    private var embeddedToolbar: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("差异")
+                    .font(.headline)
+                if let selectedPath {
+                    Text(selectedPath)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(selectedPath)
+                } else {
+                    Text("未选择文件")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(minWidth: 92, maxWidth: .infinity, alignment: .leading)
+
+            diffModePicker
+                .frame(width: 144)
+
+            Button {
+                Task { await loadAgainstBase() }
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedPath == nil)
+            .help("与 BASE 比较")
+            .accessibilityLabel("与 BASE 比较")
+
+            Button {
+                Task { await openExternal() }
+            } label: {
+                Image(systemName: "arrow.up.forward.app")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedPath == nil || externalDiffTool == nil)
+            .help("使用外置 Diff 查看器")
+            .accessibilityLabel("使用外置 Diff 查看器")
+
+            Button {
+                Task { await reloadSelected() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedPath == nil)
+            .help("刷新当前差异")
+            .accessibilityLabel("刷新当前差异")
+
+            moreDiffActionsMenu
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(minHeight: 48)
+    }
+
+    private var standaloneToolbar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Text("Diff")
+                    .font(.largeTitle.weight(.semibold))
+                Spacer()
+                diffModePicker
+                    .frame(width: 200)
+                Button("对比 BASE") {
+                    Task { await loadAgainstBase() }
+                }
+                .disabled(selectedPath == nil)
+                Button("外置查看器") {
+                    Task { await openExternal() }
+                }
+                .disabled(selectedPath == nil || externalDiffTool == nil)
+                moreDiffActionsMenu
+            }
+            HStack(spacing: 8) {
+                TextField("r1", text: $r1Text)
+                    .frame(width: 72)
+                    .textFieldStyle(.roundedBorder)
+                TextField("r2", text: $r2Text)
+                    .frame(width: 72)
+                    .textFieldStyle(.roundedBorder)
+                Button("按 revision 加载") {
+                    Task { await reloadSelected() }
+                }
+                TextField("对比文件", text: $comparePath)
+                    .frame(width: 180)
+                    .textFieldStyle(.roundedBorder)
+                Button("双文件 Diff") {
+                    Task { await loadTwoFiles() }
+                }
+                .disabled(
+                    selectedPath == nil
+                        || comparePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+                Spacer()
+                Button("刷新文件列表") {
+                    Task { await reloadPaths() }
+                }
+            }
+            if let statusText {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let errorText {
+                Text(errorText)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+        .padding(24)
+    }
+
+    private var moreDiffActionsMenu: some View {
+        Menu {
+            Button("与 URL 比较…") {
+                prepareURLDiff()
+            }
+            .disabled(selectedPath == nil && externalSelectedPath == nil)
+            if embedded {
+                Button("刷新外置工具配置") {
+                    Task { await refreshExternalTool() }
+                }
+            }
+        } label: {
+            Label("更多 Diff 操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .help("更多 Diff 操作")
+        .accessibilityLabel("更多 Diff 操作")
+    }
+
+    private var standaloneContent: some View {
+        HSplitView {
+            List(paths, id: \.self, selection: $selectedPath) { path in
+                Text(path)
+            }
+            .frame(minWidth: 220)
+            .onChange(of: selectedPath) { _, newValue in
+                guard let newValue else { return }
+                Task {
+                    await refreshExternalTool(for: newValue)
+                    await loadDiff(path: newValue)
+                }
+            }
+
+            diffContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private var transientErrorOverlay: some View {
+        if let errorText {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text(errorText)
+                    .font(.caption)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Button {
+                    self.errorText = nil
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.plain)
+                .help("关闭")
+                .accessibilityLabel("关闭错误提示")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(.regularMaterial)
+            .overlay(alignment: .bottom) { Divider() }
         }
     }
 
@@ -256,73 +366,165 @@ public struct MacSvnDiffView: View {
     }
 
     @ViewBuilder
+    private var embeddedDiffContent: some View {
+        diffPresentationContent
+    }
+
+    @ViewBuilder
     private var diffContent: some View {
-        if let viewModel {
-            switch viewModel.state {
-            case .idle, .loading:
-                ProgressView("加载 diff…")
-            case .binaryUnsupported:
-                ContentUnavailableView("二进制文件", systemImage: "doc.zipper", description: Text("无法显示文本差异"))
-            case .error(let message):
-                ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
-            case .loaded:
-                if embedded, mode == .sideBySide,
-                   DiffPerformanceLimits.shouldUseEmbeddedSideBySide(
-                       rowCount: viewModel.sideBySideRows.count
-                   ) {
-                    embeddedSideBySideContent(viewModel)
-                } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
-                    lineOrRowCount: viewModel.sideBySideRows.count,
-                    embedded: embedded
-                ), mode == .sideBySide {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 4) {
-                            ForEach(viewModel.sideBySideRows) { row in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text(row.left?.text ?? "")
-                                        .font(.system(.caption, design: .monospaced))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(4)
-                                        .background(sideBackground(row.left?.kind))
-                                    Text(row.right?.text ?? "")
-                                        .font(.system(.caption, design: .monospaced))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(4)
-                                        .background(sideBackground(row.right?.kind))
-                                }
-                            }
-                        }
-                        .padding(12)
+        diffPresentationContent
+    }
+
+    @ViewBuilder
+    private var diffPresentationContent: some View {
+        let presentation = MacSvnEmbeddedDiffPresentation.resolve(
+            path: selectedPath,
+            state: viewModel?.state ?? .idle,
+            diffText: viewModel?.diffText ?? ""
+        )
+
+        switch presentation {
+        case .noSelection:
+            ContentUnavailableView(
+                "选择一个文件查看差异",
+                systemImage: "doc.text.magnifyingglass",
+                description: Text("从变更列表选择文件，提交复选框不会影响当前 Diff")
+            )
+        case .loading(let path):
+            VStack(spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("正在加载 \((path as NSString).lastPathComponent)")
+                    .font(.callout)
+                Text(path)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .noChanges:
+            ContentUnavailableView(
+                "此文件没有可显示的文本差异",
+                systemImage: "checkmark.circle",
+                description: Text("可以尝试与 BASE、其他 URL 比较，或使用外置查看器")
+            )
+        case .loaded:
+            if let viewModel {
+                loadedDiffContent(viewModel)
+            }
+        case .binary(_, let details):
+            ContentUnavailableView {
+                Label("二进制文件", systemImage: "doc.zipper")
+            } description: {
+                Text(binaryDetailsDescription(details))
+            } actions: {
+                Button("使用外置查看器") {
+                    Task { await openExternal() }
+                }
+                .disabled(externalDiffTool == nil)
+            }
+        case .error(_, let message):
+            ContentUnavailableView {
+                Label("无法加载差异", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(message)
+            } actions: {
+                HStack {
+                    Button("重试") {
+                        Task { await reloadSelected() }
                     }
-                } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
-                    lineOrRowCount: viewModel.lines.count,
-                    embedded: embedded
-                ), mode == .unified {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(viewModel.lines) { line in
-                                Text(line.text)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(color(for: line.kind))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(background(for: line.kind))
-                            }
+                    if externalDiffTool != nil {
+                        Button("使用外置查看器") {
+                            Task { await openExternal() }
                         }
-                        .padding(12)
-                    }
-                } else {
-                    // 嵌入工作区 / 超大 Diff：单块文本，避免 AttributeGraph 死循环
-                    ScrollView([.vertical, .horizontal]) {
-                        Text(DiffPerformanceLimits.truncatedDisplayText(viewModel.diffText))
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(12)
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func loadedDiffContent(_ viewModel: DiffViewModel) -> some View {
+        if embedded, mode == .sideBySide,
+           DiffPerformanceLimits.shouldUseEmbeddedSideBySide(
+               rowCount: viewModel.sideBySideRows.count
+           ) {
+            embeddedSideBySideContent(viewModel)
+        } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
+            lineOrRowCount: viewModel.sideBySideRows.count,
+            embedded: embedded
+        ), mode == .sideBySide {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    ForEach(viewModel.sideBySideRows) { row in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(row.left?.text ?? "")
+                                .font(.system(.caption, design: .monospaced))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(4)
+                                .background(sideBackground(row.left?.kind))
+                            Text(row.right?.text ?? "")
+                                .font(.system(.caption, design: .monospaced))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(4)
+                                .background(sideBackground(row.right?.kind))
+                        }
+                    }
+                }
+                .padding(12)
+            }
+        } else if DiffPerformanceLimits.shouldUsePerLineSwiftUI(
+            lineOrRowCount: viewModel.lines.count,
+            embedded: embedded
+        ), mode == .unified {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(viewModel.lines) { line in
+                        Text(line.text)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(color(for: line.kind))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(background(for: line.kind))
+                    }
+                }
+                .padding(12)
+            }
         } else {
-            ContentUnavailableView("选择文件", systemImage: "doc.text.magnifyingglass", description: Text("从左侧选择变更文件查看 diff"))
+            // 嵌入工作区 / 超大 Diff：单块文本，避免 AttributeGraph 死循环。
+            ScrollView([.vertical, .horizontal]) {
+                Text(DiffPerformanceLimits.truncatedDisplayText(viewModel.diffText))
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(12)
+            }
+        }
+    }
+
+    private func binaryDetailsDescription(_ details: BinaryFileDetails?) -> String {
+        guard let details else { return "无法显示文本差异，请使用外置查看器" }
+        var parts: [String] = ["无法显示文本差异"]
+        if let size = details.size {
+            parts.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+        }
+        if let modifiedAt = details.modifiedAt {
+            parts.append(modifiedAt.formatted(date: .abbreviated, time: .shortened))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func handleWorkingCopyChange() async {
+        errorText = nil
+        statusText = nil
+        if embedded {
+            paths = []
+            selectedPath = nil
+            viewModel = nil
+            await ensureViewModel()
+            await refreshExternalTool()
+        } else {
+            await reloadPaths()
         }
     }
 

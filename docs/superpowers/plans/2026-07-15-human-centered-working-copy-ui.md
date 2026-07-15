@@ -412,7 +412,7 @@ git commit -m "feat(UI): 重构变更面板与提交选择"
 - 修改：`Tests/MacSvnAppTests/HumanCenteredWorkingCopyWorkspaceTests.swift`
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 
-- [ ] **步骤 1：增加 Diff 空态和工具层级失败测试**
+- [x] **步骤 1：增加 Diff 空态和工具层级失败测试**
 
 ```swift
 func testEmbeddedDiffShowsRealNoSelectionAndMovesRareActionsIntoMenu() throws {
@@ -426,13 +426,13 @@ func testEmbeddedDiffShowsRealNoSelectionAndMovesRareActionsIntoMenu() throws {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：`swift test --filter HumanCenteredWorkingCopyWorkspaceTests/testEmbeddedDiffShowsRealNoSelectionAndMovesRareActionsIntoMenu`
 
 预期：源码断言失败。
 
-- [ ] **步骤 3：实现嵌入式 Diff 状态渲染**
+- [x] **步骤 3：实现嵌入式 Diff 状态渲染**
 
 ```swift
 @ViewBuilder
@@ -461,11 +461,11 @@ private var embeddedDiffContent: some View {
 
 空闲无路径必须先命中 `.noSelection`。重试按钮重新加载当前 path，错误状态保留外部工具入口。
 
-- [ ] **步骤 4：压缩 Diff 工具栏**
+- [x] **步骤 4：压缩 Diff 工具栏**
 
 固定展示模式 Picker、对比 BASE、外置查看和刷新；“与 URL 比较”移入 `moreDiffActionsMenu`。按钮使用 SF Symbols、tooltip、accessibility label，状态文本不再插入额外高度行。
 
-- [ ] **步骤 5：运行 Diff 与性能测试**
+- [x] **步骤 5：运行 Diff 与性能测试**
 
 运行：
 
@@ -478,7 +478,7 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 
 预期：全部通过，超大 Diff 仍使用 `DiffPerformanceLimits`。
 
-- [ ] **步骤 6：提交 Diff 切片**
+- [x] **步骤 6：提交 Diff 切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnDiffView.swift \
