@@ -139,11 +139,11 @@ git commit -m "feat(UI): 重构人本属性工作流（U7 任务 1/6）"
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 - 修改：`Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings`
 
-- [ ] **步骤 1：编写锁布局和动作资格失败测试**
+- [x] **步骤 1：编写锁布局和动作资格失败测试**
 
 源码契约要求 `locksToolbar`、`locksMasterPane`、`lockDetailPane`、`eligibleReleasePaths`、`eligibleBreakPaths`、锁空态和 `HStack(spacing: 0)`；禁止 SplitView。保留 `LockActionPolicy.pathsEligibleForRelease` / `pathsEligibleForBreak`、项目属性模板、夺锁和打断锁确认。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests/testLocksUseTargetMasterDetailAndQualificationDrivenActions
@@ -152,15 +152,15 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests/testLocksWorkspace
 
 预期：旧页仍平铺四个动作并使用 `HSplitView`，测试失败。
 
-- [ ] **步骤 3：实现锁主从布局和稳定状态**
+- [x] **步骤 3：实现锁主从布局和稳定状态**
 
 目标主栏复用辅助路径标题规则，增加搜索和选择数。详情显示锁记录、所有者、创建时间、注释及明确空态。固定主操作只保留“获取锁”；释放和打断根据资格数组进入动作菜单，按钮 disabled 与实际执行使用同一数组。
 
-- [ ] **步骤 4：保持获取锁和高危确认语义**
+- [x] **步骤 4：保持获取锁和高危确认语义**
 
 获取锁 sheet 继续加载模板和最小说明长度；busy 时禁用取消以外的重复动作。夺锁、打断锁继续通过不可绕过的 confirmation dialog，取消时清理 pending confirmation。
 
-- [ ] **步骤 5：运行锁、导航、性能和 Localization 测试**
+- [x] **步骤 5：运行锁、导航、性能和 Localization 测试**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests
@@ -170,9 +170,11 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 swift test --filter LocalizationResourceTests
 ```
 
-- [ ] **步骤 6：真实窗口验收并提交任务 2**
+- [x] **步骤 6：真实窗口验收并提交任务 2**
 
 检查无锁、本 WC 锁、他人锁、多选、获取 sheet、夺锁和打断确认，保存 `artifacts/ui/u7-locks-*.png`。
+
+结果：U7/锁 ViewModel/锁动作策略/导航/性能/Localization 定向门禁 `75/75` 通过；Release App 构建和结构校验通过。真实窗口证据为 `u7-locks-dark-980x640.png`、`u7-locks-light-1180x760.png`、`u7-locks-light-reduce-motion-1440x900.png`、`u7-locks-get-sheet-dark.png`；获取锁 sheet 同时提供醒目的右上角关闭按钮、取消和默认动作。释放锁的 UI 资格进一步收紧为必须存在明确的“本工作副本持有锁”记录，缺少证据时不允许以 release 试探仓库状态。
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnLocksView.swift \

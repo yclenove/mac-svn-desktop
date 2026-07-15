@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import MacSvnApp
+import MacSvnCore
 
 final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
     func testAuxiliaryMetricsKeepMasterAndDetailReadable() {
@@ -65,6 +66,74 @@ final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
         XCTAssertTrue(source.contains("MacSvnAuxiliaryPathPresentation.relativePath("))
         XCTAssertFalse(source.contains("HSplitView {"))
         XCTAssertFalse(source.contains("VSplitView {"))
+    }
+
+    func testLocksUseTargetMasterDetailAndQualificationDrivenActions() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnLocksView.swift")
+
+        XCTAssertTrue(source.contains("@State private var searchText"))
+        XCTAssertTrue(source.contains("@State private var isApplyingLockIntent"))
+        XCTAssertTrue(source.contains("private var locksToolbar"))
+        XCTAssertTrue(source.contains("private var locksFeedback"))
+        XCTAssertTrue(source.contains("private var locksWorkspace"))
+        XCTAssertTrue(source.contains("private var locksMasterPane"))
+        XCTAssertTrue(source.contains("private var lockDetailPane"))
+        XCTAssertTrue(source.contains("private var eligibleReleasePaths"))
+        XCTAssertTrue(source.contains("private var eligibleBreakPaths"))
+        XCTAssertTrue(source.contains("MacSvnAuxiliaryPathList("))
+        XCTAssertTrue(source.contains("MacSvnAuxiliaryWorkflowMetrics.masterWidth"))
+        XCTAssertTrue(source.contains("ContentUnavailableView(\"没有锁记录\""))
+        XCTAssertTrue(source.contains(".buttonStyle(.borderedProminent)"))
+        XCTAssertTrue(source.contains("MacSvnLockActionPresentation.eligibleReleasePaths("))
+        XCTAssertTrue(source.contains("LockActionPolicy.pathsEligibleForBreak("))
+        XCTAssertTrue(source.contains("guard !isApplyingLockIntent else { return }"))
+        XCTAssertTrue(source.contains("确认夺锁（svn lock --force）"))
+        XCTAssertTrue(source.contains("确认打断锁（svn unlock --force）"))
+        XCTAssertFalse(source.contains("HSplitView {"))
+        XCTAssertFalse(source.contains("VSplitView {"))
+    }
+
+    func testLockActionPresentationRequiresOwnedLockEvidenceBeforeOfferingRelease() {
+        let owned = SvnLock(
+            target: "owned.txt",
+            token: "token",
+            owner: "me",
+            comment: nil,
+            created: nil,
+            isOwnedByWorkingCopy: true,
+            isRepositoryLocked: true
+        )
+        let other = SvnLock(
+            target: "other.txt",
+            token: nil,
+            owner: "other",
+            comment: nil,
+            created: nil,
+            isOwnedByWorkingCopy: false,
+            isRepositoryLocked: true
+        )
+
+        XCTAssertEqual(
+            MacSvnLockActionPresentation.eligibleReleasePaths(
+                selected: ["owned.txt"],
+                locks: []
+            ),
+            []
+        )
+        XCTAssertEqual(
+            MacSvnLockActionPresentation.eligibleReleasePaths(
+                selected: ["owned.txt", "other.txt"],
+                locks: [owned, other]
+            ),
+            ["owned.txt"]
+        )
+        XCTAssertEqual(
+            MacSvnLockActionPresentation.eligibleReleasePaths(
+                selected: ["other.txt"],
+                locks: [owned, other]
+            ),
+            []
+        )
     }
 
     private static func readFeatureSource(named fileName: String) throws -> String {

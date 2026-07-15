@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import MacSvnCore
 
 enum MacSvnAuxiliaryWorkflowMetrics {
     static let toolbarHeight: CGFloat = 48
@@ -25,6 +26,13 @@ enum MacSvnAuxiliaryPathPresentation {
 
     static func title(for path: String) -> String {
         path == "." ? "工作副本根目录" : path
+    }
+}
+
+enum MacSvnLockActionPresentation {
+    static func eligibleReleasePaths(selected: [String], locks: [SvnLock]) -> [String] {
+        guard !locks.isEmpty else { return [] }
+        return LockActionPolicy.pathsEligibleForRelease(selected: selected, locks: locks)
     }
 }
 

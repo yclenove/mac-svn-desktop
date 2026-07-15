@@ -543,7 +543,7 @@
 "节点详情" = "Node Details";
 "范围" = "Scope";
 "获取锁" = "Get Lock";
-"获取锁…" = "Fetching lock...";
+"获取锁…" = "Get Lock...";
 "获取锁前显示对话框" = "Show dialog before getting lock";
 "覆盖 %@/%@" = "Coverage %1$@/%2$@";
 "视图" = "View";
@@ -955,6 +955,18 @@
 "当前目标没有设置 SVN 属性" = "The current target has no SVN properties.";
 "新增/修改属性" = "Add or Edit Property";
 "值" = "Value";
+"全部目标" = "All Targets";
+"刷新锁记录" = "Refresh Locks";
+"更多锁操作" = "More Lock Actions";
+"正在刷新锁记录" = "Refreshing Locks";
+"锁记录" = "Locks";
+"没有锁记录" = "No Locks";
+"当前工作副本没有锁记录" = "The current working copy has no locks.";
+"所选目标没有锁记录" = "The selected targets have no locks.";
+"未知所有者" = "Unknown Owner";
+"所有者" = "Owner";
+"创建时间" = "Created";
+"注释" = "Comment";
 "%@ 个冲突" = "%@ conflicts";
 "先运行 Dry-run 预览，确认后再执行合并" = "Run a Dry-run preview before executing the merge";
 "加载冲突失败" = "Failed to Load Conflicts";

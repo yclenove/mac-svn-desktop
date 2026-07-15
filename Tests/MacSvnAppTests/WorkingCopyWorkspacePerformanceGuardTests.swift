@@ -59,6 +59,19 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testLocksWorkspaceAvoidsSplitViews() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnLocksView.swift")
+
+        XCTAssertFalse(
+            source.contains("HSplitView {"),
+            "锁目标与详情禁止自由 HSplitView，应使用稳定 HStack"
+        )
+        XCTAssertFalse(
+            source.contains("VSplitView {"),
+            "锁列表和详情禁止自由 VSplitView，应使用稳定 VStack"
+        )
+    }
+
     func testEmbeddedDiffPathUsesPerformanceLimitsAPI() throws {
         let source = try Self.readFeatureSource(named: "MacSvnDiffView.swift")
         XCTAssertTrue(

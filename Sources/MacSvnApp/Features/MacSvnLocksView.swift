@@ -9,6 +9,8 @@ public struct MacSvnLocksView: View {
 
     @State private var paths: [String] = []
     @State private var selected: Set<String> = []
+    @State private var searchText = ""
+    @State private var selectedLockTarget: String?
     @State private var viewModel: LockViewModel?
     @State private var message = ""
     @State private var automaticTemplateMessage: String?
@@ -18,7 +20,9 @@ public struct MacSvnLocksView: View {
     @State private var confirmSteal = false
     @State private var confirmBreak = false
     @State private var pendingConfirmPaths: [String] = []
+    @State private var isApplyingLockIntent = false
     @State private var lockIntentTask: Task<Void, Never>?
+    @State private var targetRefreshTask: Task<Void, Never>?
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -32,89 +36,17 @@ public struct MacSvnLocksView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Text("锁定")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
-                Button("刷新") { Task { await reload() } }
-                    .disabled(isBusy)
-                Button("获取锁…") {
-                    requestGetLock()
-                }
-                .disabled(selected.isEmpty || isBusy)
-                Button("释放锁") {
-                    Task { await runRelease() }
-                }
-                .disabled(selected.isEmpty || isBusy)
-                Button("打断锁…", role: .destructive) {
-                    pendingConfirmPaths = LockActionPolicy.pathsEligibleForBreak(
-                        selected: Array(selected),
-                        locks: viewModel?.locks ?? []
-                    )
-                    confirmBreak = true
-                }
-                .disabled(selected.isEmpty || isBusy)
-            }
-            .padding(24)
-
-            if let statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
-            }
+            locksToolbar
+            locksFeedback
 
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                HSplitView {
-                    MacSvnPathPicker(paths: paths, selection: $selected)
-                        .frame(minWidth: 220)
-                        .disabled(isBusy)
-                    List(viewModel?.locks ?? [], id: \.target) { lock in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(lock.target).font(.headline)
-                                Spacer()
-                                Text(lockBadge(lock))
-                                    .font(.caption2.weight(.semibold))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(lockBadgeColor(lock).opacity(0.15))
-                                    .foregroundStyle(lockBadgeColor(lock))
-                                    .clipShape(Capsule())
-                            }
-                            Text("所有者：\(lock.owner ?? "-")")
-                                .font(.caption)
-                            if let comment = lock.comment, !comment.isEmpty {
-                                Text(comment)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .contextMenu {
-                            Button("获取锁…") {
-                                selected = [lock.target]
-                                requestGetLock()
-                            }
-                            if lock.isOwnedByWorkingCopy {
-                                Button("释放锁") {
-                                    selected = [lock.target]
-                                    Task { await runRelease() }
-                                }
-                            }
-                            if lock.isRepositoryLocked {
-                                Button("打断锁…", role: .destructive) {
-                                    selected = [lock.target]
-                                    pendingConfirmPaths = [lock.target]
-                                    confirmBreak = true
-                                }
-                            }
-                        }
-                    }
-                }
+                locksWorkspace
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             await bootstrap()
             enqueueConsumePendingLockIntent()
@@ -125,13 +57,9 @@ public struct MacSvnLocksView: View {
         .onChange(of: navigator.pendingLockIntent) { _, _ in
             enqueueConsumePendingLockIntent()
         }
-        .onChange(of: selected) { _, newSelection in
-            guard let viewModel else { return }
-            let targets = newSelection.isEmpty ? paths : Array(newSelection)
-            Task {
-                await viewModel.refreshProjectProperties(for: targets)
-                applyLockTemplate(viewModel.projectProperties.lock.initialMessage)
-            }
+        .onChange(of: selected) { _, _ in
+            guard !isApplyingLockIntent else { return }
+            enqueueTargetRefresh()
         }
         .sheet(isPresented: $showGetLockSheet) {
             getLockSheet
@@ -172,6 +100,251 @@ public struct MacSvnLocksView: View {
                 viewModel?.cancelConfirmation()
             }
         }
+    }
+
+    private var locksToolbar: some View {
+        HStack(spacing: 8) {
+            Label("锁定", systemImage: "lock")
+                .font(.headline)
+            Text(selected.isEmpty ? "全部目标" : "已选 \(selected.count) 项")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button {
+                Task { await reload() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("刷新锁记录")
+            .accessibilityLabel("刷新锁记录")
+            .disabled(isBusy)
+
+            Button("获取锁", systemImage: "lock.fill") {
+                requestGetLock()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(selected.isEmpty || isBusy)
+
+            Menu {
+                Button("释放锁", systemImage: "lock.open") {
+                    Task { await runRelease() }
+                }
+                .disabled(eligibleReleasePaths.isEmpty || isBusy)
+                Divider()
+                Button("打断锁…", systemImage: "lock.slash", role: .destructive) {
+                    pendingConfirmPaths = eligibleBreakPaths
+                    confirmBreak = true
+                }
+                .disabled(eligibleBreakPaths.isEmpty || isBusy)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .frame(width: 28, height: 28)
+            }
+            .menuIndicator(.hidden)
+            .menuStyle(.borderlessButton)
+            .help("更多锁操作")
+            .accessibilityLabel("更多锁操作")
+        }
+        .padding(.horizontal, 16)
+        .frame(height: MacSvnAuxiliaryWorkflowMetrics.toolbarHeight)
+        .background(.bar)
+    }
+
+    private var locksFeedback: some View {
+        HStack(spacing: 6) {
+            if isBusy {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("正在刷新锁记录")
+            } else if let statusText {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Text(statusText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .frame(height: MacSvnAuxiliaryWorkflowMetrics.feedbackHeight)
+        .background(Color.secondary.opacity(0.04))
+    }
+
+    private var locksWorkspace: some View {
+        HStack(spacing: 0) {
+            locksMasterPane
+                .frame(width: MacSvnAuxiliaryWorkflowMetrics.masterWidth)
+            Divider()
+            lockDetailPane
+                .frame(
+                    minWidth: MacSvnAuxiliaryWorkflowMetrics.detailMinimumWidth,
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .topLeading
+                )
+        }
+    }
+
+    private var locksMasterPane: some View {
+        MacSvnAuxiliaryPathList(
+            paths: paths,
+            selection: $selected,
+            searchText: $searchText
+        )
+        .disabled(isBusy)
+    }
+
+    private var lockDetailPane: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("锁记录")
+                    .font(.headline)
+                Spacer()
+                Text("\(viewModel?.locks.count ?? 0)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 36)
+
+            Divider()
+
+            if viewModel?.locks.isEmpty != false {
+                ContentUnavailableView("没有锁记录",
+                    systemImage: "lock.open",
+                    description: Text(selected.isEmpty ? "当前工作副本没有锁记录" : "所选目标没有锁记录")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(selection: $selectedLockTarget) {
+                    ForEach(viewModel?.locks ?? [], id: \.target) { lock in
+                        lockRow(lock)
+                            .tag(lock.target)
+                            .contextMenu { lockContextMenu(lock) }
+                    }
+                }
+                .listStyle(.inset)
+
+                if let selectedLock {
+                    Divider()
+                    lockInspector(selectedLock)
+                }
+            }
+        }
+    }
+
+    private func lockRow(_ lock: SvnLock) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(MacSvnAuxiliaryPathPresentation.title(for: lock.target))
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(lock.target)
+                Spacer()
+                Label(lockBadge(lock), systemImage: lockBadgeSystemImage(lock))
+                    .labelStyle(.titleAndIcon)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(lockBadgeColor(lock))
+            }
+            HStack(spacing: 10) {
+                Text(lock.owner ?? "未知所有者")
+                if let created = lock.created {
+                    Text(created.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            if let comment = lock.comment, !comment.isEmpty {
+                Text(comment)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(comment)
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
+    @ViewBuilder
+    private func lockContextMenu(_ lock: SvnLock) -> some View {
+        Button("获取锁…") {
+            selected = [lock.target]
+            requestGetLock()
+        }
+        if lock.isOwnedByWorkingCopy {
+            Button("释放锁") {
+                selected = [lock.target]
+                Task { await runRelease() }
+            }
+        }
+        if lock.isRepositoryLocked {
+            Button("打断锁…", role: .destructive) {
+                selected = [lock.target]
+                pendingConfirmPaths = [lock.target]
+                confirmBreak = true
+            }
+        }
+    }
+
+    private func lockInspector(_ lock: SvnLock) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(lockBadge(lock), systemImage: lockBadgeSystemImage(lock))
+                    .font(.headline)
+                    .foregroundStyle(lockBadgeColor(lock))
+                Spacer()
+            }
+            LabeledContent("路径") {
+                Text(lock.target)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                    .help(lock.target)
+            }
+            LabeledContent("所有者", value: lock.owner ?? "未知")
+            LabeledContent(
+                "创建时间",
+                value: lock.created?.formatted(date: .abbreviated, time: .shortened) ?? "未知"
+            )
+            if let comment = lock.comment, !comment.isEmpty {
+                LabeledContent("注释") {
+                    Text(comment)
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                        .help(comment)
+                }
+            }
+        }
+        .font(.callout)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var selectedLock: SvnLock? {
+        guard let selectedLockTarget else { return nil }
+        return viewModel?.locks.first { $0.target == selectedLockTarget }
+    }
+
+    private var eligibleReleasePaths: [String] {
+        MacSvnLockActionPresentation.eligibleReleasePaths(
+            selected: Array(selected),
+            locks: viewModel?.locks ?? []
+        )
+    }
+
+    private var eligibleBreakPaths: [String] {
+        LockActionPolicy.pathsEligibleForBreak(
+            selected: Array(selected),
+            locks: viewModel?.locks ?? []
+        )
     }
 
     private var isBusy: Bool {
@@ -224,9 +397,13 @@ public struct MacSvnLocksView: View {
     }
 
     private func bootstrap() async {
+        targetRefreshTask?.cancel()
+        viewModel = nil
+        selected = []
+        selectedLockTarget = nil
+        searchText = ""
         guard let record = workspaceController.selectedRecord, record.isValid else {
             paths = []
-            viewModel = nil
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
@@ -267,7 +444,12 @@ public struct MacSvnLocksView: View {
     private func syncStatus() async {
         guard let viewModel else {
             statusText = nil
+            selectedLockTarget = nil
             return
+        }
+        let lockTargets = Set(viewModel.locks.map(\.target))
+        if selectedLockTarget == nil || !lockTargets.contains(selectedLockTarget ?? "") {
+            selectedLockTarget = viewModel.locks.first?.target
         }
         if case .error(let message) = viewModel.state {
             statusText = LocalizedStringKey(message)
@@ -284,7 +466,9 @@ public struct MacSvnLocksView: View {
                 statusText = "等待确认"
             }
         } else {
-            statusText = "锁记录 \(viewModel.locks.count)"
+            statusText = viewModel.locks.isEmpty
+                ? "没有锁记录"
+                : "锁记录 \(viewModel.locks.count)"
         }
     }
 
@@ -330,10 +514,7 @@ public struct MacSvnLocksView: View {
     }
 
     private func runRelease() async {
-        let paths = LockActionPolicy.pathsEligibleForRelease(
-            selected: Array(selected),
-            locks: viewModel?.locks ?? []
-        )
+        let paths = eligibleReleasePaths
         guard !paths.isEmpty else {
             statusText = "选中路径中没有本工作副本持有的锁"
             return
@@ -349,6 +530,26 @@ public struct MacSvnLocksView: View {
         }
     }
 
+    private func enqueueTargetRefresh() {
+        guard let viewModel else { return }
+        targetRefreshTask?.cancel()
+        let selectionSnapshot = selected
+        let projectPropertyTargets = selectionSnapshot.isEmpty
+            ? paths
+            : Array(selectionSnapshot).sorted()
+        let lockTargets = selectionSnapshot.isEmpty
+            ? []
+            : Array(selectionSnapshot).sorted()
+        targetRefreshTask = Task {
+            await viewModel.refreshProjectProperties(for: projectPropertyTargets)
+            guard !Task.isCancelled, selectionSnapshot == selected else { return }
+            applyLockTemplate(viewModel.projectProperties.lock.initialMessage)
+            await viewModel.load(targets: lockTargets)
+            guard !Task.isCancelled, selectionSnapshot == selected else { return }
+            await syncStatus()
+        }
+    }
+
     private func consumePendingLockIntent() async {
         guard navigator.pendingLockIntent != nil else { return }
         let intent = navigator.consumePendingLockIntent()
@@ -361,6 +562,9 @@ public struct MacSvnLocksView: View {
             return
         }
 
+        targetRefreshTask?.cancel()
+        isApplyingLockIntent = true
+        defer { isApplyingLockIntent = false }
         selected = Set(pendingPaths)
         statusText = "来自变更区：\(intentLabel(intent))"
         await reload()
@@ -372,10 +576,7 @@ public struct MacSvnLocksView: View {
         case .releaseLock:
             await runRelease()
         case .breakLock:
-            pendingConfirmPaths = LockActionPolicy.pathsEligibleForBreak(
-                selected: Array(selected),
-                locks: viewModel?.locks ?? []
-            )
+            pendingConfirmPaths = eligibleBreakPaths
             if pendingConfirmPaths.isEmpty {
                 statusText = "选中路径中没有可打断的仓库锁"
             } else {
@@ -406,6 +607,10 @@ public struct MacSvnLocksView: View {
             return "他人"
         }
         return "锁"
+    }
+
+    private func lockBadgeSystemImage(_ lock: SvnLock) -> String {
+        lock.isOwnedByWorkingCopy ? "lock.fill" : "lock"
     }
 
     private func lockBadgeColor(_ lock: SvnLock) -> Color {
