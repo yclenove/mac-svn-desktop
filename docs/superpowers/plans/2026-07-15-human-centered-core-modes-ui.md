@@ -280,7 +280,7 @@ git commit -m "feat(UI): 统一历史模式筛选与动作层级（U6 任务 2/6
 - 修改：`Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift`
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 
-- [ ] **步骤 1：增加响应式目录/详情和双击导航失败测试**
+- [x] **步骤 1：增加响应式目录/详情和双击导航失败测试**
 
 ```swift
 func testRepositoryBrowserPrioritizesDirectoryAndUsesResponsiveInspector() throws {
@@ -301,7 +301,7 @@ func testRepositoryBrowserPrioritizesDirectoryAndUsesResponsiveInspector() throw
 
 扩展性能守卫：读取 `MacSvnRepoBrowserView.swift`，断言不包含 `HSplitView {` 或 `VSplitView {`。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：
 
@@ -312,11 +312,11 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 
 预期：源码断言失败，Repo Browser 仍为固定三栏 `HSplitView`。
 
-- [ ] **步骤 3：重排地址工具栏和远端动作**
+- [x] **步骤 3：重排地址工具栏和远端动作**
 
 顶栏改为紧凑 URL 输入、前往图标、刷新、`favoritesMenu` 和仓库操作菜单。目录操作栏只固定“新建目录”；删除/复制/移动/重命名进入 `selectedEntryActionsMenu`，保留原 disabled 条件和 sheet 流程。
 
-- [ ] **步骤 4：实现 regular/compact 工作区**
+- [x] **步骤 4：实现 regular/compact 工作区**
 
 body 使用 `GeometryReader`，调用：
 
@@ -338,25 +338,27 @@ private func repositoryWorkspace(width: CGFloat) -> some View {
 
 compact 工具栏增加“详情”图标，popover 内复用 `detailPane` 并接入 `.macSvnDismissiblePopover()`。收藏始终通过菜单访问，不再常驻 sidebar。
 
-- [ ] **步骤 5：分离选择与目录导航**
+- [x] **步骤 5：分离选择与目录导航**
 
 List selection setter 只设置 `selectedEntry` 并触发文件预览；目录行增加 `.onTapGesture(count: 2) { Task { await openDirectory(entry) } }`。`openDirectory` 只处理 `.directory`，加载 child URL 成功后更新 `rootURL` 并清空旧 selection/preview。
 
-- [ ] **步骤 6：运行 Repo Browser 与真实命令测试**
+- [x] **步骤 6：运行 Repo Browser 与真实命令测试**
 
 运行：
 
 ```bash
 swift test --filter HumanCenteredCoreModesTests
-swift test --filter RepositoryBrowserViewModelTests
-swift test --filter RepositoryTransferViewModelTests
+swift test --filter RepoBrowserViewModelTests
+swift test --filter CheckoutViewModelTests
+swift test --filter CreateRepositoryViewModelTests
 swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 swift test --filter LocalizationResourceTests
+swift test
 ```
 
 预期：全部通过；收藏、预览、锁、Checkout、远端写、传输和 Create Repository 保持可达。
 
-- [ ] **步骤 7：提交仓库浏览切片**
+- [x] **步骤 7：提交仓库浏览切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnRepoBrowserView.swift \

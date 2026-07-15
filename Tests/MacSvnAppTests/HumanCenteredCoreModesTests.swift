@@ -63,6 +63,21 @@ final class HumanCenteredCoreModesTests: XCTestCase {
         XCTAssertTrue(detailActions.contains("Menu"))
     }
 
+    func testRepositoryBrowserPrioritizesDirectoryAndUsesResponsiveInspector() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnRepoBrowserView.swift"
+        )
+
+        XCTAssertTrue(source.contains("GeometryReader"))
+        XCTAssertTrue(source.contains("private func repositoryWorkspace(width:"))
+        XCTAssertTrue(source.contains("private var favoritesMenu"))
+        XCTAssertTrue(source.contains("private var selectedEntryActionsMenu"))
+        XCTAssertTrue(source.contains("@State private var showInspectorPopover"))
+        XCTAssertTrue(source.contains(".onTapGesture(count: 2)"))
+        XCTAssertTrue(source.contains("private func openDirectory("))
+        XCTAssertFalse(source.contains("HSplitView"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

@@ -12,6 +12,8 @@ public struct MacSvnRepoBrowserView: View {
     @State private var checkoutVM: CheckoutViewModel?
     @State private var rootURL: String = ""
     @State private var selectedEntry: RemoteEntry?
+    @State private var showInspectorPopover = false
+    @State private var pendingDirectoryURL: String?
     @State private var selectedDepth: SvnDepth = .infinity
     @State private var checkoutRevisionText = ""
     @State private var checkoutIgnoreExternals = false
@@ -74,15 +76,12 @@ public struct MacSvnRepoBrowserView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            HSplitView {
-                sidebar
-                    .frame(minWidth: 220)
-                centerPane
-                    .frame(minWidth: 280)
-                detailPane
-                    .frame(minWidth: 280)
+        GeometryReader { geometry in
+            let widthClass = MacSvnCoreModeWidthClass.resolve(width: geometry.size.width)
+            VStack(alignment: .leading, spacing: 0) {
+                repositoryToolbar(widthClass: widthClass)
+                Divider()
+                repositoryWorkspace(width: geometry.size.width)
             }
         }
         .task { await bootstrap() }
@@ -132,45 +131,123 @@ public struct MacSvnRepoBrowserView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            Text("仓库浏览器")
-                .font(.largeTitle.weight(.semibold))
-            Spacer()
+    private func repositoryToolbar(widthClass: MacSvnCoreModeWidthClass) -> some View {
+        HStack(spacing: 8) {
+            Label("仓库浏览", systemImage: "shippingbox")
+                .font(.headline)
+                .lineLimit(1)
             TextField("仓库 URL", text: $rootURL)
                 .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 420)
-            Button("浏览") {
+                .onSubmit { Task { await openRoot() } }
+                .frame(minWidth: 180, idealWidth: 420, maxWidth: .infinity)
+            Button {
                 Task { await openRoot() }
+            } label: {
+                Image(systemName: "arrow.right.circle")
+                    .frame(width: 28, height: 28)
             }
-            Button("收藏") {
-                Task { await browserVM?.addBookmark(url: rootURL) }
+            .buttonStyle(.plain)
+            .disabled(browserVM == nil || rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .help("前往仓库 URL")
+            .accessibilityLabel("前往仓库 URL")
+            Button {
+                Task { await openRoot() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
             }
-            .disabled(rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            Menu("SVN 操作") {
-                ForEach(TransferKind.allCases) { kind in
-                    Button(LocalizedStringKey(kind.rawValue)) { presentTransfer(kind) }
+            .buttonStyle(.plain)
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(browserVM == nil || rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .help("刷新当前目录")
+            .accessibilityLabel("刷新当前目录")
+            favoritesMenu
+            repositoryOperationsMenu
+            if widthClass == .compact {
+                Button {
+                    showInspectorPopover.toggle()
+                } label: {
+                    Image(systemName: "sidebar.right")
+                        .frame(width: 28, height: 28)
                 }
-                Divider()
-                Button("在此创建仓库…") { presentCreateRepository() }
+                .buttonStyle(.plain)
+                .disabled(selectedEntry == nil)
+                .help("显示所选条目详情")
+                .accessibilityLabel("显示所选条目详情")
+                .popover(isPresented: $showInspectorPopover, arrowEdge: .bottom) {
+                    detailPane
+                        .frame(width: 400, height: 560)
+                        .macSvnDismissiblePopover()
+                }
             }
         }
-        .padding(24)
+        .padding(.horizontal, 12)
+        .frame(height: MacSvnCoreModeMetrics.toolbarHeight)
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("收藏")
-                .font(.headline)
-                .padding(.horizontal, 12)
-            List {
-                ForEach(browserVM?.bookmarks ?? []) { bookmark in
-                    Button(bookmark.name) {
-                        rootURL = bookmark.url
-                        Task { await openRoot() }
+    private var favoritesMenu: some View {
+        Menu {
+            Button("收藏当前 URL", systemImage: "star") {
+                Task { await browserVM?.addBookmark(url: rootURL) }
+            }
+            .disabled(browserVM == nil || rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            if let bookmarks = browserVM?.bookmarks, !bookmarks.isEmpty {
+                Divider()
+                Section("收藏") {
+                    ForEach(bookmarks) { bookmark in
+                        Button(bookmark.name) {
+                            rootURL = bookmark.url
+                            Task { await openRoot() }
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
+                Menu("移除收藏", systemImage: "star.slash") {
+                    ForEach(bookmarks) { bookmark in
+                        Button(bookmark.name, role: .destructive) {
+                            Task { await browserVM?.removeBookmark(id: bookmark.id) }
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("仓库收藏", systemImage: "star")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("仓库收藏")
+        .accessibilityLabel("仓库收藏")
+    }
+
+    private var repositoryOperationsMenu: some View {
+        Menu {
+            ForEach(TransferKind.allCases) { kind in
+                Button(LocalizedStringKey(kind.rawValue)) { presentTransfer(kind) }
+            }
+            Divider()
+            Button("在此创建仓库…") { presentCreateRepository() }
+        } label: {
+            Label("仓库操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("仓库操作")
+        .accessibilityLabel("仓库操作")
+    }
+
+    @ViewBuilder
+    private func repositoryWorkspace(width: CGFloat) -> some View {
+        let widthClass = MacSvnCoreModeWidthClass.resolve(width: width)
+        HStack(spacing: 0) {
+            centerPane
+                .frame(minWidth: MacSvnCoreModeMetrics.masterMinimumWidth)
+            if widthClass == .regular {
+                Divider()
+                detailPane
+                    .frame(minWidth: MacSvnCoreModeMetrics.inspectorMinimumWidth)
             }
         }
     }
@@ -178,17 +255,12 @@ public struct MacSvnRepoBrowserView: View {
     private var centerPane: some View {
         VStack(alignment: .leading, spacing: 0) {
             remoteWriteToolbar
-            if let statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(8)
-            }
+            repositoryStatusBar
             HStack(spacing: 8) {
                 Text("名称")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("锁")
-                    .frame(width: 150, alignment: .leading)
+                    .frame(width: 110, alignment: .leading)
                 Text("修订")
                     .frame(width: 56, alignment: .trailing)
             }
@@ -199,8 +271,16 @@ public struct MacSvnRepoBrowserView: View {
             List(selection: Binding(
                 get: { selectedEntry?.path },
                 set: { path in
-                    guard let path, let browserVM else { return }
-                    selectedEntry = browserVM.children(of: rootURL).first(where: { $0.path == path })
+                    guard let browserVM else { return }
+                    let entry = path.flatMap { selectedPath in
+                        browserVM.children(of: rootURL).first(where: { $0.path == selectedPath })
+                    }
+                    selectedEntry = entry
+                    guard let entry, entry.kind == .file else {
+                        previewText = ""
+                        return
+                    }
+                    previewText = "正在加载预览…"
                     Task { await previewSelected() }
                 }
             )) {
@@ -208,6 +288,9 @@ public struct MacSvnRepoBrowserView: View {
                     HStack(spacing: 8) {
                         Image(systemName: entry.kind == .directory ? "folder" : "doc")
                         Text(entry.name)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(entry.name)
                         Spacer()
                         if let lock = entry.lock {
                             HStack(spacing: 4) {
@@ -215,12 +298,13 @@ public struct MacSvnRepoBrowserView: View {
                                     .foregroundStyle(.orange)
                                 Text(lock.owner ?? "已锁定")
                                     .lineLimit(1)
+                                    .truncationMode(.tail)
                             }
-                            .frame(width: 150, alignment: .leading)
+                            .frame(width: 110, alignment: .leading)
                             .help(lockSummary(lock))
                         } else {
                             Text("")
-                                .frame(width: 150)
+                                .frame(width: 110)
                         }
                         if let revision = entry.revision {
                             Text("r\(revision.value)")
@@ -234,92 +318,196 @@ public struct MacSvnRepoBrowserView: View {
                     }
                     .tag(entry.path)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedEntry = entry
-                        Task {
-                            if entry.kind == .directory {
-                                let childURL = join(rootURL, entry.path)
-                                await browserVM?.loadChildren(of: childURL)
-                                rootURL = childURL
-                            } else {
-                                await previewSelected()
-                            }
-                        }
+                    .onTapGesture(count: 2) {
+                        Task { await openDirectory(entry) }
                     }
                     .draggable(remoteURL(for: entry))
                 }
             }
+            .overlay {
+                if let browserVM,
+                   browserVM.state(for: rootURL) == .loaded,
+                   browserVM.children(of: rootURL).isEmpty {
+                    ContentUnavailableView("目录为空", systemImage: "folder")
+                }
+            }
+            .onKeyPress(.return) {
+                guard let selectedEntry, selectedEntry.kind == .directory else {
+                    return .ignored
+                }
+                Task { await openDirectory(selectedEntry) }
+                return .handled
+            }
         }
+    }
+
+    @ViewBuilder
+    private var repositoryStatusBar: some View {
+        HStack(spacing: 8) {
+            if let browserVM {
+                switch browserVM.state(for: rootURL) {
+                case .loading:
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在加载目录…")
+                case .error(let message):
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text(message)
+                        .foregroundStyle(.red)
+                case .idle, .loaded:
+                    if let statusText {
+                        Text(statusText)
+                    } else {
+                        Text(" ")
+                            .accessibilityHidden(true)
+                    }
+                }
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                Text("正在准备仓库浏览器…")
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 28)
     }
 
     private var remoteWriteToolbar: some View {
         HStack(spacing: 8) {
-            Button("新建目录") { presentRemoteWrite(.mkdir) }
-            Button("删除") { presentRemoteWrite(.delete) }
-                .disabled(selectedEntry == nil)
-            Button("复制") { presentRemoteWrite(.copy) }
-                .disabled(selectedEntry == nil)
-            Button("移动") { presentRemoteWrite(.move) }
-                .disabled(selectedEntry == nil)
-            Button("重命名") { presentRemoteWrite(.rename) }
-                .disabled(selectedEntry == nil)
+            Button {
+                presentRemoteWrite(.mkdir)
+            } label: {
+                Label("新建目录", systemImage: "folder.badge.plus")
+            }
+            .disabled(browserVM == nil || rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            selectedEntryActionsMenu
             Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
     }
 
+    private var selectedEntryActionsMenu: some View {
+        Menu {
+            Button("删除", systemImage: "trash", role: .destructive) {
+                presentRemoteWrite(.delete)
+            }
+            Button("复制", systemImage: "doc.on.doc") {
+                presentRemoteWrite(.copy)
+            }
+            Button("移动", systemImage: "arrow.right.square") {
+                presentRemoteWrite(.move)
+            }
+            Button("重命名", systemImage: "pencil") {
+                presentRemoteWrite(.rename)
+            }
+        } label: {
+            Label("所选条目操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .disabled(selectedEntry == nil)
+        .help("所选条目操作")
+        .accessibilityLabel("所选条目操作")
+    }
+
     private var detailPane: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("详情")
-                .font(.headline)
-            if let selectedEntry {
-                LabeledContent("名称", value: selectedEntry.name)
-                LabeledContent("类型", value: selectedEntry.kind == .directory ? "目录" : "文件")
-                if let author = selectedEntry.author {
-                    LabeledContent("作者", value: author)
-                }
-                if let lock = selectedEntry.lock {
-                    Divider()
-                    LabeledContent("锁持有者", value: lock.owner ?? "未知")
-                    if let comment = lock.comment, !comment.isEmpty {
-                        LabeledContent("锁说明", value: comment)
-                    }
-                    if let created = lock.created {
-                        LabeledContent("锁定时间") {
-                            Text(created, format: .dateTime.year().month().day().hour().minute())
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("详情")
+                        .font(.headline)
+                    Spacer()
+                    if let selectedEntry, selectedEntry.kind == .directory {
+                        Button {
+                            Task { await openDirectory(selectedEntry) }
+                        } label: {
+                            Label("打开目录", systemImage: "folder")
                         }
                     }
                 }
+                if let selectedEntry {
+                    LabeledContent("名称", value: selectedEntry.name)
+                    LabeledContent("类型") {
+                        Text(remoteEntryKindLabel(selectedEntry.kind))
+                    }
+                    LabeledContent("远端 URL") {
+                        Text(remoteURL(for: selectedEntry))
+                            .font(.caption.monospaced())
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                            .help(remoteURL(for: selectedEntry))
+                    }
+                    if let revision = selectedEntry.revision {
+                        LabeledContent("修订", value: "r\(revision.value)")
+                    }
+                    if let author = selectedEntry.author {
+                        LabeledContent("作者", value: author)
+                    }
+                    if let lock = selectedEntry.lock {
+                        Divider()
+                        LabeledContent("锁持有者", value: lock.owner ?? "未知")
+                        if let comment = lock.comment, !comment.isEmpty {
+                            LabeledContent("锁说明", value: comment)
+                        }
+                        if let created = lock.created {
+                            LabeledContent("锁定时间") {
+                                Text(created, format: .dateTime.year().month().day().hour().minute())
+                            }
+                        }
+                    }
 
-                Picker("检出深度", selection: $selectedDepth) {
-                    Text("empty").tag(SvnDepth.empty)
-                    Text("files").tag(SvnDepth.files)
-                    Text("immediates").tag(SvnDepth.immediates)
-                    Text("infinity").tag(SvnDepth.infinity)
-                }
-                TextField("检出修订（留空=HEAD）", text: $checkoutRevisionText)
-                Toggle("忽略外部项", isOn: $checkoutIgnoreExternals)
+                    Divider()
+                    Picker("检出深度", selection: $selectedDepth) {
+                        Text("empty").tag(SvnDepth.empty)
+                        Text("files").tag(SvnDepth.files)
+                        Text("immediates").tag(SvnDepth.immediates)
+                        Text("infinity").tag(SvnDepth.infinity)
+                    }
+                    TextField("检出修订（留空=HEAD）", text: $checkoutRevisionText)
+                    Toggle("忽略外部项", isOn: $checkoutIgnoreExternals)
 
-                Button("Checkout 到…") {
-                    presentCheckout(for: selectedEntry)
-                }
-                .disabled(selectedEntry.kind != .directory && selectedDepth != .files)
+                    Button("Checkout 到…") {
+                        presentCheckout(for: selectedEntry)
+                    }
+                    .disabled(selectedEntry.kind != .directory)
 
-                ScrollView {
-                    Text(previewText.isEmpty ? "选择文件可预览内容" : previewText)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
+                    Divider()
+                    Text("内容预览")
+                        .font(.headline)
+                    if selectedEntry.kind == .directory {
+                        Text("目录无需预览；双击列表行或使用“打开目录”进入。")
+                            .foregroundStyle(.secondary)
+                    } else if selectedEntry.kind == .file {
+                        Text(previewText.isEmpty ? "选择文件可预览内容" : previewText)
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+                            .textSelection(.enabled)
+                            .padding(8)
+                            .background(Color.secondary.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        Text("此远端条目类型不支持内容预览。")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "未选择远端条目",
+                        systemImage: "shippingbox",
+                        description: Text("从目录列表选择文件或目录查看详情")
+                    )
                 }
-                .border(Color.secondary.opacity(0.2))
-            } else {
-                Text("选择远端条目查看详情")
-                    .foregroundStyle(.secondary)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
-        .padding()
     }
 
     private var remoteWriteSheet: some View {
@@ -736,6 +924,17 @@ public struct MacSvnRepoBrowserView: View {
         return parts.joined(separator: "\n")
     }
 
+    private func remoteEntryKindLabel(_ kind: RemoteEntryKind) -> LocalizedStringKey {
+        switch kind {
+        case .file:
+            return "文件"
+        case .directory:
+            return "目录"
+        case .unknown:
+            return "未知类型"
+        }
+    }
+
     private func bootstrap() async {
         let settings = await session.settingsStore.settings()
         let vm = RepoBrowserViewModel(
@@ -796,11 +995,23 @@ public struct MacSvnRepoBrowserView: View {
     private func openRoot() async {
         let trimmed = rootURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let browserVM else { return }
+        pendingDirectoryURL = nil
+        let selectedPath = selectedEntry?.path
         rootURL = trimmed
+        previewText = ""
         await browserVM.loadChildren(of: trimmed)
+        guard rootURL.trimmingCharacters(in: .whitespacesAndNewlines) == trimmed else { return }
         switch browserVM.state(for: trimmed) {
         case .loaded:
-            statusText = "已加载 \(browserVM.children(of: trimmed).count) 项"
+            let children = browserVM.children(of: trimmed)
+            selectedEntry = selectedPath.flatMap { path in
+                children.first(where: { $0.path == path })
+            }
+            statusText = "已加载 \(children.count) 项"
+            if selectedEntry?.kind == .file {
+                previewText = "正在加载预览…"
+                await previewSelected()
+            }
         case .error(let message):
             statusText = "加载失败：\(message)"
         default:
@@ -808,11 +1019,35 @@ public struct MacSvnRepoBrowserView: View {
         }
     }
 
+    private func openDirectory(_ entry: RemoteEntry) async {
+        guard entry.kind == .directory, let browserVM else { return }
+        let parentURL = rootURL
+        let childURL = remoteURL(baseURL: parentURL, for: entry)
+        pendingDirectoryURL = childURL
+        await browserVM.loadChildren(of: childURL)
+        guard pendingDirectoryURL == childURL, rootURL == parentURL else { return }
+        pendingDirectoryURL = nil
+        switch browserVM.state(for: childURL) {
+        case .loaded:
+            rootURL = childURL
+            selectedEntry = nil
+            previewText = ""
+            showInspectorPopover = false
+            statusText = "已加载 \(browserVM.children(of: childURL).count) 项"
+        case .error(let message):
+            statusText = "加载失败：\(message)"
+        default:
+            break
+        }
+    }
+
     private func previewSelected() async {
-        guard let selectedEntry, let browserVM else { return }
-        await browserVM.preview(entry: selectedEntry, baseURL: rootURL)
-        let url = join(rootURL, selectedEntry.path)
-        switch browserVM.previewState(for: url) {
+        guard let entry = selectedEntry, let browserVM else { return }
+        let baseURL = rootURL
+        let previewURL = remoteURL(baseURL: baseURL, for: entry)
+        await browserVM.preview(entry: entry, baseURL: baseURL)
+        guard rootURL == baseURL, selectedEntry?.path == entry.path else { return }
+        switch browserVM.previewState(for: previewURL) {
         case .loaded(let text):
             previewText = text
         case .tooLarge(let limit, let actual):
@@ -875,8 +1110,12 @@ public struct MacSvnRepoBrowserView: View {
     }
 
     private func remoteURL(for entry: RemoteEntry) -> String {
-        guard let base = URL(string: rootURL) else {
-            return join(rootURL, entry.path)
+        remoteURL(baseURL: rootURL, for: entry)
+    }
+
+    private func remoteURL(baseURL: String, for entry: RemoteEntry) -> String {
+        guard let base = URL(string: baseURL) else {
+            return join(baseURL, entry.path)
         }
         return base.appendingPathComponent(entry.path, isDirectory: entry.kind == .directory).absoluteString
     }
