@@ -32,7 +32,7 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | GP.2 用户可见 stub 清零已完成；哈希回填提交后应干净 |
+| 工作区 | GP.2 用户可见 stub 清零与验收哈希已回填；提交后应干净 |
 | 最近功能 tip | 03700a5（T5.8/G5 设置全表与出门闸门） |
 | 覆盖率 | **114/114 = 100%**（`python3 scripts/parity-coverage.py --fail-below 1.0`） |
 | 测试 | 全量 **1012** 绿（2026-07-15），真实 SVN 49/49；Localization、Xcode Debug、SwiftPM Debug App 包装通过 |
@@ -296,7 +296,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-15 | T5.7 | 71865b7 | Xcode Release 主 App/Finder Sync/Quick Look 双架构；包结构、扩展点、继承 run-path、递归包内依赖与深层签名校验、Foundation 用户目录隔离启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；Developer ID/公证/干净机因无证书与凭据明确阻塞；无 inventory 状态变化；H-T5 分发包装 ✅；全量 948 绿；覆盖率 108/114；下一刀 T5.8/G5 |
 | 2026-07-15 | T5.8/G5 | 03700a5 | S01/S03/S04/S05/S06/S09 与 D28 全部 ✅；设置持久化/回滚和运行时热更新、SVN config/servers 与 `--config-dir`、代理密码 0600、Revert 恢复、未版本扫描边界、自动完成索引、Repo 预取/externals、动态中英文资源均有守卫；全量 1012 绿（真实 SVN 49/49）；Xcode/SwiftPM Debug App 构建通过；覆盖率 114/114；下一刀 GP.1 |
 | 2026-07-15 | GP.1 | 991eb3b | 覆盖率严格门禁实跑 114/114（100%）；command 46/46、domain 28/28、log 20/20、settings 13/13、overlay 7/7，partial/missing 均为 0；覆盖率脚本 2 项单测通过；P-INV/P-COV/H-GP ✅；下一刀 GP.2 |
-| 2026-07-15 | GP.2 | （提交后回填） | 66 个 Catalog ID 全部映射真实功能路由；`route(for:)` 改为非 Optional 穷尽 switch；删除 `.unimplemented` 用户文案、无用 Core dispatch 枚举、死路由占位；设置 bootstrap 展示 loading；生产源码 stub 扫描为 0，Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过；P-STUB/H-GP ✅；下一刀 GP.3 |
+| 2026-07-15 | GP.2 | 122cdbf | 66 个 Catalog ID 全部映射真实功能路由；`route(for:)` 改为非 Optional 穷尽 switch；删除 `.unimplemented` 用户文案、无用 Core dispatch 枚举、死路由占位；设置 bootstrap 展示 loading；生产源码 stub 扫描为 0，Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过；P-STUB/H-GP ✅；下一刀 GP.3 |
 
 ---
 
