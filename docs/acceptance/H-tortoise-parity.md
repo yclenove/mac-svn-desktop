@@ -116,7 +116,7 @@
 
 ## GP — 完美收口
 
-- [ ] `python3 scripts/parity-coverage.py --fail-below 1.0` 通过（100%）
+- [x] `python3 scripts/parity-coverage.py --fail-below 1.0` 通过（114/114，100%，partial=0，missing=0）
 - [ ] 无用户可见「未实现」stub
 - [ ] 全量 `swift test` 绿
 - [ ] 本文件 T0–T5 全部勾选
@@ -132,3 +132,4 @@
 |------|--------|------|------|------|
 | 2026-07-10 | agent | T0/G0 | 通过 | `swift test` 529 绿；parity-coverage 0/114 基线；自动化门禁项已勾 |
 | 2026-07-15 | agent | T5/G5 | 通过 | 设置全表与运行时消费核验；覆盖率 114/114；`swift test` 1012 绿；Xcode/SwiftPM App 构建通过 |
+| 2026-07-15 | agent | GP.1 | 通过 | `parity-coverage --fail-below 1.0`：114/114（100%）；五类 partial/missing 均为 0 |

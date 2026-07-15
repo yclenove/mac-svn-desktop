@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop GP.1：覆盖率 100% 严格门禁
+- Affected: parity-coverage, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: 实跑 `python3 scripts/parity-coverage.py --fail-below 1.0`，确认 command 46/46、domain 28/28、log 20/20、settings 13/13、overlay 7/7 全部完成，合计 114/114（100%），partial 与 missing 均为 0；覆盖率脚本 2 项单测通过；P-INV/P-COV 与 H-GP 对应门禁勾选，下一 GP.2
+
 - Summary: Tortoise 完美 Loop T5.8 / G5：设置全表与运行时出门闸门
 - Affected: TortoiseParitySettings, SettingsStore, SvnClientConfigurationStore, RevertSafetyService, UnversionedTreeExpander, AppUpdateService, Changes/Commit/RepoBrowser/WorkingCopyActions ViewModel, MacSvnSettings/Changes/Commit/RepoBrowser views, Localization resources, Tests/*, docs/*
 - Impact: 补齐 S01/S03/S04/S05/S06/S09 并使 D28 与 S01–S13 全部 ✅：中英文动态界面与 HTTPS 更新检查、真实 SVN config/servers 和统一 `--config-dir`、代理密码 0600、亮暗状态色、Dialogs 策略热更新、Revert 废纸篓恢复、Repo Browser 直接子目录预取与 externals、递归未版本后台取消/ignored 边界/100,000 项上限、提交自动完成限时索引均完成。设置协调保存 settings/提交历史/SVN 配置，后段失败会回滚 settings 与 SVN 配置，并以 generation 防止旧刷新覆盖新设置；全量 1012 绿（真实 SVN 49/49），覆盖率 114/114（100%），Localization、Xcode Debug 与 SwiftPM Debug App 包装通过；G5 ✅，下一 GP.1

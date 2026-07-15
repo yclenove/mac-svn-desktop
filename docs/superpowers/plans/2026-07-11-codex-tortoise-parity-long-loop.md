@@ -20,7 +20,7 @@
 5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
 6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
 
-当前第一个未完成项：GP.1 覆盖率 100% 门禁复核
+当前第一个未完成项：GP.2 清零所有用户可见 `unimplemented` stub
 北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
 ```
 
@@ -32,11 +32,11 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | T5.8/G5 功能与验收哈希已回填；提交后应干净 |
+| 工作区 | GP.1 覆盖率门禁已完成；哈希回填提交后应干净 |
 | 最近功能 tip | 03700a5（T5.8/G5 设置全表与出门闸门） |
 | 覆盖率 | **114/114 = 100%**（`python3 scripts/parity-coverage.py --fail-below 1.0`） |
 | 测试 | 全量 **1012** 绿（2026-07-15），真实 SVN 49/49；Localization、Xcode Debug、SwiftPM Debug App 包装通过 |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · G5 ✅ · T5.1–T5.8 ✅**；下一 **GP.1** |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · G5 ✅ · T5.1–T5.8 ✅ · GP.1 ✅**；下一 **GP.2** |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -102,7 +102,8 @@
 | **T5.7** | 双架构 `SVNStudio.app` 包装与隔离本机冒烟；Developer ID/公证/干净机无证书阻塞已记录 | ✅ |
 | **T5.8 / G5** | 设置全表、H-tortoise T5 与全量测试出门闸门 | ✅ |
 | T5.* | 设置 / 钩子 / 品牌 / 分发 | |
-| **GP.*** | 100% 覆盖率收口后停 loop | |
+| **GP.1** | 覆盖率 114/114（100%），零 partial/missing | ✅ |
+| **GP.2–GP.6** | stub、全测/H、README、PERFECT 文档与停止 loop | |
 
 ### 1.3 T2.8 已有代码（勿从零重写）
 
@@ -293,6 +294,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-15 | T5.6 | 8a2b80f | AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；无 inventory 状态变化；H-T5 品牌体验 ✅；全量 941 绿；覆盖率 108/114；下一刀 T5.7 |
 | 2026-07-15 | T5.7 | 71865b7 | Xcode Release 主 App/Finder Sync/Quick Look 双架构；包结构、扩展点、继承 run-path、递归包内依赖与深层签名校验、Foundation 用户目录隔离启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；Developer ID/公证/干净机因无证书与凭据明确阻塞；无 inventory 状态变化；H-T5 分发包装 ✅；全量 948 绿；覆盖率 108/114；下一刀 T5.8/G5 |
 | 2026-07-15 | T5.8/G5 | 03700a5 | S01/S03/S04/S05/S06/S09 与 D28 全部 ✅；设置持久化/回滚和运行时热更新、SVN config/servers 与 `--config-dir`、代理密码 0600、Revert 恢复、未版本扫描边界、自动完成索引、Repo 预取/externals、动态中英文资源均有守卫；全量 1012 绿（真实 SVN 49/49）；Xcode/SwiftPM Debug App 构建通过；覆盖率 114/114；下一刀 GP.1 |
+| 2026-07-15 | GP.1 | （提交后回填） | 覆盖率严格门禁实跑 114/114（100%）；command 46/46、domain 28/28、log 20/20、settings 13/13、overlay 7/7，partial/missing 均为 0；覆盖率脚本 2 项单测通过；P-INV/P-COV/H-GP ✅；下一刀 GP.2 |
 
 ---
 
