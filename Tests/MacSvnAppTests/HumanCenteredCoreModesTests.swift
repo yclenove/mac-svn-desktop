@@ -78,6 +78,23 @@ final class HumanCenteredCoreModesTests: XCTestCase {
         XCTAssertFalse(source.contains("HSplitView"))
     }
 
+    func testBranchesUseSelectionDrivenInspectorAndCreateSheet() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnBranchesView.swift"
+        )
+        let mergeWizardSource = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnMergeWizardView.swift"
+        )
+
+        XCTAssertTrue(source.contains("@State private var selectedReferenceURL"))
+        XCTAssertTrue(source.contains("@State private var referenceFilter"))
+        XCTAssertTrue(source.contains("@State private var showCreateSheet"))
+        XCTAssertTrue(source.contains("private var branchInspector"))
+        XCTAssertTrue(source.contains("navigator.openMerge(sourceURL:"))
+        XCTAssertFalse(source.contains("HSplitView"))
+        XCTAssertTrue(mergeWizardSource.contains("navigator.consumePendingMergeSourceURL()"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

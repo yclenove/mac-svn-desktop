@@ -346,6 +346,20 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         XCTAssertFalse(navigator.pendingMergeWizard)
     }
 
+    func testBranchMergeHandoffCarriesSourceURLIntoConflictMode() {
+        let navigator = MacSvnAppNavigator()
+
+        navigator.openMerge(sourceURL: "https://svn.example.com/repo/branches/release")
+
+        XCTAssertEqual(navigator.selectedMode, .conflicts)
+        XCTAssertTrue(navigator.pendingMergeWizard)
+        XCTAssertEqual(
+            navigator.consumePendingMergeSourceURL(),
+            "https://svn.example.com/repo/branches/release"
+        )
+        XCTAssertNil(navigator.consumePendingMergeSourceURL())
+    }
+
     @MainActor
     func testDeleteVariantsNavigateToChangesWithAtomicIntent() {
         let navigator = MacSvnAppNavigator()

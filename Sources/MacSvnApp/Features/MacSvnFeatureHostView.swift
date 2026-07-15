@@ -46,7 +46,11 @@ public struct MacSvnFeatureHostView: View {
         case .repositoryBrowser:
             MacSvnRepoBrowserView(session: session, workspaceController: workspaceController, navigator: navigator)
         case .branches:
-            MacSvnBranchesView(workspaceController: workspaceController, session: session)
+            MacSvnBranchesView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .merge:
             MacSvnConflictWorkspaceView(
                 workspaceController: workspaceController,

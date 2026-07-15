@@ -378,7 +378,7 @@ git commit -m "feat(UI): 重构响应式仓库浏览工作区（U6 任务 3/6）
 - 修改：`Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift`
 - 修改：`Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift`
 
-- [ ] **步骤 1：编写分支到 Merge 原子 handoff 失败测试**
+- [x] **步骤 1：编写分支到 Merge 原子 handoff 失败测试**
 
 在 `MacSvnAppNavigatorTests` 增加：
 
@@ -398,7 +398,7 @@ func testBranchMergeHandoffCarriesSourceURLIntoConflictMode() {
 }
 ```
 
-- [ ] **步骤 2：编写分支主从 UI 源码失败测试**
+- [x] **步骤 2：编写分支主从 UI 源码失败测试**
 
 ```swift
 func testBranchesUseSelectionDrivenInspectorAndCreateSheet() throws {
@@ -415,7 +415,7 @@ func testBranchesUseSelectionDrivenInspectorAndCreateSheet() throws {
 }
 ```
 
-- [ ] **步骤 3：运行测试并确认失败**
+- [x] **步骤 3：运行测试并确认失败**
 
 运行：
 
@@ -426,7 +426,7 @@ swift test --filter HumanCenteredCoreModesTests/testBranchesUseSelectionDrivenIn
 
 预期：编译或断言失败，handoff 和选择驱动 UI 尚不存在。
 
-- [ ] **步骤 4：实现 Navigator handoff**
+- [x] **步骤 4：实现 Navigator handoff**
 
 ```swift
 @Published public var pendingMergeSourceURL: String?
@@ -445,13 +445,13 @@ public func consumePendingMergeSourceURL() -> String? {
 
 `MacSvnMergeWizardView.task` 在默认 WC URL 后消费 pending source URL，非空时覆盖 `sourceURL`。FeatureHost 向 `MacSvnBranchesView` 注入 Navigator。
 
-- [ ] **步骤 5：重排分支主从工作区**
+- [x] **步骤 5：重排分支主从工作区**
 
 列表建立可选 `selectedReferenceURL` 和 `ReferenceFilter`（all/branch/tag），移除行内“切换到此”按钮。右侧 `branchInspector` 显示所选引用、revision 输入、mergeinfo 摘要，并提供“切换到此引用”主按钮和“在 Merge 向导中使用”命令。
 
 创建表单移入 `.sheet(isPresented: $showCreateSheet)`，接入 `.macSvnDismissibleSheet()`；顶栏固定刷新图标与“创建分支/标签”命令。创建成功关闭 sheet、清空名称并刷新，失败保留用户输入。
 
-- [ ] **步骤 6：运行分支、Navigator、Merge 测试**
+- [x] **步骤 6：运行分支、Navigator、Merge 测试**
 
 运行：
 
@@ -467,13 +467,14 @@ swift test --filter ModalDismissalAccessibilityTests
 
 预期：全部通过；创建、切换本地变更确认、mergeinfo 与 Merge source URL handoff 正确。
 
-- [ ] **步骤 7：提交分支切片**
+- [x] **步骤 7：提交分支切片**
 
 ```bash
 git add Sources/MacSvnApp/App/MacSvnAppNavigator.swift \
   Sources/MacSvnApp/Features/MacSvnFeatureHostView.swift \
   Sources/MacSvnApp/Features/MacSvnBranchesView.swift \
   Sources/MacSvnApp/Features/MacSvnMergeWizardView.swift \
+  Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings \
   Tests/MacSvnAppTests/MacSvnAppNavigatorTests.swift \
   Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift
 git commit -m "feat(UI): 统一分支详情与合并入口（U6 任务 4/6）"

@@ -121,6 +121,10 @@ public struct MacSvnMergeWizardView: View {
                 sourceURL = url
                 targetURL = url
             }
+            if let pendingSourceURL = navigator.consumePendingMergeSourceURL(),
+               !pendingSourceURL.isEmpty {
+                sourceURL = pendingSourceURL
+            }
         }
     }
 
