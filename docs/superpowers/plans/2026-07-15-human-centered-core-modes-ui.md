@@ -32,7 +32,7 @@
 - 创建：`Sources/MacSvnApp/Features/MacSvnCoreModePresentation.swift`
 - 创建：`Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift`
 
-- [ ] **步骤 1：编写宽度、尺寸和日志筛选失败测试**
+- [x] **步骤 1：编写宽度、尺寸和日志筛选失败测试**
 
 ```swift
 import Foundation
@@ -77,7 +77,7 @@ final class HumanCenteredCoreModesTests: XCTestCase {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认正确失败**
+- [x] **步骤 2：运行测试并确认正确失败**
 
 运行：
 
@@ -87,7 +87,7 @@ swift test --filter HumanCenteredCoreModesTests
 
 预期：编译失败，提示 `MacSvnCoreModeWidthClass`、`MacSvnLogFilterSummary` 和 `MacSvnCoreModeMetrics` 不存在。
 
-- [ ] **步骤 3：实现最小纯展示策略**
+- [x] **步骤 3：实现最小纯展示策略**
 
 ```swift
 import Foundation
@@ -124,13 +124,13 @@ enum MacSvnLogFilterSummary {
 }
 ```
 
-- [ ] **步骤 4：运行定向测试并确认通过**
+- [x] **步骤 4：运行定向测试并确认通过**
 
 运行：`swift test --filter HumanCenteredCoreModesTests`
 
 预期：3 个测试通过。
 
-- [ ] **步骤 5：提交展示策略切片**
+- [x] **步骤 5：提交展示策略切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnCoreModePresentation.swift \
