@@ -603,9 +603,11 @@ git commit -m "feat(UI): 将提交区重构为人本检查器"
 **文件：**
 - 修改：`CHANGELOG.md`
 - 修改：`docs/superpowers/specs/2026-07-15-human-centered-working-copy-ui-design.md`
+- 创建：`Sources/MacSvnApp/Components/MacSvnDismissiblePresentation.swift`
+- 创建：`Tests/MacSvnAppTests/ModalDismissalAccessibilityTests.swift`
 - 按真实窗口问题修改：任务 2–5 涉及的 SwiftUI 文件与对应测试
 
-- [ ] **步骤 1：运行全量测试**
+- [x] **步骤 1：运行全量测试**
 
 运行：
 
@@ -615,7 +617,7 @@ swift test
 
 预期：全部测试通过，无失败和意外跳过。
 
-- [ ] **步骤 2：构建并校验真实 App**
+- [x] **步骤 2：构建并校验真实 App**
 
 运行：
 
@@ -626,7 +628,7 @@ swift test
 
 预期：`dist/SVNStudio.app` 生成、结构校验通过并可启动。
 
-- [ ] **步骤 3：在真实窗口完成尺寸与状态验收**
+- [x] **步骤 3：在真实窗口完成尺寸与状态验收**
 
 打开 `dist/SVNStudio.app`，分别检查 `980 x 640`、`1180 x 760`、`1440 x 900`：
 
@@ -640,15 +642,15 @@ swift test
 
 保存基线截图到 `artifacts/ui/u5-working-copy-980x640.png`、`artifacts/ui/u5-working-copy-1180x760.png` 和 `artifacts/ui/u5-working-copy-1440x900.png`。若仓库忽略 `artifacts/`，截图只作为本地验收证据，不强制提交。
 
-- [ ] **步骤 4：修复截图和交互验收发现的问题**
+- [x] **步骤 4：修复截图和交互验收发现的问题**
 
 每个问题先在 `HumanCenteredWorkingCopyWorkspaceTests` 或源码门禁中补回归测试，再修改对应 SwiftUI 文件。重复运行定向测试、构建和真实窗口检查，直到三种尺寸无重叠、错乱换行、按钮省略或主操作层级错误。
 
-- [ ] **步骤 5：更新变更记录和规格验收结果**
+- [x] **步骤 5：更新变更记录和规格验收结果**
 
 在 `CHANGELOG.md` 的未发布区记录工作副本侧栏、变更/Diff/提交工作流、正确空态、共享提交复选框和 AI 降级为辅助入口。在规格第 13 节追加验收日期、测试结果、截图路径和仍属于 U6–U8 的后续范围。
 
-- [ ] **步骤 6：最终验证**
+- [x] **步骤 6：最终验证**
 
 运行：
 
@@ -661,7 +663,7 @@ git status --short
 
 预期：格式检查、全量测试和 App 校验通过；状态只包含本任务文档与实现文件。
 
-- [ ] **步骤 7：提交 U5 收口**
+- [x] **步骤 7：提交 U5 收口**
 
 ```bash
 git add CHANGELOG.md docs/superpowers/specs/2026-07-15-human-centered-working-copy-ui-design.md \
@@ -670,3 +672,5 @@ git commit -m "feat(UI): 完成真人高频变更工作区首轮迭代"
 ```
 
 完成 U5 后继续为 U6 核心模式统一编写独立规格，不将本计划完成误报为整个 UI 长程目标完成。
+
+执行结果：全量 `1034/1034` 通过（真实 SVN `49/49`）；Release App 构建、结构校验和隔离启动冒烟通过；三档窗口与深色外观完成本地截图验收。用户追加的弹窗关闭问题一并按 TDD 收口，全仓 26 个 sheet 和 2 个 popover 均接入共享关闭栏。

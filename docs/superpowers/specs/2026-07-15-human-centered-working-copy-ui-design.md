@@ -236,6 +236,17 @@ Unified 和左右分栏继续使用 `DiffPerformanceLimits`。不得为了视觉
 
 截图只能证明视觉基线，交互还必须通过真实点击、键盘操作和状态变化验证。
 
+### 13.3 2026-07-15 实现验收结果
+
+- 自动化：`swift test` 全量 `1034/1034` 通过，0 失败，其中真实 SVN 集成 `49/49`；Human UI `15/15`、Localization `6/6`、工作区性能守卫 `8/8`、弹窗关闭门禁 `2/2` 通过。
+- 打包：`./scripts/build-macos-app.sh` 生成并校验 `dist/SVNStudio.app`；`./scripts/smoke-test-macos-app.sh dist/SVNStudio.app` 在隔离 HOME 下稳定启动通过。
+- 窗口：完成 `980 x 640` 内容区、`1180 x 760` 默认窗口、`1440 x 900` 宽窗口及 `1180 x 760` 深色外观检查；未发现文字重叠、按钮省略、工具栏换行或无意义横向滚动。
+- 截图：本地证据位于 `artifacts/ui/u5-working-copy-980x640.png`、`artifacts/ui/u5-working-copy-1180x760.png`、`artifacts/ui/u5-working-copy-1440x900.png`、`artifacts/ui/u5-working-copy-1180x760-dark.png`。截图包含本机工作副本元数据，仅保留在本地，不进入 Git 历史。
+- 截图驱动修复：隐藏 Picker 冗余标签；路径改为单行中部截断；压缩提交和 Diff 工具栏；隐藏游离的 Menu 指示器；默认窗口改为 `1180 x 760`。
+- 弹窗补充：全仓 26 个 sheet 和 2 个 popover 接入共享关闭栏，提供右上角 `xmark`、`Esc`、tooltip 与 VoiceOver 标签；新增源码门禁，后续新增弹窗遗漏关闭能力会直接测试失败。
+- 交互契约：单测确认行选择、Diff 焦点和提交集合互不串扰，工作副本切换会清空旧交互状态，提交成功会请求变更刷新；Reduce Motion 分支保留无动画路径。
+- 后续边界：U5 已收口，但 U6 核心模式统一、U7 辅助能力统一和 U8 全局体验收口仍需继续，不将本阶段误报为整个 Human UI 长程目标完成。
+
 ## 14. 完成定义
 
 U5 只有同时满足以下条件才完成：

@@ -104,6 +104,7 @@ public struct MacSvnSettingsView: View {
         .sheet(isPresented: $showAISettings) {
             MacSvnAIProviderSettingsView(session: session)
                 .frame(minWidth: 640, minHeight: 520)
+                .macSvnDismissibleSheet()
         }
         .confirmationDialog(
             "清除 Subversion 认证缓存？",

@@ -107,6 +107,7 @@ public struct MacSvnDiffView: View {
         }
         .sheet(isPresented: $showURLDiffSheet) {
             urlDiffSheet
+                .macSvnDismissibleSheet()
         }
     }
 
@@ -126,9 +127,10 @@ public struct MacSvnDiffView: View {
                     Text("未选择文件")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
+                        .lineLimit(1)
                 }
             }
-            .frame(minWidth: 92, maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 44, maxWidth: .infinity, alignment: .leading)
 
             diffModePicker
                 .frame(width: 144)
@@ -248,6 +250,7 @@ public struct MacSvnDiffView: View {
                 .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .help("更多 Diff 操作")
         .accessibilityLabel("更多 Diff 操作")
     }

@@ -245,27 +245,35 @@ public struct MacSvnChangesView: View {
         confirmationConfiguredBody
         .sheet(isPresented: $showAddSheet) {
             addSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showDeleteUnversionedSheet) {
             deleteUnversionedSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showCleanupSheet) {
             cleanupSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showRevertSheet) {
             revertSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showRenameSheet) {
             renameSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showCaseConflictRepairSheet) {
             caseConflictRepairSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showIgnoreSheet) {
             ignoreSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showCopyMoveSheet) {
             copyMoveSheet
+                .macSvnDismissibleSheet()
         }
     }
 
@@ -299,6 +307,7 @@ public struct MacSvnChangesView: View {
             }
             .padding(24)
             .frame(width: 440)
+            .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showChangelistSheet) {
             VStack(alignment: .leading, spacing: 16) {
@@ -344,6 +353,7 @@ public struct MacSvnChangesView: View {
             }
             .padding(24)
             .frame(width: 440)
+            .macSvnDismissibleSheet()
         }
     }
 
@@ -470,6 +480,7 @@ public struct MacSvnChangesView: View {
                     .textFieldStyle(.roundedBorder)
                     .padding(12)
                     .frame(width: 260)
+                    .macSvnDismissiblePopover()
             }
             columnsMenu
         }
@@ -482,6 +493,7 @@ public struct MacSvnChangesView: View {
             }
         }
         .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var displayModePicker: some View {
@@ -491,6 +503,7 @@ public struct MacSvnChangesView: View {
             Text("列表").tag(ChangesDisplayMode.changelists)
         }
         .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var columnsMenu: some View {
@@ -514,6 +527,7 @@ public struct MacSvnChangesView: View {
                 .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .disabled(changesVM == nil)
         .help("显示列")
         .accessibilityLabel("显示列")
@@ -623,6 +637,7 @@ public struct MacSvnChangesView: View {
                 .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .help("更多操作")
         .accessibilityLabel("更多操作")
     }
@@ -904,6 +919,13 @@ public struct MacSvnChangesView: View {
     }
 
     private func flatRow(_ entry: FileStatus) -> some View {
+        ViewThatFits(in: .horizontal) {
+            detailedFlatRow(entry)
+            compactFlatRow(entry)
+        }
+    }
+
+    private func detailedFlatRow(_ entry: FileStatus) -> some View {
         let columns = changesVM?.visibleColumns ?? CFMColumnID.allCases
         return HStack(spacing: 8) {
             commitSelectionToggle(entry)
@@ -922,13 +944,16 @@ public struct MacSvnChangesView: View {
                 case .path:
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.path)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(entry.path)
                         if entry.isTreeConflict, columns.contains(.treeConflict) == false {
                             Text("树冲突")
                                 .font(.caption2)
                                 .foregroundStyle(changeColour(.conflicted))
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
                 case .revision:
                     Text(entry.revision.map { "r\($0.value)" } ?? "—")
                         .font(.caption.monospaced())
@@ -951,6 +976,50 @@ public struct MacSvnChangesView: View {
         }
     }
 
+    private func compactFlatRow(_ entry: FileStatus) -> some View {
+        HStack(spacing: 6) {
+            commitSelectionToggle(entry)
+            Text(statusLabel(entry.itemStatus))
+                .font(.caption.monospaced())
+                .frame(width: 24, alignment: .leading)
+                .foregroundStyle(statusColor(entry.itemStatus))
+            HStack(spacing: 5) {
+                Text(entry.path)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if entry.isTreeConflict {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(changeColour(.conflicted))
+                        .accessibilityLabel("树冲突")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let remoteStatus = entry.remoteItemStatus {
+                Text(statusLabel(remoteStatus))
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20, alignment: .trailing)
+                    .help("仓库状态")
+            }
+        }
+        .help(compactRowHelp(entry))
+    }
+
+    private func compactRowHelp(_ entry: FileStatus) -> String {
+        var details = [entry.path, "本地状态：\(statusLabel(entry.itemStatus))"]
+        if let remoteStatus = entry.remoteItemStatus {
+            details.append("仓库状态：\(statusLabel(remoteStatus))")
+        }
+        if let revision = entry.revision {
+            details.append("r\(revision.value)")
+        }
+        if let changelist = entry.changelist {
+            details.append("变更列表：\(changelist)")
+        }
+        return details.joined(separator: " · ")
+    }
+
     private func treeRow(_ node: FileStatusNode) -> some View {
         HStack {
             if let status = node.fileStatus {
@@ -971,6 +1040,8 @@ public struct MacSvnChangesView: View {
                     .frame(width: 28)
             }
             Text(node.name)
+                .lineLimit(1)
+                .truncationMode(.middle)
             if node.isTreeConflict {
                 Text("树冲突")
                     .font(.caption2)

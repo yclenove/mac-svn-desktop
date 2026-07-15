@@ -145,6 +145,7 @@ public struct MacSvnShelveView: View {
         }
         .sheet(isPresented: $showPatchSheet) {
             patchSheet
+                .macSvnDismissibleSheet()
         }
     }
 

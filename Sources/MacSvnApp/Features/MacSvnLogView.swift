@@ -97,28 +97,29 @@ public struct MacSvnLogView: View {
                         .padding()
                 }
                 .navigationTitle("统一 Diff")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("关闭") { showUnifiedDiffSheet = false }
-                    }
-                }
             }
             .frame(minWidth: 640, minHeight: 420)
+            .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showBranchSheet) {
             branchSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showCheckoutExportSheet) {
             checkoutExportSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showConfirmSheet) {
             confirmSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showRevisionPropertySheet) {
             revisionPropertySheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showStatisticsSheet) {
             statisticsSheet
+                .macSvnDismissibleSheet()
         }
     }
 
@@ -682,11 +683,6 @@ public struct MacSvnLogView: View {
                 .padding(20)
             }
             .navigationTitle("日志统计")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { showStatisticsSheet = false }
-                }
-            }
         }
         .frame(minWidth: 620, minHeight: 560)
     }

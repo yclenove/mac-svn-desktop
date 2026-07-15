@@ -45,6 +45,7 @@ struct MacSvnDesktopApplication: App {
                 bootstrap.handleOpenURL(url)
             }
         }
+        .defaultSize(width: 1_180, height: 760)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button {

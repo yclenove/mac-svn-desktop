@@ -121,13 +121,16 @@ public struct MacSvnCommitView: View {
             .disabled(viewModel == nil)
             .help("选择本次提交的文件")
             .popover(isPresented: $showCandidatePopover, arrowEdge: .top) {
-                if let viewModel {
-                    candidateList(viewModel)
-                        .frame(width: 440, height: 360)
-                } else {
-                    ProgressView("加载提交候选…")
-                        .frame(width: 280, height: 180)
+                Group {
+                    if let viewModel {
+                        candidateList(viewModel)
+                            .frame(width: 440, height: 360)
+                    } else {
+                        ProgressView("加载提交候选…")
+                            .frame(width: 280, height: 180)
+                    }
                 }
+                .macSvnDismissiblePopover()
             }
 
             Text(inspectorReadinessText)
@@ -243,8 +246,16 @@ public struct MacSvnCommitView: View {
                 }
             }
         } label: {
-            Label("说明辅助", systemImage: "wand.and.stars")
+            if embedded {
+                Label("说明辅助", systemImage: "wand.and.stars")
+                    .labelStyle(.iconOnly)
+            } else {
+                Label("说明辅助", systemImage: "wand.and.stars")
+            }
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
         .disabled(viewModel == nil)
         .help("生成说明、AI 预检与最近说明")
     }

@@ -180,6 +180,104 @@ final class HumanCenteredWorkingCopyWorkspaceTests: XCTestCase {
         XCTAssertTrue(commit.contains(".buttonStyle(.borderedProminent)"))
     }
 
+    func testMinimumWidthLayoutHidesRedundantLabelsAndKeepsFilePathsSingleLine() throws {
+        let shell = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnWorkingCopyShellView.swift"
+        )
+        let changes = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnChangesView.swift"
+        )
+        let commit = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnCommitView.swift"
+        )
+        let modeControl = try Self.sourceSection(
+            shell,
+            from: "private var modeControl",
+            to: "private func repositoryContext("
+        )
+        let filterPicker = try Self.sourceSection(
+            changes,
+            from: "private var filterPicker",
+            to: "private var columnsMenu"
+        )
+        let assistance = try Self.sourceSection(
+            commit,
+            from: "private var assistanceMenu",
+            to: "private var selectedCommitCount"
+        )
+
+        XCTAssertTrue(modeControl.contains(".labelsHidden()"))
+        XCTAssertGreaterThanOrEqual(
+            filterPicker.components(separatedBy: ".labelsHidden()").count - 1,
+            2
+        )
+        XCTAssertTrue(changes.contains("private func compactFlatRow("))
+        XCTAssertTrue(changes.contains("private func detailedFlatRow("))
+        XCTAssertTrue(changes.contains(".truncationMode(.middle)"))
+        XCTAssertTrue(assistance.contains(".menuStyle(.borderlessButton)"))
+        XCTAssertTrue(assistance.contains(".fixedSize()"))
+    }
+
+    func testCompactPaneMenusKeepIndicatorsAttachedAndDiffMoreActionVisible() throws {
+        let shell = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnWorkingCopyShellView.swift"
+        )
+        let changes = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnChangesView.swift"
+        )
+        let diff = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnDiffView.swift"
+        )
+        let columnsMenu = try Self.sourceSection(
+            changes,
+            from: "private var columnsMenu",
+            to: "private var primaryActions"
+        )
+        let moreActions = try Self.sourceSection(
+            changes,
+            from: "private var moreActionsMenu",
+            to: "private var deleteActionsMenu"
+        )
+        let diffToolbar = try Self.sourceSection(
+            diff,
+            from: "private var embeddedToolbar",
+            to: "private var standaloneToolbar"
+        )
+        let advancedFeatures = try Self.sourceSection(
+            shell,
+            from: "private var advancedFeaturesMenu",
+            to: "private var toolsMenu"
+        )
+        let tools = try Self.sourceSection(
+            shell,
+            from: "private var toolsMenu",
+            to: "private func repositorySubtitle("
+        )
+        let diffMoreActions = try Self.sourceSection(
+            diff,
+            from: "private var moreDiffActionsMenu",
+            to: "private var standaloneContent"
+        )
+
+        XCTAssertTrue(columnsMenu.contains(".menuIndicator(.hidden)"))
+        XCTAssertTrue(moreActions.contains(".menuIndicator(.hidden)"))
+        XCTAssertTrue(advancedFeatures.contains(".menuIndicator(.hidden)"))
+        XCTAssertTrue(tools.contains(".menuIndicator(.hidden)"))
+        XCTAssertTrue(diffMoreActions.contains(".menuIndicator(.hidden)"))
+        XCTAssertTrue(diffToolbar.contains("minWidth: 44"))
+        XCTAssertTrue(diffToolbar.contains("moreDiffActionsMenu"))
+        XCTAssertTrue(diffToolbar.contains("Text(\"未选择文件\")\n                        .font(.caption2)\n                        .foregroundStyle(.tertiary)\n                        .lineLimit(1)"))
+    }
+
+    func testDesktopWindowDefaultsToDailyWorkingSizeAboveMinimum() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift"
+        )
+
+        XCTAssertTrue(source.contains(".frame(minWidth: 980, minHeight: 640)"))
+        XCTAssertTrue(source.contains(".defaultSize(width: 1_180, height: 760)"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

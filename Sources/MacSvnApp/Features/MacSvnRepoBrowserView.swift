@@ -100,12 +100,15 @@ public struct MacSvnRepoBrowserView: View {
         }
         .sheet(isPresented: $showRemoteWriteSheet) {
             remoteWriteSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showTransferSheet) {
             transferSheet
+                .macSvnDismissibleSheet()
         }
         .sheet(isPresented: $showCreateRepositorySheet) {
             createRepositorySheet
+                .macSvnDismissibleSheet()
         }
         .onChange(of: navigator.pendingCreateRepository) { _, pending in
             if pending {

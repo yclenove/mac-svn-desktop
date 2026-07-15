@@ -144,6 +144,7 @@ public struct MacSvnWorkingCopyShellView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
         } else {
             HStack(spacing: 8) {
                 Label {
@@ -199,6 +200,7 @@ public struct MacSvnWorkingCopyShellView: View {
                 .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .help("更多功能")
         .accessibilityLabel("更多功能")
     }
@@ -222,6 +224,7 @@ public struct MacSvnWorkingCopyShellView: View {
                 .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .help("工具")
         .accessibilityLabel("工具")
     }

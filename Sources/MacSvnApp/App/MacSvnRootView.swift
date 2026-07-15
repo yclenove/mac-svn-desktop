@@ -66,6 +66,7 @@ public struct MacSvnRootView: View {
                 session: session,
                 isPresented: $showCommandPalette
             )
+            .macSvnDismissibleSheet()
         }
         .background {
             Button("") { showCommandPalette = true }

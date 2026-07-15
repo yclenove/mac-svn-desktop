@@ -135,6 +135,7 @@ public struct MacSvnLocksView: View {
         }
         .sheet(isPresented: $showGetLockSheet) {
             getLockSheet
+                .macSvnDismissibleSheet()
         }
         .confirmationDialog(
             "确认夺锁（svn lock --force）？将强制获取他人已持有的锁。",

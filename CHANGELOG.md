@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Human UI Wave U5：完成真人高频变更工作区与全局弹窗关闭能力
+- Affected: MacSvnRootView, WorkingCopyWorkspace/Shell/Changes/Diff/Commit, DismissiblePresentation, Log/RepoBrowser/Properties/Locks/Shelve/Settings/RevisionGraph sheets, Localization, HumanCenteredWorkingCopyWorkspaceTests, ModalDismissalAccessibilityTests, U5 design/plan
+- Impact: 将工作副本侧栏稳定在 220–320 pt，重排工作副本上下文、变更、Diff 与可收起提交检查器；行选择只控制 Diff，独立复选框控制提交集合，未选择/加载/无差异/二进制/错误状态不再混淆，AI 退入“说明辅助”菜单。默认窗口改为 1180×760，并在 980、1180、1440 与深色外观下修复标签换行、路径逐字换行、按钮越界及菜单指示器游离。新增统一弹窗关闭栏，26 个 sheet 与 2 个 popover 均提供右上角 xmark、tooltip、无障碍标签和 Esc 关闭，原业务“取消”按钮继续保留；全量 1034/1034 绿（真实 SVN 49/49），Release App 构建、结构校验与隔离启动冒烟通过
+
 - Summary: Tortoise 完美 Loop GP.6：停止 Loop
 - Affected: README parity contract, docs index, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: PERFECT 八项与 GP.1–GP.5 已全部完成后，勾选 GP.6 并将两份 Loop 文档切换为终止态；移除可执行的 one-shot 唤醒和续跑指令，不再创建 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` sleeper/automation。运行时审计未发现匹配进程，`~/.codex/automations` 不存在；新增停止态文档契约；全量 1017/1017 绿（真实 SVN 49/49），覆盖率 114/114（100%）

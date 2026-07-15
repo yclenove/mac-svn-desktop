@@ -40,6 +40,7 @@ public struct MacSvnRevisionGraphView: View {
         }
         .sheet(isPresented: $showDiffSheet) {
             diffSheet
+                .macSvnDismissibleSheet()
         }
     }
 
@@ -289,11 +290,6 @@ public struct MacSvnRevisionGraphView: View {
                     .padding()
             }
             .navigationTitle("节点 Diff")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { showDiffSheet = false }
-                }
-            }
         }
         .frame(minWidth: 720, minHeight: 480)
     }

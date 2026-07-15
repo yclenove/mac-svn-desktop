@@ -152,6 +152,7 @@ public struct MacSvnPropertiesView: View {
         }
         .sheet(isPresented: $showExternalsEditor) {
             externalsEditor
+                .macSvnDismissibleSheet()
         }
     }
 
