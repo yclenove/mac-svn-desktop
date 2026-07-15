@@ -24,7 +24,7 @@
 
 - [x] T0.1：大 Diff / 变更工作区不卡死；嵌入 Diff 为单块文本
 - [x] T0.2：`SvnCommandCatalog` 可枚举 #1–46 + L01–L20（单测或调试打印）
-- [x] T0.3：`Navigator.perform` 对未接线命令提示「未实现」，不假装成功
+- [x] T0.3：`Navigator.perform` 始终返回明确执行结果；GP.2 后全部 66 个 Catalog ID 均穷尽映射到真实功能页
 - [x] T0.4：长耗时操作可取消（或单测证明取消 → `SvnError.cancelled`）
 - [x] T0.5：`python3 scripts/parity-coverage.py` 成功写出 JSON
 - [x] T0.6：本清单文件存在且按 Wave 分节
@@ -117,7 +117,7 @@
 ## GP — 完美收口
 
 - [x] `python3 scripts/parity-coverage.py --fail-below 1.0` 通过（114/114，100%，partial=0，missing=0）
-- [ ] 无用户可见「未实现」stub
+- [x] 无用户可见「未实现」stub：生产源码关键字扫描为 0；Catalog 66/66 路由可达；死占位视图已删除
 - [ ] 全量 `swift test` 绿
 - [ ] 本文件 T0–T5 全部勾选
 - [ ] README 功能矩阵与 inventory 对齐
@@ -133,3 +133,4 @@
 | 2026-07-10 | agent | T0/G0 | 通过 | `swift test` 529 绿；parity-coverage 0/114 基线；自动化门禁项已勾 |
 | 2026-07-15 | agent | T5/G5 | 通过 | 设置全表与运行时消费核验；覆盖率 114/114；`swift test` 1012 绿；Xcode/SwiftPM App 构建通过 |
 | 2026-07-15 | agent | GP.1 | 通过 | `parity-coverage --fail-below 1.0`：114/114（100%）；五类 partial/missing 均为 0 |
+| 2026-07-15 | agent | GP.2 | 通过 | Catalog 66/66 穷尽路由；生产源码无用户可见 stub 标记；Navigator 33 测、全量 1012 测绿；Xcode Debug 构建通过 |

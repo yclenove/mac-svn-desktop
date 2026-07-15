@@ -92,7 +92,7 @@ struct MacSvnDesktopApplication: App {
                     MacSvnSettingsView(session: session)
                 }
             } else {
-                MacSvnSettingsPlaceholderView()
+                MacSvnSettingsLoadingView()
             }
         }
     }

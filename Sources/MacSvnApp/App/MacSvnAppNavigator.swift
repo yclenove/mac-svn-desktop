@@ -4,7 +4,6 @@ import MacSvnCore
 /// Catalog 命令经 Navigator 执行后的结果。
 public enum SvnCommandPerformResult: Equatable, Sendable {
     case navigated(to: MacSvnAppRoute)
-    case unimplemented(SvnCommandID)
 }
 
 /// 历史页注入 Diff 时的对比模式（L01 / L02）。
@@ -245,10 +244,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         lastAutomationMessage = nil
     }
 
-    /// 统一命令入口：对齐 `SvnCommandCatalog`。
-    ///
-    /// - 已接线命令：导航到对应 Route，并可选注入 paths / options。
-    /// - 未接线命令（T0 允许）：返回 `.unimplemented`，并设置可读提示，**不**假装成功。
+    /// 统一命令入口：对齐 `SvnCommandCatalog`，并注入路径与选项后导航到功能页。
     @discardableResult
     public func perform(
         command: SvnCommandID,
@@ -390,14 +386,7 @@ public final class MacSvnAppNavigator: ObservableObject {
             pendingLockIntent = lockIntent
         }
 
-        guard let route = Self.route(for: command) else {
-            let name = SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue
-            lastAutomationMessage = "未实现：\(name)"
-            let result = SvnCommandPerformResult.unimplemented(command)
-            lastCommandResult = result
-            return result
-        }
-
+        let route = Self.route(for: command)
         selectedRoute = route
         let name = SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue
         lastAutomationMessage = "命令：\(name)"
@@ -406,8 +395,8 @@ public final class MacSvnAppNavigator: ObservableObject {
         return result
     }
 
-    /// T0 已可导航的命令 → Route 映射；其余一律 unimplemented。
-    public static func route(for command: SvnCommandID) -> MacSvnAppRoute? {
+    /// Catalog 全量命令到真实功能页的穷尽映射。
+    public static func route(for command: SvnCommandID) -> MacSvnAppRoute {
         switch command {
         case .commit:
             return .commit

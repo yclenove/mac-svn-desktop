@@ -229,42 +229,16 @@ public struct MacSvnRootView: View {
     }
 }
 
-public struct MacSvnRoutePlaceholderView: View {
-    public let route: MacSvnAppRoute
-
-    public init(route: MacSvnAppRoute) {
-        self.route = route
-    }
-
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: route.systemImage)
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(LocalizedStringKey(route.title))
-                    .font(.largeTitle.weight(.semibold))
-                Text(LocalizedStringKey(route.subtitle))
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(40)
-        .navigationTitle(Text(LocalizedStringKey(route.title)))
-    }
-}
-
-public struct MacSvnSettingsPlaceholderView: View {
+public struct MacSvnSettingsLoadingView: View {
     public init() {}
 
     public var body: some View {
-        Form {
-            LabeledContent("应用", value: ProductBranding.displayName)
-            LabeledContent("配置", value: "请从「工具 → 设置」打开")
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("\(ProductBranding.displayName) 启动中…")
+                .foregroundStyle(.secondary)
         }
-        .padding()
         .frame(width: 420)
+        .padding(32)
     }
 }

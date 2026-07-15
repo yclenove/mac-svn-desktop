@@ -481,16 +481,30 @@ final class MacSvnAppNavigatorTests: XCTestCase {
     }
 
 
-    func testPerformCoversEveryCatalogIDWithoutCrash() {
+    func testEveryCatalogCommandNavigatesWithoutUserVisibleStub() throws {
         let navigator = MacSvnAppNavigator()
         for id in SvnCommandID.allCases {
+            let expectedRoute = MacSvnAppNavigator.route(for: id)
             let result = navigator.perform(command: id)
-            switch result {
-            case .navigated:
-                XCTAssertNotNil(MacSvnAppNavigator.route(for: id))
-            case .unimplemented(let command):
-                XCTAssertEqual(command, id)
-                XCTAssertNil(MacSvnAppNavigator.route(for: id))
+            XCTAssertEqual(result, .navigated(to: expectedRoute), "Missing route for \(id.rawValue)")
+            XCTAssertFalse(navigator.lastAutomationMessage?.contains("未实现") == true)
+        }
+
+        let sourceRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let productionFiles = [
+            "Sources/MacSvnApp/App/MacSvnAppNavigator.swift",
+            "Sources/MacSvnApp/App/MacSvnRootView.swift",
+            "Sources/MacSvnApp/Features/MacSvnFeatureHostView.swift",
+            "Sources/MacSvnCore/Catalog/SvnCommandOptions.swift",
+        ]
+        let forbiddenMarkers = ["case unimplemented", ".unimplemented", "未实现：", "MacSvnRoutePlaceholderView"]
+        for path in productionFiles {
+            let source = try String(contentsOf: sourceRoot.appendingPathComponent(path), encoding: .utf8)
+            for marker in forbiddenMarkers {
+                XCTAssertFalse(source.contains(marker), "User-visible stub marker \(marker) remains in \(path)")
             }
         }
     }

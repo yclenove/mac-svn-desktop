@@ -1,7 +1,7 @@
 import SwiftUI
 import MacSvnCore
 
-/// 按路由分发到真实功能页；尚未接线的路由保留占位，避免阻塞导航。
+/// 按路由穷尽分发到真实功能页。
 public struct MacSvnFeatureHostView: View {
     public let route: MacSvnAppRoute
     @ObservedObject public var session: MacSvnAppSession

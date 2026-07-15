@@ -9,8 +9,6 @@ public enum SvnCommandKind: String, Codable, Equatable, Sendable {
 }
 
 /// Tortoise 对标命令稳定 ID（与 inventory `#` / `L#` 对齐）。
-///
-/// T0 阶段：Catalog 必须齐全可枚举；实现可后续接线，未实现由 Navigator 返回 unimplemented。
 public enum SvnCommandID: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
     // MARK: - Primary #1–46
     case checkout = "cmd.01.checkout"

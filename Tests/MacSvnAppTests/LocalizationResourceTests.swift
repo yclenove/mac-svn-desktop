@@ -91,18 +91,14 @@ final class LocalizationResourceTests: XCTestCase {
         let shell = try Self.readRepoSource(
             at: "Sources/MacSvnApp/Features/MacSvnWorkingCopyShellView.swift"
         )
-        let root = try Self.readRepoSource(at: "Sources/MacSvnApp/App/MacSvnRootView.swift")
         let settings = try Self.readRepoSource(
             at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift"
         )
 
         XCTAssertTrue(shell.contains("Text(LocalizedStringKey(mode.title))"))
         XCTAssertTrue(shell.contains("Text(LocalizedStringKey(selectedMode.title))"))
-        XCTAssertTrue(root.contains("Text(LocalizedStringKey(route.title))"))
-        XCTAssertTrue(root.contains("Text(LocalizedStringKey(route.subtitle))"))
         XCTAssertTrue(settings.contains("Text(LocalizedStringKey(category.title))"))
         XCTAssertFalse(shell.contains("Label(mode.title,"))
-        XCTAssertFalse(root.contains(".navigationTitle(route.title)"))
         XCTAssertFalse(settings.contains("Label(category.title,"))
     }
 

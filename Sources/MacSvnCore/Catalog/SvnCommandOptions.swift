@@ -20,11 +20,3 @@ public struct SvnCommandOptions: Equatable, Sendable {
         self.extras = extras
     }
 }
-
-/// Core 侧可表达的执行结果（不含 App 路由类型，便于单测与后续服务层复用）。
-public enum SvnCommandDispatchKind: Equatable, Sendable {
-    /// 已映射到应用内导航/工作区动作（由 App Navigator 解释具体 Route）。
-    case navigable
-    /// T0 允许：Catalog 有 ID，但业务尚未接线。
-    case unimplemented
-}

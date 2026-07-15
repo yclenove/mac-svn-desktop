@@ -25,7 +25,7 @@ extension DiffProviding {
         throw SvnError.other(code: nil, stderr: "diffWithURLUnavailable")
     }
 
-    /// 默认回退：未实现双路径时抛错（生产路径由 `SvnService` 覆盖）
+    /// 默认回退不支持双路径；生产路径由 `SvnService` 覆盖。
     public func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
         throw SvnError.other(code: nil, stderr: "diffBetweenPathsUnavailable")
     }

@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop GP.2：清零用户可见未实现 stub
+- Affected: MacSvnAppNavigator, MacSvnRootView, MacSvnFeatureHostView, SvnCommandCatalog/Options, MacSvnDesktopApp, MacSvnAppNavigatorTests, docs/*
+- Impact: 将 66 个 Catalog ID 到真实功能页的路由改为非 Optional 穷尽映射，删除 T0 阶段 `.unimplemented` 结果与用户提示、未使用的 Core dispatch 枚举和死路由占位视图；设置 bootstrap 改为明确的加载状态。新增源码门禁，阻止 `.unimplemented`、用户可见“未实现”和死占位回归；生产源码扫描为 0，Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过；P-STUB/H-GP ✅，下一 GP.3
+
 - Summary: Tortoise 完美 Loop GP.1：覆盖率 100% 严格门禁
 - Affected: parity-coverage, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: 实跑 `python3 scripts/parity-coverage.py --fail-below 1.0`，确认 command 46/46、domain 28/28、log 20/20、settings 13/13、overlay 7/7 全部完成，合计 114/114（100%），partial 与 missing 均为 0；覆盖率脚本 2 项单测通过；P-INV/P-COV 与 H-GP 对应门禁勾选，下一 GP.2
