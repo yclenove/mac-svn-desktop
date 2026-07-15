@@ -307,8 +307,11 @@ public struct MacSvnConflictWorkspaceView: View {
                 ContentUnavailableView(
                     "加载冲突失败",
                     systemImage: "exclamationmark.triangle",
-                    description: Text(message)
+                    description: Text(
+                        LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
+                    )
                 )
+                .help(message)
             case .loaded, .resolving:
                 EmptyView()
             }
@@ -380,7 +383,7 @@ public struct MacSvnConflictWorkspaceView: View {
               listVM === list else { return }
         conflictBadgeCount = list.summary.total
         if case .error(let message) = list.state {
-            statusText = LocalizedStringKey(message)
+            statusText = LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
         } else {
             statusText = list.summary.total == 0 ? "无冲突" : "发现 \(list.summary.total) 个冲突"
             await openSelected()
@@ -425,7 +428,7 @@ public struct MacSvnConflictWorkspaceView: View {
         let count = await listVM.markCheckedAsResolved()
         conflictBadgeCount = listVM.summary.total
         if case .error(let message) = listVM.state {
-            statusText = LocalizedStringKey(message)
+            statusText = LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
         } else if count > 0 {
             statusText = "已标记 \(count) 项为已解决"
             await openSelected()
@@ -584,8 +587,11 @@ private struct MacSvnMergeEditorPane: View {
                     ContentUnavailableView(
                         "加载失败",
                         systemImage: "exclamationmark.triangle",
-                        description: Text(message)
+                        description: Text(
+                            LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
+                        )
                     )
+                    .help(message)
                 case .saved:
                     ContentUnavailableView("已解决并写回", systemImage: "checkmark.seal")
                 case .loaded, .idle:

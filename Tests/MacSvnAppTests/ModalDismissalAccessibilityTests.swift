@@ -37,10 +37,12 @@ final class ModalDismissalAccessibilityTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(source.contains("Image(systemName: \"xmark\")"))
+        XCTAssertTrue(source.contains("Image(systemName: \"xmark.circle.fill\")"))
         XCTAssertTrue(source.contains(".keyboardShortcut(.cancelAction)"))
         XCTAssertTrue(source.contains(".help(\"关闭\")"))
         XCTAssertTrue(source.contains(".accessibilityLabel(\"关闭弹窗\")"))
+        XCTAssertTrue(source.contains(".accessibilityIdentifier(\"macSvn.modal.close\")"))
+        XCTAssertTrue(source.contains(".frame(width: 30, height: 30)"))
         XCTAssertTrue(source.contains("@Environment(\\.dismiss)"))
     }
 

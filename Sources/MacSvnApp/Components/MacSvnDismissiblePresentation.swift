@@ -14,14 +14,17 @@ private struct MacSvnDismissiblePresentationModifier: ViewModifier {
                         Button {
                             dismiss()
                         } label: {
-                            Image(systemName: "xmark")
-                                .frame(width: 28, height: 28)
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                                .frame(width: 30, height: 30)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .keyboardShortcut(.cancelAction)
                         .help("关闭")
                         .accessibilityLabel("关闭弹窗")
+                        .accessibilityIdentifier("macSvn.modal.close")
                     }
                     .padding(.horizontal, compact ? 8 : 12)
                     .frame(height: compact ? 34 : 40)

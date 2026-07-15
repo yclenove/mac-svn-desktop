@@ -577,7 +577,7 @@ git commit -m "feat(UI): 统一冲突处理与合并向导（U6 任务 5/6）"
 - 修改：`docs/superpowers/plans/2026-07-15-human-centered-core-modes-ui.md`
 - 修改：真实窗口验收暴露问题对应的 U6 SwiftUI 文件和测试
 
-- [ ] **步骤 1：运行 U6 定向门禁**
+- [x] **步骤 1：运行 U6 定向门禁**
 
 运行：
 
@@ -590,13 +590,17 @@ swift test --filter LocalizationResourceTests
 
 预期：全部通过；四页无自由 SplitView，新增 popover/sheet 全部具有关闭能力。
 
-- [ ] **步骤 2：运行全量测试**
+结果：U6 展示、性能、Localization、弹窗关闭、启动参数和深链 readiness 定向测试全部通过；共享关闭栏使用可见的 `xmark.circle.fill`，并保留 Esc、tooltip、VoiceOver 与显式取消动作。
+
+- [x] **步骤 2：运行全量测试**
 
 运行：`swift test`
 
 预期：全部测试通过，真实 SVN `49/49` 继续通过。
 
-- [ ] **步骤 3：构建和冒烟最终 App**
+结果：全量 `1061/1061` 通过，真实 SVN `49/49` 通过。
+
+- [x] **步骤 3：构建和冒烟最终 App**
 
 运行：
 
@@ -607,7 +611,9 @@ swift test --filter LocalizationResourceTests
 
 预期：`dist/SVNStudio.app` 结构校验和隔离启动冒烟通过。
 
-- [ ] **步骤 4：真实窗口验收五个状态页**
+结果：Release App 构建、`verify-macos-app` 结构校验与隔离 home 启动冒烟通过。
+
+- [x] **步骤 4：真实窗口验收五个状态页**
 
 在 `980 x 640`、`1180 x 760`、`1440 x 900` 检查历史、仓库浏览、分支、冲突列表和 Merge 向导；至少覆盖：
 
@@ -620,11 +626,15 @@ swift test --filter LocalizationResourceTests
 
 截图保存到本地 `artifacts/ui/u6-*.png`，因包含本机工作副本和仓库元数据不进入 Git 历史。
 
-- [ ] **步骤 5：按截图问题继续 TDD 修正**
+结果：历史、浏览、分支、冲突和 Merge 在三档窗口均无重叠、工具栏换行、横向滚动或详情遮挡。最终证据为 `u6-*-dark-980x640.png`、`u6-*-dark-1180x760.png`、`u6-*-light-reduce-motion-1440x900.png` 和 `u6-branch-create-sheet-dark.png`。真实仓库采用非标准分支布局且现场连接返回错误态，截图验证了可读错误摘要；分支业务由自动化和真实 SVN 集成覆盖。
+
+- [x] **步骤 5：按截图问题继续 TDD 修正**
 
 每个重叠、换行、游离菜单指示器、错误空态或能力不可达问题，先在 `HumanCenteredCoreModesTests` 增加精确断言并确认红灯，再修改对应视图并重跑定向测试和截图。
 
-- [ ] **步骤 6：更新文档和最终验证**
+结果：按红灯修正错误/空态顶部对齐、网络错误摘要、Branch/Tag 创建入口、启动深链丢失、确定性窗口/外观/Reduce Motion 验收参数，以及弹窗关闭按钮可见性；新增真实 `NSWindow` 尺寸应用测试。
+
+- [x] **步骤 6：更新文档和最终验证**
 
 在 CHANGELOG 记录四模式工作流、响应式行为和能力保留；在规格追加测试数量、截图路径、偏差和 U7/U8 边界。运行：
 
@@ -636,7 +646,9 @@ swift test
 git status --short
 ```
 
-- [ ] **步骤 7：提交 U6 收口**
+结果：CHANGELOG、U6 规格与本计划已回填；Tortoise inventory/H 清单无能力状态变化，GP.6 停止态保持不变。最终命令将在提交前重新执行。
+
+- [x] **步骤 7：提交 U6 收口**
 
 ```bash
 git add CHANGELOG.md docs/superpowers/specs/2026-07-15-human-centered-core-modes-ui-design.md \

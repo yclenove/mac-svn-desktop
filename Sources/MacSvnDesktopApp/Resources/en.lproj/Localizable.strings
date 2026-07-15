@@ -937,6 +937,11 @@
 "当前工作副本位于其他引用" = "Current Working Copy Is on Another Reference";
 "%@ / %@" = "%1$@ / %2$@";
 "加载分支与标签失败" = "Failed to Load Branches and Tags";
+"加载历史失败" = "Failed to Load History";
+"仓库认证失败。请检查凭据或证书信任设置后重试。" = "Repository authentication failed. Check credentials or certificate trust settings, then try again.";
+"SSL 证书校验失败。请检查服务器地址和证书信任设置后重试。" = "SSL certificate verification failed. Check the server address and certificate trust settings, then try again.";
+"连接仓库超时。请检查网络后重试。" = "The repository connection timed out. Check the network and try again.";
+"无法连接到仓库。请检查网络连接和仓库 URL 后重试。" = "Unable to connect to the repository. Check the network and repository URL, then try again.";
 "%@ 个冲突" = "%@ conflicts";
 "先运行 Dry-run 预览，确认后再执行合并" = "Run a Dry-run preview before executing the merge";
 "加载冲突失败" = "Failed to Load Conflicts";

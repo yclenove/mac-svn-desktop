@@ -263,7 +263,7 @@ public struct MacSvnMergeWizardView: View {
                 statusText = "合并完成"
             }
         case .error(let message):
-            statusText = "失败：\(message)"
+            statusText = "失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             break
         }
@@ -314,7 +314,7 @@ public struct MacSvnMergeWizardView: View {
         if case .diffReady = viewModel.state {
             statusText = "Unified Diff 预览完成"
         } else if case .error(let message) = viewModel.state {
-            statusText = "Diff 失败：\(message)"
+            statusText = "Diff 失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         }
     }
 

@@ -201,6 +201,8 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingConflictPath: String?
     /// Catalog Merge 命令进入合并向导；与冲突回跳保持原子区分。
     @Published public var pendingMergeWizard = false
+    /// Branch/Tag 命令进入分支页后直接打开创建表单；Switch 仅保留浏览语义。
+    @Published public var pendingBranchCreation = false
     /// 分支页进入 Merge 向导时一次性携带的来源 URL。
     @Published public var pendingMergeSourceURL: String?
     /// ⌘K / 自动化「标记为已解决」：进入冲突工作区后提示勾选批量 Resolved（#12）。
@@ -310,6 +312,12 @@ public final class MacSvnAppNavigator: ObservableObject {
         if command == .merge {
             pendingMergeSourceURL = nil
             pendingMergeWizard = true
+        }
+
+        if command == .branchTag {
+            pendingBranchCreation = true
+        } else if command == .switchBranch {
+            pendingBranchCreation = false
         }
 
         if command == .changeLists {
@@ -623,6 +631,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingMergeWizard() -> Bool {
         let value = pendingMergeWizard
         pendingMergeWizard = false
+        return value
+    }
+
+    public func consumePendingBranchCreation() -> Bool {
+        let value = pendingBranchCreation
+        pendingBranchCreation = false
         return value
     }
 

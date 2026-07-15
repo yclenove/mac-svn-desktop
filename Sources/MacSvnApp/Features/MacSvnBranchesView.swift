@@ -62,7 +62,10 @@ public struct MacSvnBranchesView: View {
                 branchWorkspace
             }
         }
-        .task { await reload() }
+        .task {
+            await reload()
+            consumePendingBranchCreation()
+        }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await reload() }
         }
@@ -75,6 +78,11 @@ public struct MacSvnBranchesView: View {
             if let selectedReferenceURL,
                !filteredReferences.contains(where: { $0.url == selectedReferenceURL }) {
                 self.selectedReferenceURL = filteredReferences.first?.url
+            }
+        }
+        .onChange(of: navigator.pendingBranchCreation) { _, isPending in
+            if isPending {
+                consumePendingBranchCreation()
             }
         }
         .sheet(isPresented: $showCreateSheet) {
@@ -180,8 +188,11 @@ public struct MacSvnBranchesView: View {
                     ContentUnavailableView(
                         "加载分支与标签失败",
                         systemImage: "exclamationmark.triangle",
-                        description: Text(message)
+                        description: Text(
+                            LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
+                        )
                     )
+                    .help(message)
                 case .loaded:
                     EmptyView()
                 }
@@ -408,6 +419,11 @@ public struct MacSvnBranchesView: View {
         .frame(minWidth: 460)
     }
 
+    private func consumePendingBranchCreation() {
+        guard navigator.consumePendingBranchCreation() else { return }
+        showCreateSheet = true
+    }
+
     private var allReferences: [BranchReference] {
         guard let browserVM else { return [] }
         return [browserVM.branchList.trunk].compactMap { $0 }
@@ -544,7 +560,7 @@ public struct MacSvnBranchesView: View {
         await browser.load(repositoryRoot: root, layout: settings.branchLayout)
         await mergeInfo.load()
         if case .error(let message) = browser.state {
-            statusText = "加载失败：\(message)"
+            statusText = "加载失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         } else {
             if let previousSelection,
                filteredReferences.contains(where: { $0.url == previousSelection }) {
@@ -606,7 +622,7 @@ public struct MacSvnBranchesView: View {
             await reload()
             statusText = "创建成功 r\(revision.value)"
         case .error(let message):
-            statusText = "创建失败：\(message)"
+            statusText = "创建失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             break
         }
@@ -649,7 +665,7 @@ public struct MacSvnBranchesView: View {
             confirmLocalChanges = true
         case .error(let message):
             confirmLocalChanges = false
-            statusText = "切换失败：\(message)"
+            statusText = "切换失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             break
         }

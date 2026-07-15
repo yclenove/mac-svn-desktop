@@ -322,7 +322,14 @@ public struct MacSvnLogView: View {
             case .idle, .loading:
                 ProgressView("加载日志…").frame(maxWidth: .infinity, maxHeight: .infinity)
             case .error(let message):
-                ContentUnavailableView("失败", systemImage: "exclamationmark.triangle", description: Text(message))
+                ContentUnavailableView(
+                    "加载历史失败",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(
+                        LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message))
+                    )
+                )
+                .help(message)
             case .loaded, .loadingMore:
                 let entries = filteredEntries(viewModel.entries)
                 HStack(spacing: 0) {

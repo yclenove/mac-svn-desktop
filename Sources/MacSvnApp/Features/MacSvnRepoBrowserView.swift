@@ -353,8 +353,9 @@ public struct MacSvnRepoBrowserView: View {
                 case .error(let message):
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
-                    Text(message)
+                    Text(LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message)))
                         .foregroundStyle(.red)
+                        .help(message)
                 case .idle, .loaded:
                     if let statusText {
                         Text(statusText)
@@ -591,7 +592,9 @@ public struct MacSvnRepoBrowserView: View {
             if case .completed(let message) = transferVM?.state {
                 Text(message).foregroundStyle(.green)
             } else if case .error(let message) = transferVM?.state {
-                Text(message).foregroundStyle(.red)
+                Text(LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message)))
+                    .foregroundStyle(.red)
+                    .help(message)
             }
             HStack {
                 Spacer()
@@ -615,7 +618,9 @@ public struct MacSvnRepoBrowserView: View {
             }
             LabeledContent("文件系统", value: "FSFS")
             if case .error(let message) = createRepositoryVM?.state {
-                Text(message).foregroundStyle(.red)
+                Text(LocalizedStringKey(MacSvnCoreModeErrorPresentation.message(message)))
+                    .foregroundStyle(.red)
+                    .help(message)
             }
             HStack {
                 Spacer()
@@ -860,7 +865,7 @@ public struct MacSvnRepoBrowserView: View {
         case .completed(let op, let revision):
             statusText = "\(label(for: op))成功 r\(revision.value)"
         case .error(let message):
-            statusText = "远端写失败：\(message)"
+            statusText = "远端写失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         case .confirmationRequired:
             statusText = "等待确认远端\(remoteWriteKind.rawValue)"
         case .running(let op):
@@ -1013,7 +1018,7 @@ public struct MacSvnRepoBrowserView: View {
                 await previewSelected()
             }
         case .error(let message):
-            statusText = "加载失败：\(message)"
+            statusText = "加载失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             statusText = nil
         }
@@ -1035,7 +1040,7 @@ public struct MacSvnRepoBrowserView: View {
             showInspectorPopover = false
             statusText = "已加载 \(browserVM.children(of: childURL).count) 项"
         case .error(let message):
-            statusText = "加载失败：\(message)"
+            statusText = "加载失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             break
         }
@@ -1055,7 +1060,7 @@ public struct MacSvnRepoBrowserView: View {
         case .unsupported(let reason):
             previewText = "无法预览：\(reason)"
         case .error(let message):
-            previewText = "预览失败：\(message)"
+            previewText = "预览失败：\(MacSvnCoreModeErrorPresentation.message(message))"
         default:
             previewText = ""
         }
@@ -1098,7 +1103,7 @@ public struct MacSvnRepoBrowserView: View {
                 await workspaceController.reload()
                 workspaceController.selectedID = record.id
             case .error(let message):
-                statusText = "检出失败：\(message)"
+                statusText = "检出失败：\(MacSvnCoreModeErrorPresentation.message(message))"
             default:
                 break
             }

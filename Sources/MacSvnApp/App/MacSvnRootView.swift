@@ -6,16 +6,19 @@ public struct MacSvnRootView: View {
     @ObservedObject private var session: MacSvnAppSession
     @ObservedObject private var navigator: MacSvnAppNavigator
     @StateObject private var workspaceController: MacSvnWorkspaceController
+    private let onWorkspaceReady: () -> Void
     @State private var showCommandPalette = false
     @State private var confirmRemove = false
 
     public init(
         session: MacSvnAppSession,
         navigator: MacSvnAppNavigator,
-        sidebarModel: MacSvnSidebarModel = MacSvnSidebarModel()
+        sidebarModel: MacSvnSidebarModel = MacSvnSidebarModel(),
+        onWorkspaceReady: @escaping () -> Void = {}
     ) {
         self.session = session
         self.navigator = navigator
+        self.onWorkspaceReady = onWorkspaceReady
         // sidebarModel 保留参数以兼容旧调用方；新壳不再使用功能侧栏
         _ = sidebarModel
         _workspaceController = StateObject(
@@ -46,6 +49,7 @@ public struct MacSvnRootView: View {
                     navigator: navigator
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .task {
             await workspaceController.reload()
@@ -55,6 +59,7 @@ public struct MacSvnRootView: View {
                navigator.selectedRoute == .workspace {
                 navigator.selectMode(.changes)
             }
+            onWorkspaceReady()
         }
         .onChange(of: navigator.pendingOpenPath) { _, _ in
             Task { await consumePendingOpenIfNeeded() }

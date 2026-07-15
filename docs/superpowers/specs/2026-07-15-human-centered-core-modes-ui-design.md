@@ -224,3 +224,27 @@ U6 只有同时满足以下条件才完成：
 - AI 仅作为辅助入口，未配置 AI 不影响任何基础流程；
 - 全量测试、真实 SVN 集成、Localization、Release 构建、App 冒烟和真实窗口验收通过；
 - U7/U8 仍作为后续波次，不把 U6 完成误报为整个 Human UI 长程目标完成。
+
+## 13. 验收记录（2026-07-15）
+
+### 13.1 自动化与构建
+
+- U6 展示、性能、Localization、弹窗关闭、启动参数和深链 readiness 定向门禁全部通过；
+- 全量 `swift test` 为 **1061/1061**，其中真实 SVN 集成为 **49/49**；
+- `./scripts/build-macos-app.sh`、`./scripts/verify-macos-app.sh dist/SVNStudio.app` 与 `./scripts/smoke-test-macos-app.sh dist/SVNStudio.app` 通过；
+- `git diff --check` 通过，Tortoise inventory/H 清单无能力状态变化。
+
+### 13.2 真实窗口证据
+
+- 深色 `980 x 640`：`artifacts/ui/u6-{history,browser,branches,conflicts,merge}-dark-980x640.png`；
+- 深色 `1180 x 760`：`artifacts/ui/u6-{history,browser,branches,conflicts,merge}-dark-1180x760.png`；
+- 浅色 + Reduce Motion `1440 x 900`：`artifacts/ui/u6-{history,browser,branches,conflicts,merge}-light-reduce-motion-1440x900.png`；
+- 创建弹窗关闭入口：`artifacts/ui/u6-branch-create-sheet-dark.png`。
+
+五页在三档窗口内没有重叠、工具栏换行、横向滚动或详情遮挡。所有自定义 sheet/popover 由源码穷举门禁保证共享右上角关闭栏，并保留 Esc、tooltip、VoiceOver 标签；alert 与 confirmation dialog 继续要求显式取消动作。
+
+### 13.3 现场偏差与边界
+
+验收使用的真实仓库采用非标准 trunk/branches/tags 布局，且分支页现场连接返回错误态，因此截图展示的是可读错误摘要而不是引用列表；原始 SVN 诊断仍可通过 tooltip 查看。分支发现、创建、切换、两树 Merge、dry-run 和冲突回跳由业务单测及 49 项真实 SVN 集成覆盖，该现场偏差不代表能力降级。
+
+U6 只完成核心模式统一。U7 辅助能力统一与 U8 最终人本 UI 收口仍待后续计划执行。

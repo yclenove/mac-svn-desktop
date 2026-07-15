@@ -339,7 +339,11 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         let navigator = MacSvnAppNavigator()
 
         XCTAssertEqual(navigator.perform(command: .branchTag), .navigated(to: .branches))
+        XCTAssertTrue(navigator.pendingBranchCreation)
+        XCTAssertTrue(navigator.consumePendingBranchCreation())
+        XCTAssertFalse(navigator.pendingBranchCreation)
         XCTAssertEqual(navigator.perform(command: .switchBranch), .navigated(to: .branches))
+        XCTAssertFalse(navigator.pendingBranchCreation)
         XCTAssertEqual(navigator.perform(command: .merge), .navigated(to: .merge))
         XCTAssertTrue(navigator.pendingMergeWizard)
         XCTAssertTrue(navigator.consumePendingMergeWizard())

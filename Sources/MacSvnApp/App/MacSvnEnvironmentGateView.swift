@@ -5,13 +5,19 @@ import MacSvnCore
 public struct MacSvnEnvironmentGateView: View {
     @ObservedObject private var session: MacSvnAppSession
     @ObservedObject private var navigator: MacSvnAppNavigator
+    private let onWorkspaceReady: () -> Void
     @State private var status: SvnEnvironmentStatus?
     @State private var isChecking = true
     @State private var customPath: String = ""
 
-    public init(session: MacSvnAppSession, navigator: MacSvnAppNavigator) {
+    public init(
+        session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator,
+        onWorkspaceReady: @escaping () -> Void = {}
+    ) {
         self.session = session
         self.navigator = navigator
+        self.onWorkspaceReady = onWorkspaceReady
     }
 
     public var body: some View {
@@ -20,7 +26,11 @@ public struct MacSvnEnvironmentGateView: View {
                 ProgressView("正在检测 Subversion…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if case .available = status {
-                MacSvnRootView(session: session, navigator: navigator)
+                MacSvnRootView(
+                    session: session,
+                    navigator: navigator,
+                    onWorkspaceReady: onWorkspaceReady
+                )
             } else {
                 gateContent
             }

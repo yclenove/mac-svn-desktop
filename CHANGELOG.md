@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Human UI Wave U6：完成人本核心模式统一与弹窗关闭收口
+- Affected: MacSvnCoreModePresentation, Log/RepoBrowser/Branches/Conflict/Merge views, DismissiblePresentation, DesktopLaunchConfiguration, AppNavigator/Root/EnvironmentGate, Localization, HumanCenteredCoreModes/ModalDismissal/DesktopLaunchConfiguration tests, U6 design/plan
+- Impact: 历史、仓库浏览、分支与标签、冲突及 Merge 统一为稳定的上下文栏、筛选、主列表和详情层级，在 980×640、1180×760、1440×900 三档及浅色、深色、Reduce Motion 下完成真实窗口验收；错误与空态固定到工作区顶部，网络/认证/SSL/超时错误显示可读摘要并保留原始诊断。Branch/Tag 命令直接打开创建 sheet，启动参数和启动阶段深链等待主工作区就绪后再消费；所有自定义 sheet/popover 使用醒目的右上角关闭按钮，并保留 Esc、tooltip、VoiceOver 标签和显式取消动作。全量 1061/1061 绿（真实 SVN 49/49），Release App 构建、结构校验与隔离启动冒烟通过；Tortoise inventory/H 清单无能力状态变化，后续仍为 U7/U8
+
 - Summary: Human UI Wave U5：完成真人高频变更工作区与全局弹窗关闭能力
 - Affected: MacSvnRootView, WorkingCopyWorkspace/Shell/Changes/Diff/Commit, DismissiblePresentation, Log/RepoBrowser/Properties/Locks/Shelve/Settings/RevisionGraph sheets, Localization, HumanCenteredWorkingCopyWorkspaceTests, ModalDismissalAccessibilityTests, U5 design/plan
 - Impact: 将工作副本侧栏稳定在 220–320 pt，重排工作副本上下文、变更、Diff 与可收起提交检查器；行选择只控制 Diff，独立复选框控制提交集合，未选择/加载/无差异/二进制/错误状态不再混淆，AI 退入“说明辅助”菜单。默认窗口改为 1180×760，并在 980、1180、1440 与深色外观下修复标签换行、路径逐字换行、按钮越界及菜单指示器游离。新增统一弹窗关闭栏，26 个 sheet 与 2 个 popover 均提供右上角 xmark、tooltip、无障碍标签和 Esc 关闭，原业务“取消”按钮继续保留；全量 1034/1034 绿（真实 SVN 49/49），Release App 构建、结构校验与隔离启动冒烟通过

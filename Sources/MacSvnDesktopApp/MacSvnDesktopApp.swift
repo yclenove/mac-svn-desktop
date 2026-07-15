@@ -6,35 +6,41 @@ import MacSvnCore
 struct MacSvnDesktopApplication: App {
     @Environment(\.openWindow) private var openWindow
     @StateObject private var bootstrap = MacSvnBootstrapModel()
+    private let launchConfiguration = MacSvnDesktopLaunchConfiguration.current()
 
     var body: some Scene {
         WindowGroup(ProductBranding.displayName) {
-            Group {
-                switch bootstrap.phase {
-                case .loading:
-                    ProgressView("正在启动 \(ProductBranding.displayName)…")
+            MacSvnLaunchConfiguredContent(configuration: launchConfiguration) {
+                Group {
+                    switch bootstrap.phase {
+                    case .loading:
+                        ProgressView("正在启动 \(ProductBranding.displayName)…")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    case .ready(let session, let navigator, let menuBar):
+                        MacSvnLocalizedSessionView(
+                            session: session,
+                            navigator: navigator,
+                            menuBar: menuBar,
+                            onWorkspaceReady: {
+                                bootstrap.consumeLaunchArgumentsIfNeeded(
+                                    launchConfiguration,
+                                    navigator: navigator
+                                )
+                            }
+                        )
+                    case .failed(let message):
+                        VStack(spacing: 12) {
+                            Text("启动失败")
+                                .font(.title2.weight(.semibold))
+                            Text(message)
+                                .foregroundStyle(.secondary)
+                            Button("重试") {
+                                Task { await bootstrap.start() }
+                            }
+                        }
+                        .padding(40)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                case .ready(let session, let navigator, let menuBar):
-                    MacSvnLocalizedSessionView(
-                        session: session,
-                        navigator: navigator,
-                        menuBar: menuBar,
-                        onAppear: {
-                            bootstrap.consumeLaunchArgumentsIfNeeded(navigator: navigator)
-                        }
-                    )
-                case .failed(let message):
-                    VStack(spacing: 12) {
-                        Text("启动失败")
-                            .font(.title2.weight(.semibold))
-                        Text(message)
-                            .foregroundStyle(.secondary)
-                        Button("重试") {
-                            Task { await bootstrap.start() }
-                        }
                     }
-                    .padding(40)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(minWidth: 980, minHeight: 640)
@@ -104,16 +110,19 @@ struct MacSvnLocalizedSessionView: View {
     @ObservedObject var session: MacSvnAppSession
     let navigator: MacSvnAppNavigator
     let menuBar: MacSvnMenuBarController
-    let onAppear: () -> Void
+    let onWorkspaceReady: () -> Void
 
     var body: some View {
         MacSvnLocalizedContent(session: session) {
-            MacSvnEnvironmentGateView(session: session, navigator: navigator)
+            MacSvnEnvironmentGateView(
+                session: session,
+                navigator: navigator,
+                onWorkspaceReady: onWorkspaceReady
+            )
                 .environmentObject(navigator)
         }
             .onAppear {
                 menuBar.start()
-                onAppear()
             }
     }
 }
@@ -189,6 +198,7 @@ final class MacSvnBootstrapModel: ObservableObject {
 
     @Published var phase: Phase = .loading
     private var didConsumeLaunchArguments = false
+    private var deepLinkReadinessGate = MacSvnDeepLinkReadinessGate()
     private let deepLinkParser = MacSvnDeepLinkParser()
     private let cliParser = MacSvnCLICommandParser()
 
@@ -212,7 +222,13 @@ final class MacSvnBootstrapModel: ObservableObject {
     }
 
     func handleOpenURL(_ url: URL) {
-        guard case .ready(_, let navigator, _) = phase else { return }
+        guard let readyURL = deepLinkReadinessGate.receive(url),
+              case .ready(_, let navigator, _) = phase
+        else { return }
+        processOpenURL(readyURL, navigator: navigator)
+    }
+
+    private func processOpenURL(_ url: URL, navigator: MacSvnAppNavigator) {
         do {
             let action = try deepLinkParser.parse(url)
             navigator.handle(deepLink: action)
@@ -221,18 +237,32 @@ final class MacSvnBootstrapModel: ObservableObject {
         }
     }
 
-    func consumeLaunchArgumentsIfNeeded(navigator: MacSvnAppNavigator) {
+    private func consumePendingDeepLinks(navigator: MacSvnAppNavigator) {
+        for url in deepLinkReadinessGate.markWorkspaceReady() {
+            processOpenURL(url, navigator: navigator)
+        }
+    }
+
+    func consumeLaunchArgumentsIfNeeded(
+        _ configuration: MacSvnDesktopLaunchConfiguration,
+        navigator: MacSvnAppNavigator
+    ) {
         guard !didConsumeLaunchArguments else { return }
         didConsumeLaunchArguments = true
+        consumePendingDeepLinks(navigator: navigator)
 
-        // 跳过可执行路径本身，解析伴生 CLI：svnstudio open|status|commit-ui …
-        let args = Array(CommandLine.arguments.dropFirst())
-        guard let first = args.first, !first.hasPrefix("-") else { return }
-        do {
-            let command = try cliParser.parse(args)
-            navigator.handle(cli: command)
-        } catch {
-            // 非 CLI 启动参数时静默忽略，避免干扰正常 GUI 启动
+        switch configuration.launchAction {
+        case .deepLink(let url):
+            processOpenURL(url, navigator: navigator)
+        case .cli(let arguments):
+            do {
+                let command = try cliParser.parse(arguments)
+                navigator.handle(cli: command)
+            } catch {
+                // 非 CLI 启动参数时静默忽略，避免干扰正常 GUI 启动
+            }
+        case .none:
+            break
         }
     }
 }

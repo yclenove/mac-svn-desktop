@@ -38,6 +38,41 @@ final class HumanCenteredCoreModesTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(MacSvnCoreModeMetrics.inspectorMinimumWidth, 360)
     }
 
+    func testCoreModeErrorPresentationSummarizesTransportFailures() {
+        XCTAssertEqual(
+            MacSvnCoreModeErrorPresentation.message(
+                #"network(detail: "svn: E170013: Unable to connect\nsvn: E215004: Authentication failed\n")"#
+            ),
+            "仓库认证失败。请检查凭据或证书信任设置后重试。"
+        )
+        XCTAssertEqual(
+            MacSvnCoreModeErrorPresentation.message(
+                #"network(detail: "svn: E170013: SSL certificate verification failed\n")"#
+            ),
+            "SSL 证书校验失败。请检查服务器地址和证书信任设置后重试。"
+        )
+        XCTAssertEqual(
+            MacSvnCoreModeErrorPresentation.message("network(detail: \"Process timed out after 120 seconds.\")"),
+            "连接仓库超时。请检查网络后重试。"
+        )
+        XCTAssertEqual(
+            MacSvnCoreModeErrorPresentation.message("名称不能为空"),
+            "名称不能为空"
+        )
+    }
+
+    func testRootPinsIntrinsicEmptyAndErrorStatesToFullTopLeadingWorkspace() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/App/MacSvnRootView.swift"
+        )
+
+        XCTAssertTrue(
+            source.contains(
+                ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"
+            )
+        )
+    }
+
     func testHistoryUsesCompactToolbarCombinableFiltersAndStableMasterDetail() throws {
         let source = try Self.readRepoSource(
             at: "Sources/MacSvnApp/Features/MacSvnLogView.swift"

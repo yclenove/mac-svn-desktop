@@ -4,6 +4,7 @@ import MacSvnCore
 /// 提交页：接 CommitViewModel + 提交说明历史 + Commit Guard 警告。
 public struct MacSvnCommitView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.macSvnReduceMotionOverride) private var reduceMotionOverride
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     @ObservedObject private var session: MacSvnAppSession
@@ -286,7 +287,7 @@ public struct MacSvnCommitView: View {
     }
 
     private func toggleInspector() {
-        if accessibilityReduceMotion {
+        if reduceMotionOverride ?? accessibilityReduceMotion {
             isExpanded.toggle()
         } else {
             withAnimation(.easeInOut(duration: 0.18)) {
