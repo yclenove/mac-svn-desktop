@@ -14,14 +14,14 @@
 | [superpowers/specs/2026-07-10-ui-ux-ia-design.md](superpowers/specs/2026-07-10-ui-ux-ia-design.md) | UI/UX 信息架构：WC 侧栏 + WorkspaceMode + 变更工作区 | 已落地 |
 | [superpowers/plans/2026-07-10-ui-ux-ia-refactor.md](superpowers/plans/2026-07-10-ui-ux-ia-refactor.md) | UI/UX IA 重构实现计划（U1–U4） | 已落地 |
 | [superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md) | **小乌龟全量能力清单 v2**（DUG 域、命令 #、日志右键 L#、设置 S#、Overlay；验收唯一真相） | 114/114（100%） |
-| [superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) | **完美 Loop**：T0–T5 原子 backlog + PERFECT 停止条件 | GP.5 已完成（PERFECT），下一 GP.6 |
-| [superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) | Codex 长程 Loop 交接、续跑协议与逐项进度日志 | 下一 GP.6 |
+| [superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) | **完美 Loop**：T0–T5 原子 backlog + PERFECT 停止条件 | GP.6 已完成，Loop 已停止 |
+| [superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) | Codex 长程 Loop 交接、续跑协议与逐项进度日志 | GP.6 已完成，Loop 已停止 |
 | [acceptance/performance-guards.md](acceptance/performance-guards.md) | UI 性能门禁（AttributeGraph / Diff 阈值，T0.1） | 生效 |
 | [acceptance/parity-coverage.json](acceptance/parity-coverage.json) | Tortoise 对标覆盖率快照（由 `scripts/parity-coverage.py` 生成） | 114/114（100%） |
 | [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 旧版真实 WC 手工验收清单 | 旧版，已由 H-Tortoise 接替 |
-| [acceptance/H-tortoise-parity.md](acceptance/H-tortoise-parity.md) | Tortoise 全量对标手工验收（按 T0–T5/GP 分节） | T0–T5、GP.1–GP.5 已通过 |
+| [acceptance/H-tortoise-parity.md](acceptance/H-tortoise-parity.md) | Tortoise 全量对标手工验收（按 T0–T5/GP 分节） | T0–T5、GP.1–GP.6 已通过 |
 
 ## 阅读顺序
 

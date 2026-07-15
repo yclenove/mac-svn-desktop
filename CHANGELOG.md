@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop GP.6：停止 Loop
+- Affected: README parity contract, docs index, H-tortoise-parity, perfect-loop, codex-tortoise-parity-long-loop
+- Impact: PERFECT 八项与 GP.1–GP.5 已全部完成后，勾选 GP.6 并将两份 Loop 文档切换为终止态；移除可执行的 one-shot 唤醒和续跑指令，不再创建 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` sleeper/automation。运行时审计未发现匹配进程，`~/.codex/automations` 不存在；新增停止态文档契约；全量 1017/1017 绿（真实 SVN 49/49），覆盖率 114/114（100%）
+
 - Summary: Tortoise 全量对标完成（GP.5 PERFECT 收口）
 - Affected: README parity contract, H-tortoise-parity, distribution-smoke, parity-coverage, perfect-loop, codex-tortoise-parity-long-loop
 - Impact: PERFECT 的 P-INV、P-STUB、P-TEST、P-H1、P-COV、P-PERF、P-DOC、P-SHIP 全部满足：inventory 五维 114/114（100%），T0–T5 真实 WC/Finder/H 清单全勾，README 与验收证据对齐。重新构建 Xcode Release 双架构 App，主应用、Finder Sync、Quick Look 的包结构、Mach-O 依赖、深层签名与隔离启动冒烟全部通过，产物位于 `/tmp/svnstudio-gp5-release/SVNStudio.app`；Developer ID/公证因本机 0 个有效签名身份继续按计划明示阻塞，不降低 P-INV 或平台能力。新增 PERFECT 文档契约测试；全量 1016/1016 绿（真实 SVN 49/49），覆盖率 114/114（100%）；下一 GP.6 停止 Loop

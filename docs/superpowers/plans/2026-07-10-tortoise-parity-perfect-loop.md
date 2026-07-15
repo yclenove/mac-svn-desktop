@@ -1,19 +1,20 @@
 # SVN Studio × TortoiseSVN 全量对标 — 完美 Loop 规划
 
-> **面向 AI 代理的工作者：** 每轮只取 §5 Wave Backlog 的**首个未完成** `[ ]`；§2 PERFECT 清单由 GP.5 集中收口。用 TDD 实现 → 测 → 更新 inventory 状态 → 勾本文件 → CHANGELOG →（可选）push → **再挂 one-shot 唤醒**。
+> **Loop 已停止：** GP.6 已完成，§5 Wave Backlog 与 §2 PERFECT 全部收口；本文保留执行历史，不再取新条目或创建 one-shot 唤醒。
 > 必需参考：[`2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md)（验收唯一真相）、[`2026-07-10-long-term-iteration-roadmap.md`](2026-07-10-long-term-iteration-roadmap.md)、[`2026-07-10-long-term-product-design.md`](../specs/2026-07-10-long-term-product-design.md)。  
-> **Codex 长程续跑：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接快照 + 启动指令；当前队列以本文件首个未完成 Wave 项 **GP.6** 为准）。
+> **Codex 长程记录：** 见 [`2026-07-11-codex-tortoise-parity-long-loop.md`](2026-07-11-codex-tortoise-parity-long-loop.md)（交接与逐项完成记录；已进入终止态）。
 
 | 项 | 内容 |
 |----|------|
 | 创建日期 | 2026-07-10 |
 | 产品 | SVN Studio |
 | Loop 代号 | `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` |
+| Loop 状态 | **已停止（GP.6）** |
 | 建议工作分支 | `feat/tortoise-parity-perfect-loop`（从当前交付 tip / `feat/ui-ux-ia-refactor` 切出） |
 | 能力基线 | inventory **v2**（命令 #、日志 L#、设置 S#、Overlay、DUG 域） |
 | 北极星 | **小乌龟有的，Studio 必须有**（平台换壳，不砍能力） |
 | 停止条件 | 见 §2「完美定义」——**全部满足才停**；未满足则继续 loop |
-| 当前状态（2026-07-15） | T0–T5 + G0/G1/G2/G3/G4/G5、GP.1–GP.5 ✅；**下一 GP.6**；PERFECT 八项 ✅；覆盖率 **114/114（100%）**；全量 **1016/1016** 绿（真实 SVN **49/49**） |
+| 当前状态（2026-07-15） | T0–T5 + G0/G1/G2/G3/G4/G5、GP.1–GP.6 ✅；PERFECT 八项 ✅；覆盖率 **114/114（100%）**；全量 **1017/1017** 绿（真实 SVN **49/49**）；Loop 已停止 |
 
 ---
 
@@ -41,7 +42,7 @@
 - [x] **P-H1**：[H-Tortoise](../../acceptance/H-tortoise-parity.md) T0–T5 对标手工清单全部跑通（真实 WC/Finder）；旧 H1 清单已明确由本清单接替，未执行项不伪造勾选
 - [x] **P-COV**：覆盖率报表 `✅/必须行 = 100%`（由 T0 工具生成，CI 或脚本可复跑）
 - [x] **P-PERF**：空闲无 AttributeGraph 死循环；大 Diff 不卡死（对照详设性能规范）
-- [x] **P-DOC**：README 功能矩阵与 inventory 一致；T0–T5 与 GP.1–GP.5 全部 `[x]`；CHANGELOG 已收口（GP.6 是 PERFECT 后的停止动作）
+- [x] **P-DOC**：README 功能矩阵与 inventory 一致；T0–T5 与 GP.1–GP.6 全部 `[x]`；CHANGELOG 已收口
 - [x] **P-SHIP**（T5 末）：Xcode Release 双架构 `SVNStudio.app`、Finder Sync、Quick Look、深层签名与隔离启动冒烟通过；Developer ID/公证因 0 个身份明确阻塞，P-INV 保持 100%
 
 任一未满足 → **禁止**宣称完美；继续执行 §5 Wave Backlog，GP.5 收口时逐项消除缺口。
@@ -57,9 +58,11 @@ coverage = count(✅) / count(必须验收行)
 
 ---
 
-## 3. Loop 规则（每轮强制）
+## 3. 历史 Loop 规则（已停用）
 
-1. **读本文件** → 取 §5 Wave Backlog 首个未完成 `[ ]` 作为本轮唯一目标（同 Wave 内极小相关项可合并，进度日志写清）；§2 PERFECT 清单只在 GP.5 收口。
+以下规则记录 GP.6 停止前的执行约束，不构成续跑指令。
+
+1. 执行阶段按 §5 Wave Backlog 顺序一次处理一个未完成项；同 Wave 内仅合并极小相关项并在进度日志写清，§2 PERFECT 清单由 GP.5 集中收口。
 2. **对照 inventory**：实现前打开对应 #/L#/S#/Overlay 行；实现后更新状态 ❌→🟡→✅。
 3. **分支**：在 `feat/tortoise-parity-perfect-loop` 上工作；不存在则从当前 tip 创建。
 4. **TDD**：先测 → 实现 → `swift test`（相关 filter；Wave 出门与 PERFECT 前全量）。
@@ -68,26 +71,15 @@ coverage = count(✅) / count(必须验收行)
 7. **禁止**：
    - 把 stub / 文档骨架勾成 ✅
    - 跳过更早 Wave 去做更晚 Wave
-   - `while true; do sleep; echo WAKE; done` 无限心跳
+   - 无限循环心跳
    - 未达对话框级就勾命令 ✅
 8. **阻塞**：能力上限 / 信息缺失 → 进度日志写清候选方案，**暂停与用户确认**；禁止擅自降级砍功能。
 9. Wave 全部 `[x]` 后执行该 Wave 的 **出门闸门**；未过闸不得开下一 Wave。
 10. 全部 Wave + PERFECT 满足后：**停止挂唤醒**，输出收口报告。
 
-### 唤醒协议（强制）
+### 唤醒协议（已停用）
 
-**禁止**无限 `while true` 心跳（订阅会失效，代理不会被拉起）。
-
-每轮结束后挂 **一次性** sleeper：
-
-```bash
-sleep 120
-echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio Tortoise-parity perfect loop on feat/tortoise-parity-perfect-loop: read docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md, implement FIRST unchecked [ ] with TDD, update inventory status, swift test, commit, CHANGELOG; then re-arm one-shot wake (sleep 120 + echo AGENT_LOOP_WAKE_svnstudio_tortoise_parity). Stop only when PERFECT criteria in §2 are all met. Do not use while-true loops."}'
-```
-
-- 唤醒后：读 prompt → 干活 → **再挂下一发** one-shot。  
-- 用户说停止：杀 sleeper，不再挂。  
-- 间隔：默认 120s；重轮次可 180–300s。
+GP.6 完成后禁止再创建 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` sleeper、heartbeat 或 automation。历史执行阶段仅使用 one-shot 且禁止无限循环心跳；终止态不再保留可执行唤醒命令。
 
 ### 每轮最小产出模板（进度日志）
 
@@ -200,7 +192,7 @@ echo 'AGENT_LOOP_WAKE_svnstudio_tortoise_parity {"prompt":"Continue SVN Studio T
 - [x] **GP.3** 全量 `swift test` + H-tortoise 全文勾选
 - [x] **GP.4** README 功能矩阵与 inventory 对齐
 - [x] **GP.5** 勾选 §2 PERFECT 全部项；CHANGELOG 收口「Tortoise 全量对标完成」
-- [ ] **GP.6** **停止 loop**：不再挂 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
+- [x] **GP.6** **停止 loop**：不再挂 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 
 ---
 
@@ -292,18 +284,10 @@ roadmap T0–T6（战略波次）
 | 2026-07-15 | GP.3 | 38894ac | 全量 `swift test` 1012 绿（真实 SVN 49/49）；Xcode Debug App 隔离启动 8 秒；SVN 1.14.5；临时真实 WC 含 modified/unversioned；空闲 CPU 每 2 秒采样 5 次均 0.0%；大 Diff/工作区性能守卫绿 | inventory 无状态变化；P-TEST、P-PERF、H 环境与 T0–T5 汇总 ✅ | 下一 GP.4 |
 | 2026-07-15 | GP.4 | a4bd369 | README 五维矩阵与 114/114 总计对齐 inventory；补齐 inventory/H-Tortoise/parity-coverage 证据链接；移除旧分支、旧 main 状态和 Sparkle 误述；新增 3 项文档契约测试；全量 1015 绿（真实 SVN 49/49），覆盖率门禁 114/114 | inventory 无状态变化；H-GP README 门禁 ✅ | 下一 GP.5 |
 | 2026-07-15 | GP.5 | 2cb76c5 | PERFECT 八项审计通过；H T0–T5 与真实 WC M/? 复核；README/CHANGELOG 收口；Xcode Release 双架构主 App/Finder Sync/Quick Look、依赖、深层签名与隔离启动冒烟复跑绿；Developer ID 0 个身份阻塞明示；全量 1016/1016 绿（真实 SVN 49/49） | inventory 无状态变化；P-H1/P-DOC/P-SHIP、H-GP CHANGELOG ✅ | 下一 GP.6 |
+| 2026-07-15 | GP.6 | （提交后回填） | wake token 进程审计无匹配；`~/.codex/automations` 不存在；移除可执行唤醒/续跑指令并发布终止态；停止态契约红灯转绿；全量 1017/1017 绿（真实 SVN 49/49） | inventory 无状态变化；H-GP 停止唤醒 ✅ | Loop 停止，不再唤醒 |
 
 ---
 
-## 8. 启动指令（给人 / 给代理）
+## 8. 终止说明（给人 / 给代理）
 
-```text
-开始 SVN Studio Tortoise 完美 Loop：
-1. 切分支 feat/tortoise-parity-perfect-loop
-2. 打开 docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md
-3. 做 §5 Wave Backlog 首个 [ ]（当前 GP.6），遵守 §3 规则
-4. 每轮结束挂 one-shot AGENT_LOOP_WAKE_svnstudio_tortoise_parity
-5. 直到 §2 PERFECT 全满足再停
-```
-
-用户说「继续 loop / 唤醒」时：只读本文件 + inventory，禁止另起炉灶砍范围。
+本 Loop 已在 GP.6 停止。后续需求应建立新的显式计划，不得复用本 Loop 的 wake token 或从历史 Wave 续跑。

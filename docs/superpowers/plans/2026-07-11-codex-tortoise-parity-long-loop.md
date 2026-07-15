@@ -1,27 +1,17 @@
 # Codex 长程 Loop 交接：SVN Studio × Tortoise 全量对标
 
-> **给 Codex / 长程代理：** 本文是从 Cursor 会话切出后的**唯一启动说明书**。  
+> **给 Codex / 长程代理：** 本文是已完成 Loop 的交接与执行记录，不再作为启动说明书。
 > 执行队列仍以 [`2026-07-10-tortoise-parity-perfect-loop.md`](./2026-07-10-tortoise-parity-perfect-loop.md) 为准；inventory 以 [`../specs/2026-07-10-tortoisesvn-feature-inventory.md`](../specs/2026-07-10-tortoisesvn-feature-inventory.md) 为验收真相。  
-> **交接时刻：** 2026-07-15（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4、T5.1–T5.8/G5 与 GP.1–GP.5，当前继续 GP.6。
+> **终止时刻：** 2026-07-15（UTC+8）；Codex 已完成 T2.8–T2.15/G2、T3.1–T3.12/G3、T4.1–T4.8/G4、T5.1–T5.8/G5 与 GP.1–GP.6，Loop 已停止。
 
 ---
 
-## 0. 30 秒启动（复制即用）
+## 0. 终止态
 
 ```text
-你在仓库 /Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop
-分支 feat/tortoise-parity-perfect-loop（干净 tip）。
-
-执行 Tortoise 完美对标长程 Loop：
-1. 读 docs/superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md（本文）
-2. 读 docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md → 取 §5 Wave Backlog 首个 [ ]
-3. 对照 docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md 对应行
-4. TDD 实现 → swift test → 更新 inventory / H-tortoise / CHANGELOG / 进度日志 → 中文 commit
-5. 未达 PERFECT 则继续下一条；禁止 while-true 心跳；Codex 用会话续跑或 one-shot sleep 120 + AGENT_LOOP_WAKE_svnstudio_tortoise_parity
-6. 禁止降级砍功能；阻塞则写进度日志并暂停问用户
-
-当前首个未完成 Wave/Backlog 项：GP.6 停止 Loop
-北极星：小乌龟有的必须都有（platform-equivalent 可，砍能力不可）
+Tortoise 完美对标长程 Loop 已完成并停止。
+不得创建 AGENT_LOOP_WAKE_svnstudio_tortoise_parity sleeper、heartbeat 或 automation。
+后续工作须由新的显式计划启动；inventory 114/114 与既有能力不得降级。
 ```
 
 ---
@@ -32,11 +22,12 @@
 |----|-----|
 | 仓库路径 | `/Users/yangchao/Desktop/hlkj/newworkspace/aicoding/mac-svn-desktop` |
 | 分支 | `feat/tortoise-parity-perfect-loop` |
-| 工作区 | GP.5 PERFECT、CHANGELOG 与 Release 分发复核已完成；全量验证与提交后应干净 |
+| Loop 状态 | **已停止（GP.6）** |
+| 工作区 | GP.6 文档终止态与验证完成、提交后应干净 |
 | 最近功能 tip | 03700a5（T5.8/G5 设置全表与出门闸门） |
 | 覆盖率 | **114/114 = 100%**（`python3 scripts/parity-coverage.py --fail-below 1.0`） |
-| 测试 | GP.5 PERFECT 契约红灯已确认并转绿；全量 **1016/1016** 绿，真实 SVN **49/49** |
-| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · G5 ✅ · T5.1–T5.8 ✅ · GP.1–GP.5 ✅**；下一 **GP.6** |
+| 测试 | GP.6 停止态契约红灯已确认并转绿；全量 **1017/1017** 绿，真实 SVN **49/49** |
+| Wave | **G0 ✅ · G1 ✅ · G2 ✅ · G3 ✅ · G4 ✅ · G5 ✅ · T5.1–T5.8 ✅ · GP.1–GP.6 ✅**；Loop 已停止 |
 | 停止条件 | inventory 必须行 100% ✅ + PERFECT 清单（见 perfect-loop §2） |
 
 ### 1.1 已完成（本 Loop）
@@ -59,7 +50,7 @@
   - T4.7 Finder Context Menu 设置、状态快照与 Copy/Move 平台等价入口
   - T4.8 / G4 Finder App Sandbox、扩展容器配置镜像、真实 SVN 命令与 Added/Modified 角标冒烟
 
-### 1.2 未完成（按队列顺序）
+### 1.2 完成队列（历史顺序）
 
 | 条目 | 内容 | 备注 |
 |------|------|------|
@@ -107,7 +98,7 @@
 | **GP.3** | 全量 1012 测、H 环境、真实 WC 与空闲性能门禁 | ✅ |
 | **GP.4** | README 五维功能矩阵、证据链接与文档契约 | ✅ |
 | **GP.5** | PERFECT 八项、最终 CHANGELOG 与 Release 分发复核 | ✅ |
-| **GP.6** | 停止 loop | |
+| **GP.6** | 停止 loop | ✅ |
 
 ### 1.3 T2.8 已有代码（勿从零重写）
 
@@ -147,9 +138,9 @@
 
 ### 3.1 每轮唯一目标
 
-1. 打开 perfect-loop → §5 Wave Backlog **首个未完成** `[ ]`（当前应为 **GP.6**；§2 PERFECT 已由 GP.5 收口）。
-2. 同 Wave 内仅当极小相关才可合并；进度日志写清合并理由。
-3. **禁止**跳过 T2 去做 T3/T4/T5；**禁止**把 stub 勾成 ✅。
+1. 当前没有未完成 Wave/Backlog 项，不得从本 Loop 继续派生工作。
+2. 后续需求建立新计划，仍以 inventory 为能力真相且禁止降级。
+3. 保留本文作为历史证据，不再创建 wake 或改写已完成 Wave。
 
 ### 3.2 实现标准（完美方案，禁止降级）
 
@@ -159,33 +150,23 @@
 - 性能：禁止嵌套 Split + 逐行 Diff；大文件走 `DiffPerformanceLimits`。
 - 遇能力上限 / 需求不清：**停下来问用户**，写进度日志；禁止擅自砍功能。
 
-### 3.3 每轮交付清单
+### 3.3 最终交付清单
 
 ```text
-[ ] 代码 + 单测（TDD）
-[ ] swift test（相关 filter；Wave 出门 / 收口前全量）
-[ ] inventory 对应行 ❌/🟡 → ✅（或诚实保留 🟡 并说明剩余）
-[ ] H-tortoise 对应勾选
-[ ] perfect-loop 勾 [x] + 进度日志行（commit 先写「（提交后回填）」再 docs 回填哈希）
-[ ] CHANGELOG.md 条目（日期 / Summary / Affected / Impact）
-[ ] 中文 Conventional 风格 commit（feat/fix/docs）
-[ ] 可选：git push（用户未要求则可不 push）
-[ ] 未达 PERFECT → 续跑下一 [ ] 或挂 one-shot 唤醒
+[x] 代码 + 单测（TDD）
+[x] swift test（相关 filter；Wave 出门 / 收口前全量）
+[x] inventory 必须行全部 ✅；无能力变更时诚实记录无状态变化
+[x] H-tortoise 对应勾选
+[x] perfect-loop 勾 [x] + 进度日志行与提交哈希
+[x] CHANGELOG.md 条目（日期 / Summary / Affected / Impact）
+[x] 中文 Conventional 风格 commit（feat/fix/docs）
+[-] git push 为可选项，用户未要求，未执行
+[x] GP.6 停止 Loop，不再创建 one-shot 唤醒
 ```
 
-### 3.4 唤醒（Cursor / Codex 通用）
+### 3.4 唤醒（已停用）
 
-**禁止** `while true; do sleep; echo WAKE; done`。
-
-每轮结束可挂一次性：
-
-```bash
-sleep 120; echo AGENT_LOOP_WAKE_svnstudio_tortoise_parity
-```
-
-Codex 若支持会话续跑：完成一条后**直接**读队列下一条，不必等唤醒；唤醒仅作断线保险。
-
-Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
+GP.6 后不得创建 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` sleeper、heartbeat 或 automation。历史 one-shot 协议已停用，本文不再提供可执行唤醒命令。
 
 ### 3.5 提交约定
 
@@ -235,7 +216,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 4. **锁定命令**：相对路径不要写入 `pendingOpenPath`（会误触发打开 WC）。
 5. **批量 resolve**：允许部分成功并回报，勿一失败假装全失败。
 6. **Log 大 View**：避免单文件过大导致 type-check 超时，拆子 ViewBuilder。
-7. **唤醒**：只用 one-shot `sleep N; echo TOKEN`，旧 wake 重复通知可忽略，以 §5 Wave Backlog 首个未完成 `[ ]` 为准。
+7. **唤醒**：GP.6 已停用 wake token；若收到历史重复通知，忽略且不得重挂。
 
 ---
 
@@ -254,7 +235,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 - [x] 工作区干净、分支正确
 - [x] 本文已写入仓库
 - [x] 在 Codex 粘贴 §0 启动指令并开始 T2.8
-- [ ] （可选）`git push -u origin feat/tortoise-parity-perfect-loop` 便于多机续跑
+- [x] 未执行可选 `git push -u origin feat/tortoise-parity-perfect-loop`（用户未要求，Loop 已停止）
 
 ---
 
@@ -303,7 +284,8 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-15 | GP.3 | 38894ac | 全量 1012 测绿（真实 SVN 49/49）；Xcode Debug App 隔离启动 8 秒；`/usr/local/bin/svn` 1.14.5；临时可写 WC 含 M/?；空闲 CPU 连续 5 次 0.0%；性能守卫通过；P-TEST/P-PERF/H 环境与 T0–T5 ✅；下一刀 GP.4 |
 | 2026-07-15 | GP.4 | a4bd369 | README 对齐 D01–D28、#1–#46、L01–L20、S01–S13、Overlay 7/7 与 114/114 总计；补齐三份验收证据链接，清理旧交付状态和更新机制误述；3 项契约测试、全量 1015/1015 与覆盖率 114/114 均绿；下一刀 GP.5 |
 | 2026-07-15 | GP.5 | 2cb76c5 | PERFECT 八项全部 ✅；T0–T5 H 清单和真实 WC M/? 复核；最终 CHANGELOG 收口；Xcode Release 双架构 App/Finder Sync/Quick Look、依赖、签名与隔离启动冒烟绿；Developer ID 0 身份阻塞明示；全量 1016/1016 绿（真实 SVN 49/49）；下一刀 GP.6 |
+| 2026-07-15 | GP.6 | （提交后回填） | wake token 进程审计无匹配；`~/.codex/automations` 不存在；两份 Loop 发布终止态并移除可执行唤醒/续跑指令；停止态契约红灯转绿；全量 1017/1017 绿（真实 SVN 49/49）；Loop 停止 |
 
 ---
 
-**维护：** 每完成一条 Wave 项，无需改本文结构；以 perfect-loop 进度日志为准。若分支/路径变更，只更新 §0 与 §1 表头。
+**维护：** 本文已冻结为终止记录。后续需求建立新计划，不再更新本 Loop 队列或重挂 wake。

@@ -94,6 +94,52 @@ final class ReadmeParityTests: XCTestCase {
         XCTAssertTrue(changelog.contains("Tortoise 全量对标完成"), "CHANGELOG 缺少最终收口条目")
     }
 
+    func testPerfectLoopPublishesTerminalStopState() throws {
+        let plan = try repositoryDocument(
+            "docs/superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md"
+        )
+        let longLoop = try repositoryDocument(
+            "docs/superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md"
+        )
+        let checklist = try repositoryDocument("docs/acceptance/H-tortoise-parity.md")
+        let index = try repositoryDocument("docs/README.md")
+        let changelog = try repositoryDocument("CHANGELOG.md")
+
+        XCTAssertTrue(plan.contains("- [x] **GP.6**"), "Perfect Loop 尚未完成 GP.6")
+        XCTAssertFalse(plan.contains("- [ ] **GP."), "Perfect Loop 仍有未完成 GP 项")
+        XCTAssertTrue(plan.contains("| Loop 状态 | **已停止（GP.6）** |"), "Perfect Loop 未发布终止态")
+        XCTAssertTrue(longLoop.contains("| Loop 状态 | **已停止（GP.6）** |"), "Long Loop 未发布终止态")
+        XCTAssertFalse(
+            longLoop.contains("当前首个未完成 Wave/Backlog 项："),
+            "Long Loop 仍声明存在待执行项"
+        )
+        for forbiddenInstruction in [
+            "取 §5 Wave Backlog 首个未完成",
+            "继续 GP.6",
+        ] {
+            XCTAssertFalse(
+                plan.contains(forbiddenInstruction) || longLoop.contains(forbiddenInstruction),
+                "终止态文档仍包含可执行 wake/续跑指令：\(forbiddenInstruction)"
+            )
+        }
+        let executableWakePattern =
+            #"(?:while\s+true|sleep\s+[0-9]+|(?:echo|printf)\s+[^\n]*AGENT_LOOP_WAKE_svnstudio_tortoise_parity)"#
+        for (name, document) in [("Perfect Loop", plan), ("Long Loop", longLoop)] {
+            XCTAssertNil(
+                document.range(of: executableWakePattern, options: .regularExpression),
+                "\(name) 仍包含可执行 wake 命令"
+            )
+        }
+        XCTAssertTrue(longLoop.contains("### 1.2 完成队列（历史顺序）"), "Long Loop 仍将完成队列标为未完成")
+        XCTAssertTrue(plan.contains("## 3. 历史 Loop 规则（已停用）"), "Perfect Loop 仍将历史规则标为主动执行")
+        XCTAssertTrue(
+            checklist.contains("- [x] 停止 `AGENT_LOOP_WAKE_svnstudio_tortoise_parity` 唤醒"),
+            "H-Tortoise 尚未记录停止唤醒"
+        )
+        XCTAssertTrue(index.contains("GP.6 已完成，Loop 已停止"), "文档索引未发布最终停止状态")
+        XCTAssertTrue(changelog.contains("GP.6：停止 Loop"), "CHANGELOG 缺少 GP.6 停止条目")
+    }
+
     private func repositoryDocument(_ relativePath: String) throws -> String {
         try String(
             contentsOf: repositoryRoot.appendingPathComponent(relativePath),
