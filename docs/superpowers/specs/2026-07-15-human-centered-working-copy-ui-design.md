@@ -92,7 +92,7 @@ NavigationSplitView
 
 ```text
 WorkspaceSelectionState
-├── selectedPaths: Set<String>      // 变更列表当前多选
+├── selectedPaths: Set<String>      // 变更列表当前行选择，仅控制 Diff 与文件操作
 ├── focusedPath: String?            // Diff 正在展示的单一文件
 ├── commitPaths: Set<String>        // 当前待提交集合
 └── commitSelectionWasEdited: Bool  // 用户是否主动调整过提交集合
@@ -100,10 +100,10 @@ WorkspaceSelectionState
 
 数据流规则：
 
-1. 变更列表的单选或多选写入 `selectedPaths`，最近获得焦点的行写入 `focusedPath`；
+1. 变更列表的单选或多选写入 `selectedPaths`，最近获得焦点的行写入 `focusedPath`；行选择只控制 Diff 与文件操作，不能静默改变待提交集合；
 2. Diff 只读取 `focusedPath`，快速切换时取消或丢弃旧请求结果；
-3. 提交检查器读取 `commitPaths`；在用户未编辑提交集合前，它随 `selectedPaths` 同步，用户主动增删候选后设置 `commitSelectionWasEdited`，避免后续只切换 Diff 文件时意外覆盖提交集合；
-4. 刷新状态后移除已不存在的路径，并保留仍有效的选择；
+3. `commitPaths` 首次按现有 `CommitSelectionPolicy.defaultSelectedPaths` 规则初始化；变更列表行首复选框和提交检查器都读写同一个 `commitPaths`；
+4. 用户首次调整提交复选框后设置 `commitSelectionWasEdited`；刷新状态时始终剔除已失效候选，用户未编辑前可按默认规则纳入新候选，用户已编辑后不得擅自勾选新文件；
 5. 深链和历史页发起 Diff 时，原子设置工作副本、模式、选择路径与 revision 上下文。
 
 共享状态只负责 UI 选择，不复制 `ChangesViewModel`、`DiffViewModel` 或 `CommitViewModel` 的业务职责。
@@ -128,6 +128,7 @@ WorkspaceSelectionState
 ### 7.3 列表行为
 
 - 路径列始终存在并占据剩余宽度；状态列固定窄宽；其他列按配置显示；
+- 可提交文件行首显示复选框并绑定 `commitPaths`；行高亮控制 Diff，复选框控制提交，两者视觉和语义明确分离；
 - 状态颜色只辅助识别，必须同时保留图标或文字；
 - 行选中不等于执行动作，破坏性操作始终二次确认；
 - 空工作副本显示“没有本地变更”，并保留“刷新”和“检查仓库”动作；
