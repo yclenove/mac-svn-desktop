@@ -300,7 +300,7 @@ Wake token：`AGENT_LOOP_WAKE_svnstudio_tortoise_parity`
 | 2026-07-15 | GP.1 | 991eb3b | 覆盖率严格门禁实跑 114/114（100%）；command 46/46、domain 28/28、log 20/20、settings 13/13、overlay 7/7，partial/missing 均为 0；覆盖率脚本 2 项单测通过；P-INV/P-COV/H-GP ✅；下一刀 GP.2 |
 | 2026-07-15 | GP.2 | 122cdbf | 66 个 Catalog ID 全部映射真实功能路由；`route(for:)` 改为非 Optional 穷尽 switch；删除 `.unimplemented` 用户文案、无用 Core dispatch 枚举、死路由占位；设置 bootstrap 展示 loading；生产源码 stub 扫描为 0，Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过；P-STUB/H-GP ✅；下一刀 GP.3 |
 | 2026-07-15 | GP.3 | 38894ac | 全量 1012 测绿（真实 SVN 49/49）；Xcode Debug App 隔离启动 8 秒；`/usr/local/bin/svn` 1.14.5；临时可写 WC 含 M/?；空闲 CPU 连续 5 次 0.0%；性能守卫通过；P-TEST/P-PERF/H 环境与 T0–T5 ✅；下一刀 GP.4 |
-| 2026-07-15 | GP.4 | （提交后回填） | README 对齐 D01–D28、#1–#46、L01–L20、S01–S13、Overlay 7/7 与 114/114 总计；补齐三份验收证据链接，清理旧交付状态和更新机制误述；3 项契约测试、全量 1015/1015 与覆盖率 114/114 均绿；下一刀 GP.5 |
+| 2026-07-15 | GP.4 | a4bd369 | README 对齐 D01–D28、#1–#46、L01–L20、S01–S13、Overlay 7/7 与 114/114 总计；补齐三份验收证据链接，清理旧交付状态和更新机制误述；3 项契约测试、全量 1015/1015 与覆盖率 114/114 均绿；下一刀 GP.5 |
 
 ---
 

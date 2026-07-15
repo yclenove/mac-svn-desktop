@@ -290,7 +290,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-15 | GP.1 | 991eb3b | `python3 scripts/parity-coverage.py --fail-below 1.0` 实跑通过；覆盖率脚本 2 项单测通过；命令、域、日志、设置、Overlay 五类均无 partial/missing | inventory 无状态变化；P-INV、P-COV、H-GP 覆盖率门禁 ✅ | 覆盖率 114/114（100%）；下一 GP.2 |
 | 2026-07-15 | GP.2 | 122cdbf | Catalog 全量命令路由改为非 Optional 穷尽映射；删除 T0 `.unimplemented` 兜底、无用 Core dispatch 枚举与死路由占位；设置启动期改为明确 loading 状态；生产源码 stub 关键字扫描为 0；Navigator 33 测、全量 1012 测绿，Xcode Debug 构建通过 | inventory 无状态变化；P-STUB、H-GP stub 门禁 ✅ | 下一 GP.3 |
 | 2026-07-15 | GP.3 | 38894ac | 全量 `swift test` 1012 绿（真实 SVN 49/49）；Xcode Debug App 隔离启动 8 秒；SVN 1.14.5；临时真实 WC 含 modified/unversioned；空闲 CPU 每 2 秒采样 5 次均 0.0%；大 Diff/工作区性能守卫绿 | inventory 无状态变化；P-TEST、P-PERF、H 环境与 T0–T5 汇总 ✅ | 下一 GP.4 |
-| 2026-07-15 | GP.4 | （提交后回填） | README 五维矩阵与 114/114 总计对齐 inventory；补齐 inventory/H-Tortoise/parity-coverage 证据链接；移除旧分支、旧 main 状态和 Sparkle 误述；新增 3 项文档契约测试；全量 1015 绿（真实 SVN 49/49），覆盖率门禁 114/114 | inventory 无状态变化；H-GP README 门禁 ✅ | 下一 GP.5 |
+| 2026-07-15 | GP.4 | a4bd369 | README 五维矩阵与 114/114 总计对齐 inventory；补齐 inventory/H-Tortoise/parity-coverage 证据链接；移除旧分支、旧 main 状态和 Sparkle 误述；新增 3 项文档契约测试；全量 1015 绿（真实 SVN 49/49），覆盖率门禁 114/114 | inventory 无状态变化；H-GP README 门禁 ✅ | 下一 GP.5 |
 
 ---
 
