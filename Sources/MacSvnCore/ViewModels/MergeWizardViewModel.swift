@@ -119,6 +119,7 @@ public final class MergeWizardViewModel {
     ) async {
         let from = from.trimmingCharacters(in: .whitespacesAndNewlines)
         let to = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
         guard !from.isEmpty, !to.isEmpty else {
             state = .error("emptyMergeSource")
             return
@@ -144,6 +145,7 @@ public final class MergeWizardViewModel {
     ) async {
         let from = from.trimmingCharacters(in: .whitespacesAndNewlines)
         let to = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
         guard !from.isEmpty, !to.isEmpty else {
             state = .error("emptyMergeSource")
             return
@@ -193,6 +195,7 @@ public final class MergeWizardViewModel {
         range: RevisionRange
     ) async {
         let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
         guard !source.isEmpty else {
             state = .error("emptyMergeSource")
             return
@@ -214,6 +217,7 @@ public final class MergeWizardViewModel {
     ) async {
         let from = from.trimmingCharacters(in: .whitespacesAndNewlines)
         let to = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
         guard !from.isEmpty, !to.isEmpty else {
             state = .error("emptyMergeSource")
             return
@@ -231,6 +235,7 @@ public final class MergeWizardViewModel {
         dryRun: Bool
     ) async {
         let trimmedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
 
         guard !trimmedSource.isEmpty else {
             state = .error("emptyMergeSource")
@@ -284,6 +289,7 @@ public final class MergeWizardViewModel {
         auth: Credential?
     ) async {
         let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        discardResults()
         guard !source.isEmpty else {
             state = .error("emptyMergeSource")
             return
@@ -319,6 +325,13 @@ public final class MergeWizardViewModel {
             }
             state = .error(String(describing: error))
         }
+    }
+
+    public func discardResults() {
+        state = .idle
+        previewSummary = nil
+        mergeSummary = nil
+        unifiedDiff = nil
     }
 }
 

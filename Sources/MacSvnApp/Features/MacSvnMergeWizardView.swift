@@ -34,87 +34,23 @@ public struct MacSvnMergeWizardView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("合并向导")
-                .font(.largeTitle.weight(.semibold))
-
+        VStack(alignment: .leading, spacing: 0) {
             if workspaceController.selectedRecord == nil {
                 ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
             } else {
-                Form {
-                    Picker("合并类型", selection: $mergeMode) {
-                        ForEach(MergeMode.allCases) { mode in
-                            Text(LocalizedStringKey(mode.rawValue)).tag(mode)
-                        }
-                    }
-                    TextField("来源 URL / 分支", text: $sourceURL)
-                    if mergeMode == .twoTrees {
-                        TextField("目标 URL / 分支", text: $targetURL)
-                    } else if mergeMode == .revisionRange {
-                        HStack {
-                            TextField("起始 revision（可选）", text: $startRevision)
-                            TextField("结束 revision（可选）", text: $endRevision)
-                        }
-                    }
-                    HStack {
-                        Button("Dry-run 预览") {
-                            Task { await run(dryRun: true) }
-                        }
-                        Button("Unified Diff") {
-                            Task { await runDiff() }
-                        }
-                        .disabled(!canPreviewDiff)
-                        Button("执行合并") {
-                            Task { await run(dryRun: false) }
-                        }
-                        .keyboardShortcut(.defaultAction)
-                    }
-                }
-                .formStyle(.grouped)
-
+                mergeParameterPane
+                mergeActions
                 if let statusText {
                     Text(statusText)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 24)
                 }
-
-                if let summary = viewModel?.previewSummary ?? viewModel?.mergeSummary {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("结果摘要")
-                            .font(.headline)
-                        Text("更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted) / 合并 \(summary.merged)")
-                        if !summary.affectedPaths.isEmpty {
-                            ForEach(Array(summary.affectedPaths.prefix(12).enumerated()), id: \.offset) { _, affected in
-                                HStack(spacing: 6) {
-                                    Text(mergeActionSymbol(affected.action))
-                                        .font(.caption.monospaced().weight(.semibold))
-                                        .foregroundStyle(mergeActionColour(affected.action))
-                                    Text(affected.path)
-                                        .font(.caption.monospaced())
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-
-                if let diff = viewModel?.unifiedDiff {
-                    ScrollView {
-                        Text(DiffPerformanceLimits.truncatedDisplayText(diff))
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                    }
-                    .frame(maxHeight: 260)
-                    .background(Color(nsColor: .textBackgroundColor))
-                }
+                Divider()
+                mergeResultPane
             }
-            Spacer()
         }
-        .padding(24)
         .task {
             viewModel = MergeWizardViewModel(provider: session.svnService)
             if let url = workspaceController.selectedRecord?.repoURL {
@@ -128,10 +64,149 @@ public struct MacSvnMergeWizardView: View {
         }
     }
 
+    private var mergeParameterPane: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label("合并参数", systemImage: "arrow.triangle.merge")
+                    .font(.headline)
+                Spacer()
+                Picker("合并类型", selection: $mergeMode) {
+                    ForEach(MergeMode.allCases) { mode in
+                        Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 330)
+            }
+            TextField("来源 URL / 分支", text: $sourceURL)
+                .textFieldStyle(.roundedBorder)
+            if mergeMode == .twoTrees {
+                TextField("目标 URL / 分支", text: $targetURL)
+                    .textFieldStyle(.roundedBorder)
+            } else if mergeMode == .revisionRange {
+                HStack(spacing: 8) {
+                    TextField("起始 revision（可选）", text: $startRevision)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("结束 revision（可选）", text: $endRevision)
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+        }
+        .padding(12)
+    }
+
+    private var mergeActions: some View {
+        HStack(spacing: 8) {
+            Button {
+                Task { await run(dryRun: true) }
+            } label: {
+                Label("Dry-run 预览", systemImage: "play.circle")
+            }
+            .disabled(!canRunMerge || isMergeRunning)
+            Button {
+                Task { await runDiff() }
+            } label: {
+                Label("Unified Diff", systemImage: "doc.text.magnifyingglass")
+            }
+            .disabled(!canPreviewDiff || isMergeRunning)
+            Spacer(minLength: 8)
+            if isMergeRunning {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("正在执行合并操作")
+            }
+            Button {
+                Task { await run(dryRun: false) }
+            } label: {
+                Label("执行合并", systemImage: "arrow.triangle.merge")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!canRunMerge || isMergeRunning)
+            .keyboardShortcut(.defaultAction)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private var mergeResultPane: some View {
+        let summary = viewModel?.previewSummary ?? viewModel?.mergeSummary
+        VStack(alignment: .leading, spacing: 10) {
+            Text("合并结果")
+                .font(.headline)
+            if let summary {
+                Text("更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted) / 合并 \(summary.merged)")
+                    .font(.caption.monospacedDigit())
+                if !summary.affectedPaths.isEmpty {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 5) {
+                            ForEach(Array(summary.affectedPaths.enumerated()), id: \.offset) { _, affected in
+                                HStack(spacing: 6) {
+                                    Text(mergeActionSymbol(affected.action))
+                                        .font(.caption.monospaced().weight(.semibold))
+                                        .foregroundStyle(mergeActionColour(affected.action))
+                                        .frame(width: 18, alignment: .leading)
+                                    Text(affected.path)
+                                        .font(.caption.monospaced())
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .help(affected.path)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 180)
+                }
+            }
+            if let diff = viewModel?.unifiedDiff {
+                Divider()
+                Text("Unified Diff")
+                    .font(.headline)
+                ScrollView {
+                    Text(DiffPerformanceLimits.truncatedDisplayText(diff))
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                }
+                .background(Color(nsColor: .textBackgroundColor))
+            } else if summary == nil {
+                ContentUnavailableView(
+                    "尚无合并结果",
+                    systemImage: "arrow.triangle.merge",
+                    description: Text("先运行 Dry-run 预览，确认后再执行合并")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(12)
+    }
+
+    private var canRunMerge: Bool {
+        guard !sourceURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if mergeMode == .twoTrees {
+            return !targetURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return true
+    }
+
+    private var isMergeRunning: Bool {
+        switch viewModel?.state {
+        case .previewing, .diffPreviewing, .merging:
+            return true
+        default:
+            return false
+        }
+    }
+
     private func run(dryRun: Bool) async {
         guard let record = workspaceController.selectedRecord,
               let viewModel
         else { return }
+        viewModel.discardResults()
 
         let range: RevisionRange?
         if mergeMode == .revisionRange {

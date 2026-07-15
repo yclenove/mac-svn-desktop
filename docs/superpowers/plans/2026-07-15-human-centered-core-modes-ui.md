@@ -488,7 +488,7 @@ git commit -m "feat(UI): 统一分支详情与合并入口（U6 任务 4/6）"
 - 修改：`Tests/MacSvnAppTests/HumanCenteredCoreModesTests.swift`
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 
-- [ ] **步骤 1：增加冲突动作层级和稳定布局失败测试**
+- [x] **步骤 1：增加冲突动作层级和稳定布局失败测试**
 
 ```swift
 func testConflictWorkspaceSeparatesRowFocusBatchSelectionAndMergeActions() throws {
@@ -512,7 +512,7 @@ func testConflictWorkspaceSeparatesRowFocusBatchSelectionAndMergeActions() throw
 
 性能守卫增加 Conflict 主组合层无 SplitView 断言。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 运行：
 
@@ -523,13 +523,13 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 
 预期：断言失败，冲突页仍为大标题 + 自由 HSplitView，Merge 向导尚未拆分参数/结果。
 
-- [ ] **步骤 3：实现冲突工具栏、筛选和主从布局**
+- [x] **步骤 3：实现冲突工具栏、筛选和主从布局**
 
 将大标题块拆成 `conflictToolbar` 和 `conflictFilterBar`。类型 Picker 与路径搜索保留；“勾选可解决”“清除勾选”进入 `bulkSelectionMenu`，“标记已解决 (N)”保持固定。主区使用 `HStack(spacing: 0)`，列表按 CoreModeMetrics 固定宽度，详情占剩余空间。
 
 列表行路径增加单行中部截断和 tooltip；复选框 setter 只写 checkedPaths，List selection setter 只写 selectedConflictPath 并加载详情。树冲突继续禁用批量复选框。
 
-- [ ] **步骤 4：重排 Merge 参数、预览和执行**
+- [x] **步骤 4：重排 Merge 参数、预览和执行**
 
 `MacSvnMergeWizardView` 拆成：
 
@@ -541,7 +541,7 @@ private var mergeResultPane: some View
 
 参数区使用紧凑 segmented merge mode 和字段；动作区固定 Dry-run、Unified Diff、执行合并，其中只有执行按钮使用 `.borderedProminent`。结果区稳定显示 previewSummary / mergeSummary / unifiedDiff，路径单行中部截断并保留 tooltip。
 
-- [ ] **步骤 5：运行冲突、Merge、性能与 Localization 测试**
+- [x] **步骤 5：运行冲突、Merge、性能与 Localization 测试**
 
 运行：
 
@@ -558,7 +558,7 @@ swift test --filter LocalizationResourceTests
 
 预期：全部通过；文本/树/属性冲突、批量 Resolved、外置 Merge、AI 辅助、dry-run、Diff、执行与冲突回跳无回归。
 
-- [ ] **步骤 6：提交冲突/Merge 切片**
+- [x] **步骤 6：提交冲突/Merge 切片**
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnConflictWorkspaceView.swift \

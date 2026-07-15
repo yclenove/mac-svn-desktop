@@ -299,6 +299,37 @@ final class MergeEditorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testAIConflictSuggestionIsDiscardedWhenSelectionChangesWhileAwaitingResponse() async {
+        let provider = FakeMergeEditorProvider(loadResult: .success((
+            base: "one\nsame\ntwo\n",
+            mine: "mine-one\nsame\nmine-two\n",
+            theirs: "theirs-one\nsame\ntheirs-two\n"
+        )))
+        let suggestion = AIConflictAssistSuggestion(
+            mergedLines: ["stale-ai-result"],
+            rationale: "基于第一块生成。",
+            confidence: .medium,
+            providerID: UUID(),
+            redactionMatches: [],
+            promptCount: 1
+        )
+        let assistant = SuspendingAIConflictAssistant()
+        let viewModel = MergeEditorViewModel(provider: provider, aiConflictAssistant: assistant)
+
+        await viewModel.load(conflict: textConflict(), wc: URL(fileURLWithPath: "/tmp/wc"))
+        let request = Task { await viewModel.requestAIResolutionForCurrentConflict() }
+        await assistant.waitUntilRequestStarts()
+        viewModel.nextConflict()
+        await assistant.complete(with: suggestion)
+        await request.value
+
+        XCTAssertEqual(viewModel.currentConflictIndex, 1)
+        XCTAssertEqual(viewModel.unresolvedConflictCount, 2)
+        XCTAssertNil(viewModel.aiConflictSuggestion)
+        XCTAssertEqual(viewModel.aiConflictAssistState, .idle)
+    }
+
+    @MainActor
     func testAIConflictSuggestionUnavailableMissingConflictAndProviderErrors() async {
         let provider = FakeMergeEditorProvider(loadResult: .success((
             base: "base\n",
@@ -490,5 +521,42 @@ private actor FakeAIConflictAssistant: AIConflictAssisting {
     ) async throws -> AIConflictAssistPreview {
         previewCalls.append(AIConflictPreviewCall(contexts: contexts, privacySettings: privacySettings))
         return try previewResult.get()
+    }
+}
+
+private actor SuspendingAIConflictAssistant: AIConflictAssisting {
+    private var didStart = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var resultContinuation: CheckedContinuation<AIConflictAssistSuggestion, Error>?
+
+    func waitUntilRequestStarts() async {
+        guard !didStart else { return }
+        await withCheckedContinuation { continuation in
+            startWaiters.append(continuation)
+        }
+    }
+
+    func complete(with suggestion: AIConflictAssistSuggestion) {
+        resultContinuation?.resume(returning: suggestion)
+        resultContinuation = nil
+    }
+
+    func suggestResolution(
+        context: AIConflictAssistContext,
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIConflictAssistSuggestion {
+        didStart = true
+        startWaiters.forEach { $0.resume() }
+        startWaiters = []
+        return try await withCheckedThrowingContinuation { continuation in
+            resultContinuation = continuation
+        }
+    }
+
+    func suggestResolutions(
+        contexts: [AIConflictAssistContext],
+        privacySettings: AIPrivacySettings
+    ) async throws -> AIConflictAssistPreview {
+        throw AIConflictAssistError.emptyConflict
     }
 }

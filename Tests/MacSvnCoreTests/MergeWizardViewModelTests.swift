@@ -152,6 +152,91 @@ final class MergeWizardViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testEveryExecutionModeClearsItsPriorPreviewSummary() async {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let rangeProvider = FakeMergeProvider(results: [
+            .success(MergeSummary(updated: 1)),
+            .success(MergeSummary(merged: 2)),
+        ])
+        let rangeViewModel = MergeWizardViewModel(provider: rangeProvider)
+        await rangeViewModel.preview(wc: wc, source: "file:///repo/branches/feature")
+        await rangeViewModel.merge(wc: wc, source: "file:///repo/branches/feature")
+        XCTAssertNil(rangeViewModel.previewSummary)
+        XCTAssertEqual(rangeViewModel.mergeSummary, MergeSummary(merged: 2))
+
+        let twoTreeProvider = FakeMergeProvider(twoTreeResults: [
+            .success(MergeSummary(updated: 3)),
+            .success(MergeSummary(merged: 4)),
+        ])
+        let twoTreeViewModel = MergeWizardViewModel(provider: twoTreeProvider)
+        await twoTreeViewModel.previewTwoTrees(wc: wc, from: "old", to: "new")
+        await twoTreeViewModel.mergeTwoTrees(wc: wc, from: "old", to: "new")
+        XCTAssertNil(twoTreeViewModel.previewSummary)
+        XCTAssertEqual(twoTreeViewModel.mergeSummary, MergeSummary(merged: 4))
+
+        let reintegrateProvider = FakeMergeProvider(results: [
+            .success(MergeSummary(updated: 5)),
+            .success(MergeSummary(merged: 6)),
+        ])
+        let reintegrateViewModel = MergeWizardViewModel(provider: reintegrateProvider)
+        await reintegrateViewModel.previewReintegrate(wc: wc, source: "feature")
+        await reintegrateViewModel.reintegrate(wc: wc, source: "feature")
+        XCTAssertNil(reintegrateViewModel.previewSummary)
+        XCTAssertEqual(reintegrateViewModel.mergeSummary, MergeSummary(merged: 6))
+    }
+
+    @MainActor
+    func testStartingResultOperationInvalidatesSummariesAndDiffFromPriorOperation() async {
+        let provider = FakeMergeProvider(
+            results: [
+                .success(MergeSummary(updated: 1)),
+                .success(MergeSummary(merged: 2)),
+            ],
+            diffResults: [.success("--- old\n+++ new\n")]
+        )
+        let viewModel = MergeWizardViewModel(provider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let source = "file:///repo/branches/feature"
+
+        await viewModel.preview(wc: wc, source: source)
+        XCTAssertNotNil(viewModel.previewSummary)
+
+        await viewModel.previewUnifiedDiff(
+            wc: wc,
+            source: source,
+            range: RevisionRange(start: Revision(1), end: Revision(2))
+        )
+        XCTAssertNil(viewModel.previewSummary)
+        XCTAssertNil(viewModel.mergeSummary)
+        XCTAssertEqual(viewModel.unifiedDiff, "--- old\n+++ new\n")
+
+        await viewModel.merge(wc: wc, source: source)
+        XCTAssertNil(viewModel.previewSummary)
+        XCTAssertEqual(viewModel.mergeSummary, MergeSummary(merged: 2))
+        XCTAssertNil(viewModel.unifiedDiff)
+    }
+
+    @MainActor
+    func testDiscardResultsClearsOutputAndReturnsToIdle() async {
+        let provider = FakeMergeProvider(results: [.success(MergeSummary(updated: 1))])
+        let viewModel = MergeWizardViewModel(provider: provider)
+
+        await viewModel.preview(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "file:///repo/branches/feature"
+        )
+        XCTAssertNotNil(viewModel.previewSummary)
+
+        viewModel.discardResults()
+
+        XCTAssertEqual(viewModel.state, .idle)
+        XCTAssertNil(viewModel.previewSummary)
+        XCTAssertNil(viewModel.mergeSummary)
+        XCTAssertNil(viewModel.unifiedDiff)
+    }
+
+    @MainActor
     func testPreviewRejectsEmptySourceBeforeProviderCall() async {
         let provider = FakeMergeProvider(results: [.success(MergeSummary(updated: 1))])
         let viewModel = MergeWizardViewModel(provider: provider)

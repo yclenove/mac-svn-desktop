@@ -95,6 +95,72 @@ final class HumanCenteredCoreModesTests: XCTestCase {
         XCTAssertTrue(mergeWizardSource.contains("navigator.consumePendingMergeSourceURL()"))
     }
 
+    func testConflictWorkspaceSeparatesRowFocusBatchSelectionAndMergeActions() throws {
+        let conflict = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnConflictWorkspaceView.swift"
+        )
+        let merge = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnMergeWizardView.swift"
+        )
+        let mergeRun = try Self.sourceSection(
+            merge,
+            from: "private func run(dryRun:",
+            to: "private func mergeActionColour("
+        )
+
+        XCTAssertTrue(conflict.contains("private var conflictToolbar"))
+        XCTAssertTrue(conflict.contains("private var conflictFilterBar"))
+        XCTAssertTrue(conflict.contains("private var bulkSelectionMenu"))
+        XCTAssertTrue(conflict.contains("@State private var conflictReloadGeneration = 0"))
+        XCTAssertTrue(conflict.contains("conflictReloadGeneration &+= 1"))
+        XCTAssertTrue(conflict.contains("guard generation == conflictReloadGeneration"))
+        XCTAssertTrue(conflict.contains("MacSvnCoreModeMetrics.masterIdealWidth"))
+        XCTAssertTrue(conflict.contains("HStack(spacing: 0)"))
+        XCTAssertTrue(conflict.contains("set: { listVM.setChecked(conflict.path, isChecked: $0) }"))
+        XCTAssertTrue(conflict.contains("listVM.selectConflict(path: path)"))
+        XCTAssertTrue(
+            conflict.contains(".disabled(!ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict))")
+        )
+        XCTAssertFalse(conflict.contains("HSplitView"))
+        XCTAssertTrue(merge.contains("private var mergeParameterPane"))
+        XCTAssertTrue(merge.contains("private var mergeActions"))
+        XCTAssertTrue(merge.contains("private var mergeResultPane"))
+        XCTAssertEqual(
+            merge.components(separatedBy: ".buttonStyle(.borderedProminent)").count - 1,
+            1
+        )
+        XCTAssertFalse(merge.contains("affectedPaths.prefix("))
+        XCTAssertTrue(merge.contains(".truncationMode(.middle)"))
+        XCTAssertTrue(merge.contains(".help(affected.path)"))
+        XCTAssertTrue(mergeRun.contains("viewModel.discardResults()"))
+    }
+
+    func testTextConflictDetailKeepsContextVisibleAndMovesAssistantsOutOfPrimaryActions() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnConflictWorkspaceView.swift"
+        )
+        let detail = try Self.sourceSection(
+            source,
+            from: "private struct MacSvnMergeEditorPane",
+            to: "private struct MacSvnTreeConflictPane"
+        )
+        let primaryActions = try Self.sourceSection(
+            detail,
+            from: "private func conflictPrimaryActions(",
+            to: "private func conflictAssistMenu("
+        )
+
+        XCTAssertTrue(detail.contains("private var conflictDetailHeader"))
+        XCTAssertTrue(detail.contains("Text(conflict.path)"))
+        XCTAssertTrue(primaryActions.contains("conflictAssistMenu(editorVM)"))
+        XCTAssertFalse(primaryActions.contains("AI 建议当前"))
+        XCTAssertFalse(primaryActions.contains("外置 Merge"))
+        XCTAssertTrue(detail.contains("hunk.resolvedLines()"))
+        XCTAssertTrue(detail.contains("pane(\"Result\""))
+        XCTAssertTrue(detail.contains("case .suggested, .previewed:"))
+        XCTAssertFalse(detail.contains("else {\n            statusText = success"))
+    }
+
     private static let repoRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()

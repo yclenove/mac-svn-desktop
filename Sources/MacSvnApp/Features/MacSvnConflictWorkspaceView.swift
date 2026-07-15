@@ -21,6 +21,7 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var confirmMarkResolved = false
     @State private var externalMergeTool: ExternalDiffToolConfiguration?
     @State private var isOpeningExternalMerge = false
+    @State private var conflictReloadGeneration = 0
 
     private enum Tab: String, CaseIterable, Identifiable {
         case conflicts = "冲突列表"
@@ -50,44 +51,19 @@ public struct MacSvnConflictWorkspaceView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("冲突合并")
-                    .font(.largeTitle.weight(.semibold))
-                if conflictBadgeCount > 0 {
-                    Text("\(conflictBadgeCount)")
-                        .font(.caption.weight(.bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(conflictColour.opacity(0.85))
-                        .foregroundStyle(.white)
-                        .clipShape(Capsule())
-                }
-                Spacer()
-                Picker("", selection: $tab) {
-                    ForEach(Tab.allCases) { item in
-                        Text(LocalizedStringKey(item.rawValue)).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 280)
-                Button("刷新冲突") {
-                    Task { await reloadConflicts() }
-                }
-                Button("返回变更") {
-                    onReturnToChanges?()
-                }
-            }
-            .padding(24)
-
-            if let statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
-            }
-
+            conflictToolbar
             switch tab {
             case .conflicts:
+                conflictFilterBar
+                if let statusText {
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 24)
+                }
                 conflictPane
             case .mergeWizard:
                 MacSvnMergeWizardView(
@@ -139,105 +115,203 @@ public struct MacSvnConflictWorkspaceView: View {
         }
     }
 
+    private var conflictToolbar: some View {
+        HStack(spacing: 8) {
+            Label("冲突", systemImage: "exclamationmark.triangle.fill")
+                .font(.headline)
+            if conflictBadgeCount > 0 {
+                Text("\(conflictBadgeCount)")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(conflictColour)
+                    .accessibilityLabel("\(conflictBadgeCount) 个冲突")
+            }
+            Spacer(minLength: 8)
+            Picker("工作区", selection: $tab) {
+                ForEach(Tab.allCases) { item in
+                    Text(LocalizedStringKey(item.rawValue)).tag(item)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 240)
+            Button {
+                Task { await reloadConflicts() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(listVM?.state == .loading || listVM?.state == .resolving)
+            .help("刷新冲突")
+            .accessibilityLabel("刷新冲突")
+            Button {
+                onReturnToChanges?()
+            } label: {
+                Label("返回变更", systemImage: "arrow.uturn.backward")
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: MacSvnCoreModeMetrics.toolbarHeight)
+    }
+
+    @ViewBuilder
+    private var conflictFilterBar: some View {
+        if let listVM {
+            HStack(spacing: 8) {
+                Picker("类型", selection: $kindFilterPick) {
+                    ForEach(KindFilterPick.allCases) { item in
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 220)
+                TextField(
+                    "过滤路径",
+                    text: Binding(
+                        get: { listVM.searchText },
+                        set: { listVM.searchText = $0 }
+                    )
+                )
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 120, idealWidth: 200, maxWidth: 260)
+                Text("\(listVM.visibleConflicts.count) / \(listVM.summary.total)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                bulkSelectionMenu
+                Button {
+                    confirmMarkResolved = true
+                } label: {
+                    Label(
+                        "标记已解决 (\(listVM.checkedPathsEligibleForMarkResolved.count))",
+                        systemImage: "checkmark.circle"
+                    )
+                }
+                .disabled(
+                    listVM.checkedPathsEligibleForMarkResolved.isEmpty
+                        || listVM.state == .resolving
+                )
+                .help("对勾选的文本/属性冲突执行 svn resolve --accept working（树冲突请用右侧专用操作）")
+            }
+            .controlSize(.small)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var bulkSelectionMenu: some View {
+        if let listVM {
+            Menu {
+                Button("勾选可解决", systemImage: "checkmark.square") {
+                    listVM.checkAllVisibleEligible()
+                }
+                Button("清除勾选", systemImage: "square") {
+                    listVM.clearChecked()
+                }
+            } label: {
+                Label("批量选择", systemImage: "checklist")
+                    .labelStyle(.iconOnly)
+                    .frame(width: 28, height: 28)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .help("批量选择")
+            .accessibilityLabel("批量选择")
+        }
+    }
+
     @ViewBuilder
     private var conflictPane: some View {
         if workspaceController.selectedRecord == nil {
             ContentUnavailableView("未选择工作副本", systemImage: "externaldrive")
         } else if let listVM {
-            HSplitView {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("共 \(listVM.summary.total)（文本 \(listVM.summary.text) / 树 \(listVM.summary.tree) / 属性 \(listVM.summary.property)）")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 12)
-
-                    HStack(spacing: 8) {
-                        Picker("类型", selection: $kindFilterPick) {
-                            ForEach(KindFilterPick.allCases) { item in
-                                Text(LocalizedStringKey(item.rawValue)).tag(item)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 280)
-                        TextField("过滤路径", text: Binding(
-                            get: { listVM.searchText },
-                            set: { listVM.searchText = $0 }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                    }
-                    .padding(.horizontal, 12)
-
-                    HStack(spacing: 8) {
-                        Button("勾选可解决") {
-                            listVM.checkAllVisibleEligible()
-                        }
-                        Button("清除勾选") {
-                            listVM.clearChecked()
-                        }
-                        Button("标记已解决 (\(listVM.checkedPathsEligibleForMarkResolved.count))") {
-                            confirmMarkResolved = true
-                        }
-                        .disabled(listVM.checkedPathsEligibleForMarkResolved.isEmpty || listVM.state == .resolving)
-                        .help("对勾选的文本/属性冲突执行 svn resolve --accept working（树冲突请用右侧专用操作）")
-                    }
-                    .padding(.horizontal, 12)
-
-                    List(selection: Binding(
-                        get: { listVM.selectedConflictPath },
-                        set: { path in
-                            if let path {
-                                listVM.selectConflict(path: path)
-                            }
-                            Task { await openSelected() }
-                        }
-                    )) {
-                        ForEach(listVM.visibleConflicts, id: \.path) { conflict in
-                            HStack {
-                                Toggle(
-                                    "",
-                                    isOn: Binding(
-                                        get: { listVM.checkedPaths.contains(conflict.path) },
-                                        set: { listVM.setChecked(conflict.path, isChecked: $0) }
-                                    )
-                                )
-                                .toggleStyle(.checkbox)
-                                .disabled(!ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict))
-                                .help(
-                                    ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict)
-                                        ? "勾选后可批量标记已解决"
-                                        : "树冲突请在右侧专用面板处理"
-                                )
-                                Text(kindLabel(conflict.kind))
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(kindColor(conflict.kind))
-                                    .frame(width: 36, alignment: .leading)
-                                Text(conflict.path)
-                            }
-                            .tag(conflict.path)
-                            .contextMenu {
-                                Button("编辑冲突") {
-                                    listVM.selectConflict(path: conflict.path)
-                                    Task { await openSelected() }
-                                }
-                                if ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict) {
-                                    Button("标记此项已解决") {
-                                        listVM.clearChecked()
-                                        listVM.setChecked(conflict.path, isChecked: true)
-                                        confirmMarkResolved = true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(minWidth: 280)
-
+            HStack(spacing: 0) {
+                conflictList(listVM)
+                    .frame(
+                        minWidth: MacSvnCoreModeMetrics.masterMinimumWidth,
+                        idealWidth: MacSvnCoreModeMetrics.masterIdealWidth,
+                        maxWidth: MacSvnCoreModeMetrics.masterMaximumWidth
+                    )
+                Divider()
                 detailPane
-                    .frame(minWidth: 420)
+                    .frame(minWidth: MacSvnCoreModeMetrics.inspectorMinimumWidth)
             }
         } else {
             ProgressView("扫描冲突…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func conflictList(_ listVM: ConflictListViewModel) -> some View {
+        List(selection: Binding(
+            get: { listVM.selectedConflictPath },
+            set: { path in
+                guard let path else { return }
+                listVM.selectConflict(path: path)
+                Task { await openSelected() }
+            }
+        )) {
+            ForEach(listVM.visibleConflicts, id: \.path) { conflict in
+                HStack(spacing: 8) {
+                    Toggle(
+                        "",
+                        isOn: Binding(
+                            get: { listVM.checkedPaths.contains(conflict.path) },
+                            set: { listVM.setChecked(conflict.path, isChecked: $0) }
+                        )
+                    )
+                    .toggleStyle(.checkbox)
+                    .disabled(!ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict))
+                    .help(
+                        ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict)
+                            ? "勾选后可批量标记已解决"
+                            : "树冲突请在右侧专用面板处理"
+                    )
+                    Image(systemName: kindSystemImage(conflict.kind))
+                        .foregroundStyle(kindColor(conflict.kind))
+                        .frame(width: 16)
+                    Text(kindDisplayLabel(conflict.kind))
+                        .font(.caption)
+                        .foregroundStyle(kindColor(conflict.kind))
+                        .frame(width: 34, alignment: .leading)
+                    Text(conflict.path)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(conflict.path)
+                }
+                .tag(conflict.path)
+                .contextMenu {
+                    Button("编辑冲突") {
+                        listVM.selectConflict(path: conflict.path)
+                        Task { await openSelected() }
+                    }
+                    if ConflictResolveBatchPolicy.isEligibleForMarkResolved(conflict) {
+                        Button("标记此项已解决") {
+                            listVM.clearChecked()
+                            listVM.setChecked(conflict.path, isChecked: true)
+                            confirmMarkResolved = true
+                        }
+                    }
+                }
+            }
+        }
+        .overlay {
+            switch listVM.state {
+            case .idle, .loading:
+                ProgressView("扫描冲突…")
+            case .loaded where listVM.visibleConflicts.isEmpty:
+                ContentUnavailableView("无匹配冲突", systemImage: "checkmark.seal")
+            case .error(let message):
+                ContentUnavailableView(
+                    "加载冲突失败",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(message)
+                )
+            case .loaded, .resolving:
+                EmptyView()
+            }
         }
     }
 
@@ -247,6 +321,7 @@ public struct MacSvnConflictWorkspaceView: View {
             switch conflict.kind {
             case .text:
                 MacSvnMergeEditorPane(
+                    conflict: conflict,
                     editorVM: editorVM,
                     privacySettings: privacySettings,
                     statusText: $statusText,
@@ -279,6 +354,8 @@ public struct MacSvnConflictWorkspaceView: View {
     }
 
     private func reloadConflicts() async {
+        conflictReloadGeneration &+= 1
+        let generation = conflictReloadGeneration
         guard let record = workspaceController.selectedRecord, record.isValid else {
             listVM = nil
             editorVM = nil
@@ -295,12 +372,12 @@ public struct MacSvnConflictWorkspaceView: View {
             batchResolver: session.conflictService
         )
         listVM = list
-        editorVM = MergeEditorViewModel(
-            provider: session.conflictService,
-            aiConflictAssistant: session.aiConflictAssistant
-        )
+        editorVM = nil
         applyKindFilter(kindFilterPick)
         await list.refresh()
+        guard generation == conflictReloadGeneration,
+              workspaceController.selectedID == record.id,
+              listVM === list else { return }
         conflictBadgeCount = list.summary.total
         if case .error(let message) = list.state {
             statusText = LocalizedStringKey(message)
@@ -358,19 +435,39 @@ public struct MacSvnConflictWorkspaceView: View {
     private func openSelected() async {
         guard let conflict = listVM?.selectedConflict,
               let record = workspaceController.selectedRecord
-        else { return }
+        else {
+            editorVM = nil
+            treeVM = nil
+            propertyVM = nil
+            return
+        }
+        let selectedPath = conflict.path
         let wc = URL(fileURLWithPath: record.localPath)
         switch conflict.kind {
         case .text:
-            await editorVM?.load(conflict: conflict, wc: wc)
-            await refreshExternalMergeTool(for: conflict.path)
+            treeVM = nil
+            propertyVM = nil
+            let vm = MergeEditorViewModel(
+                provider: session.conflictService,
+                aiConflictAssistant: session.aiConflictAssistant
+            )
+            editorVM = vm
+            await vm.load(conflict: conflict, wc: wc)
+            guard listVM?.selectedConflictPath == selectedPath else { return }
+            await refreshExternalMergeTool(for: selectedPath)
         case .tree:
+            editorVM = nil
+            propertyVM = nil
+            externalMergeTool = nil
             treeVM = TreeConflictViewModel(
                 conflict: conflict,
                 workingCopy: wc,
                 resolver: session.conflictService
             )
         case .property:
+            editorVM = nil
+            treeVM = nil
+            externalMergeTool = nil
             let vm = PropertyConflictViewModel(
                 conflict: conflict,
                 workingCopy: wc,
@@ -379,18 +476,24 @@ public struct MacSvnConflictWorkspaceView: View {
             propertyVM = vm
             await vm.load()
         default:
+            editorVM = nil
+            treeVM = nil
+            propertyVM = nil
+            externalMergeTool = nil
             break
         }
     }
 
     private func refreshExternalMergeTool(for path: String) async {
         let settings = await session.settingsStore.settings()
-        externalMergeTool = ExternalToolRuleResolver.tool(
+        let tool = ExternalToolRuleResolver.tool(
             for: .merge,
             path: path,
             rules: settings.externalToolRules,
             legacyDiffTool: settings.externalDiffTool
         )
+        guard listVM?.selectedConflictPath == path else { return }
+        externalMergeTool = tool
     }
 
     private func openExternalMerge(_ conflict: ConflictInfo) async {
@@ -421,12 +524,21 @@ public struct MacSvnConflictWorkspaceView: View {
         }
     }
 
-    private func kindLabel(_ kind: ConflictKind) -> String {
+    private func kindDisplayLabel(_ kind: ConflictKind) -> LocalizedStringKey {
         switch kind {
-        case .text: return "TXT"
-        case .tree: return "TREE"
-        case .property: return "PROP"
-        case .unknown: return "?"
+        case .text: return "文本"
+        case .tree: return "树"
+        case .property: return "属性"
+        case .unknown: return "未知"
+        }
+    }
+
+    private func kindSystemImage(_ kind: ConflictKind) -> String {
+        switch kind {
+        case .text: return "doc.text"
+        case .tree: return "folder.badge.questionmark"
+        case .property: return "tag"
+        case .unknown: return "questionmark.diamond"
         }
     }
 
@@ -447,6 +559,7 @@ public struct MacSvnConflictWorkspaceView: View {
 }
 
 private struct MacSvnMergeEditorPane: View {
+    let conflict: ConflictInfo
     let editorVM: MergeEditorViewModel?
     let privacySettings: AIPrivacySettings
     @Binding var statusText: LocalizedStringKey?
@@ -457,65 +570,24 @@ private struct MacSvnMergeEditorPane: View {
     let onOpenExternalMerge: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
+            conflictDetailHeader
             if let editorVM {
-                HStack {
-                    Button("上一处") { editorVM.previousConflict() }
-                    Button("下一处") { editorVM.nextConflict() }
-                    Divider()
-                    Button("采用 Mine") { editorVM.resolveCurrent(.takeMine) }
-                    Button("采用 Theirs") { editorVM.resolveCurrent(.takeTheirs) }
-                    Button("双方(Mine先)") { editorVM.resolveCurrent(.takeBoth(mineFirst: true)) }
-                    Divider()
-                    Button(isOpeningExternalMerge ? "启动中…" : "外置 Merge") {
-                        onOpenExternalMerge()
-                    }
-                    .disabled(externalMergeTool == nil || isOpeningExternalMerge)
-                    .help(externalMergeTool?.name ?? "请先在设置中配置此扩展名的外置 Merge 工具")
-                    Divider()
-                    Button("AI 建议当前") {
-                        Task {
-                            await editorVM.requestAIResolutionForCurrentConflict(privacySettings: privacySettings)
-                            if case .error(let message) = editorVM.aiConflictAssistState {
-                                statusText = LocalizedStringKey(message)
-                            } else {
-                                statusText = "AI 冲突建议已应用（当前块）"
-                            }
-                        }
-                    }
-                    Button("AI 预览全部") {
-                        Task {
-                            await editorVM.requestAIResolutionPreviewForAllConflicts(privacySettings: privacySettings)
-                            if case .error(let message) = editorVM.aiConflictAssistState {
-                                statusText = LocalizedStringKey(message)
-                            } else {
-                                statusText = "AI 冲突预览完成"
-                            }
-                        }
-                    }
-                    Divider()
-                    Button("整文件 Mine") { Task { await editorVM.resolveWholeFileMine(); handleSaveState(editorVM) } }
-                    Button("整文件 Theirs") { Task { await editorVM.resolveWholeFileTheirs(); handleSaveState(editorVM) } }
-                    Spacer()
-                    Text("未解决 \(editorVM.unresolvedConflictCount)")
-                        .foregroundStyle(editorVM.unresolvedConflictCount == 0 ? .green : .orange)
-                    Button("保存并 Resolve") {
-                        Task {
-                            await editorVM.saveResolved()
-                            handleSaveState(editorVM)
-                        }
-                    }
-                    .disabled(!editorVM.canSaveResolved)
-                    .keyboardShortcut(.defaultAction)
-                }
+                conflictPrimaryActions(editorVM)
+                Divider()
 
                 switch editorVM.state {
                 case .loading, .saving:
                     ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .error(let message):
-                    Text(message).foregroundStyle(.red)
+                    ContentUnavailableView(
+                        "加载失败",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(message)
+                    )
                 case .saved:
-                    Text("已解决并写回").foregroundStyle(.green)
+                    ContentUnavailableView("已解决并写回", systemImage: "checkmark.seal")
                 case .loaded, .idle:
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 10) {
@@ -528,9 +600,167 @@ private struct MacSvnMergeEditorPane: View {
                 }
             } else {
                 ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding()
+    }
+
+    private var conflictDetailHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Label("文本", systemImage: "doc.text.fill")
+                    .font(.headline)
+                    .foregroundStyle(conflictColour)
+                Spacer(minLength: 8)
+                conflictStateLabel
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(conflict.path)
+                .font(.caption.monospaced())
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+                .help(conflict.path)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    @ViewBuilder
+    private var conflictStateLabel: some View {
+        if let editorVM {
+            switch editorVM.state {
+            case .idle:
+                Label("等待加载", systemImage: "clock")
+            case .loading:
+                Label("加载中", systemImage: "arrow.triangle.2.circlepath")
+            case .loaded where editorVM.hasUnsavedChanges:
+                Label("未保存", systemImage: "circle.fill")
+            case .loaded:
+                Label("可处理", systemImage: "pencil.and.outline")
+            case .saving:
+                Label("正在保存", systemImage: "arrow.down.doc")
+            case .saved:
+                Label("已解决", systemImage: "checkmark.circle")
+            case .error:
+                Label("加载失败", systemImage: "exclamationmark.triangle")
+            }
+        } else {
+            Label("加载中", systemImage: "arrow.triangle.2.circlepath")
+        }
+    }
+
+    private func conflictPrimaryActions(_ editorVM: MergeEditorViewModel) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                editorVM.previousConflict()
+            } label: {
+                Image(systemName: "chevron.up")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("上一处")
+            .accessibilityLabel("上一处")
+            Button {
+                editorVM.nextConflict()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("下一处")
+            .accessibilityLabel("下一处")
+            conflictResolutionMenu(editorVM)
+            conflictAssistMenu(editorVM)
+            Spacer(minLength: 8)
+            Label {
+                Text("\(editorVM.unresolvedConflictCount)")
+                    .font(.caption.monospacedDigit())
+            } icon: {
+                Image(systemName: "exclamationmark.circle")
+            }
+                .foregroundStyle(editorVM.unresolvedConflictCount == 0 ? .green : .orange)
+                .help("未解决 \(editorVM.unresolvedConflictCount)")
+                .accessibilityLabel("未解决 \(editorVM.unresolvedConflictCount)")
+            Button("保存并 Resolve") {
+                Task {
+                    await editorVM.saveResolved()
+                    handleSaveState(editorVM)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!editorVM.canSaveResolved)
+            .keyboardShortcut(.defaultAction)
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private func conflictAssistMenu(_ editorVM: MergeEditorViewModel) -> some View {
+        Menu {
+            Button(isOpeningExternalMerge ? "启动中…" : "外置 Merge", systemImage: "arrow.up.forward.app") {
+                onOpenExternalMerge()
+            }
+            .disabled(externalMergeTool == nil || isOpeningExternalMerge)
+            Divider()
+            Button("AI 建议当前", systemImage: "wand.and.stars") {
+                Task {
+                    await editorVM.requestAIResolutionForCurrentConflict(privacySettings: privacySettings)
+                    handleAIAssistState(editorVM, success: "AI 冲突建议已应用（当前块）")
+                }
+            }
+            Button("AI 预览全部", systemImage: "sparkles.rectangle.stack") {
+                Task {
+                    await editorVM.requestAIResolutionPreviewForAllConflicts(privacySettings: privacySettings)
+                    handleAIAssistState(editorVM, success: "AI 冲突预览完成")
+                }
+            }
+        } label: {
+            Label("冲突辅助操作", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help(externalMergeTool?.name ?? "冲突辅助操作")
+        .accessibilityLabel("冲突辅助操作")
+    }
+
+    private func conflictResolutionMenu(_ editorVM: MergeEditorViewModel) -> some View {
+        Menu {
+            Button("采用 Mine") { editorVM.resolveCurrent(.takeMine) }
+            Button("采用 Theirs") { editorVM.resolveCurrent(.takeTheirs) }
+            Button("双方(Mine先)") { editorVM.resolveCurrent(.takeBoth(mineFirst: true)) }
+            Divider()
+            Button("整文件 Mine") {
+                Task { await editorVM.resolveWholeFileMine(); handleSaveState(editorVM) }
+            }
+            Button("整文件 Theirs") {
+                Task { await editorVM.resolveWholeFileTheirs(); handleSaveState(editorVM) }
+            }
+        } label: {
+            Label("冲突解决策略", systemImage: "arrow.triangle.branch")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("冲突解决策略")
+        .accessibilityLabel("冲突解决策略")
+    }
+
+    private func handleAIAssistState(_ editorVM: MergeEditorViewModel, success: LocalizedStringKey) {
+        switch editorVM.aiConflictAssistState {
+        case .error(let message):
+            statusText = LocalizedStringKey(message)
+        case .suggested, .previewed:
+            statusText = success
+        case .idle, .suggesting:
+            break
+        }
     }
 
     @ViewBuilder
@@ -547,10 +777,18 @@ private struct MacSvnMergeEditorPane: View {
                 Text("冲突块 #\(index) \(hunk.resolution == nil ? "未解决" : "已解决")")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(hunk.resolution == nil ? .red : .green)
-                HStack(alignment: .top, spacing: 8) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(minimum: 120), alignment: .topLeading),
+                        GridItem(.flexible(minimum: 120), alignment: .topLeading),
+                    ],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
                     pane("Mine", hunk.mineLines, .blue)
                     pane("Base", hunk.baseLines, .secondary)
                     pane("Theirs", hunk.theirsLines, .orange)
+                    pane("Result", hunk.resolvedLines(), .green)
                 }
             }
             .padding(8)
@@ -562,12 +800,19 @@ private struct MacSvnMergeEditorPane: View {
         }
     }
 
-    private func pane(_ title: String, _ lines: [String], _ color: Color) -> some View {
+    private func pane(_ title: String, _ lines: [String]?, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.caption2).foregroundStyle(color)
-            Text(lines.joined(separator: "\n"))
-                .font(.system(.caption2, design: .monospaced))
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let lines {
+                Text(lines.joined(separator: "\n"))
+                    .font(.system(.caption2, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("尚未选择解决结果")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(6)
         .background(color.opacity(0.08))

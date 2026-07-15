@@ -114,6 +114,7 @@ public struct MacSvnSettingsView: View {
             Button("清除认证缓存", role: .destructive) {
                 Task { await clearAuthenticationCache() }
             }
+            Button("取消", role: .cancel) {}
         } message: {
             Text("将清除当前用户 Subversion 客户端管理的 auth 文件和 Keychain 凭据。下次访问仓库时需要重新输入凭据。不会删除 AI Provider 凭据。")
         }
