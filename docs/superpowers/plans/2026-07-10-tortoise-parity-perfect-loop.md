@@ -286,7 +286,7 @@ roadmap T0–T6（战略波次）
 | 2026-07-14 | T5.5 | 92efa39 | 外置 Diff/Merge/Blame 规则按用途和扩展名持久化；大小写无关精确规则优先，留空/`*`/`*.*` 为默认；Diff 保留旧配置兜底，Merge 使用 base/mine/theirs/result 且不自动 resolve，Blame 限制工作副本边界；全量 937 绿 | S10、H-T5 外置工具 ✅ | 覆盖率 108/114（94.74%）；下一 T5.6 |
 | 2026-07-15 | T5.6 | 8a2b80f | 原生 AppKit 脚本可重复生成多尺寸 `SVNStudio.icns`；SwiftPM/Xcode 包装统一嵌入并逐字节校验图标；首次无 WC 空态直达添加/设置；独立单例关于窗口展示实际图标、版本/build 与项目主页；全量 941 绿，SwiftPM release 与 Xcode Debug 构建验证通过 | 无 inventory 状态变化；H-T5 品牌体验 ✅ | 覆盖率 108/114（94.74%）；下一 T5.7 |
 | 2026-07-15 | T5.7 | 71865b7 | Xcode Release 主 App/Finder Sync/Quick Look 均为 `arm64 x86_64`；结构、扩展点、继承 run-path、递归包内依赖与深层签名校验通过；Foundation 用户目录隔离、最小 PATH 启动及限时进程组清理通过；隐藏目录过闸后原子发布 App/ZIP；7 项契约/行为测试、全量 948 绿 | 无 inventory 状态变化；H-T5 分发包装 ✅；Developer ID/公证/干净机因 0 个签名身份及无凭据明确阻塞 | 覆盖率 108/114（94.74%）；下一 T5.8/G5 |
-| 2026-07-15 | T5.8/G5 | （提交后回填） | S01/S03/S04/S05/S06/S09 补齐并接入运行时；SVN config-dir/代理密码 0600、Revert 废纸篓恢复、递归未版本取消/ignored/100,000 上限、自动完成索引、Repo 预取、设置热更新与并发代次守卫；动态中英文资源；`swift test` 1012 绿（真实 SVN 49/49），Xcode/SwiftPM Debug App 构建通过 | D28、S01/S03/S04/S05/S06/S09、H-T5/G5 ✅；设置 S01–S13 全表 ✅ | 覆盖率 114/114（100%）；下一 GP.1 |
+| 2026-07-15 | T5.8/G5 | 03700a5 | S01/S03/S04/S05/S06/S09 补齐并接入运行时；SVN config-dir/代理密码 0600、Revert 废纸篓恢复、递归未版本取消/ignored/100,000 上限、自动完成索引、Repo 预取、设置热更新与并发代次守卫；动态中英文资源；`swift test` 1012 绿（真实 SVN 49/49），Xcode/SwiftPM Debug App 构建通过 | D28、S01/S03/S04/S05/S06/S09、H-T5/G5 ✅；设置 S01–S13 全表 ✅ | 覆盖率 114/114（100%）；下一 GP.1 |
 
 ---
 
