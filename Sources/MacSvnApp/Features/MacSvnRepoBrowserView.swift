@@ -4,7 +4,7 @@ import AppKit
 
 /// 仓库浏览器：远端目录懒加载、预览、收藏、Checkout 与远端写操作（mkdir/删/复制/移动）。
 public struct MacSvnRepoBrowserView: View {
-    private let session: MacSvnAppSession
+    @ObservedObject private var session: MacSvnAppSession
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
 
@@ -15,7 +15,7 @@ public struct MacSvnRepoBrowserView: View {
     @State private var selectedDepth: SvnDepth = .infinity
     @State private var checkoutRevisionText = ""
     @State private var checkoutIgnoreExternals = false
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var previewText: String = ""
     @State private var transferVM: ImportExportViewModel?
     @State private var showTransferSheet = false
@@ -92,6 +92,12 @@ public struct MacSvnRepoBrowserView: View {
         .onChange(of: navigator.pendingTransferIntent) { _, _ in
             consumePendingTransfer()
         }
+        .onChange(of: session.settingsSnapshot.dialogs) { _, dialogs in
+            browserVM?.updateSettings(
+                preFetchDirectories: dialogs.preFetchRepositoryDirectories,
+                showExternals: dialogs.showRepositoryExternals
+            )
+        }
         .sheet(isPresented: $showRemoteWriteSheet) {
             remoteWriteSheet
         }
@@ -140,7 +146,7 @@ public struct MacSvnRepoBrowserView: View {
             .disabled(rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             Menu("SVN 操作") {
                 ForEach(TransferKind.allCases) { kind in
-                    Button(kind.rawValue) { presentTransfer(kind) }
+                    Button(LocalizedStringKey(kind.rawValue)) { presentTransfer(kind) }
                 }
                 Divider()
                 Button("在此创建仓库…") { presentCreateRepository() }
@@ -315,7 +321,7 @@ public struct MacSvnRepoBrowserView: View {
 
     private var remoteWriteSheet: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(remoteWriteKind.rawValue)
+            Text(LocalizedStringKey(remoteWriteKind.rawValue))
                 .font(.title2.weight(.semibold))
             Text("远端写操作会立即提交到仓库，必须填写提交说明。")
                 .font(.caption)
@@ -362,9 +368,11 @@ public struct MacSvnRepoBrowserView: View {
 
     private var transferSheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(transferKind.rawValue).font(.title2.weight(.semibold))
+            Text(LocalizedStringKey(transferKind.rawValue)).font(.title2.weight(.semibold))
             Picker("操作", selection: $transferKind) {
-                ForEach(TransferKind.allCases) { kind in Text(kind.rawValue).tag(kind) }
+                ForEach(TransferKind.allCases) { kind in
+                    Text(LocalizedStringKey(kind.rawValue)).tag(kind)
+                }
             }
             .pickerStyle(.segmented)
             .onChange(of: transferKind) { _, _ in applyTransferMessageTemplate() }
@@ -547,7 +555,9 @@ public struct MacSvnRepoBrowserView: View {
         case .removeFromVersionControl:
             await transferVM.removeFromVersionControl(path: URL(fileURLWithPath: transferPath))
         }
-        if case .completed(let message) = transferVM.state { statusText = message }
+        if case .completed(let message) = transferVM.state {
+            statusText = LocalizedStringKey(message)
+        }
     }
 
     private var canSubmitRemoteWrite: Bool {
@@ -731,7 +741,9 @@ public struct MacSvnRepoBrowserView: View {
             bookmarkManager: session.repoBookmarkStore,
             logProvider: session.svnService,
             remoteOperationProvider: session.svnService,
-            logBatchSize: settings.logBatchSize
+            logBatchSize: settings.logBatchSize,
+            preFetchDirectories: settings.dialogs.preFetchRepositoryDirectories,
+            showExternals: settings.dialogs.showRepositoryExternals
         )
         browserVM = vm
         checkoutVM = CheckoutViewModel(
@@ -752,6 +764,8 @@ public struct MacSvnRepoBrowserView: View {
         if let first = workspaceController.selectedRecord?.repoURL {
             rootURL = first
             await openRoot()
+        } else if !settings.dialogs.defaultCheckoutURL.isEmpty {
+            rootURL = settings.dialogs.defaultCheckoutURL
         }
         await consumePendingBrowse()
         consumePendingTransfer()
@@ -826,6 +840,10 @@ public struct MacSvnRepoBrowserView: View {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.prompt = "检出到此目录"
+        let defaultPath = session.settingsSnapshot.dialogs.defaultCheckoutPath
+        if !defaultPath.isEmpty {
+            panel.directoryURL = URL(fileURLWithPath: defaultPath, isDirectory: true)
+        }
         guard panel.runModal() == .OK, let destination = panel.url, let checkoutVM else { return }
         Task {
             await checkoutVM.checkout(

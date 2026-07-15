@@ -38,7 +38,7 @@ public struct MacSvnCommandPaletteView: View {
                     select(result)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(result.title)
+                        Text(LocalizedStringKey(result.title))
                         if let subtitle = result.subtitle {
                             Text(subtitle)
                                 .font(.caption)

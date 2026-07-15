@@ -9,7 +9,7 @@ public struct MacSvnReleaseNotesView: View {
     private let session: MacSvnAppSession
 
     @State private var viewModel: AIReleaseNotesViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -152,7 +152,7 @@ public struct MacSvnReleaseNotesView: View {
         case .ready:
             statusText = "已加载 \(viewModel.entries.count) 条日志"
         case .error(let message):
-            statusText = message
+            statusText = LocalizedStringKey(message)
         case .idle:
             statusText = "无日志"
         default:
@@ -166,7 +166,7 @@ public struct MacSvnReleaseNotesView: View {
         await viewModel.generate(privacySettings: privacy)
         switch viewModel.state {
         case .completed(let draft):
-            statusText = "已生成（\(draft.entryCount) 条日志，provider \(draft.providerID.uuidString.prefix(8))）"
+            statusText = "已生成（\(draft.entryCount) 条日志，provider \(String(draft.providerID.uuidString.prefix(8)))）"
         case .error(let message):
             statusText = "生成失败：\(message)"
         default:

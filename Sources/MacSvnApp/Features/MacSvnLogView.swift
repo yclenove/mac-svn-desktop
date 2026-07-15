@@ -7,18 +7,19 @@ import MacSvnCore
 /// T2.2：过滤 / stop-on-copy / Next·All / Actions。
 /// 变更路径右键 L01–L14。
 public struct MacSvnLogView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
 
     @State private var viewModel: LogViewModel?
-    @State private var errorText: String?
+    @State private var errorText: LocalizedStringKey?
     @State private var authorFilter = ""
     @State private var messageFilter = ""
     @State private var pathFilter = ""
     @State private var stopOnCopy = false
     @State private var offlineMode = false
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var selectedRevision: Int?
     /// 当前 WC 的 `svn info` URL，供路径归一化与 Browse。
     @State private var workingCopyURL: String = ""
@@ -204,7 +205,7 @@ public struct MacSvnLogView: View {
                             HStack(alignment: .top, spacing: 8) {
                                 Text(LogActionsSummary.symbols(for: entry.changedPaths))
                                     .font(.caption.monospaced().weight(.semibold))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(actionSummaryColour(entry))
                                     .frame(width: 36, alignment: .leading)
                                     .accessibilityLabel("Actions \(LogActionsSummary.symbols(for: entry.changedPaths))")
                                 VStack(alignment: .leading, spacing: 4) {
@@ -216,15 +217,26 @@ public struct MacSvnLogView: View {
                                             .lineLimit(1)
                                     }
                                     Text(entry.message)
-                                        .font(.caption)
+                                        .font(logMessageFont)
                                         .lineLimit(2)
-                                    Text(entry.date?.formatted() ?? "")
+                                    Text(formattedLogDate(entry.date))
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
                                 }
                             }
                             .tag(entry.revision.value)
                             .padding(.vertical, 2)
+                            .onTapGesture(count: 2) {
+                                guard session.settingsSnapshot.dialogs.doubleClickLogToComparePrevious,
+                                      let first = entry.changedPaths.first else { return }
+                                Task {
+                                    await performLogAction(
+                                        .logCompareWithPrevious,
+                                        changedPath: first.path,
+                                        revision: entry.revision
+                                    )
+                                }
+                            }
                             .contextMenu {
                                 if let first = entry.changedPaths.first {
                                     logPathContextMenu(path: first.path, revision: entry.revision)
@@ -289,10 +301,10 @@ public struct MacSvnLogView: View {
             if !actions.isEmpty {
                 Text(actions)
                     .font(.title3.monospaced())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(actionSummaryColour(entry))
             }
             Spacer()
-            Text(entry.date?.formatted() ?? "")
+            Text(formattedLogDate(entry.date))
                 .foregroundStyle(.secondary)
         }
     }
@@ -303,12 +315,44 @@ public struct MacSvnLogView: View {
             Text("提交说明")
                 .font(.headline)
             Text(entry.message.isEmpty ? "（无说明）" : entry.message)
+                .font(logMessageFont)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
                 .background(Color.secondary.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+    }
+
+    private var logMessageFont: Font {
+        let dialogs = session.settingsSnapshot.dialogs
+        if let name = dialogs.logFontName, !name.isEmpty {
+            return .custom(name, size: dialogs.logFontSize)
+        }
+        return .system(size: dialogs.logFontSize)
+    }
+
+    private func formattedLogDate(_ date: Date?) -> String {
+        guard let date else { return "" }
+        if session.settingsSnapshot.dialogs.useShortDateFormat {
+            return date.formatted(date: .numeric, time: .shortened)
+        }
+        return date.formatted(date: .abbreviated, time: .standard)
+    }
+
+    private func changedPathColour(_ action: ChangedPathAction) -> Color {
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: action) else { return .secondary }
+        return svnChangeColour(palette: palette, role: role, colorScheme: colorScheme)
+    }
+
+    private func actionSummaryColour(_ entry: LogEntry) -> Color {
+        for action in entry.changedPaths.map(\.action) {
+            if session.settingsSnapshot.changeColours.role(for: action) != nil {
+                return changedPathColour(action)
+            }
+        }
+        return .secondary
     }
 
     @ViewBuilder
@@ -333,7 +377,7 @@ public struct MacSvnLogView: View {
             Text(change.action.rawValue)
                 .font(.caption.monospaced())
                 .frame(width: 16, alignment: .leading)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(changedPathColour(change.action))
             Text(change.path)
                 .font(.system(.body, design: .monospaced))
                 .textSelection(.enabled)
@@ -391,13 +435,13 @@ public struct MacSvnLogView: View {
     @ViewBuilder
     private func logPathContextMenu(path: String, revision: Revision) -> some View {
         ForEach(LogContextActionPolicy.t2FileActionIDs, id: \.rawValue) { command in
-            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+            Button(LocalizedStringKey(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)) {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
         Divider()
         ForEach(LogContextActionPolicy.t3RevisionActionIDs, id: \.rawValue) { command in
-            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+            Button(LocalizedStringKey(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)) {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
@@ -406,13 +450,13 @@ public struct MacSvnLogView: View {
     @ViewBuilder
     private func logRevisionContextMenu(path: String, revision: Revision) -> some View {
         ForEach(LogContextActionPolicy.t2RevisionActionIDs, id: \.rawValue) { command in
-            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+            Button(LocalizedStringKey(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)) {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
         Divider()
         ForEach(LogContextActionPolicy.t3RevisionPropertyActionIDs, id: \.rawValue) { command in
-            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+            Button(LocalizedStringKey(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)) {
                 Task { await performLogAction(command, changedPath: path, revision: revision) }
             }
         }
@@ -421,7 +465,7 @@ public struct MacSvnLogView: View {
     @ViewBuilder
     private func logClipboardContextMenu(entry: LogEntry) -> some View {
         ForEach(LogContextActionPolicy.t2ClipboardActionIDs, id: \.rawValue) { command in
-            Button(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue) {
+            Button(LocalizedStringKey(SvnCommandCatalog.descriptor(for: command)?.displayName ?? command.rawValue)) {
                 copyLogEntryToClipboard(entry)
             }
         }
@@ -432,7 +476,7 @@ public struct MacSvnLogView: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         statusText = "已复制 r\(entry.revision.value) 摘要到剪贴板"
-        navigator.lastAutomationMessage = statusText
+        navigator.lastAutomationMessage = "已复制 r\(entry.revision.value) 摘要到剪贴板"
     }
 
     private var branchSheet: some View {
@@ -755,7 +799,7 @@ public struct MacSvnLogView: View {
             statusText = "已更新到 r\(revision.value)"
             navigator.selectMode(.changes)
         } else if case .error(let message) = actions.state {
-            errorText = message
+            errorText = LocalizedStringKey(message)
         }
     }
 
@@ -792,13 +836,13 @@ public struct MacSvnLogView: View {
             navigator.pendingLogDiff = PendingLogDiffIntent(path: path, revision: rev, kind: .workingCopy)
             navigator.selectMode(.changes)
             statusText = "与工作副本比较：\(path) @ r\(rev.value)"
-            navigator.lastAutomationMessage = statusText
+            navigator.lastAutomationMessage = "与工作副本比较：\(path) @ r\(rev.value)"
 
         case .compareWithPrevious(let path, let rev):
             navigator.pendingLogDiff = PendingLogDiffIntent(path: path, revision: rev, kind: .previous)
             navigator.selectMode(.changes)
             statusText = "与上一修订比较：\(path) @ r\(rev.value)"
-            navigator.lastAutomationMessage = statusText
+            navigator.lastAutomationMessage = "与上一修订比较：\(path) @ r\(rev.value)"
 
         case .compareAndBlame(let path, let fromRevision, let toRevision):
             navigator.pendingBlameIntent = PendingBlameIntent(
@@ -809,7 +853,7 @@ public struct MacSvnLogView: View {
             )
             navigator.selectMode(.blame)
             statusText = "Blame 差异：\(path) r\(fromRevision.value)–r\(toRevision.value)"
-            navigator.lastAutomationMessage = statusText
+            navigator.lastAutomationMessage = "Blame 差异：\(path) r\(fromRevision.value)–r\(toRevision.value)"
 
         case .showUnifiedDiff(let path, let rev):
             await showUnifiedDiff(path: path, revision: rev)
@@ -824,14 +868,14 @@ public struct MacSvnLogView: View {
             navigator.pendingBlameIntent = PendingBlameIntent(path: path, revision: rev)
             navigator.selectMode(.blame)
             statusText = "Blame \(path)（日志 r\(rev.value)）"
-            navigator.lastAutomationMessage = statusText
+            navigator.lastAutomationMessage = "Blame \(path)（日志 r\(rev.value)）"
 
         case .browseRepository(_, let rev, let url):
             navigator.pendingBrowseURL = url
             navigator.pendingBrowseRevision = rev
             navigator.selectMode(.browser)
             statusText = "浏览 \(url) @ r\(rev.value)"
-            navigator.lastAutomationMessage = statusText
+            navigator.lastAutomationMessage = "浏览 \(url) @ r\(rev.value)"
 
         case .createBranchTag(let peg, let rev):
             branchSourcePegURL = peg
@@ -920,7 +964,7 @@ public struct MacSvnLogView: View {
         revisionAuthor = vm.author
         revisionMessage = vm.message
         statusText = "已更新 r\(vm.revision.value) 的作者与日志说明"
-        navigator.lastAutomationMessage = statusText
+        navigator.lastAutomationMessage = "已更新 r\(vm.revision.value) 的作者与日志说明"
         if let viewModel {
             await reloadPreservingFilters(viewModel: viewModel)
         }
@@ -947,7 +991,7 @@ public struct MacSvnLogView: View {
                 navigator.selectMode(.changes)
             }
         } catch {
-            errorText = "合并 r\(revision.value) 失败：\(error)"
+            errorText = "合并 r\(revision.value) 失败：\(String(describing: error))"
         }
     }
 
@@ -970,7 +1014,7 @@ public struct MacSvnLogView: View {
             statusText = "已创建 \(branchKind == .tag ? "标签" : "分支") \(branchName) @ r\(rev.value)"
             navigator.selectMode(.branches)
         case .error(let message):
-            errorText = message
+            errorText = LocalizedStringKey(message)
         default:
             break
         }
@@ -990,7 +1034,7 @@ public struct MacSvnLogView: View {
             statusText = "已更新 \(path) 到 r\(revision.value)"
             navigator.selectMode(.changes)
         } else if case .error(let message) = actions.state {
-            errorText = message
+            errorText = LocalizedStringKey(message)
         }
     }
 
@@ -1012,7 +1056,7 @@ public struct MacSvnLogView: View {
             statusText = "已还原到 r\(revision.value)：冲突 \(summary.conflicted)"
             navigator.selectMode(.changes)
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 
@@ -1033,7 +1077,7 @@ public struct MacSvnLogView: View {
             statusText = "已撤销 r\(revision.value)：冲突 \(summary.conflicted)"
             navigator.selectMode(.changes)
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 
@@ -1045,6 +1089,10 @@ public struct MacSvnLogView: View {
             panel.canCreateDirectories = true
             panel.allowsMultipleSelection = false
             panel.prompt = checkoutExportIsExport ? "导出到此目录" : "检出到此目录"
+            let defaultPath = session.settingsSnapshot.dialogs.defaultCheckoutPath
+            if !defaultPath.isEmpty {
+                panel.directoryURL = URL(fileURLWithPath: defaultPath, isDirectory: true)
+            }
             guard panel.runModal() == .OK else { return nil }
             return panel.url
         }
@@ -1076,7 +1124,7 @@ public struct MacSvnLogView: View {
             }
             NSWorkspace.shared.activateFileViewerSelecting([target])
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 
@@ -1095,7 +1143,7 @@ public struct MacSvnLogView: View {
             showUnifiedDiffSheet = true
             statusText = "统一 Diff：\(path) r\(previous.value):r\(revision.value)"
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 
@@ -1128,7 +1176,7 @@ public struct MacSvnLogView: View {
             try data.write(to: url, options: .atomic)
             statusText = "已另存 r\(revision.value) → \(url.path)"
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 
@@ -1143,7 +1191,7 @@ public struct MacSvnLogView: View {
             NSWorkspace.shared.open(file)
             statusText = "已打开 r\(revision.value) · \(basename)"
         } catch {
-            errorText = String(describing: error)
+            errorText = LocalizedStringKey(String(describing: error))
         }
     }
 }

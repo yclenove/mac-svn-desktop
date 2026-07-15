@@ -47,6 +47,8 @@ public final class WorkingCopyActionsViewModel {
     private let workingCopy: URL
     private let actionProvider: any WorkingCopyActionProviding
     private let statusProvider: any StatusProviding
+    private var useTrashWhenReverting: Bool
+    private let revertSafetyService: RevertSafetyService
 
     public private(set) var state: WorkingCopyActionState = .idle
     public private(set) var lastUpdateSummary: UpdateSummary?
@@ -55,11 +57,15 @@ public final class WorkingCopyActionsViewModel {
     public init(
         workingCopy: URL,
         actionProvider: any WorkingCopyActionProviding,
-        statusProvider: any StatusProviding
+        statusProvider: any StatusProviding,
+        useTrashWhenReverting: Bool = false,
+        revertSafetyService: RevertSafetyService = RevertSafetyService()
     ) {
         self.workingCopy = workingCopy
         self.actionProvider = actionProvider
         self.statusProvider = statusProvider
+        self.useTrashWhenReverting = useTrashWhenReverting
+        self.revertSafetyService = revertSafetyService
     }
 
     public var isRunning: Bool {
@@ -68,6 +74,10 @@ public final class WorkingCopyActionsViewModel {
         }
 
         return false
+    }
+
+    public func updateSettings(useTrashWhenReverting: Bool) {
+        self.useTrashWhenReverting = useTrashWhenReverting
     }
 
     public func update(
@@ -229,8 +239,32 @@ public final class WorkingCopyActionsViewModel {
             return
         }
 
-        await perform(.revert) {
+        state = .running(.revert)
+        var backup = RevertTrashBackup()
+        do {
+            if useTrashWhenReverting {
+                let statuses = try await statusProvider.status(wc: workingCopy)
+                backup = try revertSafetyService.stage(
+                    workingCopy: workingCopy,
+                    selectedPaths: paths,
+                    statuses: statuses,
+                    recursive: recursive
+                )
+            }
             try await actionProvider.revert(wc: workingCopy, paths: paths, recursive: recursive)
+        } catch {
+            let reportedError = revertSafetyService.errorAfterRestoring(
+                backup,
+                operationError: error
+            )
+            state = .error(String(describing: reportedError))
+            return
+        }
+        do {
+            refreshedStatuses = try await statusProvider.status(wc: workingCopy)
+            state = .completed(.revert)
+        } catch {
+            state = .error(String(describing: error))
         }
     }
 

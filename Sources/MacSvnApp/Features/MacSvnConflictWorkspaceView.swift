@@ -3,6 +3,7 @@ import MacSvnCore
 
 /// 冲突工作区：列表 + 文本三路合并 / 树冲突 / 属性冲突；批量 Resolved（#12）；CFM 入口（#11）。
 public struct MacSvnConflictWorkspaceView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -13,7 +14,7 @@ public struct MacSvnConflictWorkspaceView: View {
     @State private var editorVM: MergeEditorViewModel?
     @State private var treeVM: TreeConflictViewModel?
     @State private var propertyVM: PropertyConflictViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var conflictBadgeCount = 0
     @State private var privacySettings = AIPrivacySettings()
     @State private var kindFilterPick: KindFilterPick = .all
@@ -57,14 +58,14 @@ public struct MacSvnConflictWorkspaceView: View {
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
-                        .background(Color.red.opacity(0.85))
+                        .background(conflictColour.opacity(0.85))
                         .foregroundStyle(.white)
                         .clipShape(Capsule())
                 }
                 Spacer()
                 Picker("", selection: $tab) {
                     ForEach(Tab.allCases) { item in
-                        Text(item.rawValue).tag(item)
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -153,7 +154,7 @@ public struct MacSvnConflictWorkspaceView: View {
                     HStack(spacing: 8) {
                         Picker("类型", selection: $kindFilterPick) {
                             ForEach(KindFilterPick.allCases) { item in
-                                Text(item.rawValue).tag(item)
+                                Text(LocalizedStringKey(item.rawValue)).tag(item)
                             }
                         }
                         .pickerStyle(.segmented)
@@ -250,7 +251,8 @@ public struct MacSvnConflictWorkspaceView: View {
                     privacySettings: privacySettings,
                     statusText: $statusText,
                     externalMergeTool: externalMergeTool,
-                    isOpeningExternalMerge: isOpeningExternalMerge
+                    isOpeningExternalMerge: isOpeningExternalMerge,
+                    conflictColour: conflictColour
                 ) {
                     Task { await reloadConflicts() }
                 } onOpenExternalMerge: {
@@ -301,7 +303,7 @@ public struct MacSvnConflictWorkspaceView: View {
         await list.refresh()
         conflictBadgeCount = list.summary.total
         if case .error(let message) = list.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         } else {
             statusText = list.summary.total == 0 ? "无冲突" : "发现 \(list.summary.total) 个冲突"
             await openSelected()
@@ -346,7 +348,7 @@ public struct MacSvnConflictWorkspaceView: View {
         let count = await listVM.markCheckedAsResolved()
         conflictBadgeCount = listVM.summary.total
         if case .error(let message) = listVM.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         } else if count > 0 {
             statusText = "已标记 \(count) 项为已解决"
             await openSelected()
@@ -430,20 +432,27 @@ public struct MacSvnConflictWorkspaceView: View {
 
     private func kindColor(_ kind: ConflictKind) -> Color {
         switch kind {
-        case .text: return .red
-        case .tree: return .orange
-        case .property: return .purple
+        case .text, .tree, .property: return conflictColour
         case .unknown: return .secondary
         }
+    }
+
+    private var conflictColour: Color {
+        svnChangeColour(
+            palette: session.settingsSnapshot.changeColours,
+            role: .conflicted,
+            colorScheme: colorScheme
+        )
     }
 }
 
 private struct MacSvnMergeEditorPane: View {
     let editorVM: MergeEditorViewModel?
     let privacySettings: AIPrivacySettings
-    @Binding var statusText: String?
+    @Binding var statusText: LocalizedStringKey?
     let externalMergeTool: ExternalDiffToolConfiguration?
     let isOpeningExternalMerge: Bool
+    let conflictColour: Color
     let onSaved: () -> Void
     let onOpenExternalMerge: () -> Void
 
@@ -468,7 +477,7 @@ private struct MacSvnMergeEditorPane: View {
                         Task {
                             await editorVM.requestAIResolutionForCurrentConflict(privacySettings: privacySettings)
                             if case .error(let message) = editorVM.aiConflictAssistState {
-                                statusText = message
+                                statusText = LocalizedStringKey(message)
                             } else {
                                 statusText = "AI 冲突建议已应用（当前块）"
                             }
@@ -478,7 +487,7 @@ private struct MacSvnMergeEditorPane: View {
                         Task {
                             await editorVM.requestAIResolutionPreviewForAllConflicts(privacySettings: privacySettings)
                             if case .error(let message) = editorVM.aiConflictAssistState {
-                                statusText = message
+                                statusText = LocalizedStringKey(message)
                             } else {
                                 statusText = "AI 冲突预览完成"
                             }
@@ -545,7 +554,7 @@ private struct MacSvnMergeEditorPane: View {
                 }
             }
             .padding(8)
-            .background((hunk.resolution == nil ? Color.red : Color.green).opacity(0.08))
+            .background((hunk.resolution == nil ? conflictColour : Color.green).opacity(0.08))
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(editorVM.currentBlockIndex == index ? Color.accentColor : .clear, lineWidth: 2)
@@ -570,7 +579,7 @@ private struct MacSvnMergeEditorPane: View {
             statusText = "冲突已 resolve"
             onSaved()
         case .error(let message):
-            statusText = message
+            statusText = LocalizedStringKey(message)
         default:
             break
         }

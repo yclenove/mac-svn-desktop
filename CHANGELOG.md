@@ -2,6 +2,10 @@
 
 ## 2026-07-15
 
+- Summary: Tortoise 完美 Loop T5.8 / G5：设置全表与运行时出门闸门
+- Affected: TortoiseParitySettings, SettingsStore, SvnClientConfigurationStore, RevertSafetyService, UnversionedTreeExpander, AppUpdateService, Changes/Commit/RepoBrowser/WorkingCopyActions ViewModel, MacSvnSettings/Changes/Commit/RepoBrowser views, Localization resources, Tests/*, docs/*
+- Impact: 补齐 S01/S03/S04/S05/S06/S09 并使 D28 与 S01–S13 全部 ✅：中英文动态界面与 HTTPS 更新检查、真实 SVN config/servers 和统一 `--config-dir`、代理密码 0600、亮暗状态色、Dialogs 策略热更新、Revert 废纸篓恢复、Repo Browser 直接子目录预取与 externals、递归未版本后台取消/ignored 边界/100,000 项上限、提交自动完成限时索引均完成。设置协调保存 settings/提交历史/SVN 配置，后段失败会回滚 settings 与 SVN 配置，并以 generation 防止旧刷新覆盖新设置；全量 1012 绿（真实 SVN 49/49），覆盖率 114/114（100%），Localization、Xcode Debug 与 SwiftPM Debug App 包装通过；G5 ✅，下一 GP.1
+
 - Summary: Tortoise 完美 Loop T5.7：双架构 Release 包装、本机冒烟与公证审计
 - Affected: build-release-app.sh, verify-release-app.sh, verify-mach-o-dependencies.sh, smoke-test-macos-app.sh, sign-and-notarize.sh, verify-signing-prereqs.sh, DistributionPackagingTests, docs/packaging/*, docs/acceptance/*, perfect-loop/long-loop docs
 - Impact: 新增 Xcode Release `arm64 x86_64` 分发构建闭环，强制校验主应用、Finder Sync、Quick Look 的包结构、扩展点、架构、dyld run-path 继承、递归包内依赖与深层签名，并在隔离 Foundation 用户目录、HOME/TMPDIR、最小 PATH 下真实启动冒烟，超时会终止独立进程组。签名公证流程保留 Finder 专属 entitlements，限定 Developer ID Application 并核对三包 Team ID，要求 `notarytool` JSON 状态 `Accepted`，所有步骤在隐藏目录过闸后才原子发布最终 App/ZIP。当前机器无 Developer ID 身份及公证凭据，已如实记录 Gatekeeper/干净机阻塞；全量 948 绿，覆盖率保持 108/114；下一 T5.8/G5

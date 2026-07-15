@@ -21,7 +21,7 @@ public struct MacSvnAboutView: View {
             VStack(spacing: 6) {
                 Text(ProductBranding.displayName)
                     .font(.title.weight(.semibold))
-                Text(versionText)
+                versionText
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -47,16 +47,16 @@ public struct MacSvnAboutView: View {
         .frame(width: 420, height: 430)
     }
 
-    private var versionText: String {
+    private var versionText: Text {
         let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         switch (version?.isEmpty == false ? version : nil, build?.isEmpty == false ? build : nil) {
         case (.some(let version), .some(let build)):
-            return "版本 \(version)（\(build)）"
+            return Text("版本 \(version)（\(build)）")
         case (.some(let version), .none):
-            return "版本 \(version)"
+            return Text("版本 \(version)")
         default:
-            return "开发构建"
+            return Text("开发构建")
         }
     }
 }

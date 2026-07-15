@@ -16,7 +16,7 @@ public struct MacSvnAIProviderSettingsView: View {
     @State private var makeDefault = true
     @State private var redactionEnabled = true
     @State private var sendsDiffOnly = true
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(session: MacSvnAppSession) {
         self.session = session
@@ -182,7 +182,7 @@ public struct MacSvnAIProviderSettingsView: View {
 
         await viewModel.saveProvider(provider, makeDefault: makeDefault)
         if case .error(let message) = viewModel.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         } else {
             draftAPIKey = ""
             statusText = "Provider 已保存"

@@ -41,7 +41,7 @@ final class BrandingExperienceTests: XCTestCase {
         XCTAssertTrue(application.contains("@Environment(\\.openWindow)"))
         XCTAssertTrue(
             application.contains(
-                "Window(ProductBranding.aboutWindowTitle, id: ProductBranding.aboutWindowID)"
+                "Window(LocalizedStringKey(ProductBranding.aboutWindowTitle), id: ProductBranding.aboutWindowID)"
             )
         )
         XCTAssertTrue(application.contains("openWindow(id: ProductBranding.aboutWindowID)"))

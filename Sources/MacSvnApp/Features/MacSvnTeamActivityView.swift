@@ -7,7 +7,7 @@ public struct MacSvnTeamActivityView: View {
     private let session: MacSvnAppSession
 
     @State private var viewModel: TeamActivityViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(workspaceController: MacSvnWorkspaceController, session: MacSvnAppSession) {
         self.workspaceController = workspaceController

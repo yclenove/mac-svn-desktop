@@ -50,6 +50,41 @@ final class MacSvnAppSessionTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(pollMinutes, 1)
     }
 
+    func testBootstrapPublishesSettingsUsesConfiguredHistoryLimitAndExposesSvnConfigStore() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)
+        let svnConfig = root.appendingPathComponent("svn-config", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var configured = AppSettings()
+        configured.dialogs.commitMessageHistoryLimit = 2
+        configured.changeColours.modified = AdaptiveColour(lightHex: "#123456", darkHex: "#ABCDEF")
+        try JSONEncoder().encode(SettingsFile(settings: configured))
+            .write(to: root.appendingPathComponent("settings.json"))
+
+        let session = try await MacSvnAppSession.bootstrap(
+            supportDirectory: root,
+            svnConfigurationDirectory: svnConfig
+        )
+        let snapshot = await session.settingsSnapshot
+        let configFileURL = await session.svnClientConfigurationStore.configFileURL
+        XCTAssertEqual(snapshot, configured)
+        XCTAssertEqual(configFileURL.path, svnConfig.appendingPathComponent("config").path)
+
+        for message in ["one", "two", "three"] {
+            try await session.commitMessageHistoryStore.record(message: message, workingCopy: root)
+        }
+        let recentMessages = try await session.commitMessageHistoryStore.recentMessages(workingCopy: root)
+        XCTAssertEqual(recentMessages, ["three", "two"])
+
+        var updated = configured
+        updated.dialogs.useShortDateFormat = true
+        await session.publish(settings: updated)
+        let updatedSnapshot = await session.settingsSnapshot
+        XCTAssertEqual(updatedSnapshot, updated)
+    }
+
     func testBootstrapUsesConfiguredSvnPathWhenAvailable() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("macsvn-session-\(UUID().uuidString)", isDirectory: true)

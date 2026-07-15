@@ -16,6 +16,12 @@ final class SvnCommandBuilderTests: XCTestCase {
             againstRepo.arguments,
             ["status", "-v", "--xml", "--show-updates", "--non-interactive"]
         )
+
+        let includingIgnored = SvnCommandBuilder.status(noIgnore: true)
+        XCTAssertEqual(
+            includingIgnored.arguments,
+            ["status", "-v", "--xml", "--no-ignore", "--non-interactive"]
+        )
     }
 
     func testCommitUsesUtf8EncodingNonInteractiveMessageAndPaths() {
@@ -430,6 +436,21 @@ final class SvnCommandBuilderTests: XCTestCase {
         ])
     }
 
+    func testListCanIncludeExternals() {
+        let command = SvnCommandBuilder.list(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            includeExternals: true,
+            authArguments: []
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "list", "--xml", "--non-interactive",
+            "--depth", "immediates", "--include-externals",
+            "file:///repo/trunk"
+        ])
+    }
+
     func testRemoteInfoUsesXmlDepthAuthAndUrl() {
         let command = SvnCommandBuilder.remoteInfo(
             url: "file:///repo/trunk",
@@ -441,6 +462,20 @@ final class SvnCommandBuilderTests: XCTestCase {
             "info", "--xml", "--non-interactive",
             "--depth", "immediates",
             "--username", "u", "--password-from-stdin",
+            "file:///repo/trunk"
+        ])
+    }
+
+    func testRemoteInfoCanIncludeExternals() {
+        let command = SvnCommandBuilder.remoteInfo(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            includeExternals: true
+        )
+
+        XCTAssertEqual(command.arguments, [
+            "info", "--xml", "--non-interactive",
+            "--depth", "immediates", "--include-externals",
             "file:///repo/trunk"
         ])
     }

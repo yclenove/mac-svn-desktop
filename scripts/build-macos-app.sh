@@ -45,6 +45,7 @@ PY
 
 cp "$BIN" "$APP_PATH/Contents/MacOS/SVNStudio"
 cp "$APP_ICON" "$APP_PATH/Contents/Resources/SVNStudio.icns"
+cp -R "$ROOT/Sources/MacSvnDesktopApp/Resources/en.lproj" "$APP_PATH/Contents/Resources/"
 chmod +x "$APP_PATH/Contents/MacOS/SVNStudio"
 echo -n "APPL????" > "$APP_PATH/Contents/PkgInfo"
 

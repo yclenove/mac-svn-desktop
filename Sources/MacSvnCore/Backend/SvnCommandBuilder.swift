@@ -11,7 +11,11 @@ public enum SvnCommandBuilder {
         SvnCommand(arguments: ["--version", "--quiet"])
     }
 
-    public static func status(verbose: Bool = true, showUpdates: Bool = false) -> SvnCommand {
+    public static func status(
+        verbose: Bool = true,
+        showUpdates: Bool = false,
+        noIgnore: Bool = false
+    ) -> SvnCommand {
         // 对齐小乌龟 CFM：本地 `status -v`；Check Repository 再加 `--show-updates`（-u）
         var arguments = ["status"]
         if verbose {
@@ -20,6 +24,9 @@ public enum SvnCommandBuilder {
         arguments.append("--xml")
         if showUpdates {
             arguments.append("--show-updates")
+        }
+        if noIgnore {
+            arguments.append("--no-ignore")
         }
         arguments.append("--non-interactive")
         return SvnCommand(arguments: arguments)
@@ -446,23 +453,33 @@ public enum SvnCommandBuilder {
     public static func list(
         url: String,
         depth: SvnDepth,
+        includeExternals: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
-        SvnCommand(arguments: [
+        var arguments = [
             "list", "--xml", "--non-interactive",
             "--depth", depth.rawValue
-        ] + authArguments + [url])
+        ]
+        if includeExternals {
+            arguments.append("--include-externals")
+        }
+        return SvnCommand(arguments: arguments + authArguments + [url])
     }
 
     public static func remoteInfo(
         url: String,
         depth: SvnDepth,
+        includeExternals: Bool = false,
         authArguments: [String] = []
     ) -> SvnCommand {
-        SvnCommand(arguments: [
+        var arguments = [
             "info", "--xml", "--non-interactive",
             "--depth", depth.rawValue
-        ] + authArguments + [url])
+        ]
+        if includeExternals {
+            arguments.append("--include-externals")
+        }
+        return SvnCommand(arguments: arguments + authArguments + [url])
     }
 
     public static func cat(

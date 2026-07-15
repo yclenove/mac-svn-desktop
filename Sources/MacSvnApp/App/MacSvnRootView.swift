@@ -36,6 +36,9 @@ public struct MacSvnRootView: View {
                 if let message = navigator.lastAutomationMessage {
                     automationBanner(message)
                 }
+                if case .updateAvailable(let release) = session.updateStatus {
+                    updateBanner(release)
+                }
                 MacSvnWorkingCopyShellView(
                     session: session,
                     workspaceController: workspaceController,
@@ -186,6 +189,19 @@ public struct MacSvnRootView: View {
         .background(Color.accentColor.opacity(0.08))
     }
 
+    private func updateBanner(_ release: AppRelease) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.down.circle")
+                .foregroundStyle(Color.accentColor)
+            Text("SVN Studio \(release.version) 可用")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Link("查看发布页", destination: release.pageURL)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.accentColor.opacity(0.08))
+    }
+
     private func shortPath(_ path: String) -> String {
         if path.hasPrefix(NSHomeDirectory()) {
             return "~" + path.dropFirst(NSHomeDirectory().count)
@@ -227,16 +243,16 @@ public struct MacSvnRoutePlaceholderView: View {
                 .foregroundStyle(Color.accentColor)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(route.title)
+                Text(LocalizedStringKey(route.title))
                     .font(.largeTitle.weight(.semibold))
-                Text(route.subtitle)
+                Text(LocalizedStringKey(route.subtitle))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(40)
-        .navigationTitle(route.title)
+        .navigationTitle(Text(LocalizedStringKey(route.title)))
     }
 }
 

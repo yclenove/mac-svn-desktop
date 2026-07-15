@@ -72,7 +72,7 @@
 | D25 | Revision Graph | 节点分类、视图、剪枝、节点动作 | ✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作 | T3 |
 | D26 | Export / Unversion / Relocate | export、移除版本控制、relocate | ✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate` | T2 |
 | D27 | Bugtraq / Repo Viewer 集成 | issue 正则、Web 仓库链接 | ✅ `bugtraq:logregex` 单/双阶段提取 issue，`bugtraq:url` 与 `^/` 仓库根 URL 展开，提交页展示 issue 链接 | T5 |
-| D28 | Settings 全页 | 见 §6 | 🟡 General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 已形成，并保留 Finder / Revision Graph / AI 专页；各分类完整能力仍按 S01–S13 逐项补齐 | T4/T5 |
+| D28 | Settings 全页 | 见 §6 | ✅ General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 与 Finder / Revision Graph / AI 专页齐全；S01–S13 均持久化并接入运行时，settings、提交历史与 SVN config/servers 协调保存，后段失败会回滚 settings 与 SVN 配置 | T4/T5 |
 
 ---
 
@@ -223,15 +223,15 @@
 
 | S# | 小乌龟设置页 | 必须等价项 | Studio | 波次 |
 |----|--------------|------------|--------|------|
-| S01 | General | 语言、检查更新、全局 ignore、last-commit-time、编辑 svn config、externals 本地修改策略 | 🟡 General IA、SVN 可执行路径与分支布局已有；语言、更新、全局 ignore、last-commit-time、配置编辑与 externals 策略待补 | T5 |
+| S01 | General | 语言、检查更新、全局 ignore、last-commit-time、编辑 svn config、externals 本地修改策略 | ✅ 中英文资源与运行时 Locale 切换；自动/手动 HTTPS 更新检查；真实 SVN `global-ignores`、`use-commit-times` 与 config/servers 编辑入口；externals 本地属性变更策略接入更新命令 | T5 |
 | S02 | Context Menu | 主菜单/子菜单提升、needs-lock 时提升 Lock、隐藏未版本路径菜单、排除路径 | ✅ 设置持久化；Finder 同步快照按设置规划顶层/子菜单、needs-lock 自动提升 Lock、未知状态保守不隐藏未版本菜单、排除路径边界匹配 | T4 |
-| S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | 🟡 Dialogs 1 IA、日志批量与 Auto-close 已有；字体/日期/双击、废纸篓与 checkout 默认值待补 | T5 |
-| S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | 🟡 Dialogs 2 IA 与提交冲突标记守护已有；递归未版本、自动完成、日志历史、自动勾选、提交后重开、CFM 联网与 Lock 选项待补 | T5 |
-| S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移 | T3/T5 |
-| S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | 🟡 Colours IA 与 Revision Graph 四类颜色已有；冲突/增/删/合并/改及暗色配色待补 | T5 |
+| S03 | Dialogs 1 | 默认日志条数、字体、短日期、双击比修订、Auto-close、Revert→废纸篓、默认 checkout 路径/URL | ✅ 日志批量、字体、短日期、双击前一修订、四档 Auto-close 均热更新；Revert 先入废纸篓且失败恢复/恢复失败聚合；Checkout 路径与 URL 默认值接入表单 | T5 |
+| S04 | Dialogs 2 | 递归未版本、自动完成、日志历史条数、自动勾选、提交后重开、CFM 启动联系仓库、Lock 对话框 | ✅ 递归未版本后台扫描支持取消、ignored 子树边界与 100,000 项上限；自动完成后台限时构建、512 候选/20 结果前缀索引；历史上限、自动勾选、提交后重开、CFM 联网和 Lock 对话框策略均接入运行时 | T5 |
+| S05 | Dialogs 3 | Repo 预取、显示 externals、Shelve V2/V3 | ✅ Repo Browser 可按设置并发预取直接子目录且不递归扩散，并以 `--include-externals` 显示 externals；设置热更新；官方 Shelve V2/V3 能力探测、双轨操作与本地快照迁移齐全 | T3/T5 |
+| S06 | Colours | 冲突/增/删/合并/改 等颜色 + 暗色 | ✅ 冲突/阻塞、新增、删除/缺失/替换、合并、修改/复制均支持独立亮色与暗色色板；Changes、Commit 与工作副本操作视图热更新使用 | T5 |
 | S07 | Revision Graph | 分类 pattern、颜色混合 | ✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化 | T3 |
 | S08 | Icon Overlays | Cache Default/Shell/None、仅 Finder、包含/排除驱动器与路径、可选角标种类 | ✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过 | T4 |
-| S09 | Network | 代理、SSH 客户端等 | 🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补 | T5 |
+| S09 | Network | 代理、SSH 客户端等 | ✅ 进程超时热更新；HTTP 代理、例外、用户名/密码与 SSH 客户端/参数写入真实 SVN config/servers，并统一传递 `--config-dir`；重复键大小写归一、密码不进入 settings.json 且 servers 权限为 `0600` | T5 |
 | S10 | External Programs | Diff/Merge/Blame/统一 Diff 查看器、按扩展名 | ✅ Diff 保留统一查看器与旧配置兼容；按用途支持扩展名精确匹配（大小写无关）与默认规则（留空、`*`、`*.*`），Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 传入工作副本文件；参数模板、失败退出码、工作副本边界均有契约测试 | T1/T5 |
 | S11 | Saved Data / Hook Scripts | 清认证与日志缓存、客户端钩子 | ✅ Saved Data 提供日志缓存策略/清理，认证清理由配置 SVN 的官方 `auth --remove '*'` 同时覆盖 auth 文件与 Keychain（空缓存幂等、失败保留文件）；按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子、UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调均已接线 | T5 |
 | S12 | Bugtraq / Issue tracker | 正则、消息模板 | ✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断 | T5 |
@@ -269,13 +269,13 @@
 
 | 类别 | 约数 | 含义 |
 |------|------|------|
-| 命令 #1–46 | 🟡 ~15 · ❌ ~25+ | 入口或对话框不足 |
-| 日志右键 L01–L20 | ❌ 为主 | 历史深度几乎未做 |
-| 设置 S01–S13 | ❌/弱 | 设置体系未成型 |
+| 命令 #1–46 | 46/46 ✅ | Finder/主窗口/CFM/⌘K 平台等价入口与对话框行为齐全 |
+| 日志右键 L01–L20 | 20/20 ✅ | 日志动作、统计、离线缓存与修订属性齐全 |
+| 设置 S01–S13 | 13/13 ✅ | 设置 IA、持久化、运行时消费与安全边界齐全 |
 | Overlay 全状态 | 7/7 ✅ | 全状态映射、Cache 三模式、可选显示与包含/排除路径均已完成 |
-| 域 D01–D28 | 无一域可称「对标完成」 | — |
+| 域 D01–D28 | 28/28 ✅ | DUG 能力域全部完成平台等价验收 |
 
-**结论：** 对标小乌龟 = **命令矩阵 + 对话框选项 + 日志动作 + 设置页 + Overlay 策略** 五层全部 ✅；仅「能提交/能看 log」不算完成。
+**结论：** 命令矩阵 + 对话框选项 + 日志动作 + 设置页 + Overlay 策略五层均已 ✅；覆盖率门禁为 **114/114（100%）**。
 
 ---
 

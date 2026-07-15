@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-14T18:34:16Z",
+  "generated_at": "2026-07-15T05:31:23Z",
   "total": 114,
-  "done": 108,
-  "partial": 6,
+  "done": 114,
+  "partial": 0,
   "missing": 0,
-  "coverage": 0.947368,
-  "coverage_percent": 94.74,
+  "coverage": 1.0,
+  "coverage_percent": 100.0,
   "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
   "by_section": {
     "domain": {
       "total": 28,
-      "done": 27,
-      "partial": 1,
+      "done": 28,
+      "partial": 0,
       "missing": 0
     },
     "command": {
@@ -28,8 +28,8 @@
     },
     "settings": {
       "total": 13,
-      "done": 8,
-      "partial": 5,
+      "done": 13,
+      "partial": 0,
       "missing": 0
     },
     "overlay": {
@@ -233,8 +233,8 @@
       "key": "D28",
       "section": "domain",
       "title": "Settings 全页",
-      "raw_status": "🟡 General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 已形成，并保留 Finder / Revision Graph / AI 专页；各分类完整能力仍按 S01–S13 逐项补齐",
-      "status": "partial"
+      "raw_status": "✅ General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 与 Finder / Revision Graph / AI 专页齐全；S01–S13 均持久化并接入运行时，settings、提交历史与 SVN config/servers 协调保存，后段失败会回滚 settings 与 SVN 配置",
+      "status": "done"
     },
     {
       "key": "cmd.01",
@@ -702,8 +702,8 @@
       "key": "S01",
       "section": "settings",
       "title": "General",
-      "raw_status": "🟡 General IA、SVN 可执行路径与分支布局已有；语言、更新、全局 ignore、last-commit-time、配置编辑与 externals 策略待补",
-      "status": "partial"
+      "raw_status": "✅ 中英文资源与运行时 Locale 切换；自动/手动 HTTPS 更新检查；真实 SVN `global-ignores`、`use-commit-times` 与 config/servers 编辑入口；externals 本地属性变更策略接入更新命令",
+      "status": "done"
     },
     {
       "key": "S02",
@@ -716,29 +716,29 @@
       "key": "S03",
       "section": "settings",
       "title": "Dialogs 1",
-      "raw_status": "🟡 Dialogs 1 IA、日志批量与 Auto-close 已有；字体/日期/双击、废纸篓与 checkout 默认值待补",
-      "status": "partial"
+      "raw_status": "✅ 日志批量、字体、短日期、双击前一修订、四档 Auto-close 均热更新；Revert 先入废纸篓且失败恢复/恢复失败聚合；Checkout 路径与 URL 默认值接入表单",
+      "status": "done"
     },
     {
       "key": "S04",
       "section": "settings",
       "title": "Dialogs 2",
-      "raw_status": "🟡 Dialogs 2 IA 与提交冲突标记守护已有；递归未版本、自动完成、日志历史、自动勾选、提交后重开、CFM 联网与 Lock 选项待补",
-      "status": "partial"
+      "raw_status": "✅ 递归未版本后台扫描支持取消、ignored 子树边界与 100,000 项上限；自动完成后台限时构建、512 候选/20 结果前缀索引；历史上限、自动勾选、提交后重开、CFM 联网和 Lock 对话框策略均接入运行时",
+      "status": "done"
     },
     {
       "key": "S05",
       "section": "settings",
       "title": "Dialogs 3",
-      "raw_status": "✅ 官方 Shelve V2/V3 分段选择、能力探测与双轨操作；本地手工快照可迁移，安全快照拒绝迁移",
+      "raw_status": "✅ Repo Browser 可按设置并发预取直接子目录且不递归扩散，并以 `--include-externals` 显示 externals；设置热更新；官方 Shelve V2/V3 能力探测、双轨操作与本地快照迁移齐全",
       "status": "done"
     },
     {
       "key": "S06",
       "section": "settings",
       "title": "Colours",
-      "raw_status": "🟡 Colours IA 与 Revision Graph 四类颜色已有；冲突/增/删/合并/改及暗色配色待补",
-      "status": "partial"
+      "raw_status": "✅ 冲突/阻塞、新增、删除/缺失/替换、合并、修改/复制均支持独立亮色与暗色色板；Changes、Commit 与工作副本操作视图热更新使用",
+      "status": "done"
     },
     {
       "key": "S07",
@@ -758,8 +758,8 @@
       "key": "S09",
       "section": "settings",
       "title": "Network",
-      "raw_status": "🟡 Network IA 与进程超时已有；代理、SSH 客户端等待补",
-      "status": "partial"
+      "raw_status": "✅ 进程超时热更新；HTTP 代理、例外、用户名/密码与 SSH 客户端/参数写入真实 SVN config/servers，并统一传递 `--config-dir`；重复键大小写归一、密码不进入 settings.json 且 servers 权限为 `0600`",
+      "status": "done"
     },
     {
       "key": "S10",

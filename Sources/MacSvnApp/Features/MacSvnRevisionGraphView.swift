@@ -10,7 +10,7 @@ public struct MacSvnRevisionGraphView: View {
     @State private var viewModel: RevisionGraphViewModel?
     @State private var selectedNodeID: String?
     @State private var showDiffSheet = false
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(
         workspaceController: MacSvnWorkspaceController,

@@ -19,7 +19,7 @@ private struct CommitMessageHistoryFile: Codable {
 
 public actor CommitMessageHistoryStore: CommitMessageHistoryProviding {
     private let store: PersistenceStore<CommitMessageHistoryFile>
-    private let limit: Int
+    private var limit: Int
 
     public init(fileURL: URL, limit: Int = 10) {
         self.store = PersistenceStore(fileURL: fileURL, defaultValue: CommitMessageHistoryFile())
@@ -47,6 +47,18 @@ public actor CommitMessageHistoryStore: CommitMessageHistoryProviding {
         }
         file.histories[key] = messages
         try store.save(file)
+    }
+
+    public func updateLimit(_ newLimit: Int) throws {
+        let normalizedLimit = max(1, newLimit)
+        var file = try store.load()
+        for key in file.histories.keys {
+            if let messages = file.histories[key], messages.count > normalizedLimit {
+                file.histories[key] = Array(messages.prefix(normalizedLimit))
+            }
+        }
+        try store.save(file)
+        limit = normalizedLimit
     }
 
     private static func key(for workingCopy: URL) -> String {

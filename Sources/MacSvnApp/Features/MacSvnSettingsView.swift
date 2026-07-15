@@ -39,7 +39,15 @@ public struct MacSvnSettingsView: View {
     @State private var externalDiffPath = ""
     @State private var externalDiffArguments = ""
     @State private var externalToolRules: [ExternalToolRule] = []
-    @State private var statusText: String?
+    @State private var generalPreferences = GeneralSettings()
+    @State private var dialogPreferences = DialogSettings()
+    @State private var changeColours = ChangeColourPalette()
+    @State private var networkPreferences = SvnNetworkSettings()
+    @State private var proxyPassword = ""
+    @State private var globalIgnorePatterns = ""
+    @State private var useCommitTimes = false
+    @State private var colourAppearance: AppAppearance = .light
+    @State private var statusText: LocalizedStringKey?
     @State private var showAISettings = false
     @State private var showClearAuthenticationConfirmation = false
     @State private var isClearingAuthenticationCache = false
@@ -54,7 +62,11 @@ public struct MacSvnSettingsView: View {
             HStack(spacing: 0) {
                 List(selection: $selectedCategory) {
                     ForEach(MacSvnSettingsCategory.allCases) { category in
-                        Label(category.title, systemImage: category.systemImage)
+                        Label {
+                            Text(LocalizedStringKey(category.title))
+                        } icon: {
+                            Image(systemName: category.systemImage)
+                        }
                             .tag(category)
                     }
                 }
@@ -132,9 +144,33 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var generalSettings: some View {
+        Section("应用") {
+            Picker("界面语言", selection: $generalPreferences.language) {
+                ForEach(AppLanguage.allCases, id: \.self) { language in
+                    Text(LocalizedStringKey(language.displayName)).tag(language)
+                }
+            }
+            Toggle("自动检查更新", isOn: $generalPreferences.checkForUpdatesAutomatically)
+            HStack {
+                Button("立即检查更新") {
+                    Task { await session.checkForUpdates() }
+                }
+                updateStatusView
+            }
+        }
         Section("Subversion") {
             TextField("svn 可执行路径", text: $svnPath)
             LabeledContent("当前会话路径", value: session.svnExecutablePath)
+            patternEditor("Global ignore（每行一个 pattern）", text: $globalIgnorePatterns)
+            Toggle("使用最后提交时间", isOn: $useCommitTimes)
+            Toggle(
+                "应用本地修改的 svn:externals",
+                isOn: $generalPreferences.applyLocalExternalsPropertyChanges
+            )
+            HStack {
+                Button("编辑 SVN config") { openSvnConfig() }
+                Button("编辑 SVN servers") { openSvnServers() }
+            }
         }
         Section("分支布局") {
             TextField("trunk", text: $trunk)
@@ -147,19 +183,64 @@ public struct MacSvnSettingsView: View {
     private var dialogSettings: some View {
         Section("Dialogs 1") {
             Stepper("日志每批 \(logBatchSize) 条", value: $logBatchSize, in: 20...500, step: 20)
+            TextField("日志字体", text: optionalStringBinding($dialogPreferences.logFontName))
+            Stepper(
+                "日志字体大小 \(Int(dialogPreferences.logFontSize))",
+                value: $dialogPreferences.logFontSize,
+                in: 9...28,
+                step: 1
+            )
+            Toggle("短日期/时间", isOn: $dialogPreferences.useShortDateFormat)
+            Toggle(
+                "双击日志修订时与前一修订比较",
+                isOn: $dialogPreferences.doubleClickLogToComparePrevious
+            )
             Picker("进度完成后", selection: $progressAutoCloseMode) {
                 ForEach(ProgressAutoCloseMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
+                    Text(LocalizedStringKey(mode.displayName)).tag(mode)
                 }
             }
+            Toggle("还原前移到废纸篓", isOn: $dialogPreferences.useTrashWhenReverting)
+            HStack {
+                TextField("默认 Checkout 路径", text: $dialogPreferences.defaultCheckoutPath)
+                Button {
+                    chooseDirectory(for: $dialogPreferences.defaultCheckoutPath)
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .help("选择默认 Checkout 目录")
+            }
+            TextField("默认 Checkout URL", text: $dialogPreferences.defaultCheckoutURL)
         }
         Section("Dialogs 2") {
+            Toggle("递归显示未版本目录", isOn: $dialogPreferences.recurseIntoUnversionedFolders)
+            Toggle("提交说明自动完成", isOn: $dialogPreferences.enableCommitAutoCompletion)
+            Stepper(
+                "自动完成超时 \(dialogPreferences.autoCompletionTimeoutSeconds) 秒",
+                value: $dialogPreferences.autoCompletionTimeoutSeconds,
+                in: 1...60
+            )
+            .disabled(!dialogPreferences.enableCommitAutoCompletion)
+            Stepper(
+                "提交说明历史 \(dialogPreferences.commitMessageHistoryLimit) 条",
+                value: $dialogPreferences.commitMessageHistoryLimit,
+                in: 1...200
+            )
+            Toggle("自动勾选版本化修改", isOn: $dialogPreferences.selectCommitItemsAutomatically)
+            Toggle(
+                "提交后仍有改动时重开",
+                isOn: $dialogPreferences.reopenCommitAfterSuccessWithRemainingItems
+            )
+            Toggle("启动时联系仓库", isOn: $dialogPreferences.contactRepositoryOnChangesOpen)
+            Toggle("获取锁前显示对话框", isOn: $dialogPreferences.showLockDialogBeforeLocking)
             Toggle("提交守护：冲突标记硬阻断", isOn: $hardBlockConflictMarkers)
         }
         Section("Dialogs 3") {
+            Toggle("预取仓库子目录", isOn: $dialogPreferences.preFetchRepositoryDirectories)
+            Toggle("显示 svn:externals", isOn: $dialogPreferences.showRepositoryExternals)
             Picker("官方 Shelve 实现", selection: $shelvingVersion) {
                 ForEach(SvnShelvingVersion.allCases, id: \.rawValue) { version in
-                    Text(version.displayName).tag(version)
+                    Text(LocalizedStringKey(version.displayName)).tag(version)
                 }
             }
             .pickerStyle(.segmented)
@@ -168,6 +249,21 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var colourSettings: some View {
+        Section("工作副本状态") {
+            Picker("外观", selection: $colourAppearance) {
+                Text("亮色").tag(AppAppearance.light)
+                Text("暗色").tag(AppAppearance.dark)
+            }
+            .pickerStyle(.segmented)
+            colorPicker("冲突 / 阻塞", hex: changeColourBinding(.conflicted))
+            colorPicker("新增", hex: changeColourBinding(.added))
+            colorPicker("删除 / 缺失 / 替换", hex: changeColourBinding(.deleted))
+            colorPicker("已合并", hex: changeColourBinding(.merged))
+            colorPicker("修改 / 复制", hex: changeColourBinding(.modified))
+            Button("恢复状态色默认值") {
+                changeColours = ChangeColourPalette()
+            }
+        }
         Section("Revision Graph") {
             colorPicker("主干颜色", hex: $graphTrunkHex)
             colorPicker("分支颜色", hex: $graphBranchHex)
@@ -185,6 +281,35 @@ public struct MacSvnSettingsView: View {
                 in: 30...600,
                 step: 30
             )
+        }
+        Section("HTTP 代理") {
+            Toggle("启用 HTTP 代理", isOn: $networkPreferences.proxy.enabled)
+            TextField("代理主机", text: $networkPreferences.proxy.host)
+                .disabled(!networkPreferences.proxy.enabled)
+            Stepper(
+                "端口 \(networkPreferences.proxy.port)",
+                value: $networkPreferences.proxy.port,
+                in: 1...65_535
+            )
+            .disabled(!networkPreferences.proxy.enabled)
+            TextField("例外（逗号分隔）", text: proxyExceptionsBinding())
+                .disabled(!networkPreferences.proxy.enabled)
+            TextField("代理用户名", text: $networkPreferences.proxy.username)
+                .disabled(!networkPreferences.proxy.enabled)
+            SecureField("代理密码", text: $proxyPassword)
+                .disabled(!networkPreferences.proxy.enabled)
+        }
+        Section("SSH 客户端") {
+            HStack {
+                TextField("可执行路径（留空使用系统 OpenSSH）", text: optionalStringBinding($networkPreferences.sshExecutablePath))
+                Button {
+                    chooseExecutable(for: optionalStringBinding($networkPreferences.sshExecutablePath))
+                } label: {
+                    Image(systemName: "doc.badge.gearshape")
+                }
+                .help("选择 SSH 客户端")
+            }
+            patternEditor("SSH 参数（每行一个）", text: sshArgumentsBinding())
         }
     }
 
@@ -262,7 +387,7 @@ public struct MacSvnSettingsView: View {
                 Toggle("启用", isOn: hook.isEnabled)
                 Picker("类型", selection: hook.type) {
                     ForEach(ClientHookType.allCases, id: \.self) { type in
-                        Text(type.displayName).tag(type)
+                        Text(LocalizedStringKey(type.displayName)).tag(type)
                     }
                 }
                 .frame(maxWidth: 240)
@@ -309,7 +434,7 @@ public struct MacSvnSettingsView: View {
         Section("Finder 角标") {
             Picker("Status Cache", selection: $finderSyncCacheMode) {
                 ForEach(FinderSyncCacheMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
+                    Text(LocalizedStringKey(mode.displayName)).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
@@ -325,17 +450,18 @@ public struct MacSvnSettingsView: View {
                     }
                 }
                 ForEach(FinderSyncBadge.allCases, id: \.self) { badge in
-                    Toggle(badge.displayName, isOn: finderSyncBadgeBinding(badge))
+                    Toggle(isOn: finderSyncBadgeBinding(badge)) {
+                        Text(LocalizedStringKey(badge.displayName))
+                    }
                 }
             }
         }
         Section("Finder 菜单") {
             DisclosureGroup("提升到顶层的命令") {
                 ForEach(SvnCommandCatalog.dailyCFMCommands, id: \.id) { descriptor in
-                    Toggle(
-                        descriptor.displayName,
-                        isOn: finderSyncPromotedCommandBinding(descriptor.id)
-                    )
+                    Toggle(isOn: finderSyncPromotedCommandBinding(descriptor.id)) {
+                        Text(LocalizedStringKey(descriptor.displayName))
+                    }
                 }
             }
             Toggle("needs-lock 文件自动提升 Lock", isOn: $finderSyncPromoteLockForNeedsLock)
@@ -365,6 +491,19 @@ public struct MacSvnSettingsView: View {
 
     private func load() async {
         let settings = await session.settingsStore.settings()
+        generalPreferences = settings.general
+        dialogPreferences = settings.dialogs
+        changeColours = settings.changeColours
+        networkPreferences = settings.network
+        do {
+            let managed = try session.svnClientConfigurationStore.load()
+            globalIgnorePatterns = managed.globalIgnorePatterns.joined(separator: "\n")
+            useCommitTimes = managed.useCommitTimes
+            networkPreferences = managed.network
+            proxyPassword = managed.proxyPassword
+        } catch {
+            statusText = "读取 SVN config/servers 失败：\(error.localizedDescription)"
+        }
         svnPath = settings.svnPath ?? ""
         logBatchSize = settings.logBatchSize
         processTimeout = settings.processTimeout
@@ -467,8 +606,27 @@ public struct MacSvnSettingsView: View {
             return
         }
         settings.externalToolRules = normalizedRules
+        settings.general = generalPreferences
+        settings.dialogs = dialogPreferences
+        settings.changeColours = changeColours
+        settings.network = networkPreferences
+        let managed: SvnClientManagedConfiguration
         do {
-            try await session.settingsStore.update(settings)
+            var nextManaged = try session.svnClientConfigurationStore.load()
+            nextManaged.globalIgnorePatterns = globalIgnoreTokens(from: globalIgnorePatterns)
+            nextManaged.useCommitTimes = useCommitTimes
+            nextManaged.network = networkPreferences
+            nextManaged.proxyPassword = proxyPassword
+            managed = nextManaged
+            try await TortoiseParitySettingsPersistenceCoordinator(
+                settingsStore: session.settingsStore,
+                historyStore: session.commitMessageHistoryStore,
+                configurationStore: session.svnClientConfigurationStore
+            ).save(
+                settings: settings,
+                managedConfiguration: managed
+            )
+            session.publish(settings: settings)
         } catch {
             statusText = "保存失败：\(error.localizedDescription)"
             return
@@ -487,7 +645,41 @@ public struct MacSvnSettingsView: View {
             statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"
             return
         }
-        statusText = "已保存。svn 路径、客户端钩子、官方 Shelve 版本与提交守护策略将在下次启动会话后完全生效。"
+        statusText = "已保存。界面、对话框、状态色和 SVN 网络配置已更新；svn 路径与客户端钩子将在下次启动会话后完全生效。"
+    }
+
+    @ViewBuilder
+    private var updateStatusView: some View {
+        switch session.updateStatus {
+        case .idle:
+            EmptyView()
+        case .checking:
+            ProgressView().controlSize(.small)
+        case .upToDate(let version):
+            Text("当前已是最新版本 \(version)").foregroundStyle(.secondary)
+        case .updateAvailable(let release):
+            Link("发现版本 \(release.version)", destination: release.pageURL)
+        case .failed(let message):
+            Text("检查失败：\(message)").foregroundStyle(.red)
+        }
+    }
+
+    private func openSvnConfig() {
+        do {
+            try session.svnClientConfigurationStore.ensureFilesExist()
+            NSWorkspace.shared.open(session.svnClientConfigurationStore.configFileURL)
+        } catch {
+            statusText = "无法打开 SVN config：\(error.localizedDescription)"
+        }
+    }
+
+    private func openSvnServers() {
+        do {
+            try session.svnClientConfigurationStore.ensureFilesExist()
+            NSWorkspace.shared.open(session.svnClientConfigurationStore.serversFileURL)
+        } catch {
+            statusText = "无法打开 SVN servers：\(error.localizedDescription)"
+        }
     }
 
     @ViewBuilder
@@ -496,7 +688,7 @@ public struct MacSvnSettingsView: View {
             HStack {
                 Picker("用途", selection: rule.purpose) {
                     ForEach(ExternalToolPurpose.allCases) { purpose in
-                        Text(purpose.displayName).tag(purpose)
+                        Text(LocalizedStringKey(purpose.displayName)).tag(purpose)
                     }
                 }
                 .frame(maxWidth: 180)
@@ -661,6 +853,60 @@ public struct MacSvnSettingsView: View {
         text.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+    }
+
+    private func globalIgnoreTokens(from text: String) -> [String] {
+        text.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
+    private func optionalStringBinding(_ value: Binding<String?>) -> Binding<String> {
+        Binding(
+            get: { value.wrappedValue ?? "" },
+            set: {
+                let trimmed = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                value.wrappedValue = trimmed.isEmpty ? nil : $0
+            }
+        )
+    }
+
+    private func proxyExceptionsBinding() -> Binding<String> {
+        Binding(
+            get: { networkPreferences.proxy.exceptions.joined(separator: ", ") },
+            set: { text in
+                networkPreferences.proxy.exceptions = text
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            }
+        )
+    }
+
+    private func sshArgumentsBinding() -> Binding<String> {
+        Binding(
+            get: { networkPreferences.sshArguments.joined(separator: "\n") },
+            set: { networkPreferences.sshArguments = patterns(from: $0) }
+        )
+    }
+
+    private func changeColourBinding(_ role: ChangeColourRole) -> Binding<String> {
+        Binding(
+            get: { changeColours.hex(for: role, appearance: colourAppearance) },
+            set: { newValue in
+                let current = changeColours.colour(for: role)
+                let updated = AdaptiveColour(
+                    lightHex: colourAppearance == .light ? newValue : current.lightHex,
+                    darkHex: colourAppearance == .dark ? newValue : current.darkHex,
+                    fallback: current
+                )
+                switch role {
+                case .modified: changeColours.modified = updated
+                case .added: changeColours.added = updated
+                case .deleted: changeColours.deleted = updated
+                case .merged: changeColours.merged = updated
+                case .conflicted: changeColours.conflicted = updated
+                }
+            }
+        )
     }
 
     private func hookArgumentsBinding(

@@ -17,7 +17,7 @@ public struct MacSvnBlameView: View {
     @State private var blameEndRevisionText = ""
     @State private var displayMode: BlameDisplayMode = .standard
     @State private var showOnlyDifferences = true
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var externalBlameTool: ExternalDiffToolConfiguration?
 
     private enum BlameDisplayMode: String, CaseIterable, Identifiable {
@@ -45,7 +45,7 @@ public struct MacSvnBlameView: View {
                 Spacer()
                 Picker("模式", selection: $displayMode) {
                     ForEach(BlameDisplayMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(LocalizedStringKey(mode.rawValue)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -449,7 +449,7 @@ public struct MacSvnBlameView: View {
             applyRangeToEvolutionVM()
             statusText = "已加载 \(vm.lines.count) 行"
         } else if case .error(let message) = vm.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         }
     }
 
@@ -475,7 +475,7 @@ public struct MacSvnBlameView: View {
         case .loaded:
             statusText = "已比较 r\(oldValue)–r\(newValue)，发现 \(vm.changedRows.count) 行变化"
         case .error(let message):
-            statusText = message
+            statusText = LocalizedStringKey(message)
         default:
             break
         }

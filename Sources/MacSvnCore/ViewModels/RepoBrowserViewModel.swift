@@ -3,12 +3,27 @@ import Observation
 
 public protocol RepoListProviding: Sendable {
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
     func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func listWithLocks(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
 }
 
 public extension RepoListProviding {
     func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential?
+    ) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, includeExternals: includeExternals, auth: auth)
     }
 }
 
@@ -77,6 +92,8 @@ public final class RepoBrowserViewModel {
     private let remoteOperationProvider: (any RepoRemoteOperationProviding)?
     private let bookmarkManager: (any RepoBookmarkManaging)?
     private let logBatchSize: Int
+    private var preFetchDirectories: Bool
+    private var showExternals: Bool
 
     private var statesByURL: [String: RepoBrowserState] = [:]
     private var childrenByURL: [String: [RemoteEntry]] = [:]
@@ -107,7 +124,9 @@ public final class RepoBrowserViewModel {
         bookmarkManager: (any RepoBookmarkManaging)? = nil,
         logProvider: (any RepoLogProviding)? = nil,
         remoteOperationProvider: (any RepoRemoteOperationProviding)? = nil,
-        logBatchSize: Int = 100
+        logBatchSize: Int = 100,
+        preFetchDirectories: Bool = false,
+        showExternals: Bool = false
     ) {
         self.listProvider = listProvider
         self.previewProvider = previewProvider ?? (listProvider as? any RepoPreviewProviding)
@@ -115,6 +134,8 @@ public final class RepoBrowserViewModel {
         self.remoteOperationProvider = remoteOperationProvider ?? (listProvider as? any RepoRemoteOperationProviding)
         self.bookmarkManager = bookmarkManager
         self.logBatchSize = max(1, logBatchSize)
+        self.preFetchDirectories = preFetchDirectories
+        self.showExternals = showExternals
     }
 
     public func state(for url: String) -> RepoBrowserState {
@@ -145,11 +166,67 @@ public final class RepoBrowserViewModel {
         statesByURL[url] = .loading
 
         do {
-            childrenByURL[url] = try await listProvider.listWithLocks(url: url, depth: .immediates, auth: auth)
+            let children = try await listProvider.listWithLocks(
+                url: url,
+                depth: .immediates,
+                includeExternals: showExternals,
+                auth: auth
+            )
+            childrenByURL[url] = children
             statesByURL[url] = .loaded
+            if preFetchDirectories {
+                await preFetchChildren(of: children, baseURL: url, auth: auth)
+            }
         } catch {
             childrenByURL[url] = []
             statesByURL[url] = .error(String(describing: error))
+        }
+    }
+
+    public func updateSettings(preFetchDirectories: Bool, showExternals: Bool) {
+        self.preFetchDirectories = preFetchDirectories
+        self.showExternals = showExternals
+    }
+
+    private func preFetchChildren(of entries: [RemoteEntry], baseURL: String, auth: Credential?) async {
+        let childURLs = entries
+            .filter { $0.kind == .directory }
+            .map { remoteURL(baseURL: baseURL, entryPath: $0.path) }
+        guard !childURLs.isEmpty else { return }
+
+        for childURL in childURLs {
+            statesByURL[childURL] = .loading
+        }
+
+        let provider = listProvider
+        let includeExternals = showExternals
+        await withTaskGroup(of: (String, Result<[RemoteEntry], Error>).self) { group in
+            for childURL in childURLs {
+                group.addTask {
+                    do {
+                        let children = try await provider.listWithLocks(
+                            url: childURL,
+                            depth: .immediates,
+                            includeExternals: includeExternals,
+                            auth: auth
+                        )
+                        return (childURL, .success(children))
+                    } catch {
+                        return (childURL, .failure(error))
+                    }
+                }
+            }
+
+            for await (childURL, result) in group {
+                switch result {
+                case .success(let children):
+                    childrenByURL[childURL] = children
+                    statesByURL[childURL] = .loaded
+                case .failure(let error):
+                    childrenByURL[childURL] = []
+                    statesByURL[childURL] = .error(String(describing: error))
+                }
+            }
         }
     }
 

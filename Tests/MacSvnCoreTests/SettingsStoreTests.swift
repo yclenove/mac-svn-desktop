@@ -3,6 +3,25 @@ import XCTest
 @testable import MacSvnCore
 
 final class SettingsStoreTests: XCTestCase {
+    func testFailedUpdateDoesNotReplaceCachedSettings() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("settings.json")
+        let store = SettingsStore(fileURL: file)
+        let original = AppSettings(general: GeneralSettings(language: .simplifiedChinese))
+        try await store.update(original)
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: true)
+
+        do {
+            try await store.update(AppSettings(general: GeneralSettings(language: .english)))
+            XCTFail("Expected settings write to fail")
+        } catch {
+            let cached = await store.settings()
+            XCTAssertEqual(cached, original)
+        }
+    }
+
     private var temporaryRoots: [URL] = []
 
     override func tearDownWithError() throws {
@@ -206,6 +225,69 @@ final class SettingsStoreTests: XCTestCase {
         """
         let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
         XCTAssertEqual(decoded.settings.externalToolRules, [])
+    }
+
+    func testTortoiseParitySettingsPersistWithAppSettings() async throws {
+        let root = temporaryRoot()
+        let store = makeStore(root: root)
+        var settings = AppSettings()
+        settings.general = GeneralSettings(
+            language: .english,
+            checkForUpdatesAutomatically: false,
+            applyLocalExternalsPropertyChanges: true
+        )
+        settings.dialogs = DialogSettings(
+            logFontName: "Menlo",
+            logFontSize: 14,
+            useShortDateFormat: true,
+            doubleClickLogToComparePrevious: true,
+            useTrashWhenReverting: false,
+            defaultCheckoutPath: "/tmp/checkouts",
+            defaultCheckoutURL: "https://svn.example.com/project",
+            recurseIntoUnversionedFolders: false,
+            enableCommitAutoCompletion: false,
+            autoCompletionTimeoutSeconds: 9,
+            commitMessageHistoryLimit: 40,
+            selectCommitItemsAutomatically: false,
+            reopenCommitAfterSuccessWithRemainingItems: true,
+            contactRepositoryOnChangesOpen: true,
+            showLockDialogBeforeLocking: false
+        )
+        settings.changeColours = ChangeColourPalette(
+            modified: AdaptiveColour(lightHex: "#111111", darkHex: "#EEEEEE")
+        )
+        settings.network = SvnNetworkSettings(
+            proxy: SvnProxySettings(
+                enabled: true,
+                host: "proxy.example.com",
+                port: 3128,
+                exceptions: ["localhost", "*.example.com"],
+                username: "svn-user"
+            ),
+            sshExecutablePath: "/usr/bin/ssh",
+            sshArguments: ["-q", "-o", "BatchMode=yes"]
+        )
+
+        try await store.update(settings)
+
+        let reloaded = try await makeStore(root: root).load()
+        XCTAssertEqual(reloaded.general, settings.general)
+        XCTAssertEqual(reloaded.dialogs, settings.dialogs)
+        XCTAssertEqual(reloaded.changeColours, settings.changeColours)
+        XCTAssertEqual(reloaded.network, settings.network)
+    }
+
+    func testLegacyJSONDefaultsTortoiseParitySettings() throws {
+        let legacy = """
+        {"version":1,"settings":{"logBatchSize":100,"branchLayout":{"trunk":"trunk","branches":"branches","tags":"tags"},"processTimeout":120}}
+        """
+
+        let decoded = try JSONDecoder().decode(SettingsFile.self, from: Data(legacy.utf8))
+
+        XCTAssertEqual(decoded.settings.general, GeneralSettings())
+        XCTAssertEqual(decoded.settings.dialogs, DialogSettings())
+        XCTAssertEqual(decoded.settings.changeColours, ChangeColourPalette())
+        XCTAssertEqual(decoded.settings.network, SvnNetworkSettings())
     }
 
     func testResetRestoresDefaults() async throws {

@@ -12,7 +12,7 @@ public struct MacSvnShelveView: View {
     @State private var viewModel: ShelveViewModel?
     @State private var patchViewModel: PatchViewModel?
     @State private var name = ""
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var showPatchSheet = false
     @State private var patchOperation: PatchOperation = .create
     @State private var patchPath = ""
@@ -161,11 +161,19 @@ public struct MacSvnShelveView: View {
     private var officialAvailabilityView: some View {
         switch viewModel?.officialAvailability {
         case .available(let version):
-            Label(version.displayName, systemImage: "checkmark.circle.fill")
+            Label {
+                Text(LocalizedStringKey(version.displayName))
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+            }
                 .font(.caption)
                 .foregroundStyle(.green)
         case .unavailable(let version, let reason):
-            Label("\(version.displayName) 不可用：\(reason)", systemImage: "exclamationmark.triangle")
+            Label {
+                Text("\(version.displayName) 不可用：\(reason)")
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
@@ -287,7 +295,7 @@ public struct MacSvnShelveView: View {
     }
 
     @discardableResult
-    private func updateStatus(for operation: ShelveOperation, success: String) -> Bool {
+    private func updateStatus(for operation: ShelveOperation, success: LocalizedStringKey) -> Bool {
         switch viewModel?.state {
         case .completed(let completed) where completed == operation:
             statusText = success

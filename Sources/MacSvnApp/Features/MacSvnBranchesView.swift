@@ -19,7 +19,7 @@ public struct MacSvnBranchesView: View {
     @State private var createSourceMode: CopySourceMode = .head
     @State private var createRevisionText = ""
     @State private var switchRevisionText = ""
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var confirmLocalChanges = false
 
     private enum CopySourceMode: String, CaseIterable, Identifiable {
@@ -82,7 +82,7 @@ public struct MacSvnBranchesView: View {
                             }
                             Picker("来源", selection: $createSourceMode) {
                                 ForEach(CopySourceMode.allCases) { mode in
-                                    Text(mode.rawValue).tag(mode)
+                                    Text(LocalizedStringKey(mode.rawValue)).tag(mode)
                                 }
                             }
                             if createSourceMode == .revision {

@@ -4,11 +4,18 @@ public struct SvnCliBackend: SvnBackend {
     private let svnExecutable: String
     private let runner: any ProcessRunning
     private let timeout: TimeInterval
+    private let configurationDirectory: URL?
 
-    public init(svnExecutable: String, runner: any ProcessRunning, timeout: TimeInterval = 120) {
+    public init(
+        svnExecutable: String,
+        runner: any ProcessRunning,
+        timeout: TimeInterval = 120,
+        configurationDirectory: URL? = nil
+    ) {
         self.svnExecutable = svnExecutable
         self.runner = runner
         self.timeout = timeout
+        self.configurationDirectory = configurationDirectory?.standardizedFileURL
     }
 
     public func version() async throws -> SvnVersion {
@@ -23,8 +30,20 @@ public struct SvnCliBackend: SvnBackend {
         return try StatusXMLParser.parse(result.stdout)
     }
 
+    public func statusIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        let command = SvnCommandBuilder.status(verbose: true, showUpdates: false, noIgnore: true)
+        let result = try await run(command, currentDirectory: wc.path, stdin: nil)
+        return try StatusXMLParser.parse(result.stdout)
+    }
+
     public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
         let command = SvnCommandBuilder.status(verbose: true, showUpdates: true)
+        let result = try await run(command, currentDirectory: wc.path, stdin: nil)
+        return try StatusXMLParser.parse(result.stdout)
+    }
+
+    public func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        let command = SvnCommandBuilder.status(verbose: true, showUpdates: true, noIgnore: true)
         let result = try await run(command, currentDirectory: wc.path, stdin: nil)
         return try StatusXMLParser.parse(result.stdout)
     }
@@ -605,11 +624,21 @@ public struct SvnCliBackend: SvnBackend {
         depth: SvnDepth,
         auth: Credential? = nil
     ) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, includeExternals: false, auth: auth)
+    }
+
+    public func list(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential? = nil
+    ) async throws -> [RemoteEntry] {
         let authArguments = try AuthArguments.build(credential: auth)
         let result = try await run(
             SvnCommandBuilder.list(
                 url: url,
                 depth: depth,
+                includeExternals: includeExternals,
                 authArguments: authArguments.arguments
             ),
             currentDirectory: nil,
@@ -623,12 +652,22 @@ public struct SvnCliBackend: SvnBackend {
         depth: SvnDepth,
         auth: Credential? = nil
     ) async throws -> [RemoteEntry] {
+        try await listWithLocks(url: url, depth: depth, includeExternals: false, auth: auth)
+    }
+
+    public func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential? = nil
+    ) async throws -> [RemoteEntry] {
         let authArguments = try AuthArguments.build(credential: auth)
         let normalizedURL = normalizedRemoteURL(url)
         let result = try await run(
             SvnCommandBuilder.remoteInfo(
                 url: normalizedURL,
                 depth: depth,
+                includeExternals: includeExternals,
                 authArguments: authArguments.arguments
             ),
             currentDirectory: nil,
@@ -847,9 +886,15 @@ public struct SvnCliBackend: SvnBackend {
     }
 
     private func run(_ command: SvnCommand, currentDirectory: String?, stdin: Data?) async throws -> ProcessResult {
+        let arguments: [String]
+        if let configurationDirectory {
+            arguments = ["--config-dir", configurationDirectory.path] + command.arguments
+        } else {
+            arguments = command.arguments
+        }
         let result = try await runner.run(
             executable: svnExecutable,
-            arguments: command.arguments,
+            arguments: arguments,
             stdin: stdin,
             currentDirectory: currentDirectory,
             timeout: timeout

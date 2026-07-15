@@ -3,6 +3,7 @@ import MacSvnCore
 
 /// Diff 页：Unified / Side-by-side；支持两 revision 对比（FR-DF-02/03）。
 public struct MacSvnDiffView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -13,8 +14,8 @@ public struct MacSvnDiffView: View {
     @State private var selectedPath: String?
     @State private var comparePath = ""
     @State private var viewModel: DiffViewModel?
-    @State private var errorText: String?
-    @State private var statusText: String?
+    @State private var errorText: LocalizedStringKey?
+    @State private var statusText: LocalizedStringKey?
     @State private var mode: DiffMode = .unified
     @State private var r1Text = ""
     @State private var r2Text = ""
@@ -349,7 +350,7 @@ public struct MacSvnDiffView: View {
                 }
             }
         } catch {
-            errorText = error.localizedDescription
+            errorText = LocalizedStringKey(error.localizedDescription)
         }
     }
 
@@ -407,7 +408,7 @@ public struct MacSvnDiffView: View {
     private var diffModePicker: some View {
         Picker("显示模式", selection: $mode) {
             ForEach(DiffMode.allCases) { item in
-                Text(item.rawValue).tag(item)
+                Text(LocalizedStringKey(item.rawValue)).tag(item)
             }
         }
         .labelsHidden()
@@ -532,28 +533,23 @@ public struct MacSvnDiffView: View {
     }
 
     private func color(for kind: UnifiedDiffLineKind) -> Color {
-        switch kind {
-        case .addition: return .green
-        case .deletion: return .red
-        case .hunk, .metadata: return .secondary
-        default: return .primary
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: kind) else {
+            return kind == .hunk || kind == .metadata ? .secondary : .primary
         }
+        return svnChangeColour(palette: palette, role: role, colorScheme: colorScheme)
     }
 
     private func background(for kind: UnifiedDiffLineKind) -> Color {
-        switch kind {
-        case .addition: return Color.green.opacity(0.12)
-        case .deletion: return Color.red.opacity(0.12)
-        default: return .clear
-        }
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: kind) else { return .clear }
+        return svnChangeColour(palette: palette, role: role, colorScheme: colorScheme).opacity(0.12)
     }
 
     private func sideBackground(_ kind: SideBySideDiffCellKind?) -> Color {
-        switch kind {
-        case .addition: return Color.green.opacity(0.12)
-        case .deletion: return Color.red.opacity(0.12)
-        case .modified: return Color.yellow.opacity(0.12)
-        default: return Color.clear
-        }
+        guard let kind else { return .clear }
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: kind) else { return .clear }
+        return svnChangeColour(palette: palette, role: role, colorScheme: colorScheme).opacity(0.12)
     }
 }

@@ -12,17 +12,17 @@ public struct MacSvnPropertiesView: View {
     @State private var projectProperties = ProjectPropertyPolicy(properties: [])
     @State private var itemInfo: SvnInfo?
     @State private var itemStatus: ItemStatus?
-    @State private var infoError: String?
+    @State private var infoError: LocalizedStringKey?
     @State private var loadGeneration = 0
     @State private var name = ""
     @State private var value = ""
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var pendingDeleteProperty: String?
     @State private var showExternalsEditor = false
     @State private var externalDocument: SvnExternalsDocument?
     @State private var externalDrafts: [ExternalDefinitionDraft] = []
     @State private var updateExternalsAfterSave = true
-    @State private var externalStatusText: String?
+    @State private var externalStatusText: LocalizedStringKey?
     @State private var isSavingExternals = false
 
     public init(
@@ -119,6 +119,7 @@ public struct MacSvnPropertiesView: View {
             }
         }
         .task {
+            updateExternalsAfterSave = session.settingsSnapshot.general.applyLocalExternalsPropertyChanges
             await reloadPaths()
             if navigator.pendingExternalsIntent != nil {
                 await consumePendingExternals()
@@ -310,7 +311,7 @@ public struct MacSvnPropertiesView: View {
             relativePaths: [path]
         )) ?? ProjectPropertyPolicy(properties: [])
         var loadedInfo: SvnInfo?
-        var loadedInfoError: String?
+        var loadedInfoError: LocalizedStringKey?
         do {
             loadedInfo = try await infoRequest
         } catch {
@@ -376,7 +377,7 @@ public struct MacSvnPropertiesView: View {
             externalStatusText = nil
             showExternalsEditor = true
         } catch {
-            statusText = error.localizedDescription
+            statusText = LocalizedStringKey(error.localizedDescription)
         }
     }
 
@@ -426,7 +427,7 @@ public struct MacSvnPropertiesView: View {
             statusText = updateExternalsAfterSave ? "已保存并更新外部项" : "已保存 svn:externals"
             await loadProperties()
         } catch {
-            externalStatusText = error.localizedDescription
+            externalStatusText = LocalizedStringKey(error.localizedDescription)
             statusText = externalStatusText
         }
     }

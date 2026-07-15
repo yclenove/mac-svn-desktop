@@ -3,13 +3,23 @@ import Observation
 
 public protocol StatusProviding: Sendable {
     func status(wc: URL) async throws -> [FileStatus]
+    func statusIncludingIgnored(wc: URL) async throws -> [FileStatus]
     func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
+    func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus]
 }
 
 extension StatusProviding {
     /// 默认回退到本地 status（测试假对象可省略实现；生产路径由 `SvnService` 覆盖）
     public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
         try await status(wc: wc)
+    }
+
+    public func statusIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await status(wc: wc)
+    }
+
+    public func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await statusAgainstRepository(wc: wc)
     }
 }
 
@@ -190,6 +200,8 @@ public enum FileStatusListBuilder {
 public final class ChangesViewModel {
     private let workingCopy: URL
     private let statusProvider: any StatusProviding
+    private var recurseIntoUnversionedFolders: Bool
+    private var refreshGeneration = 0
 
     public private(set) var state: ChangesViewState = .idle
     public private(set) var entries: [FileStatus] = []
@@ -206,11 +218,13 @@ public final class ChangesViewModel {
     public init(
         workingCopy: URL,
         statusProvider: any StatusProviding,
-        columnConfiguration: CFMColumnConfiguration = .default
+        columnConfiguration: CFMColumnConfiguration = .default,
+        recurseIntoUnversionedFolders: Bool = false
     ) {
         self.workingCopy = workingCopy
         self.statusProvider = statusProvider
         self.columnConfiguration = columnConfiguration
+        self.recurseIntoUnversionedFolders = recurseIntoUnversionedFolders
     }
 
     public var visibleFlatEntries: [FileStatus] {
@@ -237,15 +251,38 @@ public final class ChangesViewModel {
         CFMChangeHighlight.classify(entry)
     }
 
+    @discardableResult
+    public func updateSettings(recurseIntoUnversionedFolders: Bool) -> Bool {
+        let changed = self.recurseIntoUnversionedFolders != recurseIntoUnversionedFolders
+        self.recurseIntoUnversionedFolders = recurseIntoUnversionedFolders
+        return changed
+    }
+
     public func refresh() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        let recurse = recurseIntoUnversionedFolders
         state = .loading
 
         do {
-            entries = try await statusProvider.status(wc: workingCopy)
+            let statuses: [FileStatus]
+            if recurse {
+                statuses = try await statusProvider.statusIncludingIgnored(wc: workingCopy)
+            } else {
+                statuses = try await statusProvider.status(wc: workingCopy)
+            }
+            let expanded = try await UnversionedTreeExpander.expandAsync(
+                statuses: statuses,
+                workingCopy: workingCopy,
+                recurse: recurse
+            ).filter { $0.itemStatus != .ignored }
+            guard generation == refreshGeneration else { return }
+            entries = expanded
             includesRepositoryCheck = false
             lastRefreshedAt = Date()
             state = .loaded
         } catch {
+            guard generation == refreshGeneration else { return }
             entries = []
             includesRepositoryCheck = false
             state = .error(String(describing: error))
@@ -254,14 +291,30 @@ public final class ChangesViewModel {
 
     /// 小乌龟 CFM「Check Repository」：`svn status -u`
     public func checkRepository() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        let recurse = recurseIntoUnversionedFolders
         state = .loading
 
         do {
-            entries = try await statusProvider.statusAgainstRepository(wc: workingCopy)
+            let statuses: [FileStatus]
+            if recurse {
+                statuses = try await statusProvider.statusAgainstRepositoryIncludingIgnored(wc: workingCopy)
+            } else {
+                statuses = try await statusProvider.statusAgainstRepository(wc: workingCopy)
+            }
+            let expanded = try await UnversionedTreeExpander.expandAsync(
+                statuses: statuses,
+                workingCopy: workingCopy,
+                recurse: recurse
+            ).filter { $0.itemStatus != .ignored }
+            guard generation == refreshGeneration else { return }
+            entries = expanded
             includesRepositoryCheck = true
             lastRefreshedAt = Date()
             state = .loaded
         } catch {
+            guard generation == refreshGeneration else { return }
             entries = []
             includesRepositoryCheck = false
             state = .error(String(describing: error))

@@ -74,6 +74,65 @@ final class ChangesViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRefreshCanExpandUnversionedDirectoryChildren() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ChangesUnversioned-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("scratch/sub"), withIntermediateDirectories: true)
+        try Data().write(to: root.appendingPathComponent("scratch/sub/file.txt"))
+        let parent = FileStatus(path: "scratch", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        let viewModel = ChangesViewModel(
+            workingCopy: root,
+            statusProvider: FakeStatusProvider(result: .success([parent])),
+            recurseIntoUnversionedFolders: true
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(Set(viewModel.entries.map(\.path)), Set(["scratch", "scratch/sub", "scratch/sub/file.txt"]))
+    }
+
+    @MainActor
+    func testRecursiveUnversionedSettingCanUpdateWithoutRecreatingViewModel() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ChangesSettings-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("scratch"), withIntermediateDirectories: true)
+        try Data().write(to: root.appendingPathComponent("scratch/file.txt"))
+        let parent = FileStatus(path: "scratch", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        let viewModel = ChangesViewModel(
+            workingCopy: root,
+            statusProvider: FakeStatusProvider(result: .success([parent])),
+            recurseIntoUnversionedFolders: false
+        )
+
+        await viewModel.refresh()
+        XCTAssertEqual(viewModel.entries.map(\.path), ["scratch"])
+
+        viewModel.updateSettings(recurseIntoUnversionedFolders: true)
+        await viewModel.refresh()
+        XCTAssertEqual(Set(viewModel.entries.map(\.path)), Set(["scratch", "scratch/file.txt"]))
+    }
+
+    @MainActor
+    func testNewRefreshResultWinsWhenOlderRecursiveRefreshFinishesLate() async throws {
+        let viewModel = ChangesViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statusProvider: RacingStatusProvider(),
+            recurseIntoUnversionedFolders: true
+        )
+
+        let olderRefresh = Task { await viewModel.refresh() }
+        try await Task.sleep(for: .milliseconds(10))
+        viewModel.updateSettings(recurseIntoUnversionedFolders: false)
+        await viewModel.refresh()
+        await olderRefresh.value
+
+        XCTAssertEqual(viewModel.entries.map(\.path), ["new.swift"])
+        XCTAssertEqual(viewModel.state, .loaded)
+    }
+
+    @MainActor
     func testColumnVisibilityUpdatesConfiguration() async {
         let viewModel = ChangesViewModel(
             workingCopy: URL(fileURLWithPath: "/tmp/wc"),
@@ -146,6 +205,27 @@ final class ChangesViewModelTests: XCTestCase {
             FileStatus(path: "README.md", itemStatus: .added, revision: Revision(3), isTreeConflict: false),
             FileStatus(path: "scratch.tmp", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
         ]
+    }
+}
+
+private actor RacingStatusProvider: StatusProviding {
+    func status(wc: URL) async throws -> [FileStatus] {
+        [FileStatus(
+            path: "new.swift",
+            itemStatus: .modified,
+            revision: Revision(2),
+            isTreeConflict: false
+        )]
+    }
+
+    func statusIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await Task.sleep(for: .milliseconds(80))
+        return [FileStatus(
+            path: "old.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )]
     }
 }
 

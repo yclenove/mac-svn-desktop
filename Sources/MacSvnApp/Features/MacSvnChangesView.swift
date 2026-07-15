@@ -3,10 +3,11 @@ import MacSvnCore
 
 /// 变更页：绑定 ChangesViewModel + WorkingCopyActionsViewModel。
 public struct MacSvnChangesView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var session: MacSvnAppSession
     private let svnService: SvnService
     private let navigator: MacSvnAppNavigator?
-    private let session: MacSvnAppSession?
     /// 嵌入变更工作区时隐藏大标题、收紧边距。
     private let embedded: Bool
     /// 深链 / ⌘K 注入的初始选中。
@@ -43,7 +44,7 @@ public struct MacSvnChangesView: View {
     @State private var unversionedDeletionSelectedPaths: Set<String> = []
     @State private var revertRecursive = false
     @State private var cleanupOptions = SvnCleanupOptions()
-    @State private var statusBanner: String?
+    @State private var statusBanner: LocalizedStringKey?
     @State private var setDepth: SvnDepth = .infinity
     @State private var showUpdateToRevisionSheet = false
     @State private var updateToRevisionText = ""
@@ -70,7 +71,7 @@ public struct MacSvnChangesView: View {
         workspaceController: MacSvnWorkspaceController,
         statusProvider: SvnService,
         navigator: MacSvnAppNavigator? = nil,
-        session: MacSvnAppSession? = nil,
+        session: MacSvnAppSession,
         embedded: Bool = false,
         initialSelectedPaths: Set<String> = [],
         onFocusedPathChange: ((String?) -> Void)? = nil
@@ -120,6 +121,15 @@ public struct MacSvnChangesView: View {
         }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await bindAndRefresh() }
+        }
+        .onChange(of: session.settingsSnapshot.dialogs) { _, dialogs in
+            let shouldRefresh = changesVM?.updateSettings(
+                recurseIntoUnversionedFolders: dialogs.recurseIntoUnversionedFolders
+            ) ?? false
+            actionsVM?.updateSettings(useTrashWhenReverting: dialogs.useTrashWhenReverting)
+            if shouldRefresh {
+                Task { await changesVM?.refresh() }
+            }
         }
         .onChange(of: initialSelectedPaths) { _, newValue in
             // 深链 / ⌘K / 工作区种子路径会在 init 之后更新，必须同步选中
@@ -248,7 +258,7 @@ public struct MacSvnChangesView: View {
                     .font(.headline)
                 Picker("操作", selection: $changelistOperation) {
                     ForEach(ChangelistOperation.allCases) { operation in
-                        Text(operation.rawValue).tag(operation)
+                        Text(LocalizedStringKey(operation.rawValue)).tag(operation)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -308,7 +318,7 @@ public struct MacSvnChangesView: View {
             Spacer()
             Picker("筛选", selection: $filterMode) {
                 ForEach(FilterMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(LocalizedStringKey(mode.rawValue)).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
@@ -332,7 +342,7 @@ public struct MacSvnChangesView: View {
                         Task { await toggleColumn(column) }
                     } label: {
                         HStack {
-                            Text(column.displayName)
+                            Text(LocalizedStringKey(column.displayName))
                             if changesVM?.columnConfiguration.isVisible(column) == true {
                                 Image(systemName: "checkmark")
                             }
@@ -442,7 +452,7 @@ public struct MacSvnChangesView: View {
                 ignoreKind = .exactFilename
                 showIgnoreSheet = true
             }
-            .disabled(selectedPaths.isEmpty || session == nil || actionsVM?.isRunning == true)
+            .disabled(selectedPaths.isEmpty || actionsVM?.isRunning == true)
 
             Button("变更列表…") {
                 prepareChangelistSheet()
@@ -532,12 +542,14 @@ public struct MacSvnChangesView: View {
                         }
                     } else {
                         ForEach(changesVM.visibleChangelistGroups) { group in
-                            Section(group.displayName) {
+                            Section {
                                 ForEach(group.entries, id: \.path) { entry in
                                     flatRow(entry)
                                         .tag(entry.path)
                                         .listRowBackground(highlightColor(changesVM.highlight(for: entry)))
                                 }
+                            } header: {
+                                Text(LocalizedStringKey(group.displayName))
                             }
                         }
                     }
@@ -614,7 +626,6 @@ public struct MacSvnChangesView: View {
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
         case .delete, .revert, .addToIgnoreList:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
-                && (id != .addToIgnoreList || session != nil)
         case .deleteKeepLocal:
             return !selectedPaths.isEmpty && actionsVM?.isRunning != true
         case .deleteUnversioned:
@@ -734,7 +745,7 @@ public struct MacSvnChangesView: View {
                         if entry.isTreeConflict, columns.contains(.treeConflict) == false {
                             Text("树冲突")
                                 .font(.caption2)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(changeColour(.conflicted))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -746,7 +757,7 @@ public struct MacSvnChangesView: View {
                 case .treeConflict:
                     Text(entry.isTreeConflict ? "是" : "")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(changeColour(.conflicted))
                         .frame(width: 40, alignment: .center)
                 case .changelist:
                     Text(entry.changelist ?? "—")
@@ -776,7 +787,7 @@ public struct MacSvnChangesView: View {
             if node.isTreeConflict {
                 Text("树冲突")
                     .font(.caption2)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(changeColour(.conflicted))
             }
         }
     }
@@ -791,21 +802,20 @@ public struct MacSvnChangesView: View {
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
-        let cfmColumns: CFMColumnConfiguration
-        if let session {
-            cfmColumns = await session.settingsStore.settings().cfmColumns
-        } else {
-            cfmColumns = .default
-        }
+        let settings = await session.settingsStore.settings()
+        let cfmColumns = settings.cfmColumns
+        let dialogs = settings.dialogs
         let changes = ChangesViewModel(
             workingCopy: wc,
             statusProvider: svnService,
-            columnConfiguration: cfmColumns
+            columnConfiguration: cfmColumns,
+            recurseIntoUnversionedFolders: dialogs.recurseIntoUnversionedFolders
         )
         let actions = WorkingCopyActionsViewModel(
             workingCopy: wc,
             actionProvider: svnService,
-            statusProvider: svnService
+            statusProvider: svnService,
+            useTrashWhenReverting: dialogs.useTrashWhenReverting
         )
         changesVM = changes
         actionsVM = actions
@@ -816,7 +826,11 @@ public struct MacSvnChangesView: View {
             selectedPaths = []
         }
         applyFilters()
-        await changes.refresh()
+        if dialogs.contactRepositoryOnChangesOpen {
+            await changes.checkRepository()
+        } else {
+            await changes.refresh()
+        }
         consumePendingCopyMoveIntentIfReady()
     }
 
@@ -860,7 +874,6 @@ public struct MacSvnChangesView: View {
         guard let changesVM else { return }
         let currentlyVisible = changesVM.columnConfiguration.isVisible(column)
         changesVM.setColumnVisible(column, visible: !currentlyVisible)
-        guard let session else { return }
         var settings = await session.settingsStore.settings()
         settings.cfmColumns = changesVM.columnConfiguration
         do {
@@ -1014,7 +1027,7 @@ public struct MacSvnChangesView: View {
 
     /// 将选中路径按文件名或扩展名通配追加到父目录 `svn:ignore`（#32）。
     private func ignoreSelected() async {
-        guard let session, let record = workspaceController.selectedRecord, let changesVM else { return }
+        guard let record = workspaceController.selectedRecord, let changesVM else { return }
         let paths = Array(selectedPaths).sorted()
         let plans = IgnorePatternPolicy.plans(relativePaths: paths, kind: ignoreKind)
         guard !plans.isEmpty else {
@@ -1059,7 +1072,7 @@ public struct MacSvnChangesView: View {
                 .font(.headline)
             Picker("模式", selection: $ignoreKind) {
                 ForEach(IgnorePatternKind.allCases, id: \.self) { kind in
-                    Text(kind.displayName).tag(kind)
+                    Text(LocalizedStringKey(kind.displayName)).tag(kind)
                 }
             }
             .pickerStyle(.radioGroup)
@@ -1213,12 +1226,14 @@ public struct MacSvnChangesView: View {
         }
         if failures.isEmpty {
             statusBanner = "已标记 \(succeeded.count) 项为已解决"
+            navigator?.lastAutomationMessage = "已标记 \(succeeded.count) 项为已解决"
         } else if succeeded.isEmpty {
             statusBanner = "标记已解决失败：\(failures.joined(separator: "; "))"
+            navigator?.lastAutomationMessage = "标记已解决失败：\(failures.joined(separator: "; "))"
         } else {
             statusBanner = "部分成功 \(succeeded.count)/\(paths.count)：\(failures.joined(separator: "; "))"
+            navigator?.lastAutomationMessage = "部分成功 \(succeeded.count)/\(paths.count)：\(failures.joined(separator: "; "))"
         }
-        navigator?.lastAutomationMessage = statusBanner
         await changesVM.refresh()
         selectedPaths = selectedPaths.subtracting(succeeded)
     }
@@ -1443,7 +1458,7 @@ public struct MacSvnChangesView: View {
                     .foregroundStyle(.secondary)
                 Picker("操作", selection: $copyMoveKind) {
                     ForEach(CopyMoveKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
+                        Text(LocalizedStringKey(kind.displayName)).tag(kind)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -1455,8 +1470,10 @@ public struct MacSvnChangesView: View {
             HStack {
                 Button("取消") { showCopyMoveSheet = false }
                 Spacer()
-                Button(copyMoveKind.displayName) {
+                Button {
                     Task { await runCopyMoveFromSheet() }
+                } label: {
+                    Text(LocalizedStringKey(copyMoveKind.displayName))
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(
@@ -1563,7 +1580,6 @@ public struct MacSvnChangesView: View {
         outcome: ProgressOperationOutcome,
         isLocalOperation: Bool
     ) async -> Bool {
-        guard let session else { return false }
         let mode = await session.settingsStore.settings().progressAutoCloseMode
         return ProgressAutoClosePolicy.shouldClose(
             mode: mode,
@@ -1624,13 +1640,20 @@ public struct MacSvnChangesView: View {
     }
 
     private func statusColor(_ status: ItemStatus) -> Color {
-        switch status {
-        case .conflicted: return .red
-        case .added: return .green
-        case .deleted: return .orange
-        case .modified, .replaced: return .blue
-        default: return .secondary
-        }
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: status) else { return .secondary }
+        return changeColour(role, palette: palette)
+    }
+
+    private func changeColour(
+        _ role: ChangeColourRole,
+        palette: ChangeColourPalette? = nil
+    ) -> Color {
+        svnChangeColour(
+            palette: palette ?? session.settingsSnapshot.changeColours,
+            role: role,
+            colorScheme: colorScheme
+        )
     }
 
     /// CFM 行底色：仅本地 / 仅远端 / 双方 / 冲突
@@ -1645,7 +1668,7 @@ public struct MacSvnChangesView: View {
         case .both:
             return Color.orange.opacity(0.14)
         case .conflicted:
-            return Color.red.opacity(0.16)
+            return changeColour(.conflicted).opacity(0.16)
         }
     }
 }

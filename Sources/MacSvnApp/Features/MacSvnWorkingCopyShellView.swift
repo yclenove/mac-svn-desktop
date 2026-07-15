@@ -108,14 +108,18 @@ public struct MacSvnWorkingCopyShellView: View {
             if MacSvnWorkspaceMode.primaryModes.contains(selectedMode) {
                 Picker("模式", selection: modeBinding) {
                     ForEach(MacSvnWorkspaceMode.primaryModes) { mode in
-                        Text(mode.title).tag(mode)
+                        Text(LocalizedStringKey(mode.title)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 420)
             } else {
                 HStack(spacing: 8) {
-                    Label(selectedMode.title, systemImage: selectedMode.systemImage)
+                    Label {
+                        Text(LocalizedStringKey(selectedMode.title))
+                    } icon: {
+                        Image(systemName: selectedMode.systemImage)
+                    }
                         .font(.headline)
                     Button("返回变更") {
                         navigator.selectMode(.changes)
@@ -128,7 +132,11 @@ public struct MacSvnWorkingCopyShellView: View {
                     Button {
                         navigator.selectMode(mode)
                     } label: {
-                        Label(mode.title, systemImage: mode.systemImage)
+                        Label {
+                            Text(LocalizedStringKey(mode.title))
+                        } icon: {
+                            Image(systemName: mode.systemImage)
+                        }
                     }
                 }
             }
@@ -138,7 +146,11 @@ public struct MacSvnWorkingCopyShellView: View {
                     Button {
                         navigator.selectMode(mode)
                     } label: {
-                        Label(mode.title, systemImage: mode.systemImage)
+                        Label {
+                            Text(LocalizedStringKey(mode.title))
+                        } icon: {
+                            Image(systemName: mode.systemImage)
+                        }
                     }
                 }
             }

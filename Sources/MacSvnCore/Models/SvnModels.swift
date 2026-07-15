@@ -1197,6 +1197,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var finderSyncContextMenuSettings: FinderSyncContextMenuSettings
     /// S11：按工作副本路径匹配的客户端钩子。
     public var clientHooks: [ClientHookConfiguration]
+    public var general: GeneralSettings
+    public var dialogs: DialogSettings
+    public var changeColours: ChangeColourPalette
+    public var network: SvnNetworkSettings
 
     public init(
         svnPath: String? = nil,
@@ -1227,6 +1231,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
         self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
         self.clientHooks = []
+        self.general = GeneralSettings()
+        self.dialogs = DialogSettings()
+        self.changeColours = ChangeColourPalette()
+        self.network = SvnNetworkSettings()
     }
 
     public init(
@@ -1259,6 +1267,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
         self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
         self.clientHooks = []
+        self.general = GeneralSettings()
+        self.dialogs = DialogSettings()
+        self.changeColours = ChangeColourPalette()
+        self.network = SvnNetworkSettings()
     }
 
     public init(
@@ -1313,6 +1325,19 @@ public struct AppSettings: Codable, Equatable, Sendable {
         )
     }
 
+    public init(
+        general: GeneralSettings,
+        dialogs: DialogSettings = DialogSettings(),
+        changeColours: ChangeColourPalette = ChangeColourPalette(),
+        network: SvnNetworkSettings = SvnNetworkSettings()
+    ) {
+        self.init()
+        self.general = general
+        self.dialogs = dialogs
+        self.changeColours = changeColours
+        self.network = network
+    }
+
     private enum CodingKeys: String, CodingKey {
         case svnPath
         case logBatchSize
@@ -1331,6 +1356,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case finderSyncOverlaySettings
         case finderSyncContextMenuSettings
         case clientHooks
+        case general
+        case dialogs
+        case changeColours
+        case network
     }
 
     public init(from decoder: Decoder) throws {
@@ -1359,6 +1388,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
             forKey: .finderSyncContextMenuSettings
         ) ?? FinderSyncContextMenuSettings()
         clientHooks = try container.decodeIfPresent([ClientHookConfiguration].self, forKey: .clientHooks) ?? []
+        general = try container.decodeIfPresent(GeneralSettings.self, forKey: .general) ?? GeneralSettings()
+        dialogs = try container.decodeIfPresent(DialogSettings.self, forKey: .dialogs) ?? DialogSettings()
+        changeColours = try container.decodeIfPresent(ChangeColourPalette.self, forKey: .changeColours)
+            ?? ChangeColourPalette()
+        network = try container.decodeIfPresent(SvnNetworkSettings.self, forKey: .network) ?? SvnNetworkSettings()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1380,6 +1414,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(finderSyncOverlaySettings, forKey: .finderSyncOverlaySettings)
         try container.encode(finderSyncContextMenuSettings, forKey: .finderSyncContextMenuSettings)
         try container.encode(clientHooks, forKey: .clientHooks)
+        try container.encode(general, forKey: .general)
+        try container.encode(dialogs, forKey: .dialogs)
+        try container.encode(changeColours, forKey: .changeColours)
+        try container.encode(network, forKey: .network)
     }
 }
 

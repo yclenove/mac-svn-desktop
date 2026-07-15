@@ -3,8 +3,10 @@ import Foundation
 public protocol SvnBackend: Sendable {
     func version() async throws -> SvnVersion
     func status(wc: URL) async throws -> [FileStatus]
+    func statusIncludingIgnored(wc: URL) async throws -> [FileStatus]
     /// Check for Modifications → Check Repository（`svn status -u`）
     func statusAgainstRepository(wc: URL) async throws -> [FileStatus]
+    func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus]
     func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool, auth: Credential?) async throws -> UpdateSummary
     func switchTo(wc: URL, url: String, revision: Revision?, auth: Credential?) async throws -> UpdateSummary
     func merge(wc: URL, source: String, range: RevisionRange?, dryRun: Bool, auth: Credential?) async throws -> MergeSummary
@@ -73,7 +75,9 @@ public protocol SvnBackend: Sendable {
     func remoteLog(url: String, from: Revision, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func remoteLogFromHead(url: String, batch: Int, verbose: Bool, auth: Credential?) async throws -> [LogEntry]
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
     func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func listWithLocks(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data
     func checkout(url: String, to destination: URL, depth: SvnDepth, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws
     func export(url: String, to destination: URL, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws
@@ -90,6 +94,14 @@ public protocol SvnBackend: Sendable {
 }
 
 public extension SvnBackend {
+    func statusIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await status(wc: wc)
+    }
+
+    func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await statusAgainstRepository(wc: wc)
+    }
+
     func revisionProperties(
         wc: URL,
         target: String,
@@ -149,6 +161,19 @@ public extension SvnBackend {
 
     func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential?
+    ) async throws -> [RemoteEntry] {
+        try await listWithLocks(url: url, depth: depth, auth: auth)
     }
 
     func blame(

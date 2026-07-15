@@ -64,6 +64,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, ["--version", "--quiet"])
     }
 
+    func testConfiguredClientDirectoryIsPassedToEverySvnCommand() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("1.14.5\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let configurationDirectory = URL(fileURLWithPath: "/tmp/custom-subversion", isDirectory: true)
+        let backend = SvnCliBackend(
+            svnExecutable: "/usr/bin/svn",
+            runner: runner,
+            configurationDirectory: configurationDirectory
+        )
+
+        _ = try await backend.version()
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "--config-dir", configurationDirectory.path,
+            "--version", "--quiet"
+        ])
+    }
+
     func testDiffWithURLUsesURLAsOldAndWorkingCopyTargetAsNewWithAuthStdin() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(
             exitCode: 0,
@@ -130,6 +152,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testStatusIncludingIgnoredUsesNoIgnoreInWorkingCopy() async throws {
+        let xml = """
+        <status><target path="."><entry path="build"><wc-status item="ignored"/></entry></target></status>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(xml.utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let statuses = try await backend.statusIncludingIgnored(wc: URL(fileURLWithPath: "/tmp/wc"))
+
+        XCTAssertEqual(statuses.map(\.itemStatus), [.ignored])
+        XCTAssertEqual(
+            runner.calls.single?.arguments,
+            ["status", "-v", "--xml", "--no-ignore", "--non-interactive"]
+        )
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
     func testInfoRunsInWorkingCopyAndParsesXml() async throws {
         let xml = """
         <info><entry path="." revision="3" kind="dir"><url>file:///repo/trunk</url><repository><root>file:///repo</root></repository></entry></info>
@@ -166,6 +210,7 @@ final class SvnCliBackendTests: XCTestCase {
         let entries = try await backend.listWithLocks(
             url: "file:///repo/trunk",
             depth: .immediates,
+            includeExternals: true,
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -176,6 +221,7 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertNil(runner.calls.single?.currentDirectory)
         XCTAssertEqual(runner.calls.single?.arguments, [
             "info", "--xml", "--non-interactive", "--depth", "immediates",
+            "--include-externals",
             "--username", "u", "--password-from-stdin", "file:///repo/trunk"
         ])
     }
@@ -680,6 +726,27 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/trunk"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testListCanIncludeExternals() async throws {
+        let xml = "<lists><list path=\"file:///repo\"></list></lists>"
+        let runner = RecordingProcessRunner(
+            result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01)
+        )
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.list(
+            url: "file:///repo",
+            depth: .immediates,
+            includeExternals: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "list", "--xml", "--non-interactive",
+            "--depth", "immediates", "--include-externals",
+            "file:///repo"
+        ])
     }
 
     func testRemoteLogPassesAuthStdinRunsWithoutWorkingCopyAndParsesEntries() async throws {

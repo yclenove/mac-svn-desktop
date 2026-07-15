@@ -1,5 +1,14 @@
 import Foundation
+import Combine
 import MacSvnCore
+
+public enum MacSvnAppUpdateStatus: Equatable, Sendable {
+    case idle
+    case checking
+    case upToDate(String)
+    case updateAvailable(AppRelease)
+    case failed(String)
+}
 
 /// 应用级依赖注入容器：集中创建并持有 SVN 后端、业务服务与持久化存储。
 ///
@@ -12,6 +21,10 @@ public final class MacSvnAppSession: ObservableObject {
     public let supportDirectory: URL
     public let finderSyncConfigurationFileURLs: [URL]
     public let settingsStore: SettingsStore
+    public let svnClientConfigurationStore: SvnClientConfigurationStore
+    public let appUpdateService: AppUpdateService
+    @Published public private(set) var settingsSnapshot: AppSettings
+    @Published public private(set) var updateStatus: MacSvnAppUpdateStatus = .idle
     public let workspaceStore: WorkspaceStore
     public let commitMessageHistoryStore: CommitMessageHistoryStore
     public let repoBookmarkStore: RepoBookmarkStore
@@ -46,6 +59,9 @@ public final class MacSvnAppSession: ObservableObject {
         supportDirectory: URL,
         finderSyncConfigurationFileURLs: [URL]? = nil,
         settingsStore: SettingsStore,
+        settingsSnapshot: AppSettings,
+        svnClientConfigurationStore: SvnClientConfigurationStore,
+        appUpdateService: AppUpdateService,
         workspaceStore: WorkspaceStore,
         commitMessageHistoryStore: CommitMessageHistoryStore,
         repoBookmarkStore: RepoBookmarkStore,
@@ -81,6 +97,9 @@ public final class MacSvnAppSession: ObservableObject {
             FinderSyncRootsExporter.fileURL(in: supportDirectory)
         ]
         self.settingsStore = settingsStore
+        self.settingsSnapshot = settingsSnapshot
+        self.svnClientConfigurationStore = svnClientConfigurationStore
+        self.appUpdateService = appUpdateService
         self.workspaceStore = workspaceStore
         self.commitMessageHistoryStore = commitMessageHistoryStore
         self.repoBookmarkStore = repoBookmarkStore
@@ -121,10 +140,32 @@ public final class MacSvnAppSession: ObservableObject {
         await settingsStore.settings().aiPrivacy
     }
 
+    public func publish(settings: AppSettings) {
+        settingsSnapshot = settings
+    }
+
+    public func checkForUpdates(currentVersion: String? = nil) async {
+        updateStatus = .checking
+        let installedVersion = currentVersion
+            ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+            ?? "0.0.0"
+        do {
+            switch try await appUpdateService.check(currentVersion: installedVersion) {
+            case .upToDate(let version):
+                updateStatus = .upToDate(version)
+            case .updateAvailable(let release):
+                updateStatus = .updateAvailable(release)
+            }
+        } catch {
+            updateStatus = .failed(error.localizedDescription)
+        }
+    }
+
     /// 从 support 目录引导会话：加载设置、创建后端与服务、确保持久化文件存在。
     public static func bootstrap(
         supportDirectory: URL? = nil,
-        finderSyncExtensionSupportDirectory: URL? = nil
+        finderSyncExtensionSupportDirectory: URL? = nil,
+        svnConfigurationDirectory: URL? = nil
     ) async throws -> MacSvnAppSession {
         let directory = try resolveSupportDirectory(supportDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -142,9 +183,6 @@ public final class MacSvnAppSession: ObservableObject {
 
         let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
         let workspaceStore = WorkspaceStore(fileURL: directory.appendingPathComponent("workspaces.json"))
-        let commitMessageHistoryStore = CommitMessageHistoryStore(
-            fileURL: directory.appendingPathComponent("commit-history.json")
-        )
         let repoBookmarkStore = RepoBookmarkStore(
             fileURL: directory.appendingPathComponent("bookmarks.json")
         )
@@ -153,6 +191,14 @@ public final class MacSvnAppSession: ObservableObject {
         )
 
         let settings = try await settingsStore.load()
+        let commitMessageHistoryStore = CommitMessageHistoryStore(
+            fileURL: directory.appendingPathComponent("commit-history.json"),
+            limit: settings.dialogs.commitMessageHistoryLimit
+        )
+        let svnClientConfigurationStore = SvnClientConfigurationStore(
+            directoryURL: svnConfigurationDirectory ?? SvnConfigurationDirectoryResolver().resolve()
+        )
+        let appUpdateService = AppUpdateService(endpoint: ProductBranding.latestReleaseAPIURL)
         // 首次引导时落盘默认文件，保证 Application Support 目录可观测、可备份
         try await settingsStore.update(settings)
         let workspaces = try await workspaceStore.load()
@@ -181,13 +227,15 @@ public final class MacSvnAppSession: ObservableObject {
             timeout: settings.processTimeout
         )
         let svnAuthenticationCacheStore = SvnAuthenticationCacheStore(
+            configurationDirectory: svnClientConfigurationStore.directoryURL,
             svnExecutable: svnPath,
             timeout: TimeInterval(settings.processTimeout)
         )
         let backend = SvnCliBackend(
             svnExecutable: svnPath,
             runner: ProcessRunner(),
-            timeout: settings.processTimeout
+            timeout: settings.processTimeout,
+            configurationDirectory: svnClientConfigurationStore.directoryURL
         )
         var guardConfig = CommitGuardConfiguration()
         if settings.commitGuardHardBlockConflictMarkers {
@@ -300,6 +348,9 @@ public final class MacSvnAppSession: ObservableObject {
             supportDirectory: directory,
             finderSyncConfigurationFileURLs: finderSyncConfigurationFileURLs,
             settingsStore: settingsStore,
+            settingsSnapshot: settings,
+            svnClientConfigurationStore: svnClientConfigurationStore,
+            appUpdateService: appUpdateService,
             workspaceStore: workspaceStore,
             commitMessageHistoryStore: commitMessageHistoryStore,
             repoBookmarkStore: repoBookmarkStore,

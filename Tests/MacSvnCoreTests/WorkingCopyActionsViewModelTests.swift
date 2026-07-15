@@ -315,6 +315,112 @@ final class WorkingCopyActionsViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRevertTrashSafetyRestoresLocalContentWhenSvnRevertFails() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WorkingCopyRevert-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("changed.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "changed.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = ActionRevertTrashStore(root: root.appendingPathComponent("trash"))
+        let actionProvider = FakeWorkingCopyActionProvider(
+            revertError: .other(code: nil, stderr: "revert failed")
+        )
+        let statusProvider = ActionStatusProvider(result: .success([status]))
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: root,
+            actionProvider: actionProvider,
+            statusProvider: statusProvider,
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revert(paths: ["changed.swift"], confirmed: true)
+
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "local changes")
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("revert failed"))
+        } else {
+            XCTFail("Expected revert error")
+        }
+    }
+
+    @MainActor
+    func testRevertSafetySettingCanUpdateWithoutRecreatingViewModel() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WorkingCopyRevertSettings-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("changed.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "changed.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: root,
+            actionProvider: FakeWorkingCopyActionProvider(
+                revertError: .other(code: nil, stderr: "revert failed")
+            ),
+            statusProvider: ActionStatusProvider(result: .success([status])),
+            useTrashWhenReverting: false,
+            revertSafetyService: RevertSafetyService(store: ActionRevertTrashStore(
+                root: root.appendingPathComponent("trash")
+            ))
+        )
+
+        viewModel.updateSettings(useTrashWhenReverting: true)
+        await viewModel.revert(paths: ["changed.swift"], confirmed: true)
+
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "local changes")
+    }
+
+    @MainActor
+    func testRevertTrashSafetyReportsRestoreFailureWithoutHidingSvnFailure() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WorkingCopyRevert-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("changed.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "changed.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let viewModel = WorkingCopyActionsViewModel(
+            workingCopy: root,
+            actionProvider: FakeWorkingCopyActionProvider(
+                revertError: .other(code: nil, stderr: "svn revert failed")
+            ),
+            statusProvider: ActionStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: ActionRevertTrashStore(
+                root: root.appendingPathComponent("trash"),
+                failOnRestore: true
+            ))
+        )
+
+        await viewModel.revert(paths: ["changed.swift"], confirmed: true)
+
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("svn revert failed"))
+            XCTAssertTrue(message.contains("trash restore failed"))
+        } else {
+            XCTFail("Expected combined revert recovery error")
+        }
+    }
+
+    @MainActor
     func testPathActionsRejectEmptyPathsBeforeCallingProvider() async {
         let actionProvider = FakeWorkingCopyActionProvider()
         let statusProvider = ActionStatusProvider(result: .success([]))
@@ -610,5 +716,29 @@ private actor ActionStatusProvider: StatusProviding {
     func status(wc: URL) async throws -> [FileStatus] {
         requests.append(wc)
         return try result.get()
+    }
+}
+
+private final class ActionRevertTrashStore: RevertTrashStoring, @unchecked Sendable {
+    private let root: URL
+    private let failOnRestore: Bool
+
+    init(root: URL, failOnRestore: Bool = false) {
+        self.root = root
+        self.failOnRestore = failOnRestore
+    }
+
+    func moveToTrash(_ sourceURL: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let destination = root.appendingPathComponent(sourceURL.lastPathComponent)
+        try FileManager.default.moveItem(at: sourceURL, to: destination)
+        return destination
+    }
+
+    func restoreFromTrash(_ trashURL: URL, to originalURL: URL) throws {
+        if failOnRestore {
+            throw SvnError.parse(detail: "trash restore failed")
+        }
+        try FileManager.default.moveItem(at: trashURL, to: originalURL)
     }
 }

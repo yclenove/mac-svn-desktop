@@ -120,6 +120,118 @@ final class SettingsInformationArchitectureTests: XCTestCase {
         XCTAssertTrue(blame.contains("ExternalToolLaunchService"))
     }
 
+    func testTortoiseParitySettingsLoadSaveAndSynchronizeSvnConfiguration() throws {
+        let source = try Self.readRepoSource(at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift")
+        let coordinator = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/App/TortoiseParitySettingsPersistenceCoordinator.swift"
+        )
+        let load = try Self.sourceSection(source, from: "private func load()", to: "private func save()")
+        let save = try Self.sourceSection(source, from: "private func save()", to: "private func clearLogCache()")
+        let mappings = [
+            ("generalPreferences", "settings.general", "settings.general"),
+            ("dialogPreferences", "settings.dialogs", "settings.dialogs"),
+            ("changeColours", "settings.changeColours", "settings.changeColours"),
+            ("networkPreferences", "settings.network", "settings.network"),
+            ("globalIgnorePatterns", "managed.globalIgnorePatterns", "nextManaged.globalIgnorePatterns"),
+            ("useCommitTimes", "managed.useCommitTimes", "nextManaged.useCommitTimes"),
+        ]
+        for (state, loadSetting, saveSetting) in mappings {
+            XCTAssertTrue(load.contains(state), "load no longer maps \(state)")
+            XCTAssertTrue(load.contains(loadSetting), "load no longer reads \(loadSetting)")
+            XCTAssertTrue(save.contains(state), "save no longer maps \(state)")
+            XCTAssertTrue(save.contains(saveSetting), "save no longer writes \(saveSetting)")
+        }
+
+        for label in [
+            "界面语言", "自动检查更新", "Global ignore", "使用最后提交时间",
+            "应用本地修改的 svn:externals", "日志字体", "短日期/时间",
+            "双击日志修订时与前一修订比较", "还原前移到废纸篓", "默认 Checkout 路径",
+            "递归显示未版本目录", "提交说明自动完成", "提交说明历史",
+            "自动勾选版本化修改", "提交后仍有改动时重开", "启动时联系仓库",
+            "获取锁前显示对话框", "预取仓库子目录", "显示 svn:externals",
+            "亮色", "暗色", "HTTP 代理", "代理密码", "SSH 客户端",
+        ] {
+            XCTAssertTrue(source.contains(label), "missing Tortoise parity setting: \(label)")
+        }
+        XCTAssertTrue(source.contains("session.svnClientConfigurationStore.load()"))
+        XCTAssertTrue(source.contains("TortoiseParitySettingsPersistenceCoordinator("))
+        XCTAssertTrue(coordinator.contains("configurationStore.update(managedConfiguration)"))
+        XCTAssertTrue(coordinator.contains("configurationStore.update(originalConfiguration)"))
+        XCTAssertTrue(source.contains("session.publish(settings: settings)"))
+        XCTAssertTrue(source.contains("session.checkForUpdates()"))
+        XCTAssertTrue(source.contains("NSWorkspace.shared.open(session.svnClientConfigurationStore.configFileURL)"))
+        XCTAssertTrue(source.contains("NSWorkspace.shared.open(session.svnClientConfigurationStore.serversFileURL)"))
+        XCTAssertTrue(source.contains("networkPreferences = managed.network"))
+        XCTAssertFalse(source.contains("managed.network != SvnNetworkSettings()"))
+        XCTAssertTrue(source.contains("session.svnClientConfigurationStore.ensureFilesExist()"))
+        XCTAssertFalse(source.contains("private func synchronizeSvnConfigFiles()"))
+    }
+
+    func testDesktopAppObservesSessionWhenApplyingSelectedLanguageLocale() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnDesktopApp/MacSvnDesktopApp.swift"
+        )
+
+        XCTAssertTrue(source.contains("struct MacSvnLocalizedSessionView: View"))
+        XCTAssertTrue(source.contains("@ObservedObject var session: MacSvnAppSession"))
+        XCTAssertTrue(source.contains("struct MacSvnLocalizedContent<Content: View>: View"))
+        XCTAssertTrue(source.contains(".environment(\\.locale, selectedLocale)"))
+    }
+
+    func testCommitEditorConsumesAutoCompletionAndRevertSafetySettings() throws {
+        let commit = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnCommitView.swift"
+        )
+        let editor = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/BugtraqIssueTextEditor.swift"
+        )
+
+        XCTAssertTrue(commit.contains("dialogs.enableCommitAutoCompletion"))
+        let completionBuilder = try Self.sourceSection(
+            commit,
+            from: "private func rebuildCompletionCandidates(",
+            to: "private func diffSelected"
+        )
+        XCTAssertTrue(completionBuilder.contains("autoCompletionTimeoutSeconds"))
+        XCTAssertTrue(completionBuilder.contains("candidateStatuses.map(\\.path)"))
+        XCTAssertTrue(completionBuilder.contains("recentMessages"))
+        XCTAssertTrue(commit.contains("useTrashWhenReverting: settings.dialogs.useTrashWhenReverting"))
+        XCTAssertTrue(commit.contains("@State private var completionCandidates: [String] = []"))
+        XCTAssertTrue(commit.contains("Task.detached(priority: .utility)"))
+        let messagePanel = try Self.sourceSection(
+            commit,
+            from: "private func messagePanel(_ viewModel: CommitViewModel)",
+            to: "private func projectPropertyPanel"
+        )
+        XCTAssertFalse(messagePanel.contains("CommitMessageCompletionCandidates.build"))
+        XCTAssertTrue(editor.contains("textView.isAutomaticTextCompletionEnabled"))
+        XCTAssertTrue(editor.contains("completionIndex.matches"))
+        XCTAssertTrue(editor.contains("CommitMessageCompletionIndex"))
+        XCTAssertTrue(editor.contains("maxCandidates: Int = 512"))
+        XCTAssertTrue(editor.contains("maxResults: Int = 20"))
+        XCTAssertTrue(commit.contains("viewModel?.updateSettings("))
+        let changes = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnChangesView.swift"
+        )
+        XCTAssertTrue(changes.contains(".onChange(of: session.settingsSnapshot.dialogs)"))
+        XCTAssertTrue(changes.contains("changesVM?.updateSettings("))
+        XCTAssertTrue(changes.contains("actionsVM?.updateSettings("))
+    }
+
+    func testChangeColourPaletteIsConsumedByAllStatusWorkflows() throws {
+        for path in [
+            "Sources/MacSvnApp/Features/MacSvnChangesView.swift",
+            "Sources/MacSvnApp/Features/MacSvnDiffView.swift",
+            "Sources/MacSvnApp/Features/MacSvnLogView.swift",
+            "Sources/MacSvnApp/Features/MacSvnMergeWizardView.swift",
+            "Sources/MacSvnApp/Features/MacSvnConflictWorkspaceView.swift",
+        ] {
+            let source = try Self.readRepoSource(at: path)
+            XCTAssertTrue(source.contains("settingsSnapshot.changeColours"), "missing palette in \(path)")
+            XCTAssertTrue(source.contains("svnChangeColour("), "missing resolver in \(path)")
+        }
+    }
+
     private static func readRepoSource(at path: String) throws -> String {
         let testsFile = URL(fileURLWithPath: #filePath)
         let repoRoot = testsFile

@@ -13,7 +13,7 @@ public struct MacSvnGitMigrationView: View {
     @State private var commitMessage = "Initial import from SVN"
     @State private var destinationPath = ""
     @State private var targetRemote = ""
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     @State private var analysisVM: GitMigrationSourceAnalysisViewModel?
     @State private var authorVM: GitMigrationAuthorMappingViewModel?
@@ -45,7 +45,7 @@ public struct MacSvnGitMigrationView: View {
                 Spacer()
                 Picker("", selection: $step) {
                     ForEach(Step.allCases) { item in
-                        Text(item.rawValue).tag(item)
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -343,7 +343,7 @@ public struct MacSvnGitMigrationView: View {
             statusText = "分析完成：\(analysis.totalRevisionCount) revisions / \(analysis.authors.count) authors"
             step = mode == .historyPreserving ? .authors : .cleanup
         } else if case .error(let message) = analysisVM.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         }
     }
 
@@ -404,7 +404,7 @@ public struct MacSvnGitMigrationView: View {
                 targetRemote: remote.isEmpty ? nil : remote
             )
         } else if case .error(let message) = migrateVM.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         }
     }
 

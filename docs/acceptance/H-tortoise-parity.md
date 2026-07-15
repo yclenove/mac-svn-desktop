@@ -109,7 +109,8 @@
 - [x] 外置 Diff/Merge/Blame 按扩展名（S10）：精确扩展名（大小写无关）优先默认规则，支持留空、`*`、`*.*`；Diff 保留统一查看器与旧设置兼容，文本冲突 Merge 传入 base/mine/theirs/result 且须由用户显式标记已解决，Blame 只启动工作副本内文件
 - [x] App Icon / 空态 / 关于页：可重复生成多尺寸 `SVNStudio.icns`，SwiftPM/Xcode 包装均嵌入并校验同一图标；首次无工作副本时可直接添加或打开设置；应用菜单独立单例关于窗口展示实际图标、版本/build 与项目主页
 - [x] `SVNStudio.app` 分发包装：主应用、Finder Sync、Quick Look 均为 `arm64 x86_64`；结构/dyld run-path 继承/递归依赖/深层签名校验及 Foundation 用户目录隔离启动通过；Developer ID、公证、Gatekeeper/干净机因无证书与凭据按计划记录阻塞
-- [ ] **G5**：设置全表 ✅；本节勾选；全量测试绿
+- [x] 设置 S01–S13 全表：语言/更新、SVN config/servers、Dialogs 运行时策略、亮暗状态色、Repo Browser 预取/externals、代理/SSH、外置工具、Saved Data/钩子/Bugtraq/日志缓存全部可用；敏感配置、取消/上限/ignored 边界、并发刷新代次与保存回滚有自动化守卫
+- [x] **G5**：D28 与 S01–S13 全部 ✅；覆盖率 114/114（100%）；`swift test` 1012 绿（真实 SVN 49/49）；Localization 6/6、Xcode Debug、SwiftPM Debug App 包装与 `verify-macos-app` 通过
 
 ---
 
@@ -130,3 +131,4 @@
 | 日期 | 验收人 | Wave | 结果 | 备注 |
 |------|--------|------|------|------|
 | 2026-07-10 | agent | T0/G0 | 通过 | `swift test` 529 绿；parity-coverage 0/114 基线；自动化门禁项已勾 |
+| 2026-07-15 | agent | T5/G5 | 通过 | 设置全表与运行时消费核验；覆盖率 114/114；`swift test` 1012 绿；Xcode/SwiftPM App 构建通过 |

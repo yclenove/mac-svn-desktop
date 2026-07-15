@@ -6,6 +6,10 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
     @Binding var text: String
     let regexPatterns: [String]
     let spellcheckLanguage: String?
+    let completionCandidates: [String]
+    let isAutoCompletionEnabled: Bool
+    let fontName: String?
+    let fontSize: Double
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -22,16 +26,15 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
         textView.allowsUndo = true
         textView.isAutomaticSpellingCorrectionEnabled = true
         textView.isContinuousSpellCheckingEnabled = true
-        textView.font = .systemFont(ofSize: NSFont.systemFontSize)
         textView.delegate = context.coordinator
         scrollView.documentView = textView
         context.coordinator.attach(textView)
-        context.coordinator.update(text: text, regexPatterns: regexPatterns, spellcheckLanguage: spellcheckLanguage)
+        context.coordinator.update(parent: self)
         return scrollView
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        context.coordinator.update(text: text, regexPatterns: regexPatterns, spellcheckLanguage: spellcheckLanguage)
+        context.coordinator.update(parent: self)
     }
 
     static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
@@ -44,6 +47,9 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
         private weak var textView: NSTextView?
         private var isApplyingProgrammaticUpdate = false
         private var regexPatterns: [String] = []
+        private var completionIndex = CommitMessageCompletionIndex(candidates: [])
+        private var isAutoCompletionEnabled = false
+        private var editorFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
         private var originalSpellcheckLanguage: String?
         private var originalAutomaticLanguageDetection: Bool?
         private var appliedSpellcheckLanguage: String?
@@ -56,15 +62,26 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
             self.textView = textView
         }
 
-        func update(text: String, regexPatterns: [String], spellcheckLanguage: String?) {
-            self.regexPatterns = regexPatterns
-            configureSpellcheckLanguage(spellcheckLanguage)
+        func update(parent: BugtraqIssueTextEditor) {
+            self.parent = parent
+            regexPatterns = parent.regexPatterns
+            if completionIndex.candidates != parent.completionCandidates {
+                completionIndex = CommitMessageCompletionIndex(candidates: parent.completionCandidates)
+            }
+            isAutoCompletionEnabled = parent.isAutoCompletionEnabled
+            editorFont = BugtraqIssueTextEditorFont.resolve(name: parent.fontName, size: parent.fontSize)
+            configureSpellcheckLanguage(parent.spellcheckLanguage)
             guard let textView else { return }
-            if textView.string != text {
+            textView.isAutomaticTextCompletionEnabled = parent.isAutoCompletionEnabled
+            textView.font = editorFont
+            if textView.string != parent.text {
                 let selection = textView.selectedRange()
                 isApplyingProgrammaticUpdate = true
-                textView.string = text
-                textView.setSelectedRange(NSRange(location: min(selection.location, (text as NSString).length), length: 0))
+                textView.string = parent.text
+                textView.setSelectedRange(NSRange(
+                    location: min(selection.location, (parent.text as NSString).length),
+                    length: 0
+                ))
                 isApplyingProgrammaticUpdate = false
             }
             applyHighlights(to: textView)
@@ -74,6 +91,20 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
             guard !isApplyingProgrammaticUpdate, let textView else { return }
             parent.text = textView.string
             applyHighlights(to: textView)
+        }
+
+        func textView(
+            _ textView: NSTextView,
+            completions words: [String],
+            forPartialWordRange charRange: NSRange,
+            indexOfSelectedItem index: UnsafeMutablePointer<Int>?
+        ) -> [String] {
+            guard isAutoCompletionEnabled else { return [] }
+            let text = textView.string as NSString
+            guard charRange.location != NSNotFound, NSMaxRange(charRange) <= text.length else { return [] }
+            let matches = completionIndex.matches(partial: text.substring(with: charRange))
+            index?.pointee = matches.isEmpty ? -1 : 0
+            return matches
         }
 
         func restoreSpellcheckLanguage() {
@@ -115,7 +146,7 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
             let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
             storage.beginEditing()
             storage.setAttributes([
-                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                .font: editorFont,
                 .foregroundColor: NSColor.labelColor
             ], range: fullRange)
             for range in BugtraqIssueHighlighting.ranges(for: regexPatterns, in: text) {
@@ -127,6 +158,116 @@ struct BugtraqIssueTextEditor: NSViewRepresentable {
             storage.endEditing()
         }
 
+    }
+}
+
+enum BugtraqIssueTextEditorFont {
+    static func resolve(name: String?, size: Double) -> NSFont {
+        let resolvedSize = CGFloat(min(max(size, 9), 72))
+        if let name = name?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty,
+           let font = NSFont(name: name, size: resolvedSize) {
+            return font
+        }
+        return NSFont.systemFont(ofSize: resolvedSize)
+    }
+}
+
+enum CommitMessageCompletionCandidates {
+    static func build(
+        paths: [String],
+        recentMessages: [String],
+        timeout: TimeInterval,
+        maxCandidates: Int = 512,
+        now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+    ) -> [String] {
+        guard timeout > 0, maxCandidates > 0 else { return [] }
+        let deadline = now() + timeout
+        var candidates: [String] = []
+        var normalizedCandidates: Set<String> = []
+
+        func append(_ value: String) -> Bool {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return true }
+            let normalized = trimmed.lowercased()
+            guard !normalizedCandidates.contains(normalized) else { return true }
+            guard candidates.count < maxCandidates else { return false }
+            normalizedCandidates.insert(normalized)
+            candidates.append(trimmed)
+            return true
+        }
+
+        for path in paths {
+            guard now() < deadline else { return candidates }
+            guard append(path) else { return candidates }
+            let basename = (path as NSString).lastPathComponent
+            guard append(basename) else { return candidates }
+            guard append((basename as NSString).deletingPathExtension) else { return candidates }
+        }
+
+        let termRegex = try? NSRegularExpression(pattern: #"[\p{L}\p{N}_-]{2,}"#)
+        for message in recentMessages {
+            guard now() < deadline else { return candidates }
+            let range = NSRange(message.startIndex..<message.endIndex, in: message)
+            var timedOut = false
+            var reachedLimit = false
+            termRegex?.enumerateMatches(in: message, range: range) { match, _, stop in
+                guard now() < deadline else {
+                    timedOut = true
+                    stop.pointee = true
+                    return
+                }
+                guard let match, let termRange = Range(match.range, in: message) else { return }
+                guard append(String(message[termRange])) else {
+                    reachedLimit = true
+                    stop.pointee = true
+                    return
+                }
+            }
+            if timedOut || reachedLimit { return candidates }
+        }
+        return candidates
+    }
+
+    static func matches(candidates: [String], partial: String) -> [String] {
+        CommitMessageCompletionIndex(candidates: candidates).matches(partial: partial)
+    }
+}
+
+struct CommitMessageCompletionIndex {
+    private struct Entry {
+        let candidate: String
+        let normalized: String
+    }
+
+    let candidates: [String]
+    private let buckets: [Character: [Entry]]
+
+    init(candidates: [String]) {
+        self.candidates = candidates
+        self.buckets = Dictionary(grouping: candidates.compactMap { candidate -> (Character, Entry)? in
+            let normalized = Self.normalize(candidate)
+            guard let first = normalized.first else { return nil }
+            return (first, Entry(candidate: candidate, normalized: normalized))
+        }, by: \.0).mapValues { $0.map(\.1) }
+    }
+
+    func matches(partial: String, maxResults: Int = 20) -> [String] {
+        let normalizedPartial = Self.normalize(
+            partial.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        guard maxResults > 0,
+              let first = normalizedPartial.first,
+              !normalizedPartial.isEmpty else { return [] }
+        return buckets[first, default: []].lazy.compactMap { entry in
+            guard entry.normalized != normalizedPartial,
+                  entry.normalized.hasPrefix(normalizedPartial) else { return nil }
+            return entry.candidate
+        }.prefix(maxResults).map { $0 }
+    }
+
+    private static func normalize(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 }
 

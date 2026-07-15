@@ -3,6 +3,7 @@ import MacSvnCore
 
 /// Merge 向导：dry-run 预览 + 执行合并。
 public struct MacSvnMergeWizardView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -20,7 +21,7 @@ public struct MacSvnMergeWizardView: View {
     @State private var startRevision = ""
     @State private var endRevision = ""
     @State private var viewModel: MergeWizardViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -43,7 +44,7 @@ public struct MacSvnMergeWizardView: View {
                 Form {
                     Picker("合并类型", selection: $mergeMode) {
                         ForEach(MergeMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
+                            Text(LocalizedStringKey(mode.rawValue)).tag(mode)
                         }
                     }
                     TextField("来源 URL / 分支", text: $sourceURL)
@@ -82,9 +83,16 @@ public struct MacSvnMergeWizardView: View {
                             .font(.headline)
                         Text("更新 \(summary.updated) / 新增 \(summary.added) / 删除 \(summary.deleted) / 冲突 \(summary.conflicted) / 合并 \(summary.merged)")
                         if !summary.affectedPaths.isEmpty {
-                            Text("影响路径：\(summary.affectedPaths.prefix(12).map(\.path).joined(separator: ", "))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            ForEach(Array(summary.affectedPaths.prefix(12).enumerated()), id: \.offset) { _, affected in
+                                HStack(spacing: 6) {
+                                    Text(mergeActionSymbol(affected.action))
+                                        .font(.caption.monospaced().weight(.semibold))
+                                        .foregroundStyle(mergeActionColour(affected.action))
+                                    Text(affected.path)
+                                        .font(.caption.monospaced())
+                                        .lineLimit(1)
+                                }
+                            }
                         }
                     }
                     .padding()
@@ -179,6 +187,25 @@ public struct MacSvnMergeWizardView: View {
             statusText = "失败：\(message)"
         default:
             break
+        }
+    }
+
+    private func mergeActionColour(_ action: MergeAction) -> Color {
+        let palette = session.settingsSnapshot.changeColours
+        guard let role = palette.role(for: action) else { return .secondary }
+        return svnChangeColour(palette: palette, role: role, colorScheme: colorScheme)
+    }
+
+    private func mergeActionSymbol(_ action: MergeAction) -> String {
+        switch action {
+        case .added: return "A"
+        case .updated: return "U"
+        case .deleted: return "D"
+        case .conflicted: return "C"
+        case .merged: return "G"
+        case .existed: return "E"
+        case .replaced: return "R"
+        case .unknown(let value): return String(value)
         }
     }
 

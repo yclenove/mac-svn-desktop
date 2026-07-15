@@ -15,12 +15,14 @@ struct MacSvnDesktopApplication: App {
                     ProgressView("正在启动 \(ProductBranding.displayName)…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .ready(let session, let navigator, let menuBar):
-                    MacSvnEnvironmentGateView(session: session, navigator: navigator)
-                        .environmentObject(navigator)
-                        .onAppear {
-                            menuBar.start()
+                    MacSvnLocalizedSessionView(
+                        session: session,
+                        navigator: navigator,
+                        menuBar: menuBar,
+                        onAppear: {
                             bootstrap.consumeLaunchArgumentsIfNeeded(navigator: navigator)
                         }
+                    )
                 case .failed(let message):
                     VStack(spacing: 12) {
                         Text("启动失败")
@@ -45,24 +47,34 @@ struct MacSvnDesktopApplication: App {
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button(ProductBranding.aboutWindowTitle) {
+                Button {
                     openWindow(id: ProductBranding.aboutWindowID)
+                } label: {
+                    Text(LocalizedStringKey(ProductBranding.aboutWindowTitle))
                 }
             }
         }
 
-        Window(ProductBranding.aboutWindowTitle, id: ProductBranding.aboutWindowID) {
-            MacSvnAboutView()
+        Window(LocalizedStringKey(ProductBranding.aboutWindowTitle), id: ProductBranding.aboutWindowID) {
+            if case .ready(let session, _, _) = bootstrap.phase {
+                MacSvnLocalizedContent(session: session) {
+                    MacSvnAboutView()
+                }
+            } else {
+                MacSvnAboutView()
+            }
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
         MenuBarExtra {
-            if case .ready(_, let navigator, let menuBar) = bootstrap.phase {
-                MacSvnMenuBarExtraContent(
-                    menuBar: menuBar,
-                    navigator: navigator
-                )
+            if case .ready(let session, let navigator, let menuBar) = bootstrap.phase {
+                MacSvnLocalizedContent(session: session) {
+                    MacSvnMenuBarExtraContent(
+                        menuBar: menuBar,
+                        navigator: navigator
+                    )
+                }
             } else {
                 Text("\(ProductBranding.displayName) 启动中…")
             }
@@ -76,11 +88,55 @@ struct MacSvnDesktopApplication: App {
 
         Settings {
             if case .ready(let session, _, _) = bootstrap.phase {
-                MacSvnSettingsView(session: session)
+                MacSvnLocalizedContent(session: session) {
+                    MacSvnSettingsView(session: session)
+                }
             } else {
                 MacSvnSettingsPlaceholderView()
             }
         }
+    }
+
+}
+
+struct MacSvnLocalizedSessionView: View {
+    @ObservedObject var session: MacSvnAppSession
+    let navigator: MacSvnAppNavigator
+    let menuBar: MacSvnMenuBarController
+    let onAppear: () -> Void
+
+    var body: some View {
+        MacSvnLocalizedContent(session: session) {
+            MacSvnEnvironmentGateView(session: session, navigator: navigator)
+                .environmentObject(navigator)
+        }
+            .onAppear {
+                menuBar.start()
+                onAppear()
+            }
+    }
+}
+
+struct MacSvnLocalizedContent<Content: View>: View {
+    @ObservedObject var session: MacSvnAppSession
+    private let content: () -> Content
+
+    init(
+        session: MacSvnAppSession,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.session = session
+        self.content = content
+    }
+
+    var body: some View {
+        content()
+            .environment(\.locale, selectedLocale)
+    }
+
+    private var selectedLocale: Locale {
+        session.settingsSnapshot.general.language.localeIdentifier
+            .map(Locale.init(identifier:)) ?? .autoupdatingCurrent
     }
 }
 
@@ -146,6 +202,9 @@ final class MacSvnBootstrapModel: ObservableObject {
                 pollIntervalMinutes: session.menuBarPollIntervalMinutes
             )
             phase = .ready(session, navigator, menuBar)
+            if session.settingsSnapshot.general.checkForUpdatesAutomatically {
+                Task { await session.checkForUpdates() }
+            }
         } catch {
             phase = .failed(error.localizedDescription)
         }

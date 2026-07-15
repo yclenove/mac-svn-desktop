@@ -29,6 +29,10 @@ public enum ProductBranding: Sendable {
     public static let sourceRepositoryURL = URL(
         string: "https://github.com/yclenove/mac-svn-desktop"
     )!
+    /// GitHub Releases latest metadata; update checks never download or install binaries directly.
+    public static let latestReleaseAPIURL = URL(
+        string: "https://api.github.com/repos/yclenove/mac-svn-desktop/releases/latest"
+    )!
 
     public static var supportDirectoryURL: URL {
         get throws {

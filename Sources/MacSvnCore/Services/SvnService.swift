@@ -36,8 +36,16 @@ public actor SvnService {
         try await backend.status(wc: wc)
     }
 
+    public func statusIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await backend.statusIncludingIgnored(wc: wc)
+    }
+
     public func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
         try await backend.statusAgainstRepository(wc: wc)
+    }
+
+    public func statusAgainstRepositoryIncludingIgnored(wc: URL) async throws -> [FileStatus] {
+        try await backend.statusAgainstRepositoryIncludingIgnored(wc: wc)
     }
 
     public func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
@@ -225,16 +233,39 @@ public actor SvnService {
     }
 
     public func list(url: String, depth: SvnDepth, auth: Credential? = nil) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, includeExternals: false, auth: auth)
+    }
+
+    public func list(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential? = nil
+    ) async throws -> [RemoteEntry] {
         let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
         return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
-            try await backend.list(url: url, depth: depth, auth: auth)
+            try await backend.list(url: url, depth: depth, includeExternals: includeExternals, auth: auth)
         }
     }
 
     public func listWithLocks(url: String, depth: SvnDepth, auth: Credential? = nil) async throws -> [RemoteEntry] {
+        try await listWithLocks(url: url, depth: depth, includeExternals: false, auth: auth)
+    }
+
+    public func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential? = nil
+    ) async throws -> [RemoteEntry] {
         let credentialScope = URL(string: url) ?? URL(fileURLWithPath: url)
         return try await retryingAuthentication(wc: credentialScope, initialAuth: auth) { auth in
-            try await backend.listWithLocks(url: url, depth: depth, auth: auth)
+            try await backend.listWithLocks(
+                url: url,
+                depth: depth,
+                includeExternals: includeExternals,
+                auth: auth
+            )
         }
     }
 

@@ -5,12 +5,14 @@ import MacSvnCore
 public struct MacSvnCommitView: View {
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
-    private let session: MacSvnAppSession
+    @ObservedObject private var session: MacSvnAppSession
     private let embedded: Bool
 
     @State private var viewModel: CommitViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var bugtraqIssueInput = ""
+    @State private var completionCandidates: [String] = []
+    @State private var completionGeneration = 0
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -68,6 +70,9 @@ public struct MacSvnCommitView: View {
         .onChange(of: viewModel?.selectedPaths) { _, _ in
             guard let viewModel else { return }
             Task { await viewModel.refreshProjectProperties() }
+        }
+        .onChange(of: session.settingsSnapshot.dialogs) { oldDialogs, dialogs in
+            Task { await applyDialogSettings(old: oldDialogs, new: dialogs) }
         }
         .task {
             await reloadCandidates()
@@ -189,13 +194,19 @@ public struct MacSvnCommitView: View {
 
     @ViewBuilder
     private func messagePanel(_ viewModel: CommitViewModel) -> some View {
+        let dialogs = session.settingsSnapshot.dialogs
         VStack(alignment: .leading, spacing: 12) {
             Text("提交说明")
                 .font(.headline)
             BugtraqIssueTextEditor(text: Binding(
                 get: { viewModel.message },
                 set: { viewModel.message = $0 }
-            ), regexPatterns: viewModel.projectProperties.bugtraq.regexPatterns, spellcheckLanguage: ProjectSpellcheckLanguage.resolve(viewModel.projectProperties.projectLanguage))
+            ), regexPatterns: viewModel.projectProperties.bugtraq.regexPatterns,
+               spellcheckLanguage: ProjectSpellcheckLanguage.resolve(viewModel.projectProperties.projectLanguage),
+               completionCandidates: completionCandidates,
+               isAutoCompletionEnabled: dialogs.enableCommitAutoCompletion,
+               fontName: dialogs.logFontName,
+               fontSize: dialogs.logFontSize)
             .frame(minHeight: embedded ? 80 : 160)
 
             Toggle("Keep locks（提交后保留锁）", isOn: Binding(
@@ -365,11 +376,23 @@ public struct MacSvnCommitView: View {
     private func reloadCandidates() async {
         guard let record = workspaceController.selectedRecord, record.isValid else {
             viewModel = nil
+            completionCandidates = []
             return
         }
         let wc = URL(fileURLWithPath: record.localPath)
         do {
-            let statuses = try await session.svnService.status(wc: wc)
+            let settings = await session.settingsStore.settings()
+            let rawStatuses: [FileStatus]
+            if settings.dialogs.recurseIntoUnversionedFolders {
+                rawStatuses = try await session.svnService.statusIncludingIgnored(wc: wc)
+            } else {
+                rawStatuses = try await session.svnService.status(wc: wc)
+            }
+            let statuses = try await UnversionedTreeExpander.expandAsync(
+                statuses: rawStatuses,
+                workingCopy: wc,
+                recurse: settings.dialogs.recurseIntoUnversionedFolders
+            ).filter { $0.itemStatus != .ignored }
             let candidates = CommitSelectionPolicy.candidates(from: statuses)
             let projectProperties = try await MacSvnProjectPropertyLoader.load(
                 svnService: session.svnService,
@@ -391,10 +414,13 @@ public struct MacSvnCommitView: View {
                         relativePaths: paths
                     )
                 },
-                projectProperties: projectProperties
+                projectProperties: projectProperties,
+                selectItemsAutomatically: settings.dialogs.selectCommitItemsAutomatically,
+                useTrashWhenReverting: settings.dialogs.useTrashWhenReverting
             )
             viewModel = vm
             await vm.loadRecentMessages()
+            await rebuildCompletionCandidates(for: vm, dialogs: settings.dialogs)
             statusText = "候选 \(vm.candidateStatuses.count) 项"
             applyPendingCommitMessage()
         } catch {
@@ -403,12 +429,66 @@ public struct MacSvnCommitView: View {
         }
     }
 
+    private func applyDialogSettings(old: DialogSettings, new: DialogSettings) async {
+        viewModel?.updateSettings(
+            selectItemsAutomatically: new.selectCommitItemsAutomatically,
+            useTrashWhenReverting: new.useTrashWhenReverting
+        )
+        if old.recurseIntoUnversionedFolders != new.recurseIntoUnversionedFolders {
+            let draft = viewModel?.message
+            let selection = viewModel?.selectedPaths ?? []
+            await reloadCandidates()
+            if let draft, let viewModel {
+                viewModel.message = draft
+                viewModel.selectedPaths = selection.intersection(Set(viewModel.candidateStatuses.map(\.path)))
+            }
+        } else {
+            await rebuildCompletionCandidates(dialogs: new)
+        }
+    }
+
     private func commit(skipWarnings: Bool) async {
         guard let viewModel else { return }
         await viewModel.commit(auth: nil, skipGuardWarnings: skipWarnings)
         if case .committed(let revision) = viewModel.state {
-            statusText = "提交成功 r\(revision.value)"
+            if session.settingsSnapshot.dialogs.reopenCommitAfterSuccessWithRemainingItems,
+               !CommitSelectionPolicy.candidates(from: viewModel.refreshedStatuses).isEmpty {
+                await reloadCandidates()
+                statusText = "提交成功 r\(revision.value)，仍有未提交项"
+            } else {
+                statusText = "提交成功 r\(revision.value)"
+                await rebuildCompletionCandidates(for: viewModel)
+            }
         }
+    }
+
+    private func rebuildCompletionCandidates(
+        for targetViewModel: CommitViewModel? = nil,
+        dialogs: DialogSettings? = nil
+    ) async {
+        completionGeneration += 1
+        let generation = completionGeneration
+        guard let targetViewModel = targetViewModel ?? viewModel else {
+            completionCandidates = []
+            return
+        }
+        let preferences = dialogs ?? session.settingsSnapshot.dialogs
+        guard preferences.enableCommitAutoCompletion else {
+            completionCandidates = []
+            return
+        }
+        let paths = targetViewModel.candidateStatuses.map(\.path)
+        let recentMessages = targetViewModel.recentMessages
+        let timeout = TimeInterval(preferences.autoCompletionTimeoutSeconds)
+        let candidates = await Task.detached(priority: .utility) {
+            CommitMessageCompletionCandidates.build(
+                paths: paths,
+                recentMessages: recentMessages,
+                timeout: timeout
+            )
+        }.value
+        guard generation == completionGeneration else { return }
+        completionCandidates = candidates
     }
 
     private func diffSelected(_ viewModel: CommitViewModel) {

@@ -40,6 +40,44 @@ final class RepoBrowserViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testLoadChildrenCanShowExternalsAndPrefetchDirectDirectories() async {
+        let provider = FakeRepoListProvider(result: .success([
+            RemoteEntry(
+                name: "trunk",
+                path: "trunk",
+                kind: .directory,
+                size: nil,
+                revision: Revision(1),
+                author: "a",
+                date: nil
+            ),
+            RemoteEntry(
+                name: "README.txt",
+                path: "README.txt",
+                kind: .file,
+                size: 1,
+                revision: Revision(1),
+                author: "a",
+                date: nil
+            ),
+        ]))
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            preFetchDirectories: true,
+            showExternals: true
+        )
+
+        await viewModel.loadChildren(of: "file:///repo")
+        let calls = await provider.recordedCalls()
+
+        XCTAssertEqual(calls, [
+            RepoListCall(url: "file:///repo", depth: .immediates, auth: nil, includeExternals: true),
+            RepoListCall(url: "file:///repo/trunk", depth: .immediates, auth: nil, includeExternals: true),
+        ])
+        XCTAssertEqual(viewModel.state(for: "file:///repo/trunk"), .loaded)
+    }
+
+    @MainActor
     func testPreviewTextFileFetchesCatDataAndDecodesUtf8() async {
         let provider = FakeRepoBrowserProvider(
             listResult: .success([]),
@@ -551,6 +589,14 @@ private struct RepoListCall: Equatable, Sendable {
     let url: String
     let depth: SvnDepth
     let auth: Credential?
+    let includeExternals: Bool
+
+    init(url: String, depth: SvnDepth, auth: Credential?, includeExternals: Bool = false) {
+        self.url = url
+        self.depth = depth
+        self.auth = auth
+        self.includeExternals = includeExternals
+    }
 }
 
 private struct RepoCatCall: Equatable, Sendable {
@@ -596,6 +642,21 @@ private actor FakeRepoListProvider: RepoListProviding {
 
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         calls.append(RepoListCall(url: url, depth: depth, auth: auth))
+        return try result.get()
+    }
+
+    func list(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential?
+    ) async throws -> [RemoteEntry] {
+        calls.append(RepoListCall(
+            url: url,
+            depth: depth,
+            auth: auth,
+            includeExternals: includeExternals
+        ))
         return try result.get()
     }
 }

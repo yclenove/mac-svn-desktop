@@ -30,6 +30,43 @@ final class CommitViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCommitDialogCanStartWithNoAutomaticallySelectedItems() {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            selectItemsAutomatically: false
+        )
+
+        XCTAssertTrue(viewModel.selectedPaths.isEmpty)
+        viewModel.selectChangelist(nil)
+        XCTAssertTrue(viewModel.selectedPaths.isEmpty)
+    }
+
+    @MainActor
+    func testSelectionSettingCanUpdateWithoutRecreatingViewModel() {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            selectItemsAutomatically: false
+        )
+
+        viewModel.updateSettings(
+            selectItemsAutomatically: true,
+            useTrashWhenReverting: false
+        )
+        viewModel.selectChangelist(nil)
+
+        XCTAssertEqual(
+            viewModel.selectedPaths,
+            CommitSelectionPolicy.defaultSelectedPaths(from: sampleStatuses())
+        )
+    }
+
+    @MainActor
     func testDefaultSelectionExcludesIgnoreOnCommitAndCanSelectNamedChangelist() {
         let statuses = [
             FileStatus(path: "normal.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
@@ -385,6 +422,111 @@ final class CommitViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testRevertSelectedMovesModifiedFileToTrashWhenEnabled() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(root: root.appendingPathComponent("trash"))
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        XCTAssertEqual(viewModel.state, .reverted)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertEqual(trashStore.movedOriginals, [file])
+    }
+
+    @MainActor
+    func testRevertSelectedRestoresTrashedFileWhenProviderFails() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(root: root.appendingPathComponent("trash"))
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(
+                result: .success(Revision(1)),
+                revertResult: .failure(SvnError.parse(detail: "revert failed"))
+            ),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        XCTAssertEqual(
+            try String(contentsOf: file, encoding: .utf8),
+            "local changes"
+        )
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("revert failed"))
+        } else {
+            XCTFail("Expected revert failure")
+        }
+    }
+
+    @MainActor
+    func testRevertSelectedReportsSvnAndRestoreFailuresTogether() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(
+            root: root.appendingPathComponent("trash"),
+            failOnRestore: true
+        )
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(
+                result: .success(Revision(1)),
+                revertResult: .failure(SvnError.parse(detail: "svn revert failed"))
+            ),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("svn revert failed"))
+            XCTAssertTrue(message.contains("trash restore failed"))
+        } else {
+            XCTFail("Expected combined revert recovery error")
+        }
+    }
+
+    @MainActor
     func testGenerateAICommitMessageFillsMessageWithoutCommitting() async {
         let draft = AICommitMessageDraft(
             message: "feat: 增加登录校验",
@@ -610,6 +752,13 @@ final class CommitViewModelTests: XCTestCase {
             FileStatus(path: "normal.swift", itemStatus: .normal, revision: Revision(1), isTreeConflict: false)
         ]
     }
+
+    private func temporaryWorkingCopy() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CommitRevert-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
 }
 
 private struct CommitMessageHistoryRecord: Equatable, Sendable {
@@ -670,15 +819,21 @@ private enum ProjectPropertyLoaderTestError: Error {
 
 private actor FakeCommitProvider: CommitProviding {
     private var results: [Result<Revision, Error>]
+    private let revertResult: Result<Void, Error>
     private var calls: [CommitCall] = []
     private var revertCalls: [[String]] = []
 
-    init(result: Result<Revision, Error>) {
+    init(
+        result: Result<Revision, Error>,
+        revertResult: Result<Void, Error> = .success(())
+    ) {
         self.results = [result]
+        self.revertResult = revertResult
     }
 
     init(results: [Result<Revision, Error>]) {
         self.results = results
+        self.revertResult = .success(())
     }
 
     func recordedCalls() -> [CommitCall] {
@@ -713,6 +868,33 @@ private actor FakeCommitProvider: CommitProviding {
 
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {
         revertCalls.append(paths)
+        try revertResult.get()
+    }
+}
+
+private final class CommitRevertTrashStore: RevertTrashStoring, @unchecked Sendable {
+    private let root: URL
+    private let failOnRestore: Bool
+    private(set) var movedOriginals: [URL] = []
+
+    init(root: URL, failOnRestore: Bool = false) {
+        self.root = root
+        self.failOnRestore = failOnRestore
+    }
+
+    func moveToTrash(_ sourceURL: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let destination = root.appendingPathComponent(UUID().uuidString + "-" + sourceURL.lastPathComponent)
+        movedOriginals.append(sourceURL)
+        try FileManager.default.moveItem(at: sourceURL, to: destination)
+        return destination
+    }
+
+    func restoreFromTrash(_ trashURL: URL, to originalURL: URL) throws {
+        if failOnRestore {
+            throw SvnError.parse(detail: "trash restore failed")
+        }
+        try FileManager.default.moveItem(at: trashURL, to: originalURL)
     }
 }
 

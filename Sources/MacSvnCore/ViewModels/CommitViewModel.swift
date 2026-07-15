@@ -83,6 +83,9 @@ public final class CommitViewModel {
     private let aiPreCommitReviewer: (any AIPreCommitReviewing)?
     private let commitMessageHistoryProvider: (any CommitMessageHistoryProviding)?
     private let projectPropertyLoader: ProjectPropertyLoading?
+    private var selectItemsAutomatically: Bool
+    private var useTrashWhenReverting: Bool
+    private let revertSafetyService: RevertSafetyService
     private var projectPropertyLoadGeneration = 0
 
     public private(set) var state: CommitViewState = .idle
@@ -113,7 +116,10 @@ public final class CommitViewModel {
         aiPreCommitReviewer: (any AIPreCommitReviewing)? = nil,
         commitMessageHistoryProvider: (any CommitMessageHistoryProviding)? = nil,
         projectPropertyLoader: ProjectPropertyLoading? = nil,
-        projectProperties: ProjectPropertyPolicy = ProjectPropertyPolicy(properties: [])
+        projectProperties: ProjectPropertyPolicy = ProjectPropertyPolicy(properties: []),
+        selectItemsAutomatically: Bool = true,
+        useTrashWhenReverting: Bool = false,
+        revertSafetyService: RevertSafetyService = RevertSafetyService()
     ) {
         self.workingCopy = workingCopy
         self.commitProvider = commitProvider
@@ -122,9 +128,14 @@ public final class CommitViewModel {
         self.aiPreCommitReviewer = aiPreCommitReviewer
         self.commitMessageHistoryProvider = commitMessageHistoryProvider
         self.projectPropertyLoader = projectPropertyLoader
+        self.selectItemsAutomatically = selectItemsAutomatically
+        self.useTrashWhenReverting = useTrashWhenReverting
+        self.revertSafetyService = revertSafetyService
         self.projectProperties = projectProperties
         self.candidateStatuses = CommitSelectionPolicy.candidates(from: statuses)
-        self.selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
+        self.selectedPaths = selectItemsAutomatically
+            ? CommitSelectionPolicy.defaultSelectedPaths(from: statuses)
+            : []
         self.message = projectProperties.commit.initialMessage ?? ""
     }
 
@@ -138,10 +149,20 @@ public final class CommitViewModel {
         }
     }
 
+    public func updateSettings(
+        selectItemsAutomatically: Bool,
+        useTrashWhenReverting: Bool
+    ) {
+        self.selectItemsAutomatically = selectItemsAutomatically
+        self.useTrashWhenReverting = useTrashWhenReverting
+    }
+
     public func selectChangelist(_ name: String?) {
         selectedChangelist = name
         guard let name else {
-            selectedPaths = CommitSelectionPolicy.defaultSelectedPaths(from: candidateStatuses)
+            selectedPaths = selectItemsAutomatically
+                ? CommitSelectionPolicy.defaultSelectedPaths(from: candidateStatuses)
+                : []
             return
         }
         selectedPaths = Set(candidateStatuses.compactMap { status in
@@ -342,9 +363,27 @@ public final class CommitViewModel {
         }
 
         state = .reverting
-
+        var backup = RevertTrashBackup()
         do {
+            if useTrashWhenReverting {
+                let statuses = try await statusProvider.status(wc: workingCopy)
+                backup = try revertSafetyService.stage(
+                    workingCopy: workingCopy,
+                    selectedPaths: targets,
+                    statuses: statuses,
+                    recursive: recursive
+                )
+            }
             try await commitProvider.revert(wc: workingCopy, paths: targets, recursive: recursive)
+        } catch {
+            let reportedError = revertSafetyService.errorAfterRestoring(
+                backup,
+                operationError: error
+            )
+            state = .error(String(describing: reportedError))
+            return
+        }
+        do {
             refreshedStatuses = try await statusProvider.status(wc: workingCopy)
             for path in targets {
                 selectedPaths.remove(path)

@@ -13,7 +13,7 @@ public struct MacSvnLocksView: View {
     @State private var message = ""
     @State private var automaticTemplateMessage: String?
     @State private var stealLock = false
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
     @State private var showGetLockSheet = false
     @State private var confirmSteal = false
     @State private var confirmBreak = false
@@ -39,8 +39,7 @@ public struct MacSvnLocksView: View {
                 Button("刷新") { Task { await reload() } }
                     .disabled(isBusy)
                 Button("获取锁…") {
-                    stealLock = false
-                    showGetLockSheet = true
+                    requestGetLock()
                 }
                 .disabled(selected.isEmpty || isBusy)
                 Button("释放锁") {
@@ -96,8 +95,7 @@ public struct MacSvnLocksView: View {
                         .contextMenu {
                             Button("获取锁…") {
                                 selected = [lock.target]
-                                stealLock = false
-                                showGetLockSheet = true
+                                requestGetLock()
                             }
                             if lock.isOwnedByWorkingCopy {
                                 Button("释放锁") {
@@ -271,7 +269,7 @@ public struct MacSvnLocksView: View {
             return
         }
         if case .error(let message) = viewModel.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         } else if case .confirmationRequired(let op, let paths) = viewModel.state {
             pendingConfirmPaths = paths
             switch op {
@@ -302,6 +300,32 @@ public struct MacSvnLocksView: View {
         }
         await viewModel?.lock(paths: paths, message: message, force: false, confirmed: true)
         await syncStatus()
+    }
+
+    private func requestGetLock() {
+        stealLock = false
+        let requiresMessage = viewModel?.projectProperties.lock.minimumMessageLength != nil
+            || viewModel?.projectProperties.lock.initialMessage?.isEmpty == false
+        let containsDirectory: Bool
+        if let record = workspaceController.selectedRecord {
+            let workingCopy = URL(fileURLWithPath: record.localPath)
+            containsDirectory = selected.contains { path in
+                var isDirectory: ObjCBool = false
+                let fullPath = workingCopy.appendingPathComponent(path).path
+                return FileManager.default.fileExists(atPath: fullPath, isDirectory: &isDirectory)
+                    && isDirectory.boolValue
+            }
+        } else {
+            containsDirectory = false
+        }
+        if session.settingsSnapshot.dialogs.showLockDialogBeforeLocking
+            || requiresMessage
+            || containsDirectory {
+            showGetLockSheet = true
+        } else {
+            message = ""
+            Task { await runGetLock() }
+        }
     }
 
     private func runRelease() async {
@@ -343,8 +367,7 @@ public struct MacSvnLocksView: View {
 
         switch intent {
         case .getLock:
-            stealLock = false
-            showGetLockSheet = true
+            requestGetLock()
         case .releaseLock:
             await runRelease()
         case .breakLock:
