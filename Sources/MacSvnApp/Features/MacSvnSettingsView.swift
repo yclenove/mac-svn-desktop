@@ -2,10 +2,57 @@ import SwiftUI
 import AppKit
 import MacSvnCore
 
+struct SettingsDraftSnapshot: Equatable {
+    let svnPath: String
+    let logBatchSize: Int
+    let processTimeout: Double
+    let progressAutoCloseMode: ProgressAutoCloseMode
+    let shelvingVersion: SvnShelvingVersion
+    let logCacheEnabled: Bool
+    let logCacheRetentionDays: Int
+    let logCacheMaxEntries: Int
+    let clientHooks: [ClientHookConfiguration]
+    let finderSyncCacheMode: FinderSyncCacheMode
+    let finderSyncIncludedPaths: String
+    let finderSyncExcludedPaths: String
+    let finderSyncEnabledBadges: Set<FinderSyncBadge>
+    let finderSyncPromotedCommandIDs: Set<SvnCommandID>
+    let finderSyncPromoteLockForNeedsLock: Bool
+    let finderSyncHideUnversionedMenus: Bool
+    let finderSyncMenuExcludedPaths: String
+    let hardBlockConflictMarkers: Bool
+    let trunk: String
+    let branches: String
+    let tags: String
+    let graphTrunkPatterns: String
+    let graphBranchPatterns: String
+    let graphTagPatterns: String
+    let graphBlendCopyColors: Bool
+    let graphTrunkHex: String
+    let graphBranchHex: String
+    let graphTagHex: String
+    let graphUnclassifiedHex: String
+    let externalDiffName: String
+    let externalDiffPath: String
+    let externalDiffArguments: String
+    let externalToolRules: [ExternalToolRule]
+    let generalPreferences: GeneralSettings
+    let dialogPreferences: DialogSettings
+    let changeColours: ChangeColourPalette
+    let networkPreferences: SvnNetworkSettings
+    let proxyPassword: String
+    let globalIgnorePatterns: String
+    let useCommitTimes: Bool
+}
+
 /// 设置页：svn 路径、日志批量、超时、分支布局、外部 Diff、AI。
 public struct MacSvnSettingsView: View {
     @ObservedObject private var session: MacSvnAppSession
     @State private var selectedCategory: MacSvnSettingsCategory? = .general
+    @State private var settingsSearchText = ""
+    @State private var baselineDraft: SettingsDraftSnapshot?
+    @State private var isLoading = true
+    @State private var isSaving = false
     @State private var svnPath: String = ""
     @State private var logBatchSize: Int = 100
     @State private var processTimeout: Double = 120
@@ -60,47 +107,45 @@ public struct MacSvnSettingsView: View {
     public var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                List(selection: $selectedCategory) {
-                    ForEach(MacSvnSettingsCategory.allCases) { category in
-                        Label {
-                            Text(LocalizedStringKey(category.title))
-                        } icon: {
-                            Image(systemName: category.systemImage)
-                        }
-                            .tag(category)
-                    }
-                }
-                .listStyle(.sidebar)
-                .frame(minWidth: 176, idealWidth: 190, maxWidth: 210)
+                settingsSidebar
 
                 Divider()
 
-                Form {
-                    categoryContent
+                if filteredCategories.isEmpty {
+                    ContentUnavailableView {
+                        Label("没有匹配的设置", systemImage: "magnifyingglass")
+                    } description: {
+                        Text("换个关键词，或清除搜索后查看全部九类设置。")
+                    } actions: {
+                        Button("清除搜索") {
+                            settingsSearchText = ""
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Form {
+                        categoryContent
+                    }
+                    .formStyle(.grouped)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .disabled(isLoading || isSaving)
                 }
-                .formStyle(.grouped)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             Divider()
-
-            HStack(spacing: 12) {
-                if let statusText {
-                    Text(statusText)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                Spacer()
-                Button("保存") {
-                    Task { await save() }
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(12)
+            settingsActionBar
         }
         .frame(minWidth: 720, minHeight: 520)
-        .navigationTitle("设置 · \((selectedCategory ?? .general).title)")
+        .navigationTitle(settingsNavigationTitle)
         .task { await load() }
+        .onChange(of: settingsSearchText) { _, _ in
+            synchronizeSettingsCategorySelection()
+        }
+        .onChange(of: hasUnsavedChanges) { _, isDirty in
+            if isDirty, !isSaving {
+                statusText = nil
+            }
+        }
         .sheet(isPresented: $showAISettings) {
             MacSvnAIProviderSettingsView(session: session)
                 .frame(minWidth: 640, minHeight: 520)
@@ -118,6 +163,142 @@ public struct MacSvnSettingsView: View {
         } message: {
             Text("将清除当前用户 Subversion 客户端管理的 auth 文件和 Keychain 凭据。下次访问仓库时需要重新输入凭据。不会删除 AI Provider 凭据。")
         }
+    }
+
+    private var filteredCategories: [MacSvnSettingsCategory] {
+        MacSvnSettingsCategory.allCases.filter { $0.matches(search: settingsSearchText) }
+    }
+
+    private var currentDraft: SettingsDraftSnapshot {
+        SettingsDraftSnapshot(
+            svnPath: svnPath,
+            logBatchSize: logBatchSize,
+            processTimeout: processTimeout,
+            progressAutoCloseMode: progressAutoCloseMode,
+            shelvingVersion: shelvingVersion,
+            logCacheEnabled: logCacheEnabled,
+            logCacheRetentionDays: logCacheRetentionDays,
+            logCacheMaxEntries: logCacheMaxEntries,
+            clientHooks: clientHooks,
+            finderSyncCacheMode: finderSyncCacheMode,
+            finderSyncIncludedPaths: finderSyncIncludedPaths,
+            finderSyncExcludedPaths: finderSyncExcludedPaths,
+            finderSyncEnabledBadges: finderSyncEnabledBadges,
+            finderSyncPromotedCommandIDs: finderSyncPromotedCommandIDs,
+            finderSyncPromoteLockForNeedsLock: finderSyncPromoteLockForNeedsLock,
+            finderSyncHideUnversionedMenus: finderSyncHideUnversionedMenus,
+            finderSyncMenuExcludedPaths: finderSyncMenuExcludedPaths,
+            hardBlockConflictMarkers: hardBlockConflictMarkers,
+            trunk: trunk,
+            branches: branches,
+            tags: tags,
+            graphTrunkPatterns: graphTrunkPatterns,
+            graphBranchPatterns: graphBranchPatterns,
+            graphTagPatterns: graphTagPatterns,
+            graphBlendCopyColors: graphBlendCopyColors,
+            graphTrunkHex: graphTrunkHex,
+            graphBranchHex: graphBranchHex,
+            graphTagHex: graphTagHex,
+            graphUnclassifiedHex: graphUnclassifiedHex,
+            externalDiffName: externalDiffName,
+            externalDiffPath: externalDiffPath,
+            externalDiffArguments: externalDiffArguments,
+            externalToolRules: externalToolRules,
+            generalPreferences: generalPreferences,
+            dialogPreferences: dialogPreferences,
+            changeColours: changeColours,
+            networkPreferences: networkPreferences,
+            proxyPassword: proxyPassword,
+            globalIgnorePatterns: globalIgnorePatterns,
+            useCommitTimes: useCommitTimes
+        )
+    }
+
+    private var hasUnsavedChanges: Bool {
+        guard let baselineDraft else { return false }
+        return currentDraft != baselineDraft
+    }
+
+    private var settingsNavigationTitle: String {
+        guard let selectedCategory else { return "设置" }
+        return "设置 · \(selectedCategory.title)"
+    }
+
+    private var settingsSidebar: some View {
+        List(selection: $selectedCategory) {
+            ForEach(filteredCategories) { category in
+                Label {
+                    Text(LocalizedStringKey(category.title))
+                } icon: {
+                    Image(systemName: category.systemImage)
+                }
+                .tag(category)
+            }
+        }
+        .searchable(text: $settingsSearchText, placement: .sidebar, prompt: "搜索设置")
+        .listStyle(.sidebar)
+        .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
+    }
+
+    private var settingsActionBar: some View {
+        HStack(spacing: 10) {
+            settingsActionStatus
+            Spacer(minLength: 12)
+            Button("保存", systemImage: "square.and.arrow.down") {
+                Task { await save() }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!hasUnsavedChanges || isSaving)
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 50)
+        .background(.bar)
+    }
+
+    @ViewBuilder
+    private var settingsActionStatus: some View {
+        if isLoading {
+            ProgressView()
+                .controlSize(.small)
+            Text("正在加载设置")
+                .foregroundStyle(.secondary)
+        } else if isSaving {
+            ProgressView()
+                .controlSize(.small)
+            Text("正在保存")
+                .foregroundStyle(.secondary)
+        } else if let statusText {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text(statusText)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        } else if hasUnsavedChanges {
+            Image(systemName: "pencil.circle.fill")
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
+            Text("未保存的更改")
+                .foregroundStyle(.secondary)
+        } else if baselineDraft != nil {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .accessibilityHidden(true)
+            Text("所有更改已保存")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func synchronizeSettingsCategorySelection() {
+        guard !filteredCategories.isEmpty else {
+            selectedCategory = nil
+            return
+        }
+        if let selectedCategory, filteredCategories.contains(selectedCategory) {
+            return
+        }
+        selectedCategory = filteredCategories.first
     }
 
     @ViewBuilder
@@ -492,7 +673,13 @@ public struct MacSvnSettingsView: View {
     }
 
     private func load() async {
+        guard baselineDraft == nil else { return }
+        isLoading = true
+        defer { isLoading = false }
+        statusText = nil
+        var loadError: LocalizedStringKey?
         let settings = await session.settingsStore.settings()
+        guard !Task.isCancelled else { return }
         generalPreferences = settings.general
         dialogPreferences = settings.dialogs
         changeColours = settings.changeColours
@@ -504,7 +691,8 @@ public struct MacSvnSettingsView: View {
             networkPreferences = managed.network
             proxyPassword = managed.proxyPassword
         } catch {
-            statusText = "读取 SVN config/servers 失败：\(error.localizedDescription)"
+            navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
+            loadError = "读取 SVN config/servers 失败：\(error.localizedDescription)"
         }
         svnPath = settings.svnPath ?? ""
         logBatchSize = settings.logBatchSize
@@ -540,15 +728,25 @@ public struct MacSvnSettingsView: View {
         externalDiffPath = settings.externalDiffTool?.executablePath ?? ""
         externalDiffArguments = settings.externalDiffTool?.arguments.joined(separator: "\n") ?? ""
         externalToolRules = settings.externalToolRules
+        baselineDraft = currentDraft
+        statusText = loadError
     }
 
     private func save() async {
+        guard !isSaving else { return }
+        guard hasUnsavedChanges else { return }
+        let draftBeingSaved = currentDraft
+        isSaving = true
+        statusText = nil
+        defer { isSaving = false }
+
         if let invalidHook = clientHooks.first(where: {
             $0.isEnabled && (
                 $0.workingCopyPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || $0.executablePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             )
         }) {
+            navigateToSettingsCategory(.savedData)
             statusText = "无法保存：\(invalidHook.type.displayName) 钩子需要工作副本路径和脚本路径。"
             return
         }
@@ -612,24 +810,30 @@ public struct MacSvnSettingsView: View {
         settings.dialogs = dialogPreferences
         settings.changeColours = changeColours
         settings.network = networkPreferences
-        let managed: SvnClientManagedConfiguration
+        var nextManaged: SvnClientManagedConfiguration
         do {
-            var nextManaged = try session.svnClientConfigurationStore.load()
-            nextManaged.globalIgnorePatterns = globalIgnoreTokens(from: globalIgnorePatterns)
-            nextManaged.useCommitTimes = useCommitTimes
-            nextManaged.network = networkPreferences
-            nextManaged.proxyPassword = proxyPassword
-            managed = nextManaged
+            nextManaged = try session.svnClientConfigurationStore.load()
+        } catch {
+            navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
+            statusText = "保存失败：\(error.localizedDescription)"
+            return
+        }
+        nextManaged.globalIgnorePatterns = globalIgnoreTokens(from: globalIgnorePatterns)
+        nextManaged.useCommitTimes = useCommitTimes
+        nextManaged.network = networkPreferences
+        nextManaged.proxyPassword = proxyPassword
+        do {
             try await TortoiseParitySettingsPersistenceCoordinator(
                 settingsStore: session.settingsStore,
                 historyStore: session.commitMessageHistoryStore,
                 configurationStore: session.svnClientConfigurationStore
             ).save(
                 settings: settings,
-                managedConfiguration: managed
+                managedConfiguration: nextManaged
             )
             session.publish(settings: settings)
         } catch {
+            navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
             statusText = "保存失败：\(error.localizedDescription)"
             return
         }
@@ -647,6 +851,7 @@ public struct MacSvnSettingsView: View {
             statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"
             return
         }
+        baselineDraft = draftBeingSaved
         statusText = "已保存。界面、对话框、状态色和 SVN 网络配置已更新；svn 路径与客户端钩子将在下次启动会话后完全生效。"
     }
 
@@ -747,6 +952,7 @@ public struct MacSvnSettingsView: View {
             let name = rule.tool.name.trimmingCharacters(in: .whitespacesAndNewlines)
             let path = rule.tool.executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty, !path.isEmpty else {
+                navigateToSettingsCategory(.externalPrograms)
                 statusText = "无法保存：外置工具规则需要名称和可执行路径。"
                 return nil
             }
@@ -766,6 +972,7 @@ public struct MacSvnSettingsView: View {
             }
             for key in keys {
                 guard seenKeys.insert("\(copy.purpose.rawValue):\(key)").inserted else {
+                    navigateToSettingsCategory(.externalPrograms)
                     statusText = "无法保存：同一用途不能重复配置扩展名 \(key)。"
                     return nil
                 }
@@ -773,6 +980,12 @@ public struct MacSvnSettingsView: View {
             normalized.append(copy)
         }
         return normalized
+    }
+
+    private func navigateToSettingsCategory(_ category: MacSvnSettingsCategory?) {
+        guard let category else { return }
+        settingsSearchText = ""
+        selectedCategory = category
     }
 
     private func clearLogCache() async {

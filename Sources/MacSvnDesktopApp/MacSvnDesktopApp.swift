@@ -249,6 +249,9 @@ final class MacSvnBootstrapModel: ObservableObject {
     ) {
         guard !didConsumeLaunchArguments else { return }
         didConsumeLaunchArguments = true
+        if let initialRoute = configuration.initialRoute {
+            navigator.selectRoute(initialRoute)
+        }
         consumePendingDeepLinks(navigator: navigator)
 
         switch configuration.launchAction {

@@ -34,6 +34,7 @@ public struct MacSvnDesktopLaunchConfiguration: Equatable, Sendable {
     public let windowSize: MacSvnWindowSize?
     public let appearance: MacSvnUITestAppearance?
     public let reduceMotion: Bool?
+    public let initialRoute: MacSvnAppRoute?
 
     public init(arguments: [String], environment: [String: String]) {
         let rawPayload = Array(arguments.dropFirst())
@@ -54,6 +55,7 @@ public struct MacSvnDesktopLaunchConfiguration: Equatable, Sendable {
             windowSize = nil
             appearance = nil
             reduceMotion = nil
+            initialRoute = nil
             return
         }
 
@@ -70,6 +72,11 @@ public struct MacSvnDesktopLaunchConfiguration: Equatable, Sendable {
             Self.argumentValue("--ui-reduce-motion", in: rawPayload)
                 ?? environment["SVNSTUDIO_UI_TEST_REDUCE_MOTION"]
         )
+        initialRoute = (
+            Self.argumentValue("--ui-route", in: rawPayload)
+                ?? environment["SVNSTUDIO_UI_TEST_ROUTE"]
+        )
+            .flatMap(MacSvnAppRoute.init(rawValue:))
     }
 
     public static func current() -> MacSvnDesktopLaunchConfiguration {

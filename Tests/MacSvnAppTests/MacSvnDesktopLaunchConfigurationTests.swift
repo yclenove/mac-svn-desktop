@@ -54,6 +54,30 @@ final class MacSvnDesktopLaunchConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.reduceMotion, true)
     }
 
+    func testParsesUITestInitialRouteOnlyBehindExplicitGate() {
+        let gated = MacSvnDesktopLaunchConfiguration(
+            arguments: ["SVNStudio", "--ui-testing", "--ui-route=settings"],
+            environment: [:]
+        )
+        let ungated = MacSvnDesktopLaunchConfiguration(
+            arguments: ["SVNStudio", "--ui-route=settings"],
+            environment: [:]
+        )
+        let unknown = MacSvnDesktopLaunchConfiguration(
+            arguments: ["SVNStudio", "--ui-testing", "--ui-route=unknown"],
+            environment: [:]
+        )
+        let camelCase = MacSvnDesktopLaunchConfiguration(
+            arguments: ["SVNStudio", "--ui-testing", "--ui-route=revisionGraph"],
+            environment: [:]
+        )
+
+        XCTAssertEqual(gated.initialRoute, .settings)
+        XCTAssertEqual(camelCase.initialRoute, .revisionGraph)
+        XCTAssertNil(ungated.initialRoute)
+        XCTAssertNil(unknown.initialRoute)
+    }
+
     func testParsesUITestOverridesFromLaunchServicesArguments() throws {
         let url = try XCTUnwrap(URL(string: "svnstudio://command?command=cmd.24.merge&path=/tmp/wc"))
         let configuration = MacSvnDesktopLaunchConfiguration(

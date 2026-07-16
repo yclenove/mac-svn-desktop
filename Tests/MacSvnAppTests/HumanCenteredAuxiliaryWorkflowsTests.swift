@@ -296,6 +296,41 @@ final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
         )
     }
 
+    func testSettingsExposeSearchDirtyStateAndStableSaveFeedback() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnSettingsView.swift")
+
+        XCTAssertTrue(source.contains("@State private var settingsSearchText"))
+        XCTAssertTrue(source.contains("@State private var baselineDraft"))
+        XCTAssertTrue(source.contains("@State private var isSaving"))
+        XCTAssertTrue(source.contains("private var filteredCategories"))
+        XCTAssertTrue(source.contains("private var currentDraft"))
+        XCTAssertTrue(source.contains("private var hasUnsavedChanges"))
+        XCTAssertTrue(source.contains("private var settingsSidebar"))
+        XCTAssertTrue(source.contains("private var settingsActionBar"))
+        XCTAssertTrue(source.contains("SettingsDraftSnapshot("))
+        XCTAssertTrue(source.contains("ContentUnavailableView {"))
+        XCTAssertTrue(source.contains("Label(\"没有匹配的设置\", systemImage: \"magnifyingglass\")"))
+        XCTAssertTrue(source.contains("Button(\"清除搜索\")"))
+        XCTAssertTrue(source.contains("guard !isSaving else { return }"))
+        XCTAssertTrue(source.contains(".disabled(!hasUnsavedChanges || isSaving)"))
+        XCTAssertTrue(source.contains("baselineDraft = currentDraft"))
+        XCTAssertTrue(source.contains("navigateToSettingsCategory(.savedData)"))
+        XCTAssertTrue(source.contains("navigateToSettingsCategory(.externalPrograms)"))
+        XCTAssertTrue(source.contains("MacSvnSettingsErrorPresentation.category(for: error)"))
+        let navigationStart = try XCTUnwrap(
+            source.range(of: "private func navigateToSettingsCategory(")?.lowerBound
+        )
+        let navigationEnd = try XCTUnwrap(
+            source.range(
+                of: "private func clearLogCache()",
+                range: navigationStart..<source.endIndex
+            )?.lowerBound
+        )
+        let navigation = source[navigationStart..<navigationEnd]
+        XCTAssertTrue(navigation.contains("settingsSearchText = \"\""))
+        XCTAssertTrue(navigation.contains("selectedCategory = category"))
+    }
+
     private static func readFeatureSource(named fileName: String) throws -> String {
         try String(
             contentsOf: repoRoot

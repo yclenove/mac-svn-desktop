@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import MacSvnApp
+import MacSvnCore
 
 final class SettingsInformationArchitectureTests: XCTestCase {
     func testSettingsCategoryModelKeepsRequiredCategoriesAndTitlesInStableOrder() {
@@ -17,6 +18,75 @@ final class SettingsInformationArchitectureTests: XCTestCase {
         XCTAssertTrue(MacSvnSettingsCategory.allCases.allSatisfy { !$0.systemImage.isEmpty })
     }
 
+    func testSettingsCategoriesMatchHumanSearchTerms() {
+        XCTAssertTrue(MacSvnSettingsCategory.network.matches(search: "代理"))
+        XCTAssertTrue(MacSvnSettingsCategory.network.matches(search: "  PROXY  "))
+        XCTAssertTrue(MacSvnSettingsCategory.savedData.matches(search: "cache"))
+        XCTAssertTrue(MacSvnSettingsCategory.externalPrograms.matches(search: "合并工具"))
+        XCTAssertTrue(MacSvnSettingsCategory.revisionGraph.matches(search: "branch graph"))
+        XCTAssertTrue(MacSvnSettingsCategory.ai.matches(search: "provider"))
+        XCTAssertTrue(MacSvnSettingsCategory.general.matches(search: ""))
+        XCTAssertFalse(MacSvnSettingsCategory.ai.matches(search: "锁定"))
+    }
+
+    func testSettingsConfigurationErrorsPointToOwnedCategory() {
+        XCTAssertEqual(
+            MacSvnSettingsErrorPresentation.category(
+                for: SvnClientConfigurationError.invalidValue("global-ignores")
+            ),
+            .general
+        )
+        XCTAssertEqual(
+            MacSvnSettingsErrorPresentation.category(
+                for: SvnClientConfigurationError.invalidValue("use-commit-times")
+            ),
+            .general
+        )
+        XCTAssertEqual(
+            MacSvnSettingsErrorPresentation.category(
+                for: SvnClientConfigurationError.invalidValue("http-proxy-host")
+            ),
+            .network
+        )
+        XCTAssertEqual(
+            MacSvnSettingsErrorPresentation.category(
+                for: SvnClientConfigurationError.invalidProxyPort(0)
+            ),
+            .network
+        )
+        XCTAssertNil(
+            MacSvnSettingsErrorPresentation.category(
+                for: NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)
+            )
+        )
+    }
+
+    func testSettingsBaselineAdvancesOnlyAfterFinderSyncCompletes() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift"
+        )
+        let save = try Self.sourceSection(
+            source,
+            from: "private func save()",
+            to: "private func clearLogCache()"
+        )
+        let finderExport = try XCTUnwrap(save.range(of: "FinderSyncRootsExporter.export("))
+        let baselineAdvance = try XCTUnwrap(save.range(of: "baselineDraft = draftBeingSaved"))
+
+        XCTAssertLessThan(finderExport.lowerBound, baselineAdvance.lowerBound)
+    }
+
+    func testSettingsLoadingBlocksEditingAndCannotOverwriteAnExistingDraft() throws {
+        let source = try Self.readRepoSource(
+            at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift"
+        )
+        let load = try Self.sourceSection(source, from: "private func load()", to: "private func save()")
+
+        XCTAssertTrue(source.contains(".disabled(isLoading || isSaving)"))
+        XCTAssertTrue(load.contains("guard baselineDraft == nil else { return }"))
+        XCTAssertTrue(load.contains("guard !Task.isCancelled else { return }"))
+    }
+
     func testSettingsPageProvidesTortoiseParityCategoryNavigation() throws {
         let source = try Self.readRepoSource(
             at: "Sources/MacSvnApp/Features/MacSvnSettingsView.swift"
@@ -24,7 +94,7 @@ final class SettingsInformationArchitectureTests: XCTestCase {
 
         XCTAssertTrue(source.contains("@State private var selectedCategory: MacSvnSettingsCategory? = .general"))
         XCTAssertTrue(source.contains("List(selection: $selectedCategory)"))
-        XCTAssertTrue(source.contains("ForEach(MacSvnSettingsCategory.allCases"))
+        XCTAssertTrue(source.contains("ForEach(filteredCategories)"))
         XCTAssertTrue(source.contains(".tag(category)"))
         for category in [
             "case .general:",

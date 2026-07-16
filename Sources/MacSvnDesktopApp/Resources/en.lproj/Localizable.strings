@@ -1028,3 +1028,10 @@
 "从 Patch 文件恢复变更到当前工作副本。" = "Apply changes from a patch file to the current working copy.";
 "输出文件路径" = "Output File Path";
 "Patch 文件路径" = "Patch File Path";
+"搜索设置" = "Search settings";
+"没有匹配的设置" = "No Matching Settings";
+"换个关键词，或清除搜索后查看全部九类设置。" = "Try another keyword, or clear the search to see all nine categories.";
+"清除搜索" = "Clear Search";
+"正在加载设置" = "Loading settings";
+"未保存的更改" = "Unsaved changes";
+"所有更改已保存" = "All changes saved";

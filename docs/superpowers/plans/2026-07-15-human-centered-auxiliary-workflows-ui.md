@@ -245,7 +245,7 @@ git commit -m "feat(UI): 重排搁置与 Patch 工作流（U7 任务 3/6）"
 - 修改：`Tests/MacSvnAppTests/HumanCenteredAuxiliaryWorkflowsTests.swift`
 - 修改：`Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings`
 
-- [ ] **步骤 1：编写分类搜索和草稿状态失败测试**
+- [x] **步骤 1：编写分类搜索和草稿状态失败测试**
 
 纯策略测试分类可按中文、英文和功能关键字匹配。源码契约要求 `settingsSearchText`、`filteredCategories`、`baselineDraft`、`currentDraft`、`hasUnsavedChanges`、`isSaving` 和固定 `settingsActionBar`。
 
@@ -257,26 +257,26 @@ func testSettingsCategoriesMatchHumanSearchTerms() {
 }
 ```
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 swift test --filter SettingsInformationArchitectureTests
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests/testSettingsExposeSearchDirtyStateAndStableSaveFeedback
 ```
 
-- [ ] **步骤 3：实现设置分类搜索**
+- [x] **步骤 3：实现设置分类搜索**
 
 为每类增加稳定 `searchKeywords` 和大小写/空白归一化 `matches(search:)`。侧栏搜索过滤分类；当前分类被过滤掉时选择第一个结果，无结果显示 `ContentUnavailableView`。
 
-- [ ] **步骤 4：实现可比较草稿和固定保存栏**
+- [x] **步骤 4：实现可比较草稿和固定保存栏**
 
 定义包含全部设置字段及 SVN managed config 字段的 `SettingsDraftSnapshot: Equatable`。加载后设置 `baselineDraft = currentDraft`；`hasUnsavedChanges` 比较快照；保存成功更新基线，失败保留草稿。`isSaving` 防止并发保存，底栏稳定显示脏状态、保存中、成功或错误。
 
-- [ ] **步骤 5：让校验错误定位到分类**
+- [x] **步骤 5：让校验错误定位到分类**
 
 hook 校验失败选择 `.savedData`，外置工具规则失败选择 `.externalPrograms`，网络配置失败选择 `.network`。保存按钮只有 `hasUnsavedChanges && !isSaving` 时可用。
 
-- [ ] **步骤 6：运行设置、持久化、Finder、Localization 和全量映射测试**
+- [x] **步骤 6：运行设置、持久化、Finder、Localization 和全量映射测试**
 
 ```bash
 swift test --filter SettingsInformationArchitectureTests
@@ -286,9 +286,11 @@ swift test --filter FinderSyncPackagingGuardTests
 swift test --filter LocalizationResourceTests
 ```
 
-- [ ] **步骤 7：真实窗口验收并提交任务 4**
+- [x] **步骤 7：真实窗口验收并提交任务 4**
 
 检查九类、中文/英文搜索、无匹配、修改、保存中、保存成功、hook/外置工具错误和深色外观，保存 `artifacts/ui/u7-settings-*.png`。
+
+结果：设置/U7/持久化/Finder/Localization/启动配置定向门禁 `73/73` 通过；全量 `1082/1082` 通过，其中真实 SVN `49/49`；Release App 构建、结构校验和隔离启动冒烟通过。真实窗口证据为 `u7-settings-dark-980x640.png`、`u7-settings-light-1180x760.png` 和 `u7-settings-light-reduce-motion-1440x900.png`，三档均保持可搜索侧栏、可滚动表单和固定保存栏，无重叠或动作不可达。分类支持中英文及功能词搜索，无结果提供清除动作；40 个可编辑字段与 SVN managed config 纳入草稿基线，加载/保存期间禁止覆盖或重复提交。Hook、外置工具和可识别的 SVN 配置错误会清除冲突搜索并定位到所属分类；Finder 导出失败保留脏状态以允许重试。新增仅在显式 `--ui-testing` 门控下生效的 `--ui-route`，用于确定性真实窗口验收。两轮只读审查发现的 4 个 Important 已全部修复，复核无新增 Critical/Important；Tortoise inventory/H 清单无能力状态变化。
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnSettingsCategory.swift \
