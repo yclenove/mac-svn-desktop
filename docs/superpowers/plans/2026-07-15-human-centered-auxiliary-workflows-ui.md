@@ -192,26 +192,26 @@ git commit -m "feat(UI): 统一锁定任务与高危动作层级（U7 任务 2/6
 - 修改：`Tests/MacSvnAppTests/WorkingCopyWorkspacePerformanceGuardTests.swift`
 - 修改：`Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings`
 
-- [ ] **步骤 1：编写 shelf 列表/详情和性能失败测试**
+- [x] **步骤 1：编写 shelf 列表/详情和性能失败测试**
 
 源码契约要求 `shelveToolbar`、`shelfRecordList`、`shelfDetailPane`、`showCreateShelfSheet`、`selectedShelfID`、`DiffPerformanceLimits`，且禁止 SplitView。断言创建参数不再常驻主工具栏，每个列表行不再平铺五个按钮。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests/testShelveSeparatesCreationRecordSelectionAndPreviewActions
 swift test --filter WorkingCopyWorkspacePerformanceGuardTests/testShelveWorkspaceAvoidsSplitViews
 ```
 
-- [ ] **步骤 3：实现创建 sheet 和记录主栏**
+- [x] **步骤 3：实现创建 sheet 和记录主栏**
 
 顶栏固定“新建搁置”、刷新和 Patch 菜单。创建 sheet 包含路径选择、名称、说明、官方/本地类型、保留本地改动和安全快照选项。主栏使用 segmented control 切换官方 shelves 与本地快照；行只负责选择记录。
 
-- [ ] **步骤 4：实现详情预览和语义动作**
+- [x] **步骤 4：实现详情预览和语义动作**
 
 详情区显示记录摘要、预览类型切换和截断后的等宽文本。官方 shelf 主操作为 Unshelve，本地快照主操作为恢复；Log/Diff、Unshelve + Drop、Drop、迁移和删除进入菜单。破坏性 Drop/删除新增显式确认。
 
-- [ ] **步骤 5：运行 Shelve、Patch、性能和 Localization 测试**
+- [x] **步骤 5：运行 Shelve、Patch、性能和 Localization 测试**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests
@@ -222,9 +222,11 @@ swift test --filter WorkingCopyWorkspacePerformanceGuardTests
 swift test --filter LocalizationResourceTests
 ```
 
-- [ ] **步骤 6：真实窗口验收并提交任务 3**
+- [x] **步骤 6：真实窗口验收并提交任务 3**
 
 检查官方可用/不可用、空 shelf、本地快照、长 Diff、创建、恢复和 Patch sheet，保存 `artifacts/ui/u7-shelve-*.png`。
+
+结果：U7/Shelve/Patch/导航/性能/Localization/Modal 定向门禁 `83/83` 通过；全量 `1076/1076` 通过，其中真实 SVN `49/49`；Release App 构建、结构校验和隔离启动冒烟通过。真实窗口证据为 `u7-shelve-dark-980x640.png`、`u7-shelve-light-1180x760.png`、`u7-shelve-light-reduce-motion-1440x900.png`、`u7-shelve-create-sheet-dark-980.png`、`u7-shelve-patch-sheet-dark-980.png` 和 `u7-shelve-main-light-reduce-motion-1440x900.png`。创建与 Patch sheet 均提供醒目的右上角关闭、Escape 和显式取消；Finder/深链绝对路径统一转换为工作副本相对路径并正确预选。预览通过代际校验、80 ms 防抖和 latest-wins runner 防止旧请求覆盖；迁移、Drop、Unshelve + Drop 与删除均保留确认，创建/Patch 错误留在当前 sheet 内展示。Tortoise inventory/H 清单无能力状态变化。
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnShelveView.swift \

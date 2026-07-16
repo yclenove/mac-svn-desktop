@@ -220,6 +220,7 @@ public final class MacSvnAppNavigator: ObservableObject {
     @Published public var pendingAIChatQuery: String?
     @Published public var pendingTransferIntent: PendingTransferIntent?
     @Published public var pendingPatchIntent: PendingPatchIntent?
+    @Published public var pendingShelfCreationPaths: [String]?
     @Published public var pendingDeleteIntent: PendingDeleteIntent?
     @Published public var pendingCopyMoveIntent: PendingCopyMoveIntent?
     @Published public var pendingRevisionPropertiesIntent: PendingRevisionPropertiesIntent?
@@ -258,6 +259,7 @@ public final class MacSvnAppNavigator: ObservableObject {
         // 锁定命令携带的是 WC 内相对路径，不应触发「打开工作副本」深链。
         let isLockCommand = Self.lockIntent(for: command) != nil
         let isPatchCommand = command == .createPatch || command == .applyPatch
+        let isShelveCommand = command == .shelve
         let isPathInspectorCommand = command == .blame || command == .compareRevisions
             || command == .properties || command == .externals
             || command == .deleteKeepLocal || command == .deleteUnversioned
@@ -267,7 +269,8 @@ public final class MacSvnAppNavigator: ObservableObject {
         )
         let inspectorHasAbsolutePath = isPathInspectorCommand
             && paths.first.map { ($0 as NSString).isAbsolutePath } == true
-        if !isLockCommand, !isPatchCommand, (!isPathInspectorCommand || inspectorHasAbsolutePath), !isChangelistCommand,
+        if !isLockCommand, !isPatchCommand, !isShelveCommand,
+           (!isPathInspectorCommand || inspectorHasAbsolutePath), !isChangelistCommand,
            canInferWorkingCopyPath,
            let firstPath = paths.first, !firstPath.isEmpty {
             pendingOpenPath = firstPath
@@ -348,6 +351,9 @@ public final class MacSvnAppNavigator: ObservableObject {
                 paths: paths,
                 patchFile: options.extras["patchFile"]
             )
+        }
+        if command == .shelve {
+            pendingShelfCreationPaths = paths.filter { !$0.isEmpty }
         }
 
         if command == .deleteKeepLocal || command == .deleteUnversioned {
@@ -699,6 +705,12 @@ public final class MacSvnAppNavigator: ObservableObject {
     public func consumePendingPatchIntent() -> PendingPatchIntent? {
         let value = pendingPatchIntent
         pendingPatchIntent = nil
+        return value
+    }
+
+    public func consumePendingShelfCreationPaths() -> [String]? {
+        let value = pendingShelfCreationPaths
+        pendingShelfCreationPaths = nil
         return value
     }
 

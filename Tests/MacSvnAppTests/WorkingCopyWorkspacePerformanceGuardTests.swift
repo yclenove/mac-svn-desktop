@@ -72,6 +72,23 @@ final class WorkingCopyWorkspacePerformanceGuardTests: XCTestCase {
         )
     }
 
+    func testShelveWorkspaceAvoidsSplitViews() throws {
+        let source = try Self.readFeatureSource(named: "MacSvnShelveView.swift")
+
+        XCTAssertFalse(
+            source.contains("HSplitView {"),
+            "搁置记录与详情禁止自由 HSplitView，应使用稳定 HStack"
+        )
+        XCTAssertFalse(
+            source.contains("VSplitView {"),
+            "搁置预览禁止自由 VSplitView，应使用稳定 VStack"
+        )
+        XCTAssertTrue(
+            source.contains("DiffPerformanceLimits.truncatedDisplayText("),
+            "搁置 Diff/Patch 预览必须限制超长文本渲染"
+        )
+    }
+
     func testEmbeddedDiffPathUsesPerformanceLimitsAPI() throws {
         let source = try Self.readFeatureSource(named: "MacSvnDiffView.swift")
         XCTAssertTrue(

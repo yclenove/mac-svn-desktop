@@ -414,6 +414,21 @@ final class MacSvnAppNavigatorTests: XCTestCase {
         )
     }
 
+    func testShelveCommandNavigatesAndCarriesCreationPathsOnce() {
+        let navigator = MacSvnAppNavigator()
+
+        XCTAssertEqual(
+            navigator.perform(command: .shelve, paths: ["README.txt", "src/app.swift"]),
+            .navigated(to: .shelve)
+        )
+        XCTAssertNil(navigator.pendingOpenPath)
+        XCTAssertEqual(
+            navigator.consumePendingShelfCreationPaths(),
+            ["README.txt", "src/app.swift"]
+        )
+        XCTAssertNil(navigator.consumePendingShelfCreationPaths())
+    }
+
     func testBlameAndPropertiesCarryRelativePathsWithoutOpeningWorkingCopy() {
         let navigator = MacSvnAppNavigator()
 

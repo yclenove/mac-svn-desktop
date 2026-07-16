@@ -36,6 +36,104 @@ enum MacSvnLockActionPresentation {
     }
 }
 
+enum MacSvnAuxiliaryLatestRequestPolicy {
+    static func shouldApply(
+        requestID: UUID,
+        currentRequestID: UUID?,
+        isCancelled: Bool
+    ) -> Bool {
+        !isCancelled && requestID == currentRequestID
+    }
+}
+
+@MainActor
+final class MacSvnAuxiliaryLatestRequestRunner {
+    private var task: Task<Void, Never>?
+    private(set) var currentRequestID: UUID?
+
+    @discardableResult
+    func enqueue(
+        debounce: Duration = .milliseconds(80),
+        operation: @escaping @Sendable () async throws -> String,
+        receive: @escaping @MainActor (UUID, Result<String, Error>) -> Void
+    ) -> UUID {
+        task?.cancel()
+        let requestID = UUID()
+        currentRequestID = requestID
+        task = Task { [weak self] in
+            do {
+                try await Task.sleep(for: debounce)
+                try Task.checkCancellation()
+                let output = try await operation()
+                try Task.checkCancellation()
+                guard let self, MacSvnAuxiliaryLatestRequestPolicy.shouldApply(
+                    requestID: requestID,
+                    currentRequestID: self.currentRequestID,
+                    isCancelled: Task.isCancelled
+                ) else { return }
+                receive(requestID, .success(output))
+            } catch is CancellationError {
+                return
+            } catch {
+                guard let self, MacSvnAuxiliaryLatestRequestPolicy.shouldApply(
+                    requestID: requestID,
+                    currentRequestID: self.currentRequestID,
+                    isCancelled: Task.isCancelled
+                ) else { return }
+                receive(requestID, .failure(error))
+            }
+        }
+        return requestID
+    }
+
+    func cancel() {
+        task?.cancel()
+        task = nil
+        currentRequestID = nil
+    }
+}
+
+enum MacSvnShelveLoadOutcome: Equatable {
+    case refreshed
+    case localFailure(String)
+    case officialFailure(String)
+}
+
+enum MacSvnShelveOperationOutcome: Equatable {
+    case success
+    case failure(String)
+    case pending
+}
+
+enum MacSvnShelveFeedbackPresentation {
+    static func loadOutcome(
+        state: ShelveViewState?,
+        officialError: String?
+    ) -> MacSvnShelveLoadOutcome {
+        if case .error(let message) = state {
+            return .localFailure(message)
+        }
+        if let officialError {
+            return .officialFailure(officialError)
+        }
+        return .refreshed
+    }
+
+    static func operationOutcome(
+        state: ShelveViewState?,
+        expected: ShelveOperation
+    ) -> MacSvnShelveOperationOutcome {
+        switch state {
+        case .completed(let completed) where completed == expected:
+            return .success
+        case .error(let message):
+            return .failure(message)
+        default:
+            return .pending
+        }
+    }
+}
+
 struct MacSvnAuxiliaryPathList: View {
     let paths: [String]
     @Binding var selection: Set<String>
