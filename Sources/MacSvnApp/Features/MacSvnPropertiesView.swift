@@ -1,7 +1,36 @@
 import SwiftUI
 import MacSvnCore
 
+struct ExternalsEditorDraftSnapshot: Equatable {
+    let drafts: [ExternalDefinitionDraft]
+    let updateAfterSave: Bool
+}
+
+enum MacSvnExternalsSaveOutcome: Equatable {
+    case failedBeforePropertySave
+    case propertySavedUpdateFailed
+    case completed
+}
+
+enum MacSvnExternalsDraftBaselinePolicy {
+    static func baseline(
+        initial: ExternalsEditorDraftSnapshot?,
+        current: ExternalsEditorDraftSnapshot,
+        outcome: MacSvnExternalsSaveOutcome
+    ) -> ExternalsEditorDraftSnapshot? {
+        switch outcome {
+        case .failedBeforePropertySave:
+            initial
+        case .propertySavedUpdateFailed:
+            current
+        case .completed:
+            nil
+        }
+    }
+}
+
 public struct MacSvnPropertiesView: View {
+    @Environment(\.locale) private var locale
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -12,7 +41,7 @@ public struct MacSvnPropertiesView: View {
     @State private var projectProperties = ProjectPropertyPolicy(properties: [])
     @State private var itemInfo: SvnInfo?
     @State private var itemStatus: ItemStatus?
-    @State private var infoError: LocalizedStringKey?
+    @State private var infoError: MacSvnAuxiliaryFeedback?
     @State private var loadGeneration = 0
     @State private var name = ""
     @State private var value = ""
@@ -20,14 +49,17 @@ public struct MacSvnPropertiesView: View {
     @State private var selectedTemplateName = ""
     @State private var selectedPropertyName: String?
     @State private var loadedTargetPath: String?
-    @State private var statusText: LocalizedStringKey?
+    @State private var propertyLoadFeedback: MacSvnAuxiliaryFeedback?
+    @State private var feedback: MacSvnAuxiliaryFeedback?
     @State private var pendingDeleteProperty: String?
     @State private var showExternalsEditor = false
     @State private var externalDocument: SvnExternalsDocument?
     @State private var externalDrafts: [ExternalDefinitionDraft] = []
     @State private var updateExternalsAfterSave = true
-    @State private var externalStatusText: LocalizedStringKey?
+    @State private var externalFeedback: MacSvnAuxiliaryFeedback?
     @State private var isSavingExternals = false
+    @State private var externalsInitialDraft: ExternalsEditorDraftSnapshot?
+    @State private var showDiscardExternalsConfirmation = false
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -86,7 +118,18 @@ public struct MacSvnPropertiesView: View {
         }
         .sheet(isPresented: $showExternalsEditor) {
             externalsEditor
-                .macSvnDismissibleSheet()
+                .confirmationDialog(
+                    "放弃未保存更改？",
+                    isPresented: $showDiscardExternalsConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃更改", role: .destructive) { discardExternalsChanges() }
+                    Button("继续编辑", role: .cancel) {}
+                }
+                .macSvnDismissibleSheet(
+                    preventsDismissal: externalsPreventsDismissal,
+                    onDismissalBlocked: requestExternalsDismissal
+                )
         }
     }
 
@@ -138,22 +181,46 @@ public struct MacSvnPropertiesView: View {
     }
 
     private var propertiesFeedback: some View {
-        HStack(spacing: 6) {
-            if let statusText {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text(statusText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
+        MacSvnInlineFeedbackView(
+            feedback: currentPropertiesFeedback,
+            truncationMode: .middle
+        )
+    }
+
+    private var currentPropertiesFeedback: MacSvnAuxiliaryFeedback? {
+        switch viewModel?.state {
+        case .loading:
+            MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在加载属性",
+                locale: locale,
+                diagnostic: nil
+            )
+        case .saving:
+            MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在保存属性",
+                locale: locale,
+                diagnostic: nil
+            )
+        case .deleting:
+            MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在删除属性",
+                locale: locale,
+                diagnostic: nil
+            )
+        case .error:
+            MacSvnPropertyLoadFeedbackPresentation.feedback(
+                propertyState: viewModel?.state,
+                infoDiagnostic: nil,
+                statusDiagnostic: nil,
+                projectPropertyDiagnostic: nil,
+                locale: locale
+            )
+        default:
+            propertyLoadFeedback ?? feedback
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .frame(height: MacSvnAuxiliaryWorkflowMetrics.feedbackHeight)
-        .background(Color.secondary.opacity(0.04))
     }
 
     private var propertiesWorkspace: some View {
@@ -192,7 +259,7 @@ public struct MacSvnPropertiesView: View {
     private var propertyInspector: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("目标信息")
+                Text("SVN 信息")
                     .font(.headline)
                 Spacer()
                 Text("属性摘要")
@@ -224,9 +291,7 @@ public struct MacSvnPropertiesView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let infoError {
-                Text(infoError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                MacSvnInlineFeedbackView(feedback: infoError)
             }
         }
         .padding(12)
@@ -424,14 +489,10 @@ public struct MacSvnPropertiesView: View {
                 addDroppedExternalURLs(values)
             }
             .help("拖入仓库 URL 创建外部定义")
-            if let externalStatusText {
-                Text(externalStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+            MacSvnInlineFeedbackView(feedback: externalStatusText)
             Toggle("保存后立即更新外部项", isOn: $updateExternalsAfterSave)
             HStack {
-                Button("取消") { showExternalsEditor = false }
+                Button("取消") { requestExternalsDismissal() }
                     .disabled(isSavingExternals)
                 Spacer()
                 if isSavingExternals {
@@ -472,6 +533,33 @@ public struct MacSvnPropertiesView: View {
         return FileManager.default.fileExists(atPath: target.path, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 
+    private var currentExternalsDraft: ExternalsEditorDraftSnapshot {
+        ExternalsEditorDraftSnapshot(
+            drafts: externalDrafts,
+            updateAfterSave: updateExternalsAfterSave
+        )
+    }
+
+    private var externalStatusText: MacSvnAuxiliaryFeedback? {
+        externalFeedback
+    }
+
+    private var hasUnsavedExternalsChanges: Bool {
+        guard let externalsInitialDraft else { return false }
+        return currentExternalsDraft != externalsInitialDraft
+    }
+
+    private var externalsDismissalDecision: MacSvnAuxiliaryDismissalDecision {
+        MacSvnAuxiliaryDismissalPolicy.decision(
+            isBusy: isSavingExternals,
+            isDirty: hasUnsavedExternalsChanges
+        )
+    }
+
+    private var externalsPreventsDismissal: Bool {
+        externalsDismissalDecision.preventsDismissal
+    }
+
     private func reloadPaths() async {
         guard let record = workspaceController.selectedRecord, record.isValid else {
             paths = ["."]; selected = ["."]; return
@@ -484,9 +572,12 @@ public struct MacSvnPropertiesView: View {
         paths = loaded
     }
 
-    private func loadProperties() async {
+    private func loadProperties(preservingFeedback: Bool = false) async {
         loadGeneration += 1
         let generation = loadGeneration
+        if !preservingFeedback {
+            feedback = nil
+        }
         guard let record = workspaceController.selectedRecord,
               let path = selected.first
         else { return }
@@ -510,19 +601,26 @@ public struct MacSvnPropertiesView: View {
         )
         async let statusRequest = session.svnService.status(wc: workingCopy)
         await vm.load()
-        let loadedProjectProperties = (try? await MacSvnProjectPropertyLoader.load(
-            svnService: session.svnService,
-            workingCopy: workingCopy,
-            relativePaths: [path]
-        )) ?? ProjectPropertyPolicy(properties: [])
+        var loadedProjectProperties = ProjectPropertyPolicy(properties: [])
+        var projectPropertyDiagnostic: String?
+        do {
+            loadedProjectProperties = try await MacSvnProjectPropertyLoader.load(
+                svnService: session.svnService,
+                workingCopy: workingCopy,
+                relativePaths: [path]
+            )
+        } catch {
+            projectPropertyDiagnostic = error.localizedDescription
+        }
         var loadedInfo: SvnInfo?
-        var loadedInfoError: LocalizedStringKey?
+        var infoDiagnostic: String?
         do {
             loadedInfo = try await infoRequest
         } catch {
-            loadedInfoError = "SVN 信息读取失败：\(error.localizedDescription)"
+            infoDiagnostic = error.localizedDescription
         }
         var loadedStatus: ItemStatus?
+        var statusDiagnostic: String?
         do {
             let statusTarget = Self.relativeTarget(path, workingCopy: workingCopy)
             loadedStatus = try await statusRequest.first { status in
@@ -530,12 +628,28 @@ public struct MacSvnPropertiesView: View {
             }?.itemStatus
         } catch {
             loadedStatus = nil
+            statusDiagnostic = error.localizedDescription
         }
         guard generation == loadGeneration else { return }
         itemInfo = loadedInfo
-        infoError = loadedInfoError
+        infoError = infoDiagnostic.flatMap { diagnostic in
+            MacSvnPropertyLoadFeedbackPresentation.feedback(
+                propertyState: .loaded,
+                infoDiagnostic: diagnostic,
+                statusDiagnostic: nil,
+                projectPropertyDiagnostic: nil,
+                locale: locale
+            )
+        }
         itemStatus = loadedStatus
         projectProperties = loadedProjectProperties
+        propertyLoadFeedback = MacSvnPropertyLoadFeedbackPresentation.feedback(
+            propertyState: vm.state,
+            infoDiagnostic: infoDiagnostic,
+            statusDiagnostic: statusDiagnostic,
+            projectPropertyDiagnostic: projectPropertyDiagnostic,
+            locale: locale
+        )
     }
 
     private static func relativeTarget(_ path: String, workingCopy: URL) -> String {
@@ -557,8 +671,13 @@ public struct MacSvnPropertiesView: View {
             paths.insert(target, at: 0)
         }
         selected = [target]
-        statusText = "来自命令：\(MacSvnAuxiliaryPathPresentation.title(for: target))"
-        await loadProperties()
+        feedback = MacSvnAuxiliaryFeedback.localized(
+            kind: .success,
+            message: "来自命令：\(MacSvnAuxiliaryPathPresentation.title(for: target))",
+            locale: locale,
+            diagnostic: nil
+        )
+        await loadProperties(preservingFeedback: true)
     }
 
     private func consumePendingExternals() async {
@@ -581,7 +700,12 @@ public struct MacSvnPropertiesView: View {
 
     private func prepareExternalsEditor() {
         guard selectedTargetIsDirectory else {
-            statusText = "svn:externals 只能设置在版本化目录上"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "svn:externals 只能设置在版本化目录上",
+                locale: locale,
+                diagnostic: nil
+            )
             return
         }
         let text = viewModel?.properties.first(where: { $0.name == "svn:externals" })?.value ?? ""
@@ -591,10 +715,18 @@ public struct MacSvnPropertiesView: View {
                 : try SvnExternalsDocument(text: text)
             externalDocument = document
             externalDrafts = document.definitions.map(ExternalDefinitionDraft.init)
-            externalStatusText = nil
+            externalFeedback = nil
+            externalsInitialDraft = currentExternalsDraft
             showExternalsEditor = true
         } catch {
-            statusText = LocalizedStringKey(error.localizedDescription)
+            let diagnostic = error.localizedDescription
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "外部定义读取失败：\(presented)",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 
@@ -604,7 +736,12 @@ public struct MacSvnPropertiesView: View {
               let path = selected.first,
               let viewModel else { return }
         isSavingExternals = true
-        externalStatusText = nil
+        externalFeedback = MacSvnAuxiliaryFeedback.localized(
+            kind: .progress,
+            message: "正在保存外部定义",
+            locale: locale,
+            diagnostic: nil
+        )
         defer { isSavingExternals = false }
         do {
             let definitions = try externalDrafts.map { try $0.definition() }
@@ -621,8 +758,14 @@ public struct MacSvnPropertiesView: View {
             }
             guard case .loaded = viewModel.state else {
                 if case .error(let message) = viewModel.state {
-                    externalStatusText = "保存失败：\(message)"
-                    statusText = externalStatusText
+                    let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(message, locale: locale)
+                    externalFeedback = MacSvnAuxiliaryFeedback.localized(
+                        kind: .failure,
+                        message: "保存失败：\(presented)",
+                        locale: locale,
+                        diagnostic: message
+                    )
+                    feedback = externalFeedback
                 }
                 return
             }
@@ -634,19 +777,73 @@ public struct MacSvnPropertiesView: View {
                         ignoreExternals: false
                     )
                 } catch {
-                    externalStatusText = "属性已保存，但更新外部项失败：\(error.localizedDescription)"
-                    statusText = externalStatusText
-                    await loadProperties()
+                    let diagnostic = error.localizedDescription
+                    let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+                    externalFeedback = MacSvnAuxiliaryFeedback.localized(
+                        kind: .warning,
+                        message: "属性已保存，但更新外部项失败：\(presented)",
+                        locale: locale,
+                        diagnostic: diagnostic
+                    )
+                    feedback = externalFeedback
+                    externalsInitialDraft = MacSvnExternalsDraftBaselinePolicy.baseline(
+                        initial: externalsInitialDraft,
+                        current: currentExternalsDraft,
+                        outcome: .propertySavedUpdateFailed
+                    )
+                    await loadProperties(preservingFeedback: true)
                     return
                 }
             }
+            externalsInitialDraft = MacSvnExternalsDraftBaselinePolicy.baseline(
+                initial: externalsInitialDraft,
+                current: currentExternalsDraft,
+                outcome: .completed
+            )
             showExternalsEditor = false
-            statusText = updateExternalsAfterSave ? "已保存并更新外部项" : "已保存 svn:externals"
             await loadProperties()
+            feedback = updateExternalsAfterSave
+                ? .localized(kind: .success, message: "已保存并更新外部项", locale: locale, diagnostic: nil)
+                : .localized(kind: .success, message: "已保存 svn:externals", locale: locale, diagnostic: nil)
         } catch {
-            externalStatusText = LocalizedStringKey(error.localizedDescription)
-            statusText = externalStatusText
+            let diagnostic = error.localizedDescription
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+            externalFeedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "外部定义操作失败：\(presented)",
+                locale: locale,
+                diagnostic: diagnostic
+            )
+            feedback = externalFeedback
         }
+    }
+
+    private func requestExternalsDismissal() {
+        switch externalsDismissalDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showDiscardExternalsConfirmation = true
+        case .dismiss:
+            closeExternalsEditor()
+        }
+    }
+
+    private func discardExternalsChanges() {
+        if let externalsInitialDraft {
+            externalDrafts = externalsInitialDraft.drafts
+            updateExternalsAfterSave = externalsInitialDraft.updateAfterSave
+        }
+        closeExternalsEditor()
+    }
+
+    private func closeExternalsEditor() {
+        externalDocument = nil
+        externalDrafts = []
+        externalFeedback = nil
+        externalsInitialDraft = nil
+        showDiscardExternalsConfirmation = false
+        showExternalsEditor = false
     }
 
     private func addDroppedExternalURLs(_ values: [String]) -> Bool {
@@ -669,9 +866,19 @@ public struct MacSvnPropertiesView: View {
         let propertyName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         await viewModel?.save(name: propertyName, value: value)
         if case .loaded = viewModel?.state {
-            statusText = "已保存 \(propertyName)"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "已保存 \(propertyName)",
+                locale: locale,
+                diagnostic: nil
+            )
         } else if case .error(let message) = viewModel?.state {
-            statusText = "保存失败：\(message)"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "保存失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(message, locale: locale))",
+                locale: locale,
+                diagnostic: message
+            )
         }
     }
 
@@ -680,14 +887,24 @@ public struct MacSvnPropertiesView: View {
         pendingDeleteProperty = nil
         await viewModel?.delete(name: propertyName)
         if case .loaded = viewModel?.state {
-            statusText = "已删除 \(propertyName)"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "已删除 \(propertyName)",
+                locale: locale,
+                diagnostic: nil
+            )
             if name == propertyName {
                 selectedTemplateName = ""
                 name = ""
                 value = ""
             }
         } else if case .error(let message) = viewModel?.state {
-            statusText = "删除失败：\(message)"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "删除失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(message, locale: locale))",
+                locale: locale,
+                diagnostic: message
+            )
         }
     }
 
@@ -719,7 +936,7 @@ public struct MacSvnPropertiesView: View {
     }
 }
 
-private struct ExternalDefinitionDraft: Identifiable {
+struct ExternalDefinitionDraft: Identifiable, Equatable {
     let id = UUID()
     var revisionText = ""
     var url = ""

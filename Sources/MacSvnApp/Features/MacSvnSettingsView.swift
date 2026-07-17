@@ -47,6 +47,7 @@ struct SettingsDraftSnapshot: Equatable {
 
 /// 设置页：svn 路径、日志批量、超时、分支布局、外部 Diff、AI。
 public struct MacSvnSettingsView: View {
+    @Environment(\.locale) private var locale
     @ObservedObject private var session: MacSvnAppSession
     @State private var selectedCategory: MacSvnSettingsCategory? = .general
     @State private var settingsSearchText = ""
@@ -94,7 +95,7 @@ public struct MacSvnSettingsView: View {
     @State private var globalIgnorePatterns = ""
     @State private var useCommitTimes = false
     @State private var colourAppearance: AppAppearance = .light
-    @State private var statusText: LocalizedStringKey?
+    @State private var feedback: MacSvnAuxiliaryFeedback?
     @State private var showAISettings = false
     @State private var showClearAuthenticationConfirmation = false
     @State private var isClearingAuthenticationCache = false
@@ -143,7 +144,7 @@ public struct MacSvnSettingsView: View {
         }
         .onChange(of: hasUnsavedChanges) { _, isDirty in
             if isDirty, !isSaving {
-                statusText = nil
+                feedback = nil
             }
         }
         .sheet(isPresented: $showAISettings) {
@@ -258,36 +259,47 @@ public struct MacSvnSettingsView: View {
 
     @ViewBuilder
     private var settingsActionStatus: some View {
+        MacSvnInlineFeedbackView(feedback: currentSettingsFeedback)
+            .frame(maxWidth: .infinity)
+    }
+
+    private var currentSettingsFeedback: MacSvnAuxiliaryFeedback? {
         if isLoading {
-            ProgressView()
-                .controlSize(.small)
-            Text("正在加载设置")
-                .foregroundStyle(.secondary)
-        } else if isSaving {
-            ProgressView()
-                .controlSize(.small)
-            Text("正在保存")
-                .foregroundStyle(.secondary)
-        } else if let statusText {
-            Image(systemName: "info.circle")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text(statusText)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-        } else if hasUnsavedChanges {
-            Image(systemName: "pencil.circle.fill")
-                .foregroundStyle(.orange)
-                .accessibilityHidden(true)
-            Text("未保存的更改")
-                .foregroundStyle(.secondary)
-        } else if baselineDraft != nil {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-                .accessibilityHidden(true)
-            Text("所有更改已保存")
-                .foregroundStyle(.secondary)
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在加载设置",
+                locale: locale,
+                diagnostic: nil
+            )
         }
+        if isSaving {
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在保存",
+                locale: locale,
+                diagnostic: nil
+            )
+        }
+        if let feedback {
+            return feedback
+        }
+        if hasUnsavedChanges {
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "未保存的更改",
+                locale: locale,
+                diagnostic: nil
+            )
+        }
+        if baselineDraft != nil {
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "所有更改已保存",
+                locale: locale,
+                diagnostic: nil
+            )
+        }
+        return nil
     }
 
     private func synchronizeSettingsCategorySelection() {
@@ -676,8 +688,8 @@ public struct MacSvnSettingsView: View {
         guard baselineDraft == nil else { return }
         isLoading = true
         defer { isLoading = false }
-        statusText = nil
-        var loadError: LocalizedStringKey?
+        feedback = nil
+        var loadFeedback: MacSvnAuxiliaryFeedback?
         let settings = await session.settingsStore.settings()
         guard !Task.isCancelled else { return }
         generalPreferences = settings.general
@@ -692,7 +704,13 @@ public struct MacSvnSettingsView: View {
             proxyPassword = managed.proxyPassword
         } catch {
             navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
-            loadError = "读取 SVN config/servers 失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            loadFeedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "读取 SVN config/servers 失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
         svnPath = settings.svnPath ?? ""
         logBatchSize = settings.logBatchSize
@@ -729,7 +747,7 @@ public struct MacSvnSettingsView: View {
         externalDiffArguments = settings.externalDiffTool?.arguments.joined(separator: "\n") ?? ""
         externalToolRules = settings.externalToolRules
         baselineDraft = currentDraft
-        statusText = loadError
+        feedback = loadFeedback
     }
 
     private func save() async {
@@ -737,7 +755,7 @@ public struct MacSvnSettingsView: View {
         guard hasUnsavedChanges else { return }
         let draftBeingSaved = currentDraft
         isSaving = true
-        statusText = nil
+        feedback = nil
         defer { isSaving = false }
 
         if let invalidHook = clientHooks.first(where: {
@@ -747,7 +765,12 @@ public struct MacSvnSettingsView: View {
             )
         }) {
             navigateToSettingsCategory(.savedData)
-            statusText = "无法保存：\(invalidHook.type.displayName) 钩子需要工作副本路径和脚本路径。"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "无法保存：\(invalidHook.type.displayName) 钩子需要工作副本路径和脚本路径。",
+                locale: locale,
+                diagnostic: nil
+            )
             return
         }
         var settings = await session.settingsStore.settings()
@@ -815,7 +838,13 @@ public struct MacSvnSettingsView: View {
             nextManaged = try session.svnClientConfigurationStore.load()
         } catch {
             navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
-            statusText = "保存失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "保存失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
             return
         }
         nextManaged.globalIgnorePatterns = globalIgnoreTokens(from: globalIgnorePatterns)
@@ -834,7 +863,13 @@ public struct MacSvnSettingsView: View {
             session.publish(settings: settings)
         } catch {
             navigateToSettingsCategory(MacSvnSettingsErrorPresentation.category(for: error))
-            statusText = "保存失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "保存失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
             return
         }
 
@@ -848,11 +883,22 @@ public struct MacSvnSettingsView: View {
                 to: session.finderSyncConfigurationFileURLs
             )
         } catch {
-            statusText = "设置已保存，但 Finder 扩展配置同步失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "设置已保存，但 Finder 扩展配置同步失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
             return
         }
         baselineDraft = draftBeingSaved
-        statusText = "已保存。界面、对话框、状态色和 SVN 网络配置已更新；svn 路径与客户端钩子将在下次启动会话后完全生效。"
+        feedback = MacSvnAuxiliaryFeedback.localized(
+            kind: .success,
+            message: "已保存。界面、对话框、状态色和 SVN 网络配置已更新；svn 路径与客户端钩子将在下次启动会话后完全生效。",
+            locale: locale,
+            diagnostic: nil
+        )
     }
 
     @ViewBuilder
@@ -876,7 +922,13 @@ public struct MacSvnSettingsView: View {
             try session.svnClientConfigurationStore.ensureFilesExist()
             NSWorkspace.shared.open(session.svnClientConfigurationStore.configFileURL)
         } catch {
-            statusText = "无法打开 SVN config：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "无法打开 SVN config：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 
@@ -885,7 +937,13 @@ public struct MacSvnSettingsView: View {
             try session.svnClientConfigurationStore.ensureFilesExist()
             NSWorkspace.shared.open(session.svnClientConfigurationStore.serversFileURL)
         } catch {
-            statusText = "无法打开 SVN servers：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "无法打开 SVN servers：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 
@@ -953,7 +1011,12 @@ public struct MacSvnSettingsView: View {
             let path = rule.tool.executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty, !path.isEmpty else {
                 navigateToSettingsCategory(.externalPrograms)
-                statusText = "无法保存：外置工具规则需要名称和可执行路径。"
+                feedback = MacSvnAuxiliaryFeedback.localized(
+                    kind: .failure,
+                    message: "无法保存：外置工具规则需要名称和可执行路径。",
+                    locale: locale,
+                    diagnostic: nil
+                )
                 return nil
             }
             var copy = rule
@@ -973,7 +1036,12 @@ public struct MacSvnSettingsView: View {
             for key in keys {
                 guard seenKeys.insert("\(copy.purpose.rawValue):\(key)").inserted else {
                     navigateToSettingsCategory(.externalPrograms)
-                    statusText = "无法保存：同一用途不能重复配置扩展名 \(key)。"
+                    feedback = MacSvnAuxiliaryFeedback.localized(
+                        kind: .failure,
+                        message: "无法保存：同一用途不能重复配置扩展名 \(key)。",
+                        locale: locale,
+                        diagnostic: nil
+                    )
                     return nil
                 }
             }
@@ -994,9 +1062,20 @@ public struct MacSvnSettingsView: View {
         defer { isClearingLogCache = false }
         do {
             try await session.logCacheStore.clearAll()
-            statusText = "日志缓存已清理。"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "日志缓存已清理。",
+                locale: locale,
+                diagnostic: nil
+            )
         } catch {
-            statusText = "清理日志缓存失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "清理日志缓存失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 
@@ -1007,12 +1086,28 @@ public struct MacSvnSettingsView: View {
         do {
             let result = try await session.svnAuthenticationCacheStore.clearAll()
             if result.removedFileCacheItemCount == 0 {
-                statusText = "已完成 Subversion 认证缓存清理。"
+                feedback = MacSvnAuxiliaryFeedback.localized(
+                    kind: .success,
+                    message: "已完成 Subversion 认证缓存清理。",
+                    locale: locale,
+                    diagnostic: nil
+                )
             } else {
-                statusText = "已完成 Subversion 认证缓存清理（移除 \(result.removedFileCacheItemCount) 项文件缓存）。"
+                feedback = MacSvnAuxiliaryFeedback.localized(
+                    kind: .success,
+                    message: "已完成 Subversion 认证缓存清理（移除 \(result.removedFileCacheItemCount) 项文件缓存）。",
+                    locale: locale,
+                    diagnostic: nil
+                )
             }
         } catch {
-            statusText = "清理 Subversion 认证缓存失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "清理 Subversion 认证缓存失败：\(MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale))",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 

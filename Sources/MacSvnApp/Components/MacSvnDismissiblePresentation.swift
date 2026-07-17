@@ -4,16 +4,17 @@ private struct MacSvnDismissiblePresentationModifier: ViewModifier {
     @Environment(\.dismiss) private var dismiss
 
     let compact: Bool
+    let preventsDismissal: Bool
+    let onDismissalBlocked: () -> Void
 
     func body(content: Content) -> some View {
         content
+            .interactiveDismissDisabled(preventsDismissal)
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
-                        Button {
-                            dismiss()
-                        } label: {
+                        Button(action: requestDismiss) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16, weight: .semibold))
                                 .symbolRenderingMode(.hierarchical)
@@ -33,14 +34,33 @@ private struct MacSvnDismissiblePresentationModifier: ViewModifier {
                 .background(.bar)
             }
     }
+
+    private func requestDismiss() {
+        if preventsDismissal {
+            onDismissalBlocked()
+        } else {
+            dismiss()
+        }
+    }
 }
 
 extension View {
-    func macSvnDismissibleSheet() -> some View {
-        modifier(MacSvnDismissiblePresentationModifier(compact: false))
+    func macSvnDismissibleSheet(
+        preventsDismissal: Bool = false,
+        onDismissalBlocked: @escaping () -> Void = {}
+    ) -> some View {
+        modifier(MacSvnDismissiblePresentationModifier(
+            compact: false,
+            preventsDismissal: preventsDismissal,
+            onDismissalBlocked: onDismissalBlocked
+        ))
     }
 
     func macSvnDismissiblePopover() -> some View {
-        modifier(MacSvnDismissiblePresentationModifier(compact: true))
+        modifier(MacSvnDismissiblePresentationModifier(
+            compact: true,
+            preventsDismissal: false,
+            onDismissalBlocked: {}
+        ))
     }
 }

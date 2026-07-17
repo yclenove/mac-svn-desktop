@@ -171,17 +171,246 @@ final class LockViewModelTests: XCTestCase {
         let calls = await provider.recordedCalls()
 
         XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "unavailable")
         XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testProjectPropertyRefreshPreservesRawFailureAndSuccessClearsBothErrors() async {
+        let provider = FakeLockProvider(results: [.success([])])
+        let viewModel = LockViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["failure.txt"] {
+                    throw ProjectPropertyLoaderLockTestError.unavailable
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+
+        let failureApplied = await viewModel.refreshProjectProperties(for: ["failure.txt"])
+        XCTAssertTrue(failureApplied)
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "unavailable")
+
+        let successApplied = await viewModel.refreshProjectProperties(for: ["success.txt"])
+        XCTAssertTrue(successApplied)
+        XCTAssertNil(viewModel.projectPropertyLoadError)
+        XCTAssertNil(viewModel.projectPropertyLoadDiagnostic)
+    }
+
+    @MainActor
+    func testRefreshStartedAfterTransactionFailureCanRecoverProjectProperties() async {
+        let provider = FakeLockProvider(results: [.success([])])
+        let viewModel = LockViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["transaction.txt"] {
+                    throw ProjectPropertyLoaderLockTestError.transactionUnavailable
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+
+        await viewModel.lock(paths: ["transaction.txt"], message: nil, force: false)
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+
+        let recoveryApplied = await viewModel.refreshProjectProperties(for: ["recovery.txt"])
+
+        XCTAssertTrue(recoveryApplied)
+        XCTAssertNil(viewModel.projectPropertyLoadError)
+        XCTAssertNil(viewModel.projectPropertyLoadDiagnostic)
+    }
+
+    @MainActor
+    func testStaleProjectPropertyFailureCannotOverwriteNewerSuccessDiagnostic() async throws {
+        let provider = FakeLockProvider(results: [.success([])])
+        let gate = ProjectPropertyLoaderGate()
+        let viewModel = LockViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["slow-failure.txt"] {
+                    await gate.block("slow-failure.txt")
+                    throw ProjectPropertyLoaderLockTestError.unavailable
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+
+        let staleRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["slow-failure.txt"])
+        }
+        await gate.waitUntilEntered("slow-failure.txt")
+        await viewModel.refreshProjectProperties(for: ["success.txt"])
+        await gate.release("slow-failure.txt")
+        _ = await staleRefresh.value
+
+        XCTAssertNil(viewModel.projectPropertyLoadError)
+        XCTAssertNil(viewModel.projectPropertyLoadDiagnostic)
+    }
+
+    @MainActor
+    func testLockTransactionFailureRemainsErrorAfterNewerBackgroundRefreshSucceeds() async throws {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let gate = ProjectPropertyLoaderGate()
+        let existingLock = SvnLock(
+            target: "existing.txt",
+            token: "token",
+            owner: "alice",
+            comment: nil,
+            created: nil,
+            isOwnedByWorkingCopy: true,
+            isRepositoryLocked: true
+        )
+        let provider = FakeLockProvider(results: [.success([existingLock])])
+        let viewModel = LockViewModel(
+            workingCopy: wc,
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["transaction.txt"] {
+                    await gate.block("transaction.txt")
+                    throw ProjectPropertyLoaderLockTestError.transactionUnavailable
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+        await viewModel.load(targets: ["existing.txt"])
+
+        let lockTask = Task { @MainActor in
+            await viewModel.lock(paths: ["transaction.txt"], message: nil, force: false)
+        }
+        await gate.waitUntilEntered("transaction.txt")
+        await viewModel.refreshProjectProperties(for: ["refresh.txt"])
+        await gate.release("transaction.txt")
+        await lockTask.value
+
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "transactionUnavailable")
+        let calls = await provider.recordedCalls()
+        XCTAssertFalse(calls.contains { $0.operation == "lock" })
+    }
+
+    @MainActor
+    func testEarlierBackgroundSuccessCannotClearLaterLockTransactionFailure() async throws {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let gate = ProjectPropertyLoaderGate()
+        let existingLock = SvnLock(
+            target: "existing.txt",
+            token: "token",
+            owner: "alice",
+            comment: nil,
+            created: nil,
+            isOwnedByWorkingCopy: true,
+            isRepositoryLocked: true
+        )
+        let provider = FakeLockProvider(results: [.success([existingLock])])
+        let viewModel = LockViewModel(
+            workingCopy: wc,
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["slow-refresh.txt"] {
+                    await gate.block("slow-refresh.txt")
+                    return ProjectPropertyPolicy(properties: [])
+                }
+                if paths == ["transaction.txt"] {
+                    throw ProjectPropertyLoaderLockTestError.transactionUnavailable
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+        await viewModel.load(targets: ["existing.txt"])
+
+        let backgroundRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["slow-refresh.txt"])
+        }
+        await gate.waitUntilEntered("slow-refresh.txt")
+        await viewModel.lock(paths: ["transaction.txt"], message: nil, force: false)
+
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "transactionUnavailable")
+
+        await gate.release("slow-refresh.txt")
+        let refreshApplied = await backgroundRefresh.value
+
+        XCTAssertFalse(refreshApplied)
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "transactionUnavailable")
+        let calls = await provider.recordedCalls()
+        XCTAssertFalse(calls.contains { $0.operation == "lock" })
+    }
+
+    @MainActor
+    func testNewerBackgroundGenerationCannotClearTransactionFailureThatFinishesFirst() async throws {
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let gate = ProjectPropertyLoaderGate()
+        let existingLock = SvnLock(
+            target: "existing.txt",
+            token: "token",
+            owner: "alice",
+            comment: nil,
+            created: nil,
+            isOwnedByWorkingCopy: true,
+            isRepositoryLocked: true
+        )
+        let provider = FakeLockProvider(results: [.success([existingLock])])
+        let viewModel = LockViewModel(
+            workingCopy: wc,
+            provider: provider,
+            projectPropertyLoader: { paths in
+                if paths == ["transaction.txt"] {
+                    await gate.block("transaction.txt")
+                    throw ProjectPropertyLoaderLockTestError.transactionUnavailable
+                }
+                if paths == ["newer-background.txt"] {
+                    await gate.block("newer-background.txt")
+                    return ProjectPropertyPolicy(properties: [])
+                }
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+        await viewModel.load(targets: ["existing.txt"])
+
+        let lockTask = Task { @MainActor in
+            await viewModel.lock(paths: ["transaction.txt"], message: nil, force: false)
+        }
+        await gate.waitUntilEntered("transaction.txt")
+        let newerBackgroundRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["newer-background.txt"])
+        }
+        await gate.waitUntilEntered("newer-background.txt")
+
+        await gate.release("transaction.txt")
+        await lockTask.value
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "transactionUnavailable")
+
+        await gate.release("newer-background.txt")
+        let refreshApplied = await newerBackgroundRefresh.value
+
+        XCTAssertFalse(refreshApplied)
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+        XCTAssertEqual(viewModel.projectPropertyLoadDiagnostic, "transactionUnavailable")
+        let calls = await provider.recordedCalls()
+        XCTAssertFalse(calls.contains { $0.operation == "lock" })
     }
 
     @MainActor
     func testLockRejectsReentryWhileLoadingProjectProperties() async throws {
         let provider = FakeLockProvider(results: [.success([]), .success([])])
+        let gate = ProjectPropertyLoaderGate()
         let viewModel = LockViewModel(
             workingCopy: URL(fileURLWithPath: "/tmp/wc"),
             provider: provider,
             projectPropertyLoader: { _ in
-                try? await Task.sleep(nanoseconds: 50_000_000)
+                await gate.block("README.txt")
                 return ProjectPropertyPolicy(properties: [])
             }
         )
@@ -189,8 +418,9 @@ final class LockViewModelTests: XCTestCase {
         let firstLock = Task { @MainActor in
             await viewModel.lock(paths: ["README.txt"], message: "note", force: false)
         }
-        try await Task.sleep(nanoseconds: 10_000_000)
+        await gate.waitUntilEntered("README.txt")
         await viewModel.lock(paths: ["README.txt"], message: "note", force: false)
+        await gate.release("README.txt")
         await firstLock.value
 
         let calls = await provider.recordedCalls()
@@ -221,6 +451,7 @@ final class LockViewModelTests: XCTestCase {
     @MainActor
     func testFailedBackgroundPropertyRefreshDoesNotInterruptLockInProgress() async throws {
         let provider = FakeLockProvider(results: [.success([])])
+        let gate = ProjectPropertyLoaderGate()
         let viewModel = LockViewModel(
             workingCopy: URL(fileURLWithPath: "/tmp/wc"),
             provider: provider,
@@ -228,7 +459,7 @@ final class LockViewModelTests: XCTestCase {
                 if paths == ["refresh.txt"] {
                     throw ProjectPropertyLoaderLockTestError.unavailable
                 }
-                try await Task.sleep(nanoseconds: 80_000_000)
+                await gate.block("README.txt")
                 return ProjectPropertyPolicy(properties: [])
             }
         )
@@ -236,12 +467,13 @@ final class LockViewModelTests: XCTestCase {
         let lockTask = Task { @MainActor in
             await viewModel.lock(paths: ["README.txt"], message: nil, force: false)
         }
-        try await Task.sleep(nanoseconds: 10_000_000)
+        await gate.waitUntilEntered("README.txt")
         await viewModel.refreshProjectProperties(for: ["refresh.txt"])
 
         XCTAssertEqual(viewModel.state, .locking)
         XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
 
+        await gate.release("README.txt")
         await lockTask.value
         XCTAssertEqual(viewModel.state, .loaded)
     }
@@ -249,6 +481,7 @@ final class LockViewModelTests: XCTestCase {
 
 private enum ProjectPropertyLoaderLockTestError: Error {
     case unavailable
+    case transactionUnavailable
 }
 
 private struct LockProviderCall: Equatable {
@@ -282,5 +515,45 @@ private actor FakeLockProvider: LockProviding {
 
     func unlock(wc: URL, paths: [String], force: Bool) async throws {
         calls.append(LockProviderCall(operation: "unlock", wc: wc, paths: paths, message: nil, force: force))
+    }
+}
+
+private actor ProjectPropertyLoaderGate {
+    private var enteredKeys: Set<String> = []
+    private var enteredWaiters: [String: [CheckedContinuation<Void, Never>]] = [:]
+    private var releaseCredits: [String: Int] = [:]
+    private var releaseWaiters: [String: [CheckedContinuation<Void, Never>]] = [:]
+
+    func block(_ key: String) async {
+        enteredKeys.insert(key)
+        if let waiters = enteredWaiters.removeValue(forKey: key) {
+            for waiter in waiters {
+                waiter.resume()
+            }
+        }
+        if let credits = releaseCredits[key], credits > 0 {
+            releaseCredits[key] = credits - 1
+            return
+        }
+        await withCheckedContinuation { continuation in
+            releaseWaiters[key, default: []].append(continuation)
+        }
+    }
+
+    func waitUntilEntered(_ key: String) async {
+        guard !enteredKeys.contains(key) else { return }
+        await withCheckedContinuation { continuation in
+            enteredWaiters[key, default: []].append(continuation)
+        }
+    }
+
+    func release(_ key: String) {
+        if var waiters = releaseWaiters[key], !waiters.isEmpty {
+            let waiter = waiters.removeFirst()
+            releaseWaiters[key] = waiters.isEmpty ? nil : waiters
+            waiter.resume()
+            return
+        }
+        releaseCredits[key, default: 0] += 1
     }
 }

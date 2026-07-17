@@ -9,7 +9,7 @@ private enum MacSvnShelfRecordScope: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-private enum MacSvnShelfCreationKind: String, CaseIterable, Identifiable {
+enum MacSvnShelfCreationKind: String, CaseIterable, Identifiable {
     case official = "官方 Shelve"
     case local = "本地搁置"
     case safety = "安全快照"
@@ -30,7 +30,22 @@ private enum MacSvnOfficialShelfDestructiveAction {
     case drop
 }
 
+struct CreateShelfDraftSnapshot: Equatable {
+    let creationKind: MacSvnShelfCreationKind
+    let selected: Set<String>
+    let name: String
+    let message: String
+    let keepLocalChanges: Bool
+}
+
+struct PatchDraftSnapshot: Equatable {
+    let patchOperation: PatchOperation
+    let selected: Set<String>
+    let patchPath: String
+}
+
 public struct MacSvnShelveView: View {
+    @Environment(\.locale) private var locale
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -40,7 +55,7 @@ public struct MacSvnShelveView: View {
     @State private var viewModel: ShelveViewModel?
     @State private var patchViewModel: PatchViewModel?
     @State private var name = ""
-    @State private var statusText: LocalizedStringKey?
+    @State private var feedback: MacSvnAuxiliaryFeedback?
     @State private var showCreateShelfSheet = false
     @State private var showPatchSheet = false
     @State private var patchOperation: PatchOperation = .create
@@ -58,7 +73,11 @@ public struct MacSvnShelveView: View {
     @State private var previewRequestID: UUID?
     @State private var previewRunner = MacSvnAuxiliaryLatestRequestRunner()
     @State private var isPreviewLoading = false
-    @State private var sheetErrorText: LocalizedStringKey?
+    @State private var sheetFeedback: MacSvnAuxiliaryFeedback?
+    @State private var createShelfInitialDraft: CreateShelfDraftSnapshot?
+    @State private var patchInitialDraft: PatchDraftSnapshot?
+    @State private var showDiscardCreateShelfConfirmation = false
+    @State private var showDiscardPatchConfirmation = false
     @State private var confirmOfficialDestructiveAction = false
     @State private var pendingOfficialShelf: SvnShelf?
     @State private var pendingOfficialAction: MacSvnOfficialShelfDestructiveAction?
@@ -112,11 +131,33 @@ public struct MacSvnShelveView: View {
         .onDisappear { cancelPreview() }
         .sheet(isPresented: $showCreateShelfSheet) {
             createShelfSheet
-                .macSvnDismissibleSheet()
+                .confirmationDialog(
+                    "放弃未保存更改？",
+                    isPresented: $showDiscardCreateShelfConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃更改", role: .destructive) { discardCreateShelfChanges() }
+                    Button("继续编辑", role: .cancel) {}
+                }
+                .macSvnDismissibleSheet(
+                    preventsDismissal: createShelfPreventsDismissal,
+                    onDismissalBlocked: requestCreateShelfDismissal
+                )
         }
         .sheet(isPresented: $showPatchSheet) {
             patchSheet
-                .macSvnDismissibleSheet()
+                .confirmationDialog(
+                    "放弃未保存更改？",
+                    isPresented: $showDiscardPatchConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃更改", role: .destructive) { discardPatchChanges() }
+                    Button("继续编辑", role: .cancel) {}
+                }
+                .macSvnDismissibleSheet(
+                    preventsDismissal: patchPreventsDismissal,
+                    onDismissalBlocked: requestPatchDismissal
+                )
         }
         .confirmationDialog(
             "确认删除官方 shelf？此操作会永久删除 shelf，无法撤销。",
@@ -204,27 +245,65 @@ public struct MacSvnShelveView: View {
     }
 
     private var shelveFeedback: some View {
-        HStack(spacing: 6) {
-            if isBusy || isPreviewLoading {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel("正在处理搁置任务")
-            }
-            if let statusText {
-                Image(systemName: (isBusy || isPreviewLoading) ? "clock" : "info.circle")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text(statusText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
+        MacSvnInlineFeedbackView(
+            feedback: currentShelveFeedback,
+            truncationMode: .middle
+        )
+    }
+
+    private var currentShelveFeedback: MacSvnAuxiliaryFeedback? {
+        if isPreviewLoading {
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在加载搁置预览",
+                locale: locale,
+                diagnostic: nil
+            )
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .frame(height: MacSvnAuxiliaryWorkflowMetrics.feedbackHeight)
-        .background(Color.secondary.opacity(0.04))
+        switch viewModel?.state {
+        case .loading:
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在加载搁置记录",
+                locale: locale,
+                diagnostic: nil
+            )
+        case .running:
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在处理搁置任务",
+                locale: locale,
+                diagnostic: nil
+            )
+        case .error(let diagnostic):
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "搁置操作失败：\(presented)",
+                locale: locale,
+                diagnostic: diagnostic
+            )
+        default:
+            break
+        }
+        if case .running = patchViewModel?.state {
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .progress,
+                message: "正在执行 Patch 操作",
+                locale: locale,
+                diagnostic: nil
+            )
+        }
+        if case .error(let diagnostic) = patchViewModel?.state {
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+            return MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "Patch 操作失败：\(presented)",
+                locale: locale,
+                diagnostic: diagnostic
+            )
+        }
+        return feedback
     }
 
     private var shelveWorkspace: some View {
@@ -590,18 +669,14 @@ public struct MacSvnShelveView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
-                if let sheetErrorText {
-                    Label(sheetErrorText, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .textSelection(.enabled)
-                }
+                MacSvnInlineFeedbackView(feedback: sheetFeedback)
                 HStack {
                     Text("已选 \(selected.count) 项")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button("取消") { showCreateShelfSheet = false }
+                    Button("取消") { requestCreateShelfDismissal() }
+                        .disabled(isBusy)
                     Button(createShelfActionTitle) {
                         Task { await submitCreateShelf() }
                     }
@@ -653,15 +728,11 @@ public struct MacSvnShelveView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if let sheetErrorText {
-                    Label(sheetErrorText, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .textSelection(.enabled)
-                }
+                MacSvnInlineFeedbackView(feedback: sheetFeedback)
                 HStack {
                     Spacer()
-                    Button("取消") { showPatchSheet = false }
+                    Button("取消") { requestPatchDismissal() }
+                        .disabled(isPatchBusy)
                     Button("执行") { Task { await executePatch() } }
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
@@ -738,6 +809,56 @@ public struct MacSvnShelveView: View {
         isShelveBusy || isPatchBusy
     }
 
+    private var currentCreateShelfDraft: CreateShelfDraftSnapshot {
+        CreateShelfDraftSnapshot(
+            creationKind: creationKind,
+            selected: selected,
+            name: name,
+            message: message,
+            keepLocalChanges: keepLocalChanges
+        )
+    }
+
+    private var hasUnsavedCreateShelfChanges: Bool {
+        guard let createShelfInitialDraft else { return false }
+        return currentCreateShelfDraft != createShelfInitialDraft
+    }
+
+    private var createShelfDismissalDecision: MacSvnAuxiliaryDismissalDecision {
+        MacSvnAuxiliaryDismissalPolicy.decision(
+            isBusy: isBusy,
+            isDirty: hasUnsavedCreateShelfChanges
+        )
+    }
+
+    private var createShelfPreventsDismissal: Bool {
+        createShelfDismissalDecision.preventsDismissal
+    }
+
+    private var currentPatchDraft: PatchDraftSnapshot {
+        PatchDraftSnapshot(
+            patchOperation: patchOperation,
+            selected: selected,
+            patchPath: patchPath
+        )
+    }
+
+    private var hasUnsavedPatchChanges: Bool {
+        guard let patchInitialDraft else { return false }
+        return currentPatchDraft != patchInitialDraft
+    }
+
+    private var patchDismissalDecision: MacSvnAuxiliaryDismissalDecision {
+        MacSvnAuxiliaryDismissalPolicy.decision(
+            isBusy: isPatchBusy,
+            isDirty: hasUnsavedPatchChanges
+        )
+    }
+
+    private var patchPreventsDismissal: Bool {
+        patchDismissalDecision.preventsDismissal
+    }
+
     private var visibleRecordCount: Int {
         switch recordScope {
         case .official: viewModel?.officialShelves.count ?? 0
@@ -807,12 +928,14 @@ public struct MacSvnShelveView: View {
         message = ""
         keepLocalChanges = false
         createSearchText = ""
-        sheetErrorText = nil
+        sheetFeedback = nil
+        createShelfInitialDraft = currentCreateShelfDraft
         showCreateShelfSheet = true
     }
 
     private func submitCreateShelf() async {
-        sheetErrorText = nil
+        guard !isBusy else { return }
+        sheetFeedback = nil
         switch creationKind {
         case .official:
             await createOfficialShelf()
@@ -827,16 +950,23 @@ public struct MacSvnShelveView: View {
         cancelPreview()
         await viewModel?.load()
         synchronizeRecordSelection()
-        switch MacSvnShelveFeedbackPresentation.loadOutcome(
+        applyShelveLoadFeedback()
+    }
+
+    private func applyShelveLoadFeedback() {
+        let outcome = MacSvnShelveFeedbackPresentation.loadOutcome(
             state: viewModel?.state,
             officialError: viewModel?.officialError
+        )
+        feedback = MacSvnShelveFeedbackPresentation.loadFeedback(
+            state: viewModel?.state,
+            officialError: viewModel?.officialError,
+            locale: locale
+        )
+        if MacSvnShelvePreviewRefreshPolicy.shouldEnqueuePreview(
+            after: outcome,
+            hasSelection: selectedOfficialShelf != nil || selectedLocalSnapshot != nil
         ) {
-        case .localFailure(let message):
-            statusText = "搁置记录加载失败：\(message)"
-        case .officialFailure(let error):
-            statusText = "官方 shelf 列表加载失败：\(error)"
-        case .refreshed:
-            statusText = "已刷新搁置记录"
             enqueueSelectedPreview()
         }
     }
@@ -849,6 +979,7 @@ public struct MacSvnShelveView: View {
             keepLocal: keepLocalChanges
         )
         if updateStatus(for: .officialShelve, success: "官方 Shelve 创建完成") {
+            createShelfInitialDraft = nil
             showCreateShelfSheet = false
             recordScope = .official
             synchronizeRecordSelection(preferredID: "official:\(name.trimmingCharacters(in: .whitespacesAndNewlines))")
@@ -859,6 +990,7 @@ public struct MacSvnShelveView: View {
     private func createLocalShelf() async {
         await viewModel?.shelve(name: name, paths: Array(selected).sorted())
         if updateStatus(for: .shelve, success: "本地搁置创建完成") {
+            createShelfInitialDraft = nil
             showCreateShelfSheet = false
             recordScope = .local
             synchronizeRecordSelection()
@@ -873,6 +1005,7 @@ public struct MacSvnShelveView: View {
             paths: Array(selected).sorted()
         )
         if updateStatus(for: .safetySnapshot, success: "安全快照创建完成") {
+            createShelfInitialDraft = nil
             showCreateShelfSheet = false
             recordScope = .local
             synchronizeRecordSelection()
@@ -881,8 +1014,13 @@ public struct MacSvnShelveView: View {
 
     private func unshelve(_ shelf: SvnShelf, drop: Bool) async {
         await viewModel?.officialUnshelve(shelf, drop: drop)
-        let suffix = drop ? "并删除 shelf" : ""
-        if updateStatus(for: .officialUnshelve, success: "已恢复 \(shelf.name) \(suffix)") {
+        let succeeded = drop
+            ? updateStatus(
+                for: .officialUnshelve,
+                success: "已恢复 \(shelf.name) 并删除 shelf"
+            )
+            : updateStatus(for: .officialUnshelve, success: "已恢复 \(shelf.name)")
+        if succeeded {
             synchronizeRecordSelection()
             await reloadPaths()
         }
@@ -971,7 +1109,7 @@ public struct MacSvnShelveView: View {
         let requestedKind = previewKind
         isPreviewLoading = true
         let service = session.shelveService
-        let successMessage: LocalizedStringKey
+        let successMessage: String.LocalizationValue
         if let shelf {
             successMessage = requestedKind == .log
                 ? "已加载 \(shelf.name) 的版本记录"
@@ -1009,10 +1147,22 @@ public struct MacSvnShelveView: View {
                 switch result {
                 case .success(let output):
                     previewText = output
-                    statusText = successMessage
+                    feedback = MacSvnAuxiliaryFeedback.localized(
+                        kind: .success,
+                        message: successMessage,
+                        locale: locale,
+                        diagnostic: nil
+                    )
                 case .failure(let error):
-                    previewErrorText = error.localizedDescription
-                    statusText = "预览加载失败：\(error.localizedDescription)"
+                    let diagnostic = error.localizedDescription
+                    let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+                    previewErrorText = presented
+                    feedback = MacSvnAuxiliaryFeedback.localized(
+                        kind: .failure,
+                        message: "预览加载失败：\(presented)",
+                        locale: locale,
+                        diagnostic: diagnostic
+                    )
                 }
             }
         )
@@ -1046,18 +1196,32 @@ public struct MacSvnShelveView: View {
     }
 
     @discardableResult
-    private func updateStatus(for operation: ShelveOperation, success: LocalizedStringKey) -> Bool {
+    private func updateStatus(
+        for operation: ShelveOperation,
+        success: String.LocalizationValue
+    ) -> Bool {
         switch MacSvnShelveFeedbackPresentation.operationOutcome(
             state: viewModel?.state,
             expected: operation
         ) {
         case .success:
-            statusText = success
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: success,
+                locale: locale,
+                diagnostic: nil
+            )
             return true
         case .failure(let message):
-            statusText = "操作失败：\(message)"
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(message, locale: locale)
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "操作失败：\(presented)",
+                locale: locale,
+                diagnostic: message
+            )
             if showCreateShelfSheet {
-                sheetErrorText = "操作失败：\(message)"
+                sheetFeedback = feedback
             }
             return false
         case .pending:
@@ -1069,7 +1233,7 @@ public struct MacSvnShelveView: View {
         cancelPreview()
         selected = []
         selectedShelfID = nil
-        statusText = nil
+        feedback = nil
         guard let record = workspaceController.selectedRecord, record.isValid else {
             paths = []
             viewModel = nil
@@ -1087,6 +1251,7 @@ public struct MacSvnShelveView: View {
             recordScope = .local
         }
         synchronizeRecordSelection()
+        applyShelveLoadFeedback()
         consumePendingPatchIntent()
         consumePendingShelfCreation()
     }
@@ -1103,10 +1268,11 @@ public struct MacSvnShelveView: View {
         patchOperation = operation
         patchPath = ""
         patchSearchText = ""
-        sheetErrorText = nil
+        sheetFeedback = nil
         if operation == .create {
             selected = []
         }
+        patchInitialDraft = currentPatchDraft
         showPatchSheet = true
     }
 
@@ -1137,7 +1303,8 @@ public struct MacSvnShelveView: View {
             selected = Set(normalizedWorkingCopyPaths(intent.paths))
         }
         patchPath = intent.patchFile ?? ""
-        sheetErrorText = nil
+        sheetFeedback = nil
+        patchInitialDraft = currentPatchDraft
         showPatchSheet = true
     }
 
@@ -1161,8 +1328,9 @@ public struct MacSvnShelveView: View {
     }
 
     private func executePatch() async {
+        guard !isPatchBusy else { return }
         guard let patchViewModel else { return }
-        sheetErrorText = nil
+        sheetFeedback = nil
         let file = URL(fileURLWithPath: patchPath.trimmingCharacters(in: .whitespacesAndNewlines))
         switch patchOperation {
         case .create:
@@ -1173,17 +1341,88 @@ public struct MacSvnShelveView: View {
 
         switch patchViewModel.state {
         case .completed(.create):
-            statusText = "Patch 创建完成：\(file.path)"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "Patch 创建完成：\(file.path)",
+                locale: locale,
+                diagnostic: nil
+            )
+            patchInitialDraft = nil
             showPatchSheet = false
         case .completed(.apply):
-            statusText = "Patch 应用完成"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .success,
+                message: "Patch 应用完成",
+                locale: locale,
+                diagnostic: nil
+            )
+            patchInitialDraft = nil
             showPatchSheet = false
             await reloadPaths()
         case .error(let message):
-            statusText = "Patch 操作失败：\(message)"
-            sheetErrorText = "Patch 操作失败：\(message)"
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(message, locale: locale)
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "Patch 操作失败：\(presented)",
+                locale: locale,
+                diagnostic: message
+            )
+            sheetFeedback = feedback
         default:
             break
         }
+    }
+
+    private func requestCreateShelfDismissal() {
+        switch createShelfDismissalDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showDiscardCreateShelfConfirmation = true
+        case .dismiss:
+            closeCreateShelfSheet()
+        }
+    }
+
+    private func discardCreateShelfChanges() {
+        closeCreateShelfSheet()
+    }
+
+    private func closeCreateShelfSheet() {
+        creationKind = .official
+        selected = []
+        name = ""
+        message = ""
+        keepLocalChanges = false
+        createSearchText = ""
+        sheetFeedback = nil
+        createShelfInitialDraft = nil
+        showDiscardCreateShelfConfirmation = false
+        showCreateShelfSheet = false
+    }
+
+    private func requestPatchDismissal() {
+        switch patchDismissalDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showDiscardPatchConfirmation = true
+        case .dismiss:
+            closePatchSheet()
+        }
+    }
+
+    private func discardPatchChanges() {
+        closePatchSheet()
+    }
+
+    private func closePatchSheet() {
+        selected = []
+        patchPath = ""
+        patchSearchText = ""
+        sheetFeedback = nil
+        patchInitialDraft = nil
+        showDiscardPatchConfirmation = false
+        showPatchSheet = false
     }
 }

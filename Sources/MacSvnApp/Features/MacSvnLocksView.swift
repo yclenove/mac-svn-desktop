@@ -1,8 +1,14 @@
 import SwiftUI
 import MacSvnCore
 
+struct GetLockDraftSnapshot: Equatable {
+    let message: String
+    let stealLock: Bool
+}
+
 /// 锁定工作区：获取锁 / 释放锁 / 打断锁（#19–#21），支持 CFM/⌘K 深链。
 public struct MacSvnLocksView: View {
+    @Environment(\.locale) private var locale
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
     @ObservedObject private var navigator: MacSvnAppNavigator
     private let session: MacSvnAppSession
@@ -15,8 +21,10 @@ public struct MacSvnLocksView: View {
     @State private var message = ""
     @State private var automaticTemplateMessage: String?
     @State private var stealLock = false
-    @State private var statusText: LocalizedStringKey?
+    @State private var feedback: MacSvnAuxiliaryFeedback?
     @State private var showGetLockSheet = false
+    @State private var getLockInitialDraft: GetLockDraftSnapshot?
+    @State private var showDiscardGetLockConfirmation = false
     @State private var confirmSteal = false
     @State private var confirmBreak = false
     @State private var pendingConfirmPaths: [String] = []
@@ -63,27 +71,40 @@ public struct MacSvnLocksView: View {
         }
         .sheet(isPresented: $showGetLockSheet) {
             getLockSheet
-                .macSvnDismissibleSheet()
-        }
-        .confirmationDialog(
-            "确认夺锁（svn lock --force）？将强制获取他人已持有的锁。",
-            isPresented: $confirmSteal,
-            titleVisibility: .visible
-        ) {
-            Button("夺锁", role: .destructive) {
-                Task {
-                    await viewModel?.lock(
-                        paths: pendingConfirmPaths,
-                        message: message,
-                        force: true,
-                        confirmed: true
-                    )
-                    await syncStatus()
+                .confirmationDialog(
+                    "确认夺锁（svn lock --force）？将强制获取他人已持有的锁。",
+                    isPresented: $confirmSteal,
+                    titleVisibility: .visible
+                ) {
+                    Button("夺锁", role: .destructive) {
+                        Task {
+                            await viewModel?.lock(
+                                paths: pendingConfirmPaths,
+                                message: message,
+                                force: true,
+                                confirmed: true
+                            )
+                            await syncStatus()
+                            completeGetLockSubmission()
+                        }
+                    }
+                    .disabled(isBusy)
+                    Button("取消", role: .cancel) {
+                        viewModel?.cancelConfirmation()
+                    }
                 }
-            }
-            Button("取消", role: .cancel) {
-                viewModel?.cancelConfirmation()
-            }
+                .confirmationDialog(
+                    "放弃未保存更改？",
+                    isPresented: $showDiscardGetLockConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃更改", role: .destructive) { discardGetLockChanges() }
+                    Button("继续编辑", role: .cancel) {}
+                }
+                .macSvnDismissibleSheet(
+                    preventsDismissal: getLockPreventsDismissal,
+                    onDismissalBlocked: requestGetLockDismissal
+                )
         }
         .confirmationDialog(
             "确认打断锁（svn unlock --force）？此操作会强制解除他人锁，不可轻易撤销。",
@@ -112,7 +133,7 @@ public struct MacSvnLocksView: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             Button {
-                Task { await reload() }
+                enqueueTargetRefresh()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .frame(width: 28, height: 28)
@@ -154,26 +175,21 @@ public struct MacSvnLocksView: View {
     }
 
     private var locksFeedback: some View {
-        HStack(spacing: 6) {
-            if isBusy {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel("正在刷新锁记录")
-            } else if let statusText {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text(statusText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .frame(height: MacSvnAuxiliaryWorkflowMetrics.feedbackHeight)
-        .background(Color.secondary.opacity(0.04))
+        MacSvnInlineFeedbackView(
+            feedback: currentLocksFeedback,
+            truncationMode: .middle
+        )
+    }
+
+    private var currentLocksFeedback: MacSvnAuxiliaryFeedback? {
+        MacSvnLockFeedbackPresentation.feedback(
+            state: viewModel?.state,
+            projectPropertyLoadError: viewModel?.projectPropertyLoadError,
+            projectPropertyLoadDiagnostic: viewModel?.projectPropertyLoadDiagnostic,
+            lockCount: viewModel?.locks.count ?? 0,
+            fallback: feedback,
+            locale: locale
+        )
     }
 
     private var locksWorkspace: some View {
@@ -356,6 +372,26 @@ public struct MacSvnLocksView: View {
         }
     }
 
+    private var currentGetLockDraft: GetLockDraftSnapshot {
+        GetLockDraftSnapshot(message: message, stealLock: stealLock)
+    }
+
+    private var hasUnsavedGetLockChanges: Bool {
+        guard let getLockInitialDraft else { return false }
+        return currentGetLockDraft != getLockInitialDraft
+    }
+
+    private var getLockDismissalDecision: MacSvnAuxiliaryDismissalDecision {
+        MacSvnAuxiliaryDismissalPolicy.decision(
+            isBusy: isBusy,
+            isDirty: hasUnsavedGetLockChanges
+        )
+    }
+
+    private var getLockPreventsDismissal: Bool {
+        getLockDismissalDecision.preventsDismissal
+    }
+
     private var getLockSheet: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("获取锁")
@@ -365,10 +401,16 @@ public struct MacSvnLocksView: View {
                 .foregroundStyle(.secondary)
             TextField("锁定注释（可选）", text: $message)
                 .textFieldStyle(.roundedBorder)
-            if let loadError = viewModel?.projectPropertyLoadError {
-                Text("项目属性读取失败，已阻止获取锁：\(loadError)")
-                    .font(.caption)
-                    .foregroundStyle(.red)
+            if let loadError = viewModel?.projectPropertyLoadError,
+               let loadFeedback = MacSvnLockFeedbackPresentation.feedback(
+                    state: .loaded,
+                    projectPropertyLoadError: loadError,
+                    projectPropertyLoadDiagnostic: viewModel?.projectPropertyLoadDiagnostic,
+                    lockCount: viewModel?.locks.count ?? 0,
+                    fallback: nil,
+                    locale: locale
+               ) {
+                MacSvnInlineFeedbackView(feedback: loadFeedback)
             }
             if let minimum = viewModel?.projectProperties.lock.minimumMessageLength {
                 Text("最少 \(minimum) 个字符")
@@ -376,15 +418,20 @@ public struct MacSvnLocksView: View {
                     .foregroundStyle(lockMessageIsLongEnough ? Color.secondary : Color.red)
             }
             Toggle("夺锁（--force，若已被他人锁定）", isOn: $stealLock)
+                .disabled(isBusy)
             HStack {
-                Button("取消") { showGetLockSheet = false }
+                Button("取消") { requestGetLockDismissal() }
+                    .disabled(isBusy)
                 Spacer()
                 Button("获取锁") {
-                    showGetLockSheet = false
                     Task { await runGetLock() }
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(!lockMessageIsLongEnough || viewModel?.projectPropertyLoadError != nil)
+                .disabled(
+                    !lockMessageIsLongEnough
+                        || viewModel?.projectPropertyLoadError != nil
+                        || isBusy
+                )
             }
         }
         .padding(20)
@@ -430,7 +477,14 @@ public struct MacSvnLocksView: View {
             await reload()
         } catch {
             viewModel = nil
-            statusText = "项目属性读取失败：\(error.localizedDescription)"
+            let diagnostic = error.localizedDescription
+            let presented = MacSvnAuxiliaryErrorSummaryPresentation.message(diagnostic, locale: locale)
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .failure,
+                message: "项目属性读取失败：\(presented)",
+                locale: locale,
+                diagnostic: diagnostic
+            )
         }
     }
 
@@ -443,7 +497,7 @@ public struct MacSvnLocksView: View {
 
     private func syncStatus() async {
         guard let viewModel else {
-            statusText = nil
+            feedback = nil
             selectedLockTarget = nil
             return
         }
@@ -451,30 +505,36 @@ public struct MacSvnLocksView: View {
         if selectedLockTarget == nil || !lockTargets.contains(selectedLockTarget ?? "") {
             selectedLockTarget = viewModel.locks.first?.target
         }
-        if case .error(let message) = viewModel.state {
-            statusText = LocalizedStringKey(message)
-        } else if case .confirmationRequired(let op, let paths) = viewModel.state {
+        if case .confirmationRequired(let op, let paths) = viewModel.state {
             pendingConfirmPaths = paths
             switch op {
             case .stealLock:
                 confirmSteal = true
-                statusText = "等待确认夺锁：\(paths.count) 项"
             case .breakLock:
                 confirmBreak = true
-                statusText = "等待确认打断锁：\(paths.count) 项"
-            default:
-                statusText = "等待确认"
+            default: break
             }
-        } else {
-            statusText = viewModel.locks.isEmpty
-                ? "没有锁记录"
-                : "锁记录 \(viewModel.locks.count)"
         }
+        feedback = MacSvnLockFeedbackPresentation.feedback(
+            state: viewModel.state,
+            projectPropertyLoadError: viewModel.projectPropertyLoadError,
+            projectPropertyLoadDiagnostic: viewModel.projectPropertyLoadDiagnostic,
+            lockCount: viewModel.locks.count,
+            fallback: feedback,
+            locale: locale
+        )
     }
 
     private func runGetLock() async {
         guard viewModel?.projectPropertyLoadError == nil else {
-            statusText = "项目属性读取失败，无法获取锁"
+            feedback = MacSvnLockFeedbackPresentation.feedback(
+                state: .loaded,
+                projectPropertyLoadError: viewModel?.projectPropertyLoadError,
+                projectPropertyLoadDiagnostic: viewModel?.projectPropertyLoadDiagnostic,
+                lockCount: viewModel?.locks.count ?? 0,
+                fallback: feedback,
+                locale: locale
+            )
             return
         }
         let paths = Array(selected).sorted()
@@ -485,6 +545,7 @@ public struct MacSvnLocksView: View {
         }
         await viewModel?.lock(paths: paths, message: message, force: false, confirmed: true)
         await syncStatus()
+        completeGetLockSubmission()
     }
 
     private func requestGetLock() {
@@ -503,9 +564,12 @@ public struct MacSvnLocksView: View {
         } else {
             containsDirectory = false
         }
-        if session.settingsSnapshot.dialogs.showLockDialogBeforeLocking
-            || requiresMessage
-            || containsDirectory {
+        if MacSvnGetLockPresentationPolicy.shouldPresent(
+            userPreference: session.settingsSnapshot.dialogs.showLockDialogBeforeLocking,
+            requiresMessage: requiresMessage,
+            containsDirectory: containsDirectory
+        ) {
+            getLockInitialDraft = currentGetLockDraft
             showGetLockSheet = true
         } else {
             message = ""
@@ -516,7 +580,12 @@ public struct MacSvnLocksView: View {
     private func runRelease() async {
         let paths = eligibleReleasePaths
         guard !paths.isEmpty else {
-            statusText = "选中路径中没有本工作副本持有的锁"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "选中路径中没有本工作副本持有的锁",
+                locale: locale,
+                diagnostic: nil
+            )
             return
         }
         await viewModel?.unlock(paths: paths, force: false, confirmed: true)
@@ -541,8 +610,14 @@ public struct MacSvnLocksView: View {
             ? []
             : Array(selectionSnapshot).sorted()
         targetRefreshTask = Task {
-            await viewModel.refreshProjectProperties(for: projectPropertyTargets)
+            let didApplyProjectProperties = await viewModel.refreshProjectProperties(
+                for: projectPropertyTargets
+            )
             guard !Task.isCancelled, selectionSnapshot == selected else { return }
+            guard didApplyProjectProperties else {
+                await syncStatus()
+                return
+            }
             applyLockTemplate(viewModel.projectProperties.lock.initialMessage)
             await viewModel.load(targets: lockTargets)
             guard !Task.isCancelled, selectionSnapshot == selected else { return }
@@ -558,7 +633,12 @@ public struct MacSvnLocksView: View {
         guard !Task.isCancelled else { return }
 
         guard !pendingPaths.isEmpty else {
-            statusText = "请先在变更区选中路径后再执行锁定命令（⌘K 需带路径或从 CFM 右键进入）"
+            feedback = MacSvnAuxiliaryFeedback.localized(
+                kind: .warning,
+                message: "请先在变更区选中路径后再执行锁定命令（⌘K 需带路径或从 CFM 右键进入）",
+                locale: locale,
+                diagnostic: nil
+            )
             return
         }
 
@@ -566,7 +646,12 @@ public struct MacSvnLocksView: View {
         isApplyingLockIntent = true
         defer { isApplyingLockIntent = false }
         selected = Set(pendingPaths)
-        statusText = "来自变更区：\(intentLabel(intent))"
+        feedback = MacSvnAuxiliaryFeedback.localized(
+            kind: .success,
+            message: "来自变更区：\(intentLabel(intent))",
+            locale: locale,
+            diagnostic: nil
+        )
         await reload()
         guard !Task.isCancelled else { return }
 
@@ -578,11 +663,45 @@ public struct MacSvnLocksView: View {
         case .breakLock:
             pendingConfirmPaths = eligibleBreakPaths
             if pendingConfirmPaths.isEmpty {
-                statusText = "选中路径中没有可打断的仓库锁"
+                feedback = MacSvnAuxiliaryFeedback.localized(
+                    kind: .warning,
+                    message: "选中路径中没有可打断的仓库锁",
+                    locale: locale,
+                    diagnostic: nil
+                )
             } else {
                 confirmBreak = true
             }
         }
+    }
+
+    private func requestGetLockDismissal() {
+        switch getLockDismissalDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showDiscardGetLockConfirmation = true
+        case .dismiss:
+            closeGetLockSheet()
+        }
+    }
+
+    private func discardGetLockChanges() {
+        closeGetLockSheet()
+    }
+
+    private func completeGetLockSubmission() {
+        guard case .loaded = viewModel?.state else { return }
+        getLockInitialDraft = nil
+        closeGetLockSheet()
+    }
+
+    private func closeGetLockSheet() {
+        message = automaticTemplateMessage ?? ""
+        stealLock = false
+        getLockInitialDraft = nil
+        showDiscardGetLockConfirmation = false
+        showGetLockSheet = false
     }
 
     private func intentLabel(_ intent: LockActionIntent) -> String {

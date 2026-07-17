@@ -34,12 +34,14 @@ public final class LockViewModel {
     private let projectPropertyLoader: ProjectPropertyLoading?
     private var lastTargets: [String] = []
     private var projectPropertyLoadGeneration = 0
+    private var lockTransactionProjectPropertyFailureVersion = 0
     private var pendingLockMessage: String?
 
     public private(set) var state: LockViewState = .idle
     public private(set) var locks: [SvnLock] = []
     public private(set) var projectProperties: ProjectPropertyPolicy
     public private(set) var projectPropertyLoadError: String?
+    public private(set) var projectPropertyLoadDiagnostic: String?
 
     public init(
         workingCopy: URL,
@@ -61,16 +63,26 @@ public final class LockViewModel {
     }
 
     /// 选择变化后刷新说明长度提示；获取锁前会再次读取当前目标，确保门控精确。
-    public func refreshProjectProperties(for paths: [String]) async {
+    @discardableResult
+    public func refreshProjectProperties(for paths: [String]) async -> Bool {
+        let transactionFailureVersion = lockTransactionProjectPropertyFailureVersion
         let generation = beginProjectPropertyLoad()
         do {
             let properties = try await loadProjectProperties(for: paths)
-            guard generation == projectPropertyLoadGeneration else { return }
+            guard generation == projectPropertyLoadGeneration,
+                  transactionFailureVersion == lockTransactionProjectPropertyFailureVersion
+            else { return false }
             projectProperties = properties
             projectPropertyLoadError = nil
+            projectPropertyLoadDiagnostic = nil
+            return true
         } catch {
-            guard generation == projectPropertyLoadGeneration else { return }
+            guard generation == projectPropertyLoadGeneration,
+                  transactionFailureVersion == lockTransactionProjectPropertyFailureVersion
+            else { return false }
             projectPropertyLoadError = "projectPropertiesLoadFailed"
+            projectPropertyLoadDiagnostic = String(describing: error)
+            return true
         }
     }
 
@@ -95,9 +107,12 @@ public final class LockViewModel {
             if generation == projectPropertyLoadGeneration {
                 projectProperties = properties
                 projectPropertyLoadError = nil
+                projectPropertyLoadDiagnostic = nil
             }
         } catch {
+            lockTransactionProjectPropertyFailureVersion += 1
             projectPropertyLoadError = "projectPropertiesLoadFailed"
+            projectPropertyLoadDiagnostic = String(describing: error)
             state = .error("projectPropertiesLoadFailed")
             return
         }

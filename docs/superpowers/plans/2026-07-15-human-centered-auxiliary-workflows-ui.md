@@ -310,22 +310,24 @@ git commit -m "feat(UI): 增加可搜索设置与保存状态（U7 任务 4/6）
 - 修改：`Sources/MacSvnApp/Features/MacSvnLocksView.swift`
 - 修改：`Sources/MacSvnApp/Features/MacSvnShelveView.swift`
 - 修改：`Sources/MacSvnApp/Features/MacSvnSettingsView.swift`
+- 修改：`Sources/MacSvnCore/ViewModels/LockViewModel.swift`
 - 修改：`Tests/MacSvnAppTests/HumanCenteredAuxiliaryWorkflowsTests.swift`
 - 修改：`Tests/MacSvnAppTests/ModalDismissalAccessibilityTests.swift`
+- 修改：`Tests/MacSvnCoreTests/LockViewModelTests.swift`
 - 修改：`Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings`
 
-- [ ] **步骤 1：编写反馈语义和弹窗防重入失败测试**
+- [x] **步骤 1：编写反馈语义和弹窗防重入失败测试**
 
 测试 `MacSvnAuxiliaryFeedback` 的 progress/success/warning/failure 图标与颜色角色互异。源码契约要求四页使用 `MacSvnInlineFeedbackView`，原始诊断通过 `.help` 可访问；所有异步 sheet 默认动作带 busy disabled，现有 modal close/escape/cancel 门禁保持。新增 dismissal 策略测试，要求 dirty sheet 的关闭按钮和 Escape 走同一个放弃确认入口。
 
-- [ ] **步骤 2：运行测试并确认失败**
+- [x] **步骤 2：运行测试并确认失败**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests
 swift test --filter ModalDismissalAccessibilityTests
 ```
 
-- [ ] **步骤 3：实现共享反馈模型和视图**
+- [x] **步骤 3：实现共享反馈模型和视图**
 
 ```swift
 enum MacSvnAuxiliaryFeedbackKind: Equatable {
@@ -352,13 +354,13 @@ func macSvnDismissibleSheet(
 
 关闭按钮和 `.cancelAction` 统一调用 requestDismiss；`preventsDismissal` 为 true 时执行 `onDismissalBlocked`，否则 dismiss。内容同时使用 `.interactiveDismissDisabled(preventsDismissal)`，防止系统交互绕过。
 
-- [ ] **步骤 4：迁移四页状态并审计 sheet**
+- [x] **步骤 4：迁移四页状态并审计 sheet**
 
 属性、锁、搁置和设置把加载、成功、警告、失败映射为共享反馈。可恢复加载失败提供页面现有刷新动作；认证/SSL、网络和超时调用 `MacSvnCoreModeErrorPresentation.message`。保存 external、获取锁、Patch、创建 shelf 和设置保存均在 busy 时阻止重复执行。
 
 外部定义、获取锁、创建 shelf 和 Patch sheet 分别保存展示时的初始草稿；当前草稿不同且操作未提交时，右上角关闭、Escape 和“取消”均弹出“放弃未保存更改”确认。确认放弃后清理草稿并关闭，继续编辑则保留全部输入；busy 状态不允许关闭正在执行的事务。
 
-- [ ] **步骤 5：运行 U7 定向、Modal、Localization 和业务测试**
+- [x] **步骤 5：运行 U7 定向、Modal、Localization 和业务测试**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests
@@ -370,7 +372,9 @@ swift test --filter ShelveViewModelTests
 swift test --filter SettingsInformationArchitectureTests
 ```
 
-- [ ] **步骤 6：提交任务 5**
+- [x] **步骤 6：提交任务 5**
+
+结果：共享反馈、诊断 tooltip、dirty 放弃确认、busy 防关闭/防重入和统一关闭入口均已覆盖；全仓 `28` 个 sheet 与 `4` 个 popover 的关闭可达性门禁通过。全量 `swift test --quiet` 为 `1114/1114` 通过，其中真实 SVN `49/49`；Release App 构建、结构校验、英文资源 `plutil` 校验、隔离启动冒烟和 `git diff --check` 均通过。规格审查与代码质量复核最终均为 `0 Critical / 0 Important / 0 Minor`，质量复核相关门禁 `22/22` 通过。锁属性加载增加代际保护并保留原始诊断，刷新可从错误状态恢复；Shelf 官方加载失败仍保留本地快照预览；Properties 刷新和目标切换不再残留旧反馈。Tortoise inventory/H 清单无能力状态变化，不修改。
 
 ```bash
 git add Sources/MacSvnApp/Features/MacSvnAuxiliaryWorkflowPresentation.swift \
@@ -379,9 +383,12 @@ git add Sources/MacSvnApp/Features/MacSvnAuxiliaryWorkflowPresentation.swift \
   Sources/MacSvnApp/Features/MacSvnLocksView.swift \
   Sources/MacSvnApp/Features/MacSvnShelveView.swift \
   Sources/MacSvnApp/Features/MacSvnSettingsView.swift \
+  Sources/MacSvnCore/ViewModels/LockViewModel.swift \
   Sources/MacSvnDesktopApp/Resources/en.lproj/Localizable.strings \
   Tests/MacSvnAppTests/HumanCenteredAuxiliaryWorkflowsTests.swift \
-  Tests/MacSvnAppTests/ModalDismissalAccessibilityTests.swift
+  Tests/MacSvnAppTests/ModalDismissalAccessibilityTests.swift \
+  Tests/MacSvnCoreTests/LockViewModelTests.swift \
+  docs/superpowers/plans/2026-07-15-human-centered-auxiliary-workflows-ui.md
 git commit -m "feat(UI): 统一辅助任务反馈与弹窗状态（U7 任务 5/6）"
 ```
 
