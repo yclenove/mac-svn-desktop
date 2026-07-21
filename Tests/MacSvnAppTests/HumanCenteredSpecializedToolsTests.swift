@@ -67,10 +67,23 @@ final class HumanCenteredSpecializedToolsTests: XCTestCase {
     // MARK: - Source gates (wired incrementally by later ST tasks)
 
     func testBlameViewWiresRefreshShortcutWhenRequired() throws {
-        try assertRefreshWiring(
-            fileName: "MacSvnBlameView.swift",
-            page: .blame,
-            requiredInTask: 2
+        let source = try sourceOfFeature("MacSvnBlameView.swift")
+        let identifier = try XCTUnwrap(
+            MacSvnSpecializedToolsContract.refreshAccessibilityIdentifier(for: .blame)
+        )
+        XCTAssertTrue(
+            source.contains("keyboardShortcut(\"r\", modifiers: .command)"),
+            "Blame must wire ⌘R"
+        )
+        XCTAssertTrue(source.contains(identifier), "Blame missing \(identifier)")
+        XCTAssertTrue(source.contains("refreshBlameWorkspace"), "Blame must expose refresh action")
+        XCTAssertTrue(
+            source.contains("MacSvnSpecializedToolsMetrics.toolbarHeight"),
+            "Blame toolbar should use ST metrics"
+        )
+        XCTAssertTrue(
+            source.contains("isBlameBusy"),
+            "Blame must gate actions while busy"
         )
     }
 

@@ -108,7 +108,7 @@ git commit -m "feat(UI): 增加专业工具面契约模块（ST 任务 1）"
 - 修改：`Sources/MacSvnApp/Features/MacSvnBlameView.swift`
 - 修改：`Tests/MacSvnAppTests/HumanCenteredSpecializedToolsTests.swift`
 
-- [ ] **步骤 1：失败测试**
+- [x] **步骤 1：失败测试**
 
 源码门禁：
 
@@ -117,27 +117,33 @@ git commit -m "feat(UI): 增加专业工具面契约模块（ST 任务 1）"
 - `HSplitView` 至多 1 处；无 `VSplitView`
 - 若有装饰动画则引用 `MacSvnMotionPolicy`
 
-- [ ] **步骤 2：实现**
+- [x] **步骤 2：实现**
 
 - 工具栏高度对齐 `MacSvnSpecializedToolsMetrics.toolbarHeight`
 - 刷新按钮 ⌘R + identifier；loading 时 disabled
 - 主错误/空态上提为稳定反馈区（可复用 Auxiliary 反馈样式）
 - 保持外置 Blame、范围、比较、演化解释能力
 
-- [ ] **步骤 3：定向测试**
+- [x] **步骤 3：定向测试**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
 swift test --filter Blame
 ```
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git commit -m "feat(UI): 统一 Blame 工具栏与刷新契约（ST 任务 2）"
 ```
 
 ---
+
+
+### 任务 2 执行结果（2026-07-21）
+
+- Blame 工具栏对齐 ST 度量；⌘R + `macSvn.st.blame.refresh`；busy 门禁；错误态 ContentUnavailable；
+- ST 定向 11/11；Blame 相关过滤 31/31 通过。
 
 ## 任务 3：AI Assistant 人本接线
 

@@ -39,10 +39,10 @@ public struct MacSvnBlameView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("Blame")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
+                    .font(.headline)
+                Spacer(minLength: 8)
                 Picker("模式", selection: $displayMode) {
                     ForEach(BlameDisplayMode.allCases) { mode in
                         Text(LocalizedStringKey(mode.rawValue)).tag(mode)
@@ -50,32 +50,54 @@ public struct MacSvnBlameView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 150)
+                .disabled(isBlameBusy)
                 TextField(displayMode == .differences ? "旧修订" : "起始修订", text: $blameStartRevisionText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 100)
+                    .disabled(isBlameBusy)
                 TextField(displayMode == .differences ? "新修订" : "结束修订", text: $blameEndRevisionText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 100)
+                    .disabled(isBlameBusy)
                 if displayMode == .differences {
                     Button("BASE") { Task { await useBaseRevision() } }
-                        .disabled(selected.count != 1)
+                        .disabled(selected.count != 1 || isBlameBusy)
                 }
                 Button(displayMode == .differences ? "比较" : "加载") {
                     Task { await loadBlame() }
                 }
-                    .disabled(selected.count != 1)
+                .disabled(selected.count != 1 || isBlameBusy)
                 Button("外置 Blame") {
                     Task { await openExternalBlame() }
                 }
-                .disabled(selected.count != 1 || externalBlameTool == nil)
+                .disabled(selected.count != 1 || externalBlameTool == nil || isBlameBusy)
+                Button {
+                    Task { await refreshBlameWorkspace() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .frame(
+                    minWidth: MacSvnSpecializedToolsMetrics.iconButtonMinSide,
+                    minHeight: MacSvnSpecializedToolsMetrics.iconButtonMinSide
+                )
+                .keyboardShortcut("r", modifiers: .command)
+                .accessibilityIdentifier("macSvn.st.blame.refresh")
+                .accessibilityLabel(Text("刷新 Blame"))
+                .disabled(isBlameBusy || workspaceController.selectedRecord == nil)
+                .help("刷新路径列表并重新加载当前 Blame")
             }
-            .padding(24)
+            .frame(height: MacSvnSpecializedToolsMetrics.toolbarHeight)
+            .padding(.horizontal, 12)
 
             if let statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: MacSvnSpecializedToolsMetrics.feedbackBarHeight)
+                    .padding(.horizontal, 12)
+                    .accessibilityIdentifier("macSvn.st.blame.feedback")
             }
 
             if workspaceController.selectedRecord == nil {
@@ -226,7 +248,12 @@ public struct MacSvnBlameView: View {
             case .loading:
                 ProgressView("加载 blame…")
             case .error(let message):
-                Text(message).foregroundStyle(.red).padding()
+                ContentUnavailableView(
+                    "Blame 加载失败",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(message)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded:
                 VStack(spacing: 0) {
                     List(viewModel.lines, id: \.lineNumber) { line in
@@ -384,6 +411,22 @@ public struct MacSvnBlameView: View {
         evolutionVM?.setRange(start: start, end: end)
         rangeStartText = "\(evolutionVM?.rangeStart ?? start)"
         rangeEndText = "\(evolutionVM?.rangeEnd ?? end)"
+    }
+
+
+    private var isBlameBusy: Bool {
+        if case .loading = viewModel?.state { return true }
+        if case .loading = differenceViewModel?.state { return true }
+        return false
+    }
+
+    private func refreshBlameWorkspace() async {
+        await reloadPaths()
+        if selected.count == 1 {
+            await loadBlame()
+        } else {
+            statusText = "已刷新路径列表"
+        }
     }
 
     private func reloadPaths() async {
