@@ -72,5 +72,6 @@ python3 scripts/parity-coverage.py --fail-below 1.0
 ## 5. 合入 `main`
 
 - 策略：`feat/tortoise-parity-perfect-loop` → PR → `main`（禁止 force-push `main`）
-- 本分支已 merge `main`，无落后提交
-- PR 描述模板见 closeout 文档 § PR
+- **已完成**：[PR #2](https://github.com/yclenove/mac-svn-desktop/pull/2) MERGED
+- merge commit：`89dc6a5`
+- PR 描述与门禁明细见 [closeout 记录](release-closeout-2026-07-22.md)

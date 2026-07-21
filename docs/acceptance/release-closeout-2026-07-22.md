@@ -91,3 +91,15 @@
 |------|------|
 | `gh pr create` | 任务 5 尽力而为 |
 | GitHub Release / 公证上传 | **不做** |
+
+## 7. 合入 main（完成）
+
+| 项 | 值 |
+|----|-----|
+| PR | https://github.com/yclenove/mac-svn-desktop/pull/2 |
+| 状态 | **MERGED** |
+| merge commit | `89dc6a5` `合并工程收口 RC：parity 分支合入 main` |
+| 合入时间（UTC） | 2026-07-21T16:58:16Z |
+| 本地 `main` tip | 与 `origin/main` 一致 `89dc6a5` |
+| 策略 | merge commit（非 squash / 非 rebase `main`） |
+

@@ -4,7 +4,7 @@
 |----|------|
 | 日期 | 2026-07-22 |
 | 产品 | SVN Studio |
-| 状态 | **完成**（2026-07-22 RC 任务 1–5 收口） |
+| 状态 | **完成**（2026-07-22 RC 任务 1–5 收口；PR #2 已合入 `main` @ `89dc6a5`） |
 | 对应迭代 | Release Closeout Wave **RC**（ST 之后工程收口） |
 | 前序 | Tortoise Perfect Loop GP.6 已停止；Human UI U5–U8 与 ST 均已完成 |
 | 非目标 | 不实现 Developer ID 公证；不做真 VoiceOver/按键注入；不重启 Perfect Loop；不推进 T6 产品增强或新体验波次；不修改 inventory/H-tortoise（能力无变化） |
