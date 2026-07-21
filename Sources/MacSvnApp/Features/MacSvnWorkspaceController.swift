@@ -11,17 +11,20 @@ public final class MacSvnWorkspaceController: ObservableObject {
 
     private let workspaceStore: WorkspaceStore
     private let infoProvider: any WorkingCopyInfoProviding
-    /// 用于导出 Finder Sync 根目录；测试可注入临时目录。
-    private let supportDirectory: URL?
+    /// 主应用与 sandbox 扩展各自读取的 Finder 配置文件。
+    private let finderSyncConfigurationFileURLs: [URL]
 
     public init(
         workspaceStore: WorkspaceStore,
         infoProvider: any WorkingCopyInfoProviding,
-        supportDirectory: URL? = nil
+        supportDirectory: URL? = nil,
+        finderSyncConfigurationFileURLs: [URL]? = nil
     ) {
         self.workspaceStore = workspaceStore
         self.infoProvider = infoProvider
-        self.supportDirectory = supportDirectory
+        self.finderSyncConfigurationFileURLs = finderSyncConfigurationFileURLs
+            ?? supportDirectory.map { [FinderSyncRootsExporter.fileURL(in: $0)] }
+            ?? []
     }
 
     public var selectedRecord: WorkingCopyRecord? {
@@ -89,9 +92,13 @@ public final class MacSvnWorkspaceController: ObservableObject {
     /// 深链 / CLI 打开本地路径：已登记则选中，否则尝试添加为工作副本。
     public func openLocalPath(_ path: String) async {
         let normalized = (path as NSString).standardizingPath
-        if let existing = records.first(where: {
-            ($0.localPath as NSString).standardizingPath == normalized
-        }) {
+        let existing = records.compactMap { record -> (record: WorkingCopyRecord, path: String)? in
+            let workingCopyPath = (record.localPath as NSString).standardizingPath
+            let prefix = workingCopyPath.hasSuffix("/") ? workingCopyPath : workingCopyPath + "/"
+            guard normalized == workingCopyPath || normalized.hasPrefix(prefix) else { return nil }
+            return (record, workingCopyPath)
+        }.max { $0.path.count < $1.path.count }?.record
+        if let existing {
             selectedID = existing.id
             errorMessage = nil
             return
@@ -102,8 +109,10 @@ public final class MacSvnWorkspaceController: ObservableObject {
 
     /// 将有效 WC 根目录导出给 Finder Sync 扩展读取。
     private func exportFinderSyncRootsIfPossible() {
-        guard let supportDirectory else { return }
-        let fileURL = FinderSyncRootsExporter.fileURL(in: supportDirectory)
-        try? FinderSyncRootsExporter.export(records: records, to: fileURL)
+        guard !finderSyncConfigurationFileURLs.isEmpty else { return }
+        try? FinderSyncRootsExporter.export(
+            records: records,
+            to: finderSyncConfigurationFileURLs
+        )
     }
 }

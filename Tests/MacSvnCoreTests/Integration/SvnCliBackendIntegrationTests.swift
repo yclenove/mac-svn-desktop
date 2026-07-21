@@ -3,13 +3,311 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
+    func testRevisionPropertiesRequireHookThenRoundTripAuthorMessageAndCustomValue() async throws {
+        let fixture = try makeFixture()
+        let wc = fixture.workingCopy
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: wc)
+
+        do {
+            try await fixture.backend.setRevisionProperty(
+                wc: wc,
+                target: fixture.repositoryURL,
+                revision: Revision(1),
+                name: "svn:log",
+                value: "should be rejected",
+                auth: nil
+            )
+            XCTFail("Expected repository without pre-revprop-change hook to reject the write")
+        } catch {
+            XCTAssertTrue(String(describing: error).contains("pre-revprop-change"))
+        }
+
+        let hook = fixture.repository.appendingPathComponent("hooks/pre-revprop-change")
+        try "#!/bin/sh\nexit 0\n".write(to: hook, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path)
+
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "svn:author",
+            value: "new-author",
+            auth: nil
+        )
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "svn:log",
+            value: "修正后的日志说明",
+            auth: nil
+        )
+        try await fixture.backend.setRevisionProperty(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            name: "custom:reviewed",
+            value: "yes",
+            auth: nil
+        )
+
+        let properties = try await fixture.backend.revisionProperties(
+            wc: wc,
+            target: fixture.repositoryURL,
+            revision: Revision(1),
+            auth: nil
+        )
+        let values = Dictionary(uniqueKeysWithValues: properties.map { ($0.name, $0.value) })
+        XCTAssertEqual(values["svn:author"], "new-author")
+        XCTAssertEqual(values["svn:log"], "修正后的日志说明")
+        XCTAssertEqual(values["custom:reviewed"], "yes")
+        XCTAssertNotNil(values["svn:date"])
+    }
+
+    func testExperimentalShelvingV2AndV3RoundTripThroughRealWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let file = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        for version in SvnShelvingVersion.allCases {
+            let marker = "shelved-\(version.rawValue)\n"
+            try ("hello\n" + marker).write(to: file, atomically: true, encoding: .utf8)
+            let client = SvnExperimentalShelvingClient(
+                svnExecutable: fixture.svnExecutable,
+                runner: ProcessRunner(),
+                timeout: 30,
+                version: version
+            )
+            let name = "roundtrip-\(version.rawValue)"
+
+            let availability = await client.availability(wc: fixture.workingCopy)
+            XCTAssertEqual(availability, .available(version))
+            try await client.shelve(
+                wc: fixture.workingCopy,
+                name: name,
+                paths: ["README.txt"],
+                message: "real \(version.displayName)",
+                keepLocal: false
+            )
+            XCTAssertEqual(try String(contentsOf: file), "hello\n")
+
+            let shelves = try await client.list(wc: fixture.workingCopy)
+            XCTAssertEqual(shelves.first(where: { $0.name == name })?.latestVersion, 1)
+            let diff = try await client.diff(
+                wc: fixture.workingCopy,
+                name: name,
+                version: 1
+            )
+            XCTAssertTrue(diff.contains(marker.trimmingCharacters(in: .newlines)))
+
+            try await client.unshelve(
+                wc: fixture.workingCopy,
+                name: name,
+                version: 1,
+                drop: true
+            )
+            XCTAssertEqual(try String(contentsOf: file), "hello\n" + marker)
+            let remaining = try await client.list(wc: fixture.workingCopy)
+            XCTAssertFalse(remaining.contains { $0.name == name })
+            try await fixture.backend.revert(wc: fixture.workingCopy, paths: ["README.txt"], recursive: false)
+        }
+    }
+
+    func testDirectoryAndFileExternalsRoundTripAndMaterializeOnUpdate() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let value = SvnExternalsDocument(definitions: [
+            SvnExternalDefinition(
+                revision: Revision(1),
+                url: "^/branches/feature-one",
+                pegRevision: Revision(1),
+                localPath: "external-feature"
+            ),
+            SvnExternalDefinition(
+                revision: Revision(1),
+                url: "^/trunk/README.txt",
+                pegRevision: Revision(1),
+                localPath: "external-readme.txt"
+            )
+        ]).render()
+
+        try await service.setProperty(
+            wc: fixture.workingCopy,
+            target: ".",
+            name: "svn:externals",
+            value: value
+        )
+        let property = try await fixture.backend.propertyValue(
+            wc: fixture.workingCopy,
+            target: ".",
+            name: "svn:externals"
+        )
+        let document = try SvnExternalsDocument(text: try XCTUnwrap(property?.value))
+        XCTAssertEqual(document.definitions.map(\.localPath), [
+            "external-feature", "external-readme.txt"
+        ])
+
+        _ = try await service.update(wc: fixture.workingCopy, paths: ["."], ignoreExternals: false)
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("external-feature/README.txt")),
+            "branch seed\n"
+        )
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("external-readme.txt")),
+            "hello\n"
+        )
+    }
+
+    func testChangelistAssignmentAndRemovalRoundTripThroughStatusXML() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        try await service.assignChangelist(
+            wc: fixture.workingCopy,
+            name: "release",
+            paths: ["README.txt"]
+        )
+        var statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertEqual(
+            statuses.first(where: { $0.path == "README.txt" })?.changelist,
+            "release"
+        )
+
+        try await service.removeFromChangelists(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"]
+        )
+        statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertNil(statuses.first(where: { $0.path == "README.txt" })?.changelist)
+    }
+
+    @MainActor
+    func testRevisionGraphBuildsCopyEdgeAndLoadsNodeDiffFromRealRepository() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: "\(fixture.repositoryURL)/branches/graph-copy",
+            message: "create graph branch"
+        )
+        let viewModel = RevisionGraphViewModel(
+            workingCopy: fixture.workingCopy,
+            batchSize: 50,
+            settings: RevisionGraphSettings(),
+            provider: service
+        )
+
+        await viewModel.loadInitial()
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        let branchNode = try XCTUnwrap(
+            viewModel.snapshot.nodes.first(where: { $0.path == "/branches/graph-copy" })
+        )
+        XCTAssertEqual(branchNode.sourcePath, "/trunk")
+        XCTAssertTrue(viewModel.snapshot.edges.contains {
+            $0.kind == .copy && $0.targetID == branchNode.id
+        })
+
+        await viewModel.loadDiff(for: branchNode.id)
+        XCTAssertEqual(viewModel.diffState, .loaded)
+        XCTAssertNotNil(viewModel.diffText)
+    }
+
+    @MainActor
+    func testDiffWithURLComparesWorkingCopyAgainstBranchURLAtRevision() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let viewModel = DiffViewModel(
+            workingCopy: fixture.workingCopy,
+            diffProvider: service
+        )
+
+        await viewModel.loadWithURL(
+            target: "README.txt",
+            url: "\(fixture.repositoryURL)/branches/feature-one/README.txt",
+            revisionText: "1"
+        )
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertTrue(viewModel.diffText.contains("-branch seed"), viewModel.diffText)
+        XCTAssertTrue(viewModel.diffText.contains("+hello"), viewModel.diffText)
+        XCTAssertTrue(viewModel.diffText.contains("branches/feature-one/README.txt"), viewModel.diffText)
+    }
+
+    func testCreateAndApplyPatchRoundTripSelectedWorkingCopyChange() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+        try "hello\npatched\n".write(to: readme, atomically: true, encoding: .utf8)
+        let patchFile = fixture.root.appendingPathComponent("changes.patch")
+
+        try await service.createPatch(wc: fixture.workingCopy, paths: ["README.txt"], to: patchFile)
+        try await fixture.backend.revert(wc: fixture.workingCopy, paths: ["README.txt"], recursive: false)
+        XCTAssertEqual(try String(contentsOf: readme), "hello\n")
+
+        try await service.applyPatch(wc: fixture.workingCopy, patchFile: patchFile)
+        XCTAssertEqual(try String(contentsOf: readme), "hello\npatched\n")
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertTrue(statuses.contains { $0.path == "README.txt" && $0.itemStatus == .modified })
+    }
+
+    func testImportProjectAndImportInPlaceProduceUsableRepositoryContent() async throws {
+        let fixture = try makeFixture()
+        let source = fixture.root.appendingPathComponent("new-project", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try "imported\n".write(to: source.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
+
+        let revision = try await fixture.backend.importProject(
+            path: source,
+            url: "\(fixture.repositoryURL)/imported",
+            message: "import project",
+            auth: nil
+        )
+        XCTAssertGreaterThan(revision.value, 0)
+
+        let inPlace = fixture.root.appendingPathComponent("in-place", isDirectory: true)
+        try FileManager.default.createDirectory(at: inPlace, withIntermediateDirectories: true)
+        try "in place\n".write(to: inPlace.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
+        let service = SvnService(backend: fixture.backend)
+        _ = try await service.importInPlace(
+            path: inPlace,
+            url: "\(fixture.repositoryURL)/in-place",
+            message: "import in place",
+            auth: nil
+        )
+
+        let statuses = try await fixture.backend.status(wc: inPlace)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal })
+        XCTAssertEqual(try String(contentsOf: inPlace.appendingPathComponent("README.txt")), "in place\n")
+    }
+
+    func testRelocateKeepsWorkingCopyUsable() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await fixture.backend.relocate(
+            wc: fixture.workingCopy,
+            from: fixture.repositoryURL,
+            to: fixture.repositoryURL,
+            auth: nil
+        )
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal })
+    }
+
     func testCheckoutThenStatusIsClean() async throws {
         let fixture = try makeFixture()
 
         try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
         let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
 
-        XCTAssertEqual(statuses, [])
+        // status -v 会列出全部正常项；「干净」= 无本地变更/冲突
+        XCTAssertFalse(statuses.isEmpty)
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal && !$0.isTreeConflict })
     }
 
     func testSnapshotGitMigrationExportsAndCommitsRepository() async throws {
@@ -202,6 +500,67 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertNotNil(lines.first?.author)
     }
 
+    @MainActor
+    func testBlameHoverLoadsExactRevisionLogFromWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let viewModel = BlameViewModel(
+            workingCopy: fixture.workingCopy,
+            target: "README.txt",
+            provider: service,
+            logProvider: service,
+            rangeProvider: service
+        )
+
+        await viewModel.load(startRevision: Revision(1), endRevision: Revision(1))
+        let line = try XCTUnwrap(viewModel.lines.first)
+        await viewModel.loadRevisionDetails(for: line.lineNumber)
+
+        XCTAssertEqual(viewModel.hoveredLineNumber, line.lineNumber)
+        XCTAssertEqual(viewModel.hoveredLog?.revision, line.revision)
+        XCTAssertEqual(viewModel.hoveredLog?.message, "initial import")
+    }
+
+    @MainActor
+    func testBlameDifferencesAlignRealContentAndAttributionAcrossRevisions() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        try "first change\n".write(to: readme, atomically: true, encoding: .utf8)
+        _ = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "first readme change",
+            auth: nil
+        )
+        try "second change\nadded line\n".write(to: readme, atomically: true, encoding: .utf8)
+        let latestRevision = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "second readme change",
+            auth: nil
+        )
+        let viewModel = BlameDifferenceViewModel(
+            workingCopy: fixture.workingCopy,
+            target: "\(fixture.trunkURL)/README.txt",
+            provider: service
+        )
+
+        await viewModel.load(from: Revision(1), to: latestRevision)
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.summary.contentModified, 1)
+        XCTAssertEqual(viewModel.summary.added, 1)
+        let modified = try XCTUnwrap(viewModel.rows.first(where: { $0.kind == .contentModified }))
+        XCTAssertEqual(modified.left?.revision, Revision(1))
+        XCTAssertEqual(modified.right?.revision, latestRevision)
+        XCTAssertEqual(modified.left?.text, "hello")
+        XCTAssertEqual(modified.right?.text, "second change")
+    }
+
     func testPropertiesSetListGetDeleteOnWorkingCopyFile() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)
@@ -257,6 +616,15 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertTrue(mineLocks.first?.isOwnedByWorkingCopy ?? false)
         XCTAssertTrue(mineLocks.first?.isRepositoryLocked ?? false)
 
+        let lockedInfo = try await fixture.backend.info(
+            wc: fixture.workingCopy,
+            target: "README.txt"
+        )
+        XCTAssertEqual(lockedInfo.lastChangedRevision, Revision(1))
+        XCTAssertFalse(lockedInfo.lastChangedAuthor?.isEmpty ?? true)
+        XCTAssertEqual(lockedInfo.lock?.owner, NSUserName())
+        XCTAssertEqual(lockedInfo.lock?.comment, "锁定：编辑中")
+
         try await service.unlock(wc: fixture.workingCopy, paths: ["README.txt"], force: false)
         let afterUnlock = try await service.locks(wc: fixture.workingCopy, targets: ["README.txt"])
         XCTAssertEqual(afterUnlock, [])
@@ -279,7 +647,8 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
         let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
 
-        XCTAssertEqual(statuses, [])
+        // empty depth 仍有 WC 根；status -v 返回根节点为 normal
+        XCTAssertTrue(statuses.allSatisfy { $0.itemStatus == .normal && !$0.isTreeConflict })
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("README.txt").path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("src").path))
     }
@@ -311,6 +680,31 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(entries.first(where: { $0.name == "src" })?.kind, .directory)
         XCTAssertEqual(entries.first(where: { $0.name == "README.txt" })?.kind, .file)
         XCTAssertNotNil(entries.first(where: { $0.name == "README.txt" })?.revision)
+    }
+
+    func testListWithLocksReturnsRemoteLockOwnerAndComment() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        try await service.lock(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "Repo Browser lock",
+            force: false
+        )
+
+        let entries = try await service.listWithLocks(
+            url: fixture.trunkURL,
+            depth: .immediates,
+            auth: nil
+        )
+        let locked = try XCTUnwrap(entries.first { $0.name == "README.txt" })
+
+        XCTAssertEqual(locked.lock?.owner, NSUserName())
+        XCTAssertEqual(locked.lock?.comment, "Repo Browser lock")
+        XCTAssertNotNil(locked.lock?.created)
+        XCTAssertNil(entries.first { $0.name == "src" }?.lock)
     }
 
     func testCatRemoteFileReturnsUtf8Contents() async throws {
@@ -552,6 +946,159 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         )
     }
 
+    func testServiceTwoTreeMergePreviewAndExecutionIntoWorkingCopy() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/two-tree-source"
+
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "create two-tree branch",
+            auth: nil
+        )
+        try await fixture.backend.checkout(url: branchURL, to: fixture.workingCopy)
+        try "two-tree change\n".write(
+            to: fixture.workingCopy.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let branchChangeRevision = try await service.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt"],
+            message: "two-tree change",
+            auth: nil
+        )
+        _ = try await service.switchTo(wc: fixture.workingCopy, url: fixture.trunkURL, auth: nil)
+
+        let rangeDiff = try await service.diff(
+            wc: fixture.workingCopy,
+            target: branchURL,
+            r1: Revision(max(0, branchChangeRevision.value - 1)),
+            r2: branchChangeRevision
+        )
+        let twoTreeDiff = try await service.diffBetweenPaths(
+            wc: fixture.workingCopy,
+            oldPath: fixture.trunkURL,
+            newPath: branchURL
+        )
+
+        let preview = try await service.mergeTwoTrees(
+            wc: fixture.workingCopy,
+            from: fixture.trunkURL,
+            to: branchURL,
+            dryRun: true,
+            auth: nil
+        )
+        let summary = try await service.mergeTwoTrees(
+            wc: fixture.workingCopy,
+            from: fixture.trunkURL,
+            to: branchURL,
+            dryRun: false,
+            auth: nil
+        )
+
+        XCTAssertTrue(preview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(summary.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(rangeDiff.contains("two-tree change"))
+        XCTAssertTrue(twoTreeDiff.contains("two-tree change"))
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("README.txt"), encoding: .utf8),
+            "two-tree change\n"
+        )
+    }
+
+    func testReintegrateAndMergeRevisionToUseModernCompleteAndSingleRevisionMerges() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        let branchURL = "\(fixture.repositoryURL)/branches/reintegrate-source"
+
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        _ = try await service.copy(
+            source: fixture.trunkURL,
+            destination: branchURL,
+            message: "create reintegrate branch",
+            auth: nil
+        )
+        let branchWC = fixture.root.appendingPathComponent("reintegrate-wc", isDirectory: true)
+        try await fixture.backend.checkout(url: branchURL, to: branchWC)
+        try "branch change\n".write(
+            to: branchWC.appendingPathComponent("README.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let branchRevision = try await service.commit(
+            wc: branchWC,
+            paths: ["README.txt"],
+            message: "branch change",
+            auth: nil
+        )
+
+        let revisionPreview = try await service.mergeRevisionTo(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            revision: branchRevision,
+            dryRun: true,
+            auth: nil
+        )
+        let revisionMerged = try await service.mergeRevisionTo(
+            wc: fixture.workingCopy,
+            source: branchURL,
+            revision: branchRevision,
+            dryRun: false,
+            auth: nil
+        )
+        XCTAssertTrue(revisionPreview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(revisionMerged.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertEqual(
+            try String(contentsOf: fixture.workingCopy.appendingPathComponent("README.txt"), encoding: .utf8),
+            "branch change\n"
+        )
+
+        let reintegrateWC = fixture.root.appendingPathComponent("trunk-reintegrate-wc", isDirectory: true)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: reintegrateWC)
+        let preview = try await service.mergeReintegrate(
+            wc: reintegrateWC,
+            source: branchURL,
+            dryRun: true,
+            auth: nil
+        )
+        let merged = try await service.mergeReintegrate(
+            wc: reintegrateWC,
+            source: branchURL,
+            dryRun: false,
+            auth: nil
+        )
+        XCTAssertTrue(preview.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertTrue(merged.affectedPaths.map(\.path).contains("README.txt"))
+        XCTAssertEqual(
+            try String(contentsOf: reintegrateWC.appendingPathComponent("README.txt"), encoding: .utf8),
+            "branch change\n"
+        )
+    }
+
+    func testRepositoryCreatorCreatesRealFSFSRepository() async throws {
+        let fixture = try makeFixture()
+        let svnadmin = URL(fileURLWithPath: fixture.svnExecutable)
+            .deletingLastPathComponent()
+            .appendingPathComponent("svnadmin")
+        guard FileManager.default.isExecutableFile(atPath: svnadmin.path) else {
+            throw XCTSkip("svnadmin executable is not available beside svn")
+        }
+        let destination = fixture.root.appendingPathComponent("created-repository", isDirectory: true)
+        let creator = SvnRepositoryCreator(
+            svnadminExecutable: svnadmin.path,
+            runner: ProcessRunner(),
+            timeout: 30
+        )
+
+        try await creator.create(at: destination)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("format").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("db").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("conf").path))
+    }
+
     func testConflictServiceListsTextConflictAndResolveMineFull() async throws {
         let fixture = try makeFixture()
         let service = SvnService(backend: fixture.backend)
@@ -762,6 +1309,127 @@ final class SvnCliBackendIntegrationTests: SvnIntegrationTestCase {
         XCTAssertEqual(statusesByPath["README.txt"], .modified)
         XCTAssertEqual(statusesByPath["new.txt"], .added)
         XCTAssertEqual(statusesByPath["src/main.txt"], .deleted)
+    }
+
+    func testDeleteKeepingLocalSchedulesDeleteAndPreservesFile() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let readme = fixture.workingCopy.appendingPathComponent("README.txt")
+
+        try await service.deleteKeepingLocal(wc: fixture.workingCopy, paths: ["README.txt"])
+
+        let statuses = try await service.status(wc: fixture.workingCopy)
+        XCTAssertEqual(statuses.first(where: { $0.path == "README.txt" })?.itemStatus, .deleted)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: readme.path))
+    }
+
+    func testDeleteUnversionedRemovesFilesAndDirectoriesButKeepsVersionedPaths() async throws {
+        let fixture = try makeFixture()
+        let service = SvnService(backend: fixture.backend)
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+        let scratchFile = fixture.workingCopy.appendingPathComponent("scratch.txt")
+        let scratchDirectory = fixture.workingCopy.appendingPathComponent("scratch-dir", isDirectory: true)
+        try "scratch\n".write(to: scratchFile, atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(at: scratchDirectory, withIntermediateDirectories: true)
+        try "nested\n".write(
+            to: scratchDirectory.appendingPathComponent("nested.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let candidates = try await service.unversionedPaths(wc: fixture.workingCopy)
+        XCTAssertEqual(Set(candidates.map(\.path)), ["scratch-dir", "scratch.txt"])
+        try await service.deleteUnversioned(
+            wc: fixture.workingCopy,
+            paths: ["scratch.txt", "scratch-dir"]
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: scratchFile.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: scratchDirectory.path))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: fixture.workingCopy.appendingPathComponent("README.txt").path
+        ))
+    }
+
+    func testRepairMoveAfterExternalRenameSchedulesHistoryPreservingMove() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        let oldURL = fixture.workingCopy.appendingPathComponent("README.txt")
+        let newURL = fixture.workingCopy.appendingPathComponent("README-renamed.txt")
+        try FileManager.default.moveItem(at: oldURL, to: newURL)
+
+        let before = try await fixture.backend.status(wc: fixture.workingCopy)
+        let beforeByPath = Dictionary(uniqueKeysWithValues: before.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(beforeByPath["README.txt"], .missing)
+        XCTAssertEqual(beforeByPath["README-renamed.txt"], .unversioned)
+
+        try await fixture.backend.moveInWorkingCopy(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "README-renamed.txt"
+        )
+
+        let after = try await fixture.backend.status(wc: fixture.workingCopy)
+        let afterByPath = Dictionary(uniqueKeysWithValues: after.map { ($0.path, $0.itemStatus) })
+        // svn move 后源路径通常为 deleted（调度删除），目标为 added（带 copy-from 历史）
+        XCTAssertTrue(
+            afterByPath["README.txt"] == nil || afterByPath["README.txt"] == .deleted,
+            "source should be gone or deleted, got \(String(describing: afterByPath["README.txt"]))"
+        )
+        XCTAssertEqual(afterByPath["README-renamed.txt"], .added)
+    }
+
+    func testRepairCopyAfterExternalCopySchedulesHistoryPreservingCopy() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        let sourceURL = fixture.workingCopy.appendingPathComponent("README.txt")
+        let copyURL = fixture.workingCopy.appendingPathComponent("README-copy.txt")
+        try FileManager.default.copyItem(at: sourceURL, to: copyURL)
+
+        let before = try await fixture.backend.status(wc: fixture.workingCopy)
+        let beforeByPath = Dictionary(uniqueKeysWithValues: before.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(beforeByPath["README-copy.txt"], .unversioned)
+
+        try await fixture.backend.copyInWorkingCopy(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "README-copy.txt"
+        )
+
+        let after = try await fixture.backend.status(wc: fixture.workingCopy)
+        let afterByPath = Dictionary(uniqueKeysWithValues: after.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(afterByPath["README-copy.txt"], .added)
+    }
+
+    func testFilenameCaseConflictRepairSchedulesCaseOnlyRenameAndCommits() async throws {
+        let fixture = try makeFixture()
+        try await fixture.backend.checkout(url: fixture.trunkURL, to: fixture.workingCopy)
+
+        try await fixture.backend.repairFilenameCaseConflict(
+            wc: fixture.workingCopy,
+            source: "README.txt",
+            destination: "readme.txt"
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.workingCopy.appendingPathComponent("readme.txt").path))
+
+        let statuses = try await fixture.backend.status(wc: fixture.workingCopy)
+        let statusByPath = Dictionary(uniqueKeysWithValues: statuses.map { ($0.path, $0.itemStatus) })
+        XCTAssertEqual(statusByPath["readme.txt"], .added)
+        XCTAssertTrue(statusByPath["README.txt"] == nil || statusByPath["README.txt"] == .deleted)
+
+        _ = try await fixture.backend.commit(
+            wc: fixture.workingCopy,
+            paths: ["README.txt", "readme.txt"],
+            message: "修复文件名大小写",
+            auth: nil
+        )
+        let entries = try await fixture.backend.list(url: fixture.trunkURL, depth: .immediates, auth: nil)
+        XCTAssertTrue(entries.contains { $0.name == "readme.txt" })
+        XCTAssertFalse(entries.contains { $0.name == "README.txt" })
     }
 
     func testCommitWithChineseMessageIsReadBackFromLog() async throws {

@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "MacSvnDesktop",
+    defaultLocalization: "zh-Hans",
     platforms: [
         .macOS(.v14)
     ],
@@ -31,7 +32,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "MacSvnDesktopApp",
-            dependencies: ["MacSvnApp"]
+            dependencies: ["MacSvnApp"],
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "MacSvnCoreTests",

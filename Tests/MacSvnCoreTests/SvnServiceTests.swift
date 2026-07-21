@@ -28,6 +28,74 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["status", "diff", "log", "info"])
     }
 
+    func testLogUsesAuthenticatedRemotePathWhenTargetIsURL() async throws {
+        let backend = MockSvnBackend()
+        backend.remoteLogResult = [
+            LogEntry(revision: Revision(4), author: "u", date: nil, message: "remote", changedPaths: [])
+        ]
+        backend.remoteLogErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let entries = try await service.log(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "https://svn.example/repo/branches/feature",
+            from: Revision(4),
+            batch: 10,
+            verbose: true,
+            stopOnCopy: false
+        )
+
+        XCTAssertEqual(entries, backend.remoteLogResult)
+        XCTAssertEqual(backend.calls.map(\.name), ["remoteLog", "remoteLog"])
+        XCTAssertEqual(backend.remoteLogCredentials, [nil, Credential(username: "u", password: "p")])
+    }
+
+    func testDiffWithURLPromptsForCredentialsAndRetriesOnce() async throws {
+        let backend = MockSvnBackend()
+        backend.diffWithURLResult = "@@ diff"
+        backend.diffWithURLErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let diff = try await service.diffWithURL(
+            wc: wc,
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt@7",
+            revision: Revision(7)
+        )
+
+        XCTAssertEqual(diff, "@@ diff")
+        XCTAssertEqual(backend.calls.map(\.name), ["diffWithURL", "diffWithURL"])
+        XCTAssertEqual(backend.diffWithURLCredentials, [nil, Credential(username: "u", password: "p")])
+        let requestedScopes = await provider.recordedWorkingCopies()
+        XCTAssertEqual(requestedScopes, [URL(string: "file:///repo/trunk/README.txt@7")!])
+    }
+
+    func testRepositoryDiffPromptsForCredentialsAndRetriesOnce() async throws {
+        let backend = MockSvnBackend()
+        backend.repositoryDiffResult = "@@ graph diff"
+        backend.repositoryDiffErrors = [.authentication]
+        let provider = FakeCredentialProvider(credential: Credential(username: "u", password: "p"))
+        let service = SvnService(backend: backend, credentialProvider: provider)
+
+        let diff = try await service.repositoryDiff(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            oldURL: "file:///repo/trunk",
+            oldRevision: Revision(4),
+            newURL: "file:///repo/branches/feature",
+            newRevision: Revision(9)
+        )
+
+        XCTAssertEqual(diff, "@@ graph diff")
+        XCTAssertEqual(backend.calls.map(\.name), ["repositoryDiff", "repositoryDiff"])
+        XCTAssertEqual(
+            backend.repositoryDiffCredentials,
+            [nil, Credential(username: "u", password: "p")]
+        )
+    }
+
     func testBlameForwardsToBackend() async throws {
         let backend = MockSvnBackend()
         backend.blameResult = [
@@ -61,6 +129,45 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["properties", "propertyValue", "setProperty", "deleteProperty"])
     }
 
+    func testRevisionPropertyMethodsRetryAuthenticationForReadAndWrite() async throws {
+        let backend = MockSvnBackend()
+        backend.revisionPropertiesResult = [
+            SvnProperty(target: "r7", name: "svn:author", value: "yangchao")
+        ]
+        backend.revisionPropertiesErrors = [.authentication]
+        backend.setRevisionPropertyErrors = [.authentication]
+        let credential = Credential(username: "u", password: "p")
+        let provider = FakeCredentialProvider(credential: credential)
+        let service = SvnService(backend: backend, credentialProvider: provider)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let properties = try await service.revisionProperties(
+            wc: wc,
+            target: "https://svn.example/repo",
+            revision: Revision(7)
+        )
+        try await service.setRevisionProperty(
+            wc: wc,
+            target: "https://svn.example/repo",
+            revision: Revision(7),
+            name: "svn:log",
+            value: "new message"
+        )
+
+        XCTAssertEqual(properties, backend.revisionPropertiesResult)
+        XCTAssertEqual(backend.calls.map(\.name), [
+            "revisionProperties", "revisionProperties",
+            "setRevisionProperty", "setRevisionProperty"
+        ])
+        XCTAssertEqual(backend.revisionPropertiesCredentials, [nil, credential])
+        XCTAssertEqual(backend.setRevisionPropertyCredentials, [nil, credential])
+        let requestedScopes = await provider.recordedWorkingCopies()
+        XCTAssertEqual(requestedScopes, [
+            URL(string: "https://svn.example/repo")!,
+            URL(string: "https://svn.example/repo")!
+        ])
+    }
+
     func testLockMethodsForwardToBackendAndWritesUseLocks() async throws {
         let backend = MockSvnBackend()
         backend.locksResult = [
@@ -83,6 +190,19 @@ final class SvnServiceTests: XCTestCase {
 
         XCTAssertEqual(locks, backend.locksResult)
         XCTAssertEqual(backend.calls.map(\.name), ["locks", "lock", "unlock"])
+    }
+
+    func testFilenameCaseConflictRepairForwardsThroughWriteLock() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+
+        try await service.repairFilenameCaseConflict(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "Foo.txt",
+            destination: "foo.txt"
+        )
+
+        XCTAssertEqual(backend.calls.map(\.name), ["repairFilenameCaseConflict"])
     }
 
     func testCommitRejectsEmptyMessage() async {
@@ -162,6 +282,35 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.calls.map(\.name), ["update", "update"])
         XCTAssertEqual(backend.updateCredentials, [nil, Credential(username: "u", password: "p")])
         XCTAssertEqual(backend.updateSetDepths, [.files, .files])
+    }
+
+    func testMultiPathUpdatePinsRepositoryHeadBeforeUpdating() async throws {
+        let backend = MockSvnBackend()
+        backend.headRevisionResult = Revision(42)
+        backend.updateResult = UpdateSummary(updated: 2, revision: Revision(42))
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let summary = try await service.update(wc: wc, paths: ["a.txt", "b.txt"], revision: nil)
+
+        XCTAssertEqual(summary.revision, Revision(42))
+        XCTAssertEqual(backend.calls.map(\.name), ["repositoryHeadRevision", "update"])
+        XCTAssertEqual(backend.updateRevisions, [Revision(42)])
+    }
+
+    func testSinglePathUpdateDoesNotPinHead() async throws {
+        let backend = MockSvnBackend()
+        backend.updateResult = UpdateSummary(updated: 1, revision: Revision(7))
+        let service = SvnService(backend: backend)
+
+        _ = try await service.update(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["only.txt"],
+            revision: nil
+        )
+
+        XCTAssertEqual(backend.calls.map(\.name), ["update"])
+        XCTAssertEqual(backend.updateRevisions, [nil])
     }
 
     func testCheckoutPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
@@ -358,12 +507,14 @@ final class SvnServiceTests: XCTestCase {
         let summary = try await service.switchTo(
             wc: URL(fileURLWithPath: "/tmp/wc"),
             url: "file:///repo/branches/feature-one",
+            revision: Revision(8),
             auth: nil,
             allowLocalChanges: true
         )
 
         XCTAssertEqual(summary, UpdateSummary(updated: 1, revision: Revision(9)))
         XCTAssertEqual(backend.calls.map(\.name), ["status", "switch"])
+        XCTAssertEqual(backend.switchRevisions, [Revision(8)])
     }
 
     func testSwitchPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
@@ -410,6 +561,23 @@ final class SvnServiceTests: XCTestCase {
         XCTAssertEqual(backend.mergeCredentials, [nil, Credential(username: "u", password: "p")])
     }
 
+    func testMergeTwoTreesForwardsSourcesAndUsesWriteOperation() async throws {
+        let backend = MockSvnBackend()
+        backend.mergeResult = MergeSummary(updated: 2)
+        let service = SvnService(backend: backend)
+
+        let summary = try await service.mergeTwoTrees(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "file:///repo/trunk",
+            to: "file:///repo/branches/feature",
+            dryRun: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(summary, MergeSummary(updated: 2))
+        XCTAssertEqual(backend.calls.map(\.name), ["mergeTwoTrees"])
+    }
+
     func testResolveUsesBackendWriteOperation() async throws {
         let backend = MockSvnBackend()
         let service = SvnService(backend: backend)
@@ -434,6 +602,24 @@ final class SvnServiceTests: XCTestCase {
 
         XCTAssertEqual(backend.calls.map(\.name), ["applyPatch"])
         XCTAssertEqual(backend.patchFiles, [patchFile])
+    }
+
+    func testCreatePatchWritesSelectedDiffsToOnePatchFile() async throws {
+        let backend = MockSvnBackend()
+        backend.diffResult = "diff for selected path\n"
+        let service = SvnService(backend: backend)
+        let patchFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("svnstudio-(UUID().uuidString).patch")
+        defer { try? FileManager.default.removeItem(at: patchFile) }
+
+        try await service.createPatch(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["README.txt", "src/main.swift"],
+            to: patchFile
+        )
+
+        XCTAssertEqual(try String(contentsOf: patchFile), "diff for selected path\n\ndiff for selected path\n")
+        XCTAssertEqual(backend.calls.map(\.name), ["diff", "diff"])
     }
 
     func testApplyPatchWriteLockBlocksConcurrentWritesOnSameWorkingCopy() async throws {
@@ -464,6 +650,29 @@ final class SvnServiceTests: XCTestCase {
 
         await releasePatch.open()
         _ = try await patchTask.value
+    }
+
+    func testApplyPatchReportsNewRejectFilesAsConflicts() async throws {
+        let backend = MockSvnBackend()
+        let service = SvnService(backend: backend)
+        let wc = FileManager.default.temporaryDirectory.appendingPathComponent("svnstudio-patch-wc-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: wc, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: wc) }
+        backend.onApplyPatch = {
+            try? "reject".write(to: wc.appendingPathComponent("README.txt.rej"), atomically: true, encoding: .utf8)
+        }
+
+        do {
+            try await service.applyPatch(wc: wc, patchFile: URL(fileURLWithPath: "/tmp/change.patch"))
+            XCTFail("Expected patch rejection")
+        } catch let error as PatchPathError {
+            guard case .rejectedPaths(let paths) = error else {
+                XCTFail("Expected rejected paths, got \(error)")
+                return
+            }
+            XCTAssertEqual(paths.count, 1)
+            XCTAssertTrue(paths[0].hasSuffix("/README.txt.rej"))
+        }
     }
 
     func testListPromptsForCredentialsAndRetriesOnceAfterAuthenticationFailure() async throws {
@@ -648,6 +857,47 @@ final class SvnServiceTests: XCTestCase {
         ])
     }
 
+    func testCommitAddsSelectedUnversionedPathsBeforeCommit() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false),
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitResult = Revision(9)
+        let service = SvnService(backend: backend)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let revision = try await service.commit(
+            wc: wc,
+            paths: ["new.txt", "a.txt"],
+            message: "add and commit",
+            auth: nil
+        )
+
+        XCTAssertEqual(revision, Revision(9))
+        XCTAssertEqual(backend.calls.map(\.name), ["status", "add", "commit"])
+        XCTAssertEqual(backend.commitKeepLocks, [false])
+    }
+
+    func testCommitKeepLocksPassesNoUnlockToBackend() async throws {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "a.txt", itemStatus: .modified, revision: Revision(1), isTreeConflict: false)
+        ]
+        backend.commitResult = Revision(3)
+        let service = SvnService(backend: backend)
+
+        _ = try await service.commit(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            paths: ["a.txt"],
+            message: "locked",
+            auth: nil,
+            keepLocks: true
+        )
+
+        XCTAssertEqual(backend.commitKeepLocks, [true])
+    }
+
     func testCommitGuardBlockingIssuesCannotBeSkipped() async {
         let backend = MockSvnBackend()
         backend.statusResult = [
@@ -739,6 +989,88 @@ final class SvnServiceTests: XCTestCase {
         _ = try await firstTask.value
         XCTAssertEqual(backend.calls.map(\.name), ["update", "update"])
     }
+
+    func testPreCommitHookFailureBlocksAddAndCommit() async {
+        let backend = MockSvnBackend()
+        backend.statusResult = [
+            FileStatus(path: "new.txt", itemStatus: .unversioned, revision: nil, isTreeConflict: false)
+        ]
+        let hook = FakeClientHookRunner(preCommitError: ClientHookError.failed(
+            type: .preCommit,
+            exitCode: 2,
+            message: "blocked"
+        ))
+        let service = SvnService(backend: backend, clientHooks: hook)
+
+        do {
+            _ = try await service.commit(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                paths: ["new.txt"],
+                message: "message",
+                auth: nil
+            )
+            XCTFail("Expected hook failure")
+        } catch let error as ClientHookError {
+            XCTAssertEqual(error, .failed(type: .preCommit, exitCode: 2, message: "blocked"))
+        } catch {
+            XCTFail("Expected ClientHookError, got \(error)")
+        }
+
+        XCTAssertEqual(backend.calls.map(\.name), ["status"])
+        let hookCalls = await hook.preCommitCalls()
+        XCTAssertEqual(hookCalls.count, 1)
+    }
+
+    func testPostUpdateHookRunsAfterSuccessfulUpdate() async throws {
+        let backend = MockSvnBackend()
+        backend.updateResult = UpdateSummary(updated: 1, revision: Revision(12))
+        let hook = FakeClientHookRunner()
+        let service = SvnService(backend: backend, clientHooks: hook)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+
+        let summary = try await service.update(
+            wc: wc,
+            paths: ["Sources"],
+            revision: Revision(12),
+            setDepth: .files
+        )
+
+        XCTAssertEqual(summary.revision, Revision(12))
+        let hookCalls = await hook.postUpdateCalls()
+        XCTAssertEqual(hookCalls, [ClientHookPostUpdateCall(
+            wc: wc,
+            paths: ["Sources"],
+            depth: .files,
+            revision: Revision(12),
+            errorMessage: "",
+            touchedPaths: ["Sources"]
+        )])
+    }
+
+    func testPostUpdateHookAlsoRunsWhenUpdateFailsAndOriginalErrorWins() async {
+        let backend = MockSvnBackend()
+        backend.updateErrors = [.conflict(paths: ["a.txt"])]
+        let hook = FakeClientHookRunner(postUpdateError: ClientHookError.failed(
+            type: .postUpdate,
+            exitCode: 3,
+            message: "cleanup failed"
+        ))
+        let service = SvnService(backend: backend, clientHooks: hook)
+
+        do {
+            _ = try await service.update(wc: URL(fileURLWithPath: "/tmp/wc"), paths: ["a.txt"])
+            XCTFail("Expected update failure")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .conflict(paths: ["a.txt"]))
+        } catch {
+            XCTFail("Expected original SvnError, got \(error)")
+        }
+
+        let calls = await hook.postUpdateCalls()
+        XCTAssertEqual(calls.count, 1)
+        XCTAssertNil(calls[0].revision)
+        XCTAssertFalse(calls[0].errorMessage.isEmpty)
+    }
 }
 
 private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
@@ -750,7 +1082,9 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedCalls: [Call] = []
     private var recordedUpdateCredentials: [Credential?] = []
     private var recordedUpdateSetDepths: [SvnDepth?] = []
+    private var recordedUpdateRevisions: [Revision?] = []
     private var recordedCommitCredentials: [Credential?] = []
+    private var recordedCommitKeepLocks: [Bool] = []
     private var recordedCheckoutCredentials: [Credential?] = []
     private var recordedCheckoutDepths: [SvnDepth] = []
     private var recordedExportCredentials: [Credential?] = []
@@ -766,9 +1100,16 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     private var recordedRemoteDeleteCredentials: [Credential?] = []
     private var recordedMoveCredentials: [Credential?] = []
     private var recordedSwitchCredentials: [Credential?] = []
+    private var recordedSwitchRevisions: [Revision?] = []
     private var recordedMergeCredentials: [Credential?] = []
     private var recordedResolveAccepts: [ResolveAccept] = []
     private var recordedPatchFiles: [URL] = []
+    private var recordedDiffWithURLCredentials: [Credential?] = []
+    private var recordedRepositoryDiffCredentials: [Credential?] = []
+    private var recordedRevisionPropertiesCredentials: [Credential?] = []
+    private var recordedSetRevisionPropertyCredentials: [Credential?] = []
+    var repositoryDiffResult = ""
+    var repositoryDiffErrors: [SvnError] = []
 
     var calls: [Call] {
         callsLock.lock()
@@ -776,6 +1117,30 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
             callsLock.unlock()
         }
         return recordedCalls
+    }
+
+    var diffWithURLCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedDiffWithURLCredentials
+    }
+
+    var repositoryDiffCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedRepositoryDiffCredentials
+    }
+
+    var revisionPropertiesCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedRevisionPropertiesCredentials
+    }
+
+    var setRevisionPropertyCredentials: [Credential?] {
+        callsLock.lock()
+        defer { callsLock.unlock() }
+        return recordedSetRevisionPropertyCredentials
     }
 
     var updateCredentials: [Credential?] {
@@ -794,12 +1159,28 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedUpdateSetDepths
     }
 
+    var updateRevisions: [Revision?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedUpdateRevisions
+    }
+
     var commitCredentials: [Credential?] {
         callsLock.lock()
         defer {
             callsLock.unlock()
         }
         return recordedCommitCredentials
+    }
+
+    var commitKeepLocks: [Bool] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedCommitKeepLocks
     }
 
     var checkoutCredentials: [Credential?] {
@@ -922,6 +1303,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return recordedSwitchCredentials
     }
 
+    var switchRevisions: [Revision?] {
+        callsLock.lock()
+        defer {
+            callsLock.unlock()
+        }
+        return recordedSwitchRevisions
+    }
+
     var mergeCredentials: [Credential?] {
         callsLock.lock()
         defer {
@@ -951,9 +1340,13 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
     var blameResult: [BlameLine] = []
     var propertiesResult: [SvnProperty] = []
     var propertyValueResult: SvnProperty?
+    var revisionPropertiesResult: [SvnProperty] = []
+    var revisionPropertiesErrors: [SvnError] = []
+    var setRevisionPropertyErrors: [SvnError] = []
     var locksResult: [SvnLock] = []
     var logResult: [LogEntry] = []
     var infoResult = SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(1), kind: "dir")
+    var headRevisionResult = Revision(99)
     var listResult: [RemoteEntry] = []
     var catResult = Data()
     var remoteLogResult: [LogEntry] = []
@@ -999,14 +1392,20 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return statusResult
     }
 
+    func statusAgainstRepository(wc: URL) async throws -> [FileStatus] {
+        record("statusAgainstRepository")
+        return statusResult
+    }
+
     func update(
         wc: URL,
         paths: [String],
         revision: Revision?,
         setDepth: SvnDepth?,
+        ignoreExternals: Bool,
         auth: Credential?
     ) async throws -> UpdateSummary {
-        let error = recordUpdate(setDepth: setDepth, auth: auth)
+        let error = recordUpdate(revision: revision, setDepth: setDepth, auth: auth)
         await onUpdate?(wc)
         if let error {
             throw error
@@ -1014,8 +1413,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return updateResult
     }
 
-    func commit(wc: URL, paths: [String], message: String, auth: Credential?) async throws -> Revision {
-        let error = recordCommit(auth: auth)
+    func commit(wc: URL, paths: [String], message: String, auth: Credential?, keepLocks: Bool) async throws -> Revision {
+        let error = recordCommit(auth: auth, keepLocks: keepLocks)
         if let error {
             throw error
         }
@@ -1030,16 +1429,65 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("delete")
     }
 
+    func deleteKeepingLocal(wc: URL, paths: [String]) async throws {
+        record("deleteKeepingLocal")
+    }
+
+    func deleteUnversioned(wc: URL, paths: [String]) async throws {
+        record("deleteUnversioned")
+    }
+
+    func moveInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("moveInWorkingCopy")
+    }
+
+    func renameInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("renameInWorkingCopy")
+    }
+
+    func copyInWorkingCopy(wc: URL, source: String, destination: String) async throws {
+        record("copyInWorkingCopy")
+    }
+
+    func repairFilenameCaseConflict(wc: URL, source: String, destination: String) async throws {
+        record("repairFilenameCaseConflict")
+    }
+
     func revert(wc: URL, paths: [String], recursive: Bool) async throws {
         record("revert")
     }
 
-    func cleanup(wc: URL) async throws {
+    func cleanup(wc: URL, options: SvnCleanupOptions) async throws {
         record("cleanup")
     }
 
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         record("diff")
+        return diffResult
+    }
+
+    var diffWithURLResult = ""
+    var diffWithURLErrors: [SvnError] = []
+
+    func diffWithURL(
+        wc: URL,
+        target: String,
+        url: String,
+        revision: Revision?,
+        auth: Credential?
+    ) async throws -> String {
+        let error = recordDiffWithURL(auth: auth)
+        if let error { throw error }
+        return diffWithURLResult
+    }
+
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        record("diffBetweenPaths")
+        return diffResult
+    }
+
+    func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        record("diffAgainstBase")
         return diffResult
     }
 
@@ -1066,6 +1514,39 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("deleteProperty")
     }
 
+    func revisionProperties(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        auth: Credential?
+    ) async throws -> [SvnProperty] {
+        let error = recordRevisionProperty(
+            name: "revisionProperties",
+            credentials: &recordedRevisionPropertiesCredentials,
+            errors: &revisionPropertiesErrors,
+            auth: auth
+        )
+        if let error { throw error }
+        return revisionPropertiesResult
+    }
+
+    func setRevisionProperty(
+        wc: URL,
+        target: String,
+        revision: Revision,
+        name: String,
+        value: String,
+        auth: Credential?
+    ) async throws {
+        let error = recordRevisionProperty(
+            name: "setRevisionProperty",
+            credentials: &recordedSetRevisionPropertyCredentials,
+            errors: &setRevisionPropertyErrors,
+            auth: auth
+        )
+        if let error { throw error }
+    }
+
     func locks(wc: URL, targets: [String]) async throws -> [SvnLock] {
         record("locks")
         return locksResult
@@ -1079,7 +1560,14 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         record("unlock")
     }
 
-    func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
+    func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool
+    ) async throws -> [LogEntry] {
         record("log")
         return logResult
     }
@@ -1116,18 +1604,44 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return remoteLogFromHeadResult
     }
 
-    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
+    func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth,
+        revision: Revision?,
+        ignoreExternals: Bool,
+        auth: Credential?
+    ) async throws {
         let error = recordCheckout(depth: depth, auth: auth)
+        _ = revision
+        _ = ignoreExternals
         if let error {
             throw error
         }
     }
 
-    func export(url: String, to destination: URL, revision: Revision?, auth: Credential?) async throws {
+    func export(url: String, to destination: URL, revision: Revision?, ignoreExternals: Bool, auth: Credential?) async throws {
         let error = recordExport(revision: revision, auth: auth)
+        _ = ignoreExternals
         if let error {
             throw error
         }
+    }
+
+    func importProject(path: URL, url: String, message: String, auth: Credential?) async throws -> Revision {
+        _ = (path, url, message, auth)
+        record("importProject")
+        return Revision(1)
+    }
+
+    func relocate(wc: URL, from: String, to: String, auth: Credential?) async throws {
+        _ = (wc, from, to, auth)
+        record("relocate")
+    }
+
+    func removeFromVersionControl(path: URL, recursive: Bool) async throws {
+        _ = (path, recursive)
+        record("removeFromVersionControl")
     }
 
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision {
@@ -1167,8 +1681,8 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return moveResult
     }
 
-    func switchTo(wc: URL, url: String, auth: Credential?) async throws -> UpdateSummary {
-        let error = recordSwitch(auth: auth)
+    func switchTo(wc: URL, url: String, revision: Revision?, auth: Credential?) async throws -> UpdateSummary {
+        let error = recordSwitch(revision: revision, auth: auth)
         if let error {
             throw error
         }
@@ -1183,6 +1697,23 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         auth: Credential?
     ) async throws -> MergeSummary {
         let error = recordMerge(auth: auth)
+        if let error {
+            throw error
+        }
+        return mergeResult
+    }
+
+    func mergeTwoTrees(
+        wc: URL,
+        from: String,
+        to: String,
+        dryRun: Bool,
+        auth: Credential?
+    ) async throws -> MergeSummary {
+        _ = from
+        _ = to
+        _ = dryRun
+        let error = recordMerge(auth: auth, name: "mergeTwoTrees")
         if let error {
             throw error
         }
@@ -1217,9 +1748,42 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return infoResult
     }
 
-    private func recordUpdate(setDepth: SvnDepth?, auth: Credential?) -> SvnError? {
+    func repositoryDiff(
+        wc: URL,
+        oldURL: String,
+        oldRevision: Revision,
+        newURL: String,
+        newRevision: Revision,
+        auth: Credential?
+    ) async throws -> String {
+        _ = wc
+        _ = oldURL
+        _ = oldRevision
+        _ = newURL
+        _ = newRevision
+        let error = recordRepositoryDiff(auth: auth)
+        if let error { throw error }
+        return repositoryDiffResult
+    }
+
+    private func recordRepositoryDiff(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "repositoryDiff"))
+        recordedRepositoryDiffCredentials.append(auth)
+        let error = repositoryDiffErrors.isEmpty ? nil : repositoryDiffErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    func repositoryHeadRevision(wc: URL, target: String) async throws -> Revision {
+        record("repositoryHeadRevision")
+        return headRevisionResult
+    }
+
+    private func recordUpdate(revision: Revision?, setDepth: SvnDepth?, auth: Credential?) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "update"))
+        recordedUpdateRevisions.append(revision)
         recordedUpdateSetDepths.append(setDepth)
         recordedUpdateCredentials.append(auth)
         let error = updateErrors.isEmpty ? nil : updateErrors.removeFirst()
@@ -1227,10 +1791,11 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return error
     }
 
-    private func recordCommit(auth: Credential?) -> SvnError? {
+    private func recordCommit(auth: Credential?, keepLocks: Bool = false) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "commit"))
         recordedCommitCredentials.append(auth)
+        recordedCommitKeepLocks.append(keepLocks)
         let error = commitErrors.isEmpty ? nil : commitErrors.removeFirst()
         callsLock.unlock()
         return error
@@ -1317,20 +1882,44 @@ private final class MockSvnBackend: SvnBackend, @unchecked Sendable {
         return error
     }
 
-    private func recordSwitch(auth: Credential?) -> SvnError? {
+    private func recordRevisionProperty(
+        name: String,
+        credentials: inout [Credential?],
+        errors: inout [SvnError],
+        auth: Credential?
+    ) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: name))
+        credentials.append(auth)
+        let error = errors.isEmpty ? nil : errors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordSwitch(revision: Revision?, auth: Credential?) -> SvnError? {
         callsLock.lock()
         recordedCalls.append(Call(name: "switch"))
         recordedSwitchCredentials.append(auth)
+        recordedSwitchRevisions.append(revision)
         let error = switchErrors.isEmpty ? nil : switchErrors.removeFirst()
         callsLock.unlock()
         return error
     }
 
-    private func recordMerge(auth: Credential?) -> SvnError? {
+    private func recordMerge(auth: Credential?, name: String = "merge") -> SvnError? {
         callsLock.lock()
-        recordedCalls.append(Call(name: "merge"))
+        recordedCalls.append(Call(name: name))
         recordedMergeCredentials.append(auth)
         let error = mergeErrors.isEmpty ? nil : mergeErrors.removeFirst()
+        callsLock.unlock()
+        return error
+    }
+
+    private func recordDiffWithURL(auth: Credential?) -> SvnError? {
+        callsLock.lock()
+        recordedCalls.append(Call(name: "diffWithURL"))
+        recordedDiffWithURLCredentials.append(auth)
+        let error = diffWithURLErrors.isEmpty ? nil : diffWithURLErrors.removeFirst()
         callsLock.unlock()
         return error
     }
@@ -1375,6 +1964,71 @@ private actor FakeCommitGuardProvider: CommitGuardChecking {
     func recordedCalls() -> [CommitGuardCall] {
         calls
     }
+}
+
+private struct ClientHookPreCommitCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let message: String
+    let depth: SvnDepth
+}
+
+private struct ClientHookPostUpdateCall: Equatable, Sendable {
+    let wc: URL
+    let paths: [String]
+    let depth: SvnDepth
+    let revision: Revision?
+    let errorMessage: String
+    let touchedPaths: [String]
+}
+
+private actor FakeClientHookRunner: ClientHookRunning {
+    private let preCommitError: Error?
+    private let postUpdateError: Error?
+    private var recordedPreCommitCalls: [ClientHookPreCommitCall] = []
+    private var recordedPostUpdateCalls: [ClientHookPostUpdateCall] = []
+
+    init(preCommitError: Error? = nil, postUpdateError: Error? = nil) {
+        self.preCommitError = preCommitError
+        self.postUpdateError = postUpdateError
+    }
+
+    func runPreCommit(
+        wc: URL,
+        paths: [String],
+        message: String,
+        depth: SvnDepth
+    ) async throws {
+        recordedPreCommitCalls.append(ClientHookPreCommitCall(
+            wc: wc,
+            paths: paths,
+            message: message,
+            depth: depth
+        ))
+        if let preCommitError { throw preCommitError }
+    }
+
+    func runPostUpdate(
+        wc: URL,
+        paths: [String],
+        depth: SvnDepth,
+        revision: Revision?,
+        errorMessage: String,
+        touchedPaths: [String]
+    ) async throws {
+        recordedPostUpdateCalls.append(ClientHookPostUpdateCall(
+            wc: wc,
+            paths: paths,
+            depth: depth,
+            revision: revision,
+            errorMessage: errorMessage,
+            touchedPaths: touchedPaths
+        ))
+        if let postUpdateError { throw postUpdateError }
+    }
+
+    func preCommitCalls() -> [ClientHookPreCommitCall] { recordedPreCommitCalls }
+    func postUpdateCalls() -> [ClientHookPostUpdateCall] { recordedPostUpdateCalls }
 }
 
 private actor AsyncGate {

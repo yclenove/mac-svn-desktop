@@ -2,6 +2,21 @@ import XCTest
 @testable import MacSvnCore
 
 final class StatusXMLParserTests: XCTestCase {
+    func testParsesChangelistAssociationWithoutLeakingToFollowingEntries() throws {
+        let xml = """
+        <status><target path=".">
+          <changelist name="release">
+            <entry path="Sources/App.swift"><wc-status item="modified" revision="7"/></entry>
+          </changelist>
+          <entry path="README.md"><wc-status item="modified" revision="7"/></entry>
+        </target></status>
+        """
+
+        let statuses = try StatusXMLParser.parse(Data(xml.utf8))
+
+        XCTAssertEqual(statuses.map(\.changelist), ["release", nil])
+    }
+
     func testParsesMixedStatusesAndTreeConflict() throws {
         let xml = """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -46,5 +61,26 @@ final class StatusXMLParserTests: XCTestCase {
                 return XCTFail("Expected SvnError.parse, got \(error)")
             }
         }
+    }
+
+    func testParsesOverlayAttributesLocksDepthAndPropertyStatus() throws {
+        let xml = """
+        <status><target path=".">
+          <entry path="src/switched.txt">
+            <wc-status item="normal" props="modified" revision="8" wc-locked="true" switched="true" file-external="true" depth="files">
+              <lock><token>lock-token</token></lock>
+            </wc-status>
+          </entry>
+        </target></status>
+        """
+
+        let status = try XCTUnwrap(StatusXMLParser.parse(Data(xml.utf8)).first)
+
+        XCTAssertEqual(status.overlay.propertyStatus, .modified)
+        XCTAssertTrue(status.overlay.isWorkingCopyLocked)
+        XCTAssertTrue(status.overlay.isRepositoryLocked)
+        XCTAssertTrue(status.overlay.isSwitched)
+        XCTAssertTrue(status.overlay.isFileExternal)
+        XCTAssertEqual(status.overlay.depth, .files)
     }
 }

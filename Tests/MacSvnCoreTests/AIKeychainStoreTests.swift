@@ -13,7 +13,7 @@ final class AIKeychainStoreTests: XCTestCase {
         try await store.deleteAPIKey(ref: ref)
         let deleted = try await store.apiKey(ref: ref)
 
-        XCTAssertEqual(ref, "macsvn.ai-provider.10000000-0000-0000-0000-000000000001")
+        XCTAssertEqual(ref, "svnstudio.ai-provider.10000000-0000-0000-0000-000000000001")
         XCTAssertFalse(ref.contains("sk-secret-value"))
         XCTAssertEqual(loaded, "sk-secret-value")
         XCTAssertNil(deleted)

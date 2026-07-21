@@ -278,7 +278,14 @@ private actor FakeBlameEvolutionLogProvider: LogProviding {
         calls
     }
 
-    func log(wc: URL, target: String, from: Revision, batch: Int, verbose: Bool) async throws -> [LogEntry] {
+    func log(
+        wc: URL,
+        target: String,
+        from: Revision,
+        batch: Int,
+        verbose: Bool,
+        stopOnCopy: Bool
+    ) async throws -> [LogEntry] {
         calls.append(LogCall(wc: wc, target: target, from: from, batch: batch, verbose: verbose))
         return entries[from] ?? []
     }

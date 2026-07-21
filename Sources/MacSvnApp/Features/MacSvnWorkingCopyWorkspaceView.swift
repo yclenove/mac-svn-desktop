@@ -1,0 +1,113 @@
+import SwiftUI
+import MacSvnCore
+
+/// 变更工作区：变更树 + Diff + 提交面板同屏。
+/// 注意：避免嵌套 VSplitView+HSplitView + 海量子 View，否则 macOS SwiftUI 易陷入 AttributeGraph 死循环（CPU 100%）。
+public struct MacSvnWorkingCopyWorkspaceView: View {
+    @ObservedObject private var workspaceController: MacSvnWorkspaceController
+    @ObservedObject private var navigator: MacSvnAppNavigator
+    private let session: MacSvnAppSession
+
+    @State private var workspaceState = MacSvnWorkingCopyWorkspaceState()
+    @State private var seededSelection: Set<String> = []
+    @State private var isCommitInspectorExpanded = false
+
+    public init(
+        workspaceController: MacSvnWorkspaceController,
+        session: MacSvnAppSession,
+        navigator: MacSvnAppNavigator
+    ) {
+        self.workspaceController = workspaceController
+        self.session = session
+        self.navigator = navigator
+    }
+
+    public var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                MacSvnChangesView(
+                    workspaceController: workspaceController,
+                    statusProvider: session.svnService,
+                    navigator: navigator,
+                    session: session,
+                    embedded: true,
+                    initialSelectedPaths: seededSelection,
+                    workspaceState: workspaceState,
+                    onFocusedPathChange: { path in
+                        guard let path else { return }
+                        workspaceState.selectRows(
+                            workspaceState.selectedPaths,
+                            focusedPath: path
+                        )
+                    }
+                )
+                .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
+
+                Divider()
+
+                MacSvnDiffView(
+                    workspaceController: workspaceController,
+                    session: session,
+                    navigator: navigator,
+                    embedded: true,
+                    externalSelectedPath: Binding(
+                        get: { workspaceState.focusedPath },
+                        set: { _ in }
+                    )
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
+            MacSvnCommitView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator,
+                embedded: true,
+                isExpanded: $isCommitInspectorExpanded,
+                workspaceState: workspaceState
+            )
+            .frame(
+                minHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.minimumExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight,
+                idealHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.idealExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight,
+                maxHeight: isCommitInspectorExpanded
+                    ? MacSvnCommitInspectorMetrics.maximumExpandedHeight
+                    : MacSvnCommitInspectorMetrics.collapsedHeight
+            )
+        }
+        .task {
+            applyPendingDiffPathSeed()
+            applyPendingLogDiffSeed()
+        }
+        .onChange(of: navigator.pendingDiffPath) { _, _ in
+            applyPendingDiffPathSeed()
+        }
+        .onChange(of: navigator.pendingLogDiff) { _, _ in
+            applyPendingLogDiffSeed()
+        }
+        .onChange(of: workspaceController.selectedID) { _, _ in
+            workspaceState.resetForWorkingCopy()
+            seededSelection = []
+        }
+    }
+
+    private func applyPendingDiffPathSeed() {
+        // 工作区独占消费 pendingDiffPath，避免与嵌入 Diff 竞态
+        guard let path = navigator.consumePendingDiffPath() else { return }
+        seededSelection = [path]
+        workspaceState.seedFocusedPath(path)
+    }
+
+    /// 历史页原子 Diff：只同步 CFM 选中，修订由 DiffView 消费 `pendingLogDiff`。
+    private func applyPendingLogDiffSeed() {
+        guard let intent = navigator.pendingLogDiff else { return }
+        seededSelection = [intent.path]
+        workspaceState.seedFocusedPath(intent.path)
+    }
+}

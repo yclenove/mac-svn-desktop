@@ -19,7 +19,14 @@ final class InfoXMLParserTests: XCTestCase {
             </wc-info>
             <commit revision="3">
               <author>yangchao</author>
+              <date>2026-07-13T10:20:30.000000Z</date>
             </commit>
+            <lock>
+              <token>opaquelocktoken:abc</token>
+              <owner>alice</owner>
+              <comment>editing</comment>
+              <created>2026-07-13T11:22:33.000000Z</created>
+            </lock>
           </entry>
         </info>
         """
@@ -31,6 +38,13 @@ final class InfoXMLParserTests: XCTestCase {
         XCTAssertEqual(info.repositoryRoot, "file:///tmp/repo")
         XCTAssertEqual(info.revision, Revision(3))
         XCTAssertEqual(info.kind, "dir")
+        XCTAssertEqual(info.lastChangedRevision, Revision(3))
+        XCTAssertEqual(info.lastChangedAuthor, "yangchao")
+        XCTAssertNotNil(info.lastChangedDate)
+        XCTAssertEqual(info.lock?.token, "opaquelocktoken:abc")
+        XCTAssertEqual(info.lock?.owner, "alice")
+        XCTAssertEqual(info.lock?.comment, "editing")
+        XCTAssertNotNil(info.lock?.created)
     }
 
     func testParsesTextConflictFiles() throws {

@@ -7,7 +7,7 @@ final class FinderSyncDeepLinkBuilderTests: XCTestCase {
         let path = "/Users/me/wc/Sources/App.swift"
 
         let open = try XCTUnwrap(builder.url(for: .update, path: path))
-        XCTAssertEqual(open.scheme, "macsvn")
+        XCTAssertEqual(open.scheme, ProductBranding.urlScheme)
         XCTAssertEqual(open.host, "open")
         XCTAssertEqual(URLComponents(url: open, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "path" }?.value, path)
         XCTAssertEqual(URLComponents(url: open, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value, "update")
@@ -21,6 +21,30 @@ final class FinderSyncDeepLinkBuilderTests: XCTestCase {
         let commit = try XCTUnwrap(builder.url(for: .commit, path: path))
         XCTAssertEqual(commit.host, "open")
         XCTAssertEqual(URLComponents(url: commit, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value, "commit")
+    }
+
+    func testBuildsCommandURLForFinderExtendedMenu() throws {
+        let builder = FinderSyncDeepLinkBuilder()
+        let url = try XCTUnwrap(builder.commandURL(for: .deleteKeepLocal, path: "/Users/me/repo/file.txt"))
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(components.host, "command")
+        XCTAssertEqual(components.queryItems?.first { $0.name == "path" }?.value, "/Users/me/repo/file.txt")
+        XCTAssertEqual(components.queryItems?.first { $0.name == "command" }?.value, SvnCommandID.deleteKeepLocal.rawValue)
+    }
+
+    func testBuildsCommandURLWithAllSelectedPathsInOrder() throws {
+        let builder = FinderSyncDeepLinkBuilder()
+        let url = try XCTUnwrap(builder.commandURL(
+            for: .deleteKeepLocal,
+            paths: ["/Users/me/repo/first.txt", "/Users/me/repo/second.txt"]
+        ))
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(
+            components.queryItems?.filter { $0.name == "path" }.compactMap(\.value),
+            ["/Users/me/repo/first.txt", "/Users/me/repo/second.txt"]
+        )
     }
 }
 
@@ -60,5 +84,110 @@ final class FinderSyncRootsExporterTests: XCTestCase {
         try FinderSyncRootsExporter.export(records: records, to: fileURL)
         let loaded = try FinderSyncRootsExporter.load(from: fileURL)
         XCTAssertEqual(loaded, ["/tmp/wc-a"])
+    }
+
+    func testExportsAndLoadsExplicitCacheMode() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/wc-a")],
+            cacheMode: .shell,
+            to: fileURL
+        )
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.roots, ["/tmp/wc-a"])
+        XCTAssertEqual(configuration.cacheMode, .shell)
+    }
+
+    func testLegacyRootsFileDefaultsToDefaultCache() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        try Data(#"{"version":1,"roots":["/tmp/wc"]}"#.utf8).write(to: fileURL)
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+
+        XCTAssertEqual(configuration.cacheMode, .defaultCache)
+        XCTAssertEqual(configuration.roots, ["/tmp/wc"])
+    }
+
+    func testRootOnlyExportPreservesExistingCacheMode() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/old")],
+            cacheMode: .shell,
+            to: fileURL
+        )
+
+        try FinderSyncRootsExporter.export(records: [record(path: "/tmp/new")], to: fileURL)
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.cacheMode, .shell)
+        XCTAssertEqual(configuration.roots, ["/tmp/new"])
+    }
+
+    func testExportAndLoadPreservesOverlaySettings() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        let overlaySettings = FinderSyncOverlaySettings(
+            includedPaths: ["/tmp/include"],
+            excludedPaths: ["/tmp/include/.build"],
+            enabledBadges: [.modified, .normal]
+        )
+
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/wc-a")],
+            cacheMode: .shell,
+            overlaySettings: overlaySettings,
+            to: fileURL
+        )
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.overlaySettings, overlaySettings)
+    }
+
+    func testRootOnlyExportPreservesExistingOverlaySettings() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = FinderSyncRootsExporter.fileURL(in: directory)
+        let overlaySettings = FinderSyncOverlaySettings(includedPaths: ["/tmp/include"])
+        try FinderSyncRootsExporter.export(
+            records: [record(path: "/tmp/old")],
+            cacheMode: .defaultCache,
+            overlaySettings: overlaySettings,
+            to: fileURL
+        )
+
+        try FinderSyncRootsExporter.export(records: [record(path: "/tmp/new")], to: fileURL)
+
+        let configuration = try FinderSyncRootsExporter.loadConfiguration(from: fileURL)
+        XCTAssertEqual(configuration.overlaySettings, overlaySettings)
+    }
+
+    private func temporaryDirectory() -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("finder-roots-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private func record(path: String) -> WorkingCopyRecord {
+        WorkingCopyRecord(
+            id: UUID(),
+            name: "wc",
+            localPath: path,
+            repoURL: "file:///repo",
+            username: nil,
+            addedAt: Date(timeIntervalSince1970: 1),
+            lastOpenedAt: Date(timeIntervalSince1970: 1),
+            isValid: true,
+            revision: Revision(1)
+        )
     }
 }

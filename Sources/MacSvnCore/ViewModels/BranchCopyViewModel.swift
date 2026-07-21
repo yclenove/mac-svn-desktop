@@ -1,7 +1,26 @@
+import Foundation
 import Observation
 
 public protocol BranchCopyProviding: Sendable {
     func copy(source: String, destination: String, message: String, auth: Credential?) async throws -> Revision
+}
+
+public enum BranchCopySource: Equatable, Sendable {
+    case head(repositoryURL: String)
+    case revision(repositoryURL: String, revision: Revision)
+    case workingCopy(URL)
+
+    public var commandSource: String {
+        switch self {
+        case .head(let repositoryURL):
+            return LogContextActionPolicy.stripPegRevision(from: repositoryURL)
+        case .revision(let repositoryURL, let revision):
+            let url = LogContextActionPolicy.stripPegRevision(from: repositoryURL)
+            return "\(url)@\(revision.value)"
+        case .workingCopy(let url):
+            return url.path
+        }
+    }
 }
 
 public enum BranchCopyState: Equatable, Sendable {
@@ -21,6 +40,26 @@ public final class BranchCopyViewModel {
 
     public init(copyProvider: any BranchCopyProviding) {
         self.copyProvider = copyProvider
+    }
+
+    public func create(
+        kind: BranchReferenceKind,
+        source: BranchCopySource,
+        repositoryRoot: String,
+        name: String,
+        layout: BranchLayout,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        await create(
+            kind: kind,
+            source: source.commandSource,
+            repositoryRoot: repositoryRoot,
+            name: name,
+            layout: layout,
+            message: message,
+            auth: auth
+        )
     }
 
     public func create(

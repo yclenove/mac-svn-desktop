@@ -79,17 +79,138 @@ public enum SvnDepth: String, Codable, Equatable, Sendable {
     case infinity
 }
 
+/// Finder/Tortoise 角标需要的工作副本附加状态。
+/// `svn status --xml` 直接提供的字段由解析器填写，其余字段由状态采集器补充。
+public struct FileStatusOverlayMetadata: Equatable, Sendable {
+    public let propertyStatus: ItemStatus
+    public let isWorkingCopyLocked: Bool
+    public let isRepositoryLocked: Bool
+    public let isSwitched: Bool
+    public let isFileExternal: Bool
+    public let hasNeedsLock: Bool
+    public let isReadOnly: Bool
+    public let depth: SvnDepth?
+    public let isNestedWorkingCopy: Bool
+    public let isMergeInfoOnly: Bool
+
+    public init(
+        propertyStatus: ItemStatus = .none,
+        isWorkingCopyLocked: Bool = false,
+        isRepositoryLocked: Bool = false,
+        isSwitched: Bool = false,
+        isFileExternal: Bool = false,
+        hasNeedsLock: Bool = false,
+        isReadOnly: Bool = false,
+        depth: SvnDepth? = nil,
+        isNestedWorkingCopy: Bool = false,
+        isMergeInfoOnly: Bool = false
+    ) {
+        self.propertyStatus = propertyStatus
+        self.isWorkingCopyLocked = isWorkingCopyLocked
+        self.isRepositoryLocked = isRepositoryLocked
+        self.isSwitched = isSwitched
+        self.isFileExternal = isFileExternal
+        self.hasNeedsLock = hasNeedsLock
+        self.isReadOnly = isReadOnly
+        self.depth = depth
+        self.isNestedWorkingCopy = isNestedWorkingCopy
+        self.isMergeInfoOnly = isMergeInfoOnly
+    }
+}
+
 public struct FileStatus: Equatable, Sendable {
     public let path: String
     public let itemStatus: ItemStatus
     public let revision: Revision?
     public let isTreeConflict: Bool
+    /// 对照仓库时的远端状态（`status -u` 的 `repos-status`）；未检查仓库时为 `nil`
+    public let remoteItemStatus: ItemStatus?
+    /// 工作副本 changelist 归属；未分配时为 `nil`。
+    public let changelist: String?
+    /// Finder/Tortoise 角标所需的属性、锁、稀疏工作副本和外部项状态。
+    public let overlay: FileStatusOverlayMetadata
 
-    public init(path: String, itemStatus: ItemStatus, revision: Revision?, isTreeConflict: Bool) {
+    public init(
+        path: String,
+        itemStatus: ItemStatus,
+        revision: Revision?,
+        isTreeConflict: Bool,
+        remoteItemStatus: ItemStatus? = nil,
+        changelist: String? = nil
+    ) {
+        self.init(
+            path: path,
+            itemStatus: itemStatus,
+            revision: revision,
+            isTreeConflict: isTreeConflict,
+            remoteItemStatus: remoteItemStatus,
+            changelist: changelist,
+            overlay: FileStatusOverlayMetadata()
+        )
+    }
+
+    public init(
+        path: String,
+        itemStatus: ItemStatus,
+        revision: Revision?,
+        isTreeConflict: Bool,
+        remoteItemStatus: ItemStatus? = nil,
+        changelist: String? = nil,
+        overlay: FileStatusOverlayMetadata
+    ) {
         self.path = path
         self.itemStatus = itemStatus
         self.revision = revision
         self.isTreeConflict = isTreeConflict
+        self.remoteItemStatus = remoteItemStatus
+        self.changelist = changelist
+        self.overlay = overlay
+    }
+}
+
+/// CFM 行颜色语义（对齐小乌龟：仅本地 / 仅远端 / 双方 / 冲突）
+public enum CFMChangeHighlight: Equatable, Sendable {
+    case none
+    case localOnly
+    case remoteOnly
+    case both
+    case conflicted
+
+    public static func classify(_ status: FileStatus) -> CFMChangeHighlight {
+        if status.itemStatus == .conflicted || status.isTreeConflict {
+            return .conflicted
+        }
+        let localChanged = isLocallyInteresting(status.itemStatus)
+        let remoteChanged = isRemotelyInteresting(status.remoteItemStatus)
+        switch (localChanged, remoteChanged) {
+        case (true, true):
+            return .both
+        case (true, false):
+            return .localOnly
+        case (false, true):
+            return .remoteOnly
+        case (false, false):
+            return .none
+        }
+    }
+
+    private static func isLocallyInteresting(_ status: ItemStatus) -> Bool {
+        switch status {
+        case .modified, .added, .deleted, .missing, .replaced, .conflicted, .obstructed, .incomplete, .unversioned:
+            return true
+        case .normal, .ignored, .external, .none:
+            return false
+        }
+    }
+
+    private static func isRemotelyInteresting(_ status: ItemStatus?) -> Bool {
+        guard let status else { return false }
+        switch status {
+        case .modified, .added, .deleted, .replaced, .conflicted:
+            return true
+        case .none, .normal, .unversioned, .missing, .ignored, .external, .incomplete, .obstructed:
+            return false
+        }
     }
 }
 
@@ -465,7 +586,7 @@ public struct Credential: Equatable, Sendable {
     }
 }
 
-public struct LogEntry: Equatable, Sendable {
+public struct LogEntry: Codable, Equatable, Sendable {
     public let revision: Revision
     public let author: String
     public let date: Date?
@@ -481,7 +602,7 @@ public struct LogEntry: Equatable, Sendable {
     }
 }
 
-public struct ChangedPath: Equatable, Sendable {
+public struct ChangedPath: Codable, Equatable, Sendable {
     public let path: String
     public let action: ChangedPathAction
     public let kind: String?
@@ -497,7 +618,7 @@ public struct ChangedPath: Equatable, Sendable {
     }
 }
 
-public enum ChangedPathAction: String, Equatable, Sendable {
+public enum ChangedPathAction: String, Codable, Equatable, Hashable, Sendable {
     case added = "A"
     case modified = "M"
     case deleted = "D"
@@ -519,6 +640,21 @@ public enum CommandPaletteActionID: String, Codable, Equatable, Hashable, Sendab
     case update
     case switchBranch
     case openWorkingCopy
+    case goChanges
+    case goHistory
+    case goBrowser
+    case goBranches
+    case goConflicts
+    case goBlame
+    case goProperties
+    case goLocks
+    case goShelve
+    case goGitMigration
+    case goTeamActivity
+    case goAIAssistant
+    case goReleaseNotes
+    case goSettings
+    case goDiff
 }
 
 public struct CommandPaletteAction: Equatable, Sendable {
@@ -543,6 +679,7 @@ public struct CommandPaletteFileItem: Equatable, Sendable {
 
 public enum CommandPaletteResultKind: Equatable, Sendable {
     case action(CommandPaletteActionID)
+    case svnCommand(SvnCommandID)
     case file(path: String)
     case log(revision: Revision)
     case aiChat(query: String)
@@ -579,6 +716,20 @@ public enum RemoteEntryKind: Equatable, Sendable {
     }
 }
 
+public struct RemoteLockInfo: Equatable, Sendable {
+    public let token: String?
+    public let owner: String?
+    public let comment: String?
+    public let created: Date?
+
+    public init(token: String?, owner: String?, comment: String?, created: Date?) {
+        self.token = token
+        self.owner = owner
+        self.comment = comment
+        self.created = created
+    }
+}
+
 public struct RemoteEntry: Equatable, Sendable {
     public let name: String
     public let path: String
@@ -587,6 +738,7 @@ public struct RemoteEntry: Equatable, Sendable {
     public let revision: Revision?
     public let author: String?
     public let date: Date?
+    public let lock: RemoteLockInfo?
 
     public init(
         name: String,
@@ -595,7 +747,8 @@ public struct RemoteEntry: Equatable, Sendable {
         size: Int?,
         revision: Revision?,
         author: String?,
-        date: Date?
+        date: Date?,
+        lock: RemoteLockInfo? = nil
     ) {
         self.name = name
         self.path = path
@@ -604,6 +757,7 @@ public struct RemoteEntry: Equatable, Sendable {
         self.revision = revision
         self.author = author
         self.date = date
+        self.lock = lock
     }
 }
 
@@ -766,6 +920,26 @@ public enum ShelveKind: String, Codable, Equatable, Sendable {
     case safety
 }
 
+/// Subversion experimental shelving implementation selected through `SVN_EXPERIMENTAL_COMMANDS`.
+public enum SvnShelvingVersion: String, Codable, CaseIterable, Equatable, Sendable {
+    case v2
+    case v3
+
+    public var environmentValue: String {
+        switch self {
+        case .v2: "shelf2"
+        case .v3: "shelf3"
+        }
+    }
+
+    public var displayName: String {
+        switch self {
+        case .v2: "V2"
+        case .v3: "V3"
+        }
+    }
+}
+
 public struct ShelveSnapshot: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public let wcPath: String
@@ -815,6 +989,10 @@ public struct SvnInfo: Equatable, Sendable {
     public let revision: Revision?
     public let kind: String?
     public let conflicts: [ConflictInfo]
+    public let lastChangedRevision: Revision?
+    public let lastChangedAuthor: String?
+    public let lastChangedDate: Date?
+    public let lock: RemoteLockInfo?
 
     public init(
         path: String,
@@ -822,7 +1000,11 @@ public struct SvnInfo: Equatable, Sendable {
         repositoryRoot: String?,
         revision: Revision?,
         kind: String?,
-        conflicts: [ConflictInfo] = []
+        conflicts: [ConflictInfo] = [],
+        lastChangedRevision: Revision? = nil,
+        lastChangedAuthor: String? = nil,
+        lastChangedDate: Date? = nil,
+        lock: RemoteLockInfo? = nil
     ) {
         self.path = path
         self.url = url
@@ -830,6 +1012,10 @@ public struct SvnInfo: Equatable, Sendable {
         self.revision = revision
         self.kind = kind
         self.conflicts = conflicts
+        self.lastChangedRevision = lastChangedRevision
+        self.lastChangedAuthor = lastChangedAuthor
+        self.lastChangedDate = lastChangedDate
+        self.lock = lock
     }
 }
 
@@ -908,16 +1094,113 @@ public struct ExternalDiffToolConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+public enum ExternalToolPurpose: String, Codable, CaseIterable, Identifiable, Sendable {
+    case diff
+    case merge
+    case blame
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .diff: return "Diff"
+        case .merge: return "Merge"
+        case .blame: return "Blame"
+        }
+    }
+}
+
+/// 外置程序的按扩展名规则。空扩展名表示该用途的默认规则。
+public struct ExternalToolRule: Codable, Equatable, Identifiable, Sendable {
+    public var id: UUID
+    public var purpose: ExternalToolPurpose
+    public var fileExtensions: [String]
+    public var tool: ExternalDiffToolConfiguration
+
+    public init(
+        id: UUID = UUID(),
+        purpose: ExternalToolPurpose,
+        fileExtensions: [String] = [],
+        tool: ExternalDiffToolConfiguration
+    ) {
+        self.id = id
+        self.purpose = purpose
+        self.fileExtensions = fileExtensions
+        self.tool = tool
+    }
+}
+
+public enum ExternalToolRuleResolver {
+    public static func tool(
+        for purpose: ExternalToolPurpose,
+        path: String,
+        rules: [ExternalToolRule],
+        legacyDiffTool: ExternalDiffToolConfiguration?
+    ) -> ExternalDiffToolConfiguration? {
+        let matchingPurpose = rules.filter { $0.purpose == purpose }
+        let fileExtension = normalizedExtension(URL(fileURLWithPath: path).pathExtension)
+
+        if !fileExtension.isEmpty,
+           let exactRule = matchingPurpose.first(where: {
+               $0.fileExtensions.contains { normalizedExtension($0) == fileExtension }
+           }) {
+            return exactRule.tool
+        }
+        if let defaultRule = matchingPurpose.first(where: { isDefaultRule($0) }) {
+            return defaultRule.tool
+        }
+        return purpose == .diff ? legacyDiffTool : nil
+    }
+
+    private static func isDefaultRule(_ rule: ExternalToolRule) -> Bool {
+        rule.fileExtensions.isEmpty || rule.fileExtensions.contains {
+            normalizedExtension($0) == "*"
+        }
+    }
+
+    private static func normalizedExtension(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "*.", with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var svnPath: String?
     public var logBatchSize: Int
     public var branchLayout: BranchLayout
     public var processTimeout: TimeInterval
     public var externalDiffTool: ExternalDiffToolConfiguration?
+    /// S10：按用途和扩展名匹配的外置 Diff / Merge / Blame 工具。
+    public var externalToolRules: [ExternalToolRule]
     /// 为 true 时，提交守护将冲突标记残留等规则升级为硬阻断（不可跳过警告提交）
     public var commitGuardHardBlockConflictMarkers: Bool
     /// AI 隐私：脱敏开关与自定义规则（随设置持久化）
     public var aiPrivacy: AIPrivacySettings
+    /// Check for Modifications 列配置（可见列与顺序）
+    public var cfmColumns: CFMColumnConfiguration
+    /// Progress 完成后的自动关闭策略。
+    public var progressAutoCloseMode: ProgressAutoCloseMode
+    /// Revision Graph 分类路径、节点颜色与复制颜色混合策略。
+    public var revisionGraph: RevisionGraphSettings
+    /// 官方 SVN experimental shelving CLI 版本。
+    public var shelvingVersion: SvnShelvingVersion
+    /// S13：日志缓存启用、保留期和每目标容量。
+    public var logCachePolicy: LogCachePolicy
+    /// S08：Finder Sync 状态缓存模式。
+    public var finderSyncCacheMode: FinderSyncCacheMode
+    /// S08：Finder Sync 包含/排除路径与可见角标。
+    public var finderSyncOverlaySettings: FinderSyncOverlaySettings
+    /// S02：Finder Sync 顶层菜单、needs-lock 提升与菜单过滤。
+    public var finderSyncContextMenuSettings: FinderSyncContextMenuSettings
+    /// S11：按工作副本路径匹配的客户端钩子。
+    public var clientHooks: [ClientHookConfiguration]
+    public var general: GeneralSettings
+    public var dialogs: DialogSettings
+    public var changeColours: ChangeColourPalette
+    public var network: SvnNetworkSettings
 
     public init(
         svnPath: String? = nil,
@@ -926,15 +1209,133 @@ public struct AppSettings: Codable, Equatable, Sendable {
         processTimeout: TimeInterval = 120,
         externalDiffTool: ExternalDiffToolConfiguration? = nil,
         commitGuardHardBlockConflictMarkers: Bool = false,
-        aiPrivacy: AIPrivacySettings = AIPrivacySettings()
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        revisionGraph: RevisionGraphSettings
     ) {
         self.svnPath = svnPath
         self.logBatchSize = logBatchSize
         self.branchLayout = branchLayout
         self.processTimeout = processTimeout
         self.externalDiffTool = externalDiffTool
+        self.externalToolRules = []
         self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
         self.aiPrivacy = aiPrivacy
+        self.cfmColumns = cfmColumns
+        self.progressAutoCloseMode = progressAutoCloseMode
+        self.revisionGraph = revisionGraph
+        self.shelvingVersion = .v3
+        self.logCachePolicy = LogCachePolicy()
+        self.finderSyncCacheMode = .defaultCache
+        self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
+        self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
+        self.clientHooks = []
+        self.general = GeneralSettings()
+        self.dialogs = DialogSettings()
+        self.changeColours = ChangeColourPalette()
+        self.network = SvnNetworkSettings()
+    }
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        revisionGraph: RevisionGraphSettings,
+        shelvingVersion: SvnShelvingVersion
+    ) {
+        self.svnPath = svnPath
+        self.logBatchSize = logBatchSize
+        self.branchLayout = branchLayout
+        self.processTimeout = processTimeout
+        self.externalDiffTool = externalDiffTool
+        self.externalToolRules = []
+        self.commitGuardHardBlockConflictMarkers = commitGuardHardBlockConflictMarkers
+        self.aiPrivacy = aiPrivacy
+        self.cfmColumns = cfmColumns
+        self.progressAutoCloseMode = progressAutoCloseMode
+        self.revisionGraph = revisionGraph
+        self.shelvingVersion = shelvingVersion
+        self.logCachePolicy = LogCachePolicy()
+        self.finderSyncCacheMode = .defaultCache
+        self.finderSyncOverlaySettings = FinderSyncOverlaySettings()
+        self.finderSyncContextMenuSettings = FinderSyncContextMenuSettings()
+        self.clientHooks = []
+        self.general = GeneralSettings()
+        self.dialogs = DialogSettings()
+        self.changeColours = ChangeColourPalette()
+        self.network = SvnNetworkSettings()
+    }
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts
+    ) {
+        self.init(
+            svnPath: svnPath,
+            logBatchSize: logBatchSize,
+            branchLayout: branchLayout,
+            processTimeout: processTimeout,
+            externalDiffTool: externalDiffTool,
+            commitGuardHardBlockConflictMarkers: commitGuardHardBlockConflictMarkers,
+            aiPrivacy: aiPrivacy,
+            cfmColumns: cfmColumns,
+            progressAutoCloseMode: progressAutoCloseMode,
+            revisionGraph: RevisionGraphSettings()
+        )
+    }
+
+    public init(
+        svnPath: String? = nil,
+        logBatchSize: Int = 100,
+        branchLayout: BranchLayout = BranchLayout(),
+        processTimeout: TimeInterval = 120,
+        externalDiffTool: ExternalDiffToolConfiguration? = nil,
+        commitGuardHardBlockConflictMarkers: Bool = false,
+        aiPrivacy: AIPrivacySettings = AIPrivacySettings(),
+        cfmColumns: CFMColumnConfiguration = .default,
+        progressAutoCloseMode: ProgressAutoCloseMode = .noConflicts,
+        shelvingVersion: SvnShelvingVersion
+    ) {
+        self.init(
+            svnPath: svnPath,
+            logBatchSize: logBatchSize,
+            branchLayout: branchLayout,
+            processTimeout: processTimeout,
+            externalDiffTool: externalDiffTool,
+            commitGuardHardBlockConflictMarkers: commitGuardHardBlockConflictMarkers,
+            aiPrivacy: aiPrivacy,
+            cfmColumns: cfmColumns,
+            progressAutoCloseMode: progressAutoCloseMode,
+            revisionGraph: RevisionGraphSettings(),
+            shelvingVersion: shelvingVersion
+        )
+    }
+
+    public init(
+        general: GeneralSettings,
+        dialogs: DialogSettings = DialogSettings(),
+        changeColours: ChangeColourPalette = ChangeColourPalette(),
+        network: SvnNetworkSettings = SvnNetworkSettings()
+    ) {
+        self.init()
+        self.general = general
+        self.dialogs = dialogs
+        self.changeColours = changeColours
+        self.network = network
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -943,8 +1344,22 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case branchLayout
         case processTimeout
         case externalDiffTool
+        case externalToolRules
         case commitGuardHardBlockConflictMarkers
         case aiPrivacy
+        case cfmColumns
+        case progressAutoCloseMode
+        case revisionGraph
+        case shelvingVersion
+        case logCachePolicy
+        case finderSyncCacheMode
+        case finderSyncOverlaySettings
+        case finderSyncContextMenuSettings
+        case clientHooks
+        case general
+        case dialogs
+        case changeColours
+        case network
     }
 
     public init(from decoder: Decoder) throws {
@@ -954,8 +1369,30 @@ public struct AppSettings: Codable, Equatable, Sendable {
         branchLayout = try container.decodeIfPresent(BranchLayout.self, forKey: .branchLayout) ?? BranchLayout()
         processTimeout = try container.decodeIfPresent(TimeInterval.self, forKey: .processTimeout) ?? 120
         externalDiffTool = try container.decodeIfPresent(ExternalDiffToolConfiguration.self, forKey: .externalDiffTool)
+        externalToolRules = try container.decodeIfPresent([ExternalToolRule].self, forKey: .externalToolRules) ?? []
         commitGuardHardBlockConflictMarkers = try container.decodeIfPresent(Bool.self, forKey: .commitGuardHardBlockConflictMarkers) ?? false
         aiPrivacy = try container.decodeIfPresent(AIPrivacySettings.self, forKey: .aiPrivacy) ?? AIPrivacySettings()
+        cfmColumns = try container.decodeIfPresent(CFMColumnConfiguration.self, forKey: .cfmColumns) ?? .default
+        progressAutoCloseMode = try container.decodeIfPresent(ProgressAutoCloseMode.self, forKey: .progressAutoCloseMode) ?? .noConflicts
+        revisionGraph = try container.decodeIfPresent(RevisionGraphSettings.self, forKey: .revisionGraph) ?? RevisionGraphSettings()
+        shelvingVersion = try container.decodeIfPresent(SvnShelvingVersion.self, forKey: .shelvingVersion) ?? .v3
+        logCachePolicy = try container.decodeIfPresent(LogCachePolicy.self, forKey: .logCachePolicy) ?? LogCachePolicy()
+        finderSyncCacheMode = try container.decodeIfPresent(FinderSyncCacheMode.self, forKey: .finderSyncCacheMode)
+            ?? .defaultCache
+        finderSyncOverlaySettings = try container.decodeIfPresent(
+            FinderSyncOverlaySettings.self,
+            forKey: .finderSyncOverlaySettings
+        ) ?? FinderSyncOverlaySettings()
+        finderSyncContextMenuSettings = try container.decodeIfPresent(
+            FinderSyncContextMenuSettings.self,
+            forKey: .finderSyncContextMenuSettings
+        ) ?? FinderSyncContextMenuSettings()
+        clientHooks = try container.decodeIfPresent([ClientHookConfiguration].self, forKey: .clientHooks) ?? []
+        general = try container.decodeIfPresent(GeneralSettings.self, forKey: .general) ?? GeneralSettings()
+        dialogs = try container.decodeIfPresent(DialogSettings.self, forKey: .dialogs) ?? DialogSettings()
+        changeColours = try container.decodeIfPresent(ChangeColourPalette.self, forKey: .changeColours)
+            ?? ChangeColourPalette()
+        network = try container.decodeIfPresent(SvnNetworkSettings.self, forKey: .network) ?? SvnNetworkSettings()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -965,8 +1402,22 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try container.encode(branchLayout, forKey: .branchLayout)
         try container.encode(processTimeout, forKey: .processTimeout)
         try container.encodeIfPresent(externalDiffTool, forKey: .externalDiffTool)
+        try container.encode(externalToolRules, forKey: .externalToolRules)
         try container.encode(commitGuardHardBlockConflictMarkers, forKey: .commitGuardHardBlockConflictMarkers)
         try container.encode(aiPrivacy, forKey: .aiPrivacy)
+        try container.encode(cfmColumns, forKey: .cfmColumns)
+        try container.encode(progressAutoCloseMode, forKey: .progressAutoCloseMode)
+        try container.encode(revisionGraph, forKey: .revisionGraph)
+        try container.encode(shelvingVersion, forKey: .shelvingVersion)
+        try container.encode(logCachePolicy, forKey: .logCachePolicy)
+        try container.encode(finderSyncCacheMode, forKey: .finderSyncCacheMode)
+        try container.encode(finderSyncOverlaySettings, forKey: .finderSyncOverlaySettings)
+        try container.encode(finderSyncContextMenuSettings, forKey: .finderSyncContextMenuSettings)
+        try container.encode(clientHooks, forKey: .clientHooks)
+        try container.encode(general, forKey: .general)
+        try container.encode(dialogs, forKey: .dialogs)
+        try container.encode(changeColours, forKey: .changeColours)
+        try container.encode(network, forKey: .network)
     }
 }
 

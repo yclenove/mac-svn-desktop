@@ -1,7 +1,7 @@
 import SwiftUI
 import MacSvnCore
 
-/// 按路由分发到真实功能页；尚未接线的路由保留占位，避免阻塞导航。
+/// 按路由穷尽分发到真实功能页。
 public struct MacSvnFeatureHostView: View {
     public let route: MacSvnAppRoute
     @ObservedObject public var session: MacSvnAppSession
@@ -32,25 +32,47 @@ public struct MacSvnFeatureHostView: View {
                 session: session
             )
         case .commit:
-            MacSvnCommitView(workspaceController: workspaceController, session: session)
+            MacSvnCommitView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .diff:
             MacSvnDiffView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .log:
             MacSvnLogView(workspaceController: workspaceController, session: session, navigator: navigator)
+        case .revisionGraph:
+            MacSvnRevisionGraphView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .repositoryBrowser:
-            MacSvnRepoBrowserView(session: session, workspaceController: workspaceController)
+            MacSvnRepoBrowserView(session: session, workspaceController: workspaceController, navigator: navigator)
         case .branches:
-            MacSvnBranchesView(workspaceController: workspaceController, session: session)
+            MacSvnBranchesView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .merge:
-            MacSvnConflictWorkspaceView(workspaceController: workspaceController, session: session)
+            MacSvnConflictWorkspaceView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator,
+                onReturnToChanges: {
+                    navigator.selectMode(.changes)
+                    navigator.lastAutomationMessage = "已返回变更工作区"
+                }
+            )
         case .blame:
-            MacSvnBlameView(workspaceController: workspaceController, session: session)
+            MacSvnBlameView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .properties:
-            MacSvnPropertiesView(workspaceController: workspaceController, session: session)
+            MacSvnPropertiesView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .locks:
-            MacSvnLocksView(workspaceController: workspaceController, session: session)
+            MacSvnLocksView(
+                workspaceController: workspaceController,
+                session: session,
+                navigator: navigator
+            )
         case .shelve:
-            MacSvnShelveView(workspaceController: workspaceController, session: session)
+            MacSvnShelveView(workspaceController: workspaceController, session: session, navigator: navigator)
         case .gitMigration:
             MacSvnGitMigrationView(workspaceController: workspaceController, session: session)
         case .teamActivity:

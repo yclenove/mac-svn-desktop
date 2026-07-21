@@ -19,15 +19,15 @@ public actor SettingsStore {
     }
 
     public func update(_ settings: AppSettings) throws {
-        cachedSettings = settings
         try store.save(SettingsFile(settings: settings))
+        cachedSettings = settings
     }
 
     @discardableResult
     public func reset() throws -> AppSettings {
         let defaults = AppSettings()
-        cachedSettings = defaults
         try store.save(SettingsFile(settings: defaults))
+        cachedSettings = defaults
         return defaults
     }
 }

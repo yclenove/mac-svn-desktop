@@ -80,7 +80,7 @@ private actor FakeChatToolService: AISVNToolServicing {
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] { [] }
     func blame(wc: URL, target: String) async throws -> [BlameLine] { [] }
     func cat(url: String, revision: Revision?, sizeLimit: Int, auth: Credential?) async throws -> Data { Data() }
-    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?) async throws -> UpdateSummary {
+    func update(wc: URL, paths: [String], revision: Revision?, setDepth: SvnDepth?, ignoreExternals: Bool) async throws -> UpdateSummary {
         calls.append("update:\(wc.path)")
         return UpdateSummary(updated: 1)
     }

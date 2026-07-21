@@ -137,7 +137,25 @@ private struct CheckoutCall: Equatable, Sendable {
     let url: String
     let destination: URL
     let depth: SvnDepth
+    let revision: Revision?
+    let ignoreExternals: Bool
     let auth: Credential?
+
+    init(
+        url: String,
+        destination: URL,
+        depth: SvnDepth,
+        revision: Revision? = nil,
+        ignoreExternals: Bool = false,
+        auth: Credential?
+    ) {
+        self.url = url
+        self.destination = destination
+        self.depth = depth
+        self.revision = revision
+        self.ignoreExternals = ignoreExternals
+        self.auth = auth
+    }
 }
 
 private struct WorkspaceImportCall: Equatable, Sendable {
@@ -158,8 +176,22 @@ private actor FakeCheckoutProvider: CheckoutProviding {
         calls
     }
 
-    func checkout(url: String, to destination: URL, depth: SvnDepth, auth: Credential?) async throws {
-        calls.append(CheckoutCall(url: url, destination: destination, depth: depth, auth: auth))
+    func checkout(
+        url: String,
+        to destination: URL,
+        depth: SvnDepth,
+        revision: Revision?,
+        ignoreExternals: Bool,
+        auth: Credential?
+    ) async throws {
+        calls.append(CheckoutCall(
+            url: url,
+            destination: destination,
+            depth: depth,
+            revision: revision,
+            ignoreExternals: ignoreExternals,
+            auth: auth
+        ))
         if let error {
             throw error
         }

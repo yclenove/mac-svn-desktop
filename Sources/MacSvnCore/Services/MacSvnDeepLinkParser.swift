@@ -4,7 +4,7 @@ public struct MacSvnDeepLinkParser: Sendable {
     public init() {}
 
     public func parse(_ url: URL) throws -> MacSvnDeepLinkAction {
-        guard url.scheme?.lowercased() == "macsvn" else {
+        guard url.scheme?.lowercased() == ProductBranding.urlScheme else {
             throw MacSvnDeepLinkParserError.invalidScheme(url.scheme)
         }
         guard let route = url.host?.lowercased(), !route.isEmpty else {
@@ -25,6 +25,19 @@ public struct MacSvnDeepLinkParser: Sendable {
                 throw MacSvnDeepLinkParserError.missingParameter("path")
             }
             return .open(path: path)
+        case "command":
+            let paths = items
+                .filter { $0.name.lowercased() == "path" }
+                .compactMap(\.value)
+                .filter { !$0.isEmpty }
+            guard !paths.isEmpty else {
+                throw MacSvnDeepLinkParserError.missingParameter("path")
+            }
+            guard let rawCommand = values["command"],
+                  let command = SvnCommandID(rawValue: rawCommand) else {
+                throw MacSvnDeepLinkParserError.unknownCommand(values["command"] ?? "")
+            }
+            return .command(command: command, paths: paths)
         case "log":
             let target = try target(from: values)
             return .log(target: target, revision: try optionalRevision(values["rev"]))

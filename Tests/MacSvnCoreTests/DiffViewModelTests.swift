@@ -75,6 +75,28 @@ final class DiffViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.lines, [])
     }
 
+    @MainActor
+    func testLoadSkipsLineParsingForOversizedDiff() async {
+        let oversized = String(
+            repeating: "+line\n",
+            count: (DiffPerformanceLimits.maxParseCharacterCount / 6) + 10
+        )
+        XCTAssertGreaterThan(oversized.count, DiffPerformanceLimits.maxParseCharacterCount)
+
+        let provider = FakeDiffProvider(result: .success(oversized))
+        let viewModel = DiffViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            diffProvider: provider
+        )
+
+        await viewModel.load(target: "big.swift")
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(viewModel.diffText, oversized)
+        XCTAssertTrue(viewModel.lines.isEmpty)
+        XCTAssertTrue(viewModel.sideBySideRows.isEmpty)
+    }
+
     func testParseSideBySideRowsAlignsContextModificationsAndSingleSidedChanges() {
         let diff = """
         Index: a.swift
@@ -131,6 +153,24 @@ final class DiffViewModelTests: XCTestCase {
         XCTAssertEqual(rows[1].right?.inlineSpans, [
             InlineDiffSpan(start: 1, length: 1, kind: .changed)
         ])
+    }
+
+    func testSideBySideColumnTextsPreserveAlignedRowsWithoutPerLineViews() {
+        let rows = DiffViewModel.parseSideBySideRows("""
+        @@ -1,2 +1,2 @@
+        -old
+        +new
+         same
+        """)
+
+        let columns = DiffViewModel.sideBySideColumnTexts(rows)
+
+        XCTAssertEqual(columns.left.components(separatedBy: "\n").count, 3)
+        XCTAssertEqual(columns.right.components(separatedBy: "\n").count, 3)
+        XCTAssertTrue(columns.left.contains("1  old"))
+        XCTAssertTrue(columns.right.contains("1  new"))
+        XCTAssertTrue(columns.left.contains("2  same"))
+        XCTAssertTrue(columns.right.contains("2  same"))
     }
 
     @MainActor
@@ -226,6 +266,36 @@ final class DiffViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.externalDiffState, .error("externalDiffUnavailable"))
     }
+
+    @MainActor
+    func testLoadAgainstBaseUsesDedicatedProvider() async {
+        let provider = FakeDiffProvider(result: .success("+base\n"))
+        let viewModel = DiffViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            diffProvider: provider
+        )
+
+        await viewModel.loadAgainstBase(target: "a.swift")
+        let baseCalls = await provider.recordedAgainstBaseCalls()
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(baseCalls, ["a.swift"])
+    }
+
+    @MainActor
+    func testLoadBetweenPathsUsesOldAndNew() async {
+        let provider = FakeDiffProvider(result: .success("-a\n+b\n"))
+        let viewModel = DiffViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            diffProvider: provider
+        )
+
+        await viewModel.loadBetweenPaths(oldPath: "a.swift", newPath: "b.swift")
+        let between = await provider.recordedBetweenPathCalls()
+
+        XCTAssertEqual(viewModel.state, .loaded)
+        XCTAssertEqual(between.map { "\($0.0)->\($0.1)" }, ["a.swift->b.swift"])
+    }
 }
 
 private struct DiffCall: Equatable, Sendable {
@@ -246,6 +316,8 @@ private struct ExternalDiffOpenCall: Equatable, Sendable {
 private actor FakeDiffProvider: DiffProviding {
     private let result: Result<String, Error>
     private var calls: [DiffCall] = []
+    private var betweenPathCalls: [(String, String)] = []
+    private var againstBaseCalls: [String] = []
 
     init(result: Result<String, Error>) {
         self.result = result
@@ -255,8 +327,26 @@ private actor FakeDiffProvider: DiffProviding {
         calls
     }
 
+    func recordedBetweenPathCalls() -> [(String, String)] {
+        betweenPathCalls
+    }
+
+    func recordedAgainstBaseCalls() -> [String] {
+        againstBaseCalls
+    }
+
     func diff(wc: URL, target: String, r1: Revision?, r2: Revision?) async throws -> String {
         calls.append(DiffCall(wc: wc, target: target, r1: r1, r2: r2))
+        return try result.get()
+    }
+
+    func diffBetweenPaths(wc: URL, oldPath: String, newPath: String) async throws -> String {
+        betweenPathCalls.append((oldPath, newPath))
+        return try result.get()
+    }
+
+    func diffAgainstBase(wc: URL, target: String) async throws -> String {
+        againstBaseCalls.append(target)
         return try result.get()
     }
 }

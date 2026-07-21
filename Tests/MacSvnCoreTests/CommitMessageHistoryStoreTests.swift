@@ -52,6 +52,24 @@ final class CommitMessageHistoryStoreTests: XCTestCase {
         XCTAssertEqual(messages, ["修复登录"])
     }
 
+    func testUpdatingLimitImmediatelyTrimsEveryWorkingCopyHistory() async throws {
+        let fileURL = try makeTemporaryDirectory().appendingPathComponent("commit-history.json")
+        let store = CommitMessageHistoryStore(fileURL: fileURL, limit: 5)
+        let wcA = URL(fileURLWithPath: "/tmp/project-a")
+        let wcB = URL(fileURLWithPath: "/tmp/project-b")
+        for index in 1...5 {
+            try await store.record(message: "A\(index)", workingCopy: wcA)
+            try await store.record(message: "B\(index)", workingCopy: wcB)
+        }
+
+        try await store.updateLimit(2)
+
+        let messagesA = try await store.recentMessages(workingCopy: wcA)
+        let messagesB = try await store.recentMessages(workingCopy: wcB)
+        XCTAssertEqual(messagesA, ["A5", "A4"])
+        XCTAssertEqual(messagesB, ["B5", "B4"])
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

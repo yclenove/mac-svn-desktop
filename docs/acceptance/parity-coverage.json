@@ -1,0 +1,842 @@
+{
+  "generated_at": "2026-07-21T16:45:26Z",
+  "total": 114,
+  "done": 114,
+  "partial": 0,
+  "missing": 0,
+  "coverage": 1.0,
+  "coverage_percent": 100.0,
+  "formula": "done / total （仅 ✅ 计入 done；🟡/弱/部分=partial；❌/缺口=missing）",
+  "by_section": {
+    "domain": {
+      "total": 28,
+      "done": 28,
+      "partial": 0,
+      "missing": 0
+    },
+    "command": {
+      "total": 46,
+      "done": 46,
+      "partial": 0,
+      "missing": 0
+    },
+    "log": {
+      "total": 20,
+      "done": 20,
+      "partial": 0,
+      "missing": 0
+    },
+    "settings": {
+      "total": 13,
+      "done": 13,
+      "partial": 0,
+      "missing": 0
+    },
+    "overlay": {
+      "total": 7,
+      "done": 7,
+      "partial": 0,
+      "missing": 0
+    }
+  },
+  "items": [
+    {
+      "key": "D01",
+      "section": "domain",
+      "title": "Icon Overlays / WC Status",
+      "raw_status": "✅ 全状态采集/映射与目录递归聚合；Finder 属性命令深链打开应用内 SVN 信息面板，展示 WC 状态、修订、作者、URL、锁与属性摘要；真实 Finder 冒烟确认 Added/Modified 使用不同角标",
+      "status": "done"
+    },
+    {
+      "key": "D02",
+      "section": "domain",
+      "title": "Context Menus / Drag-Drop",
+      "raw_status": "✅ CFM/⌘K、Finder 普通+扩展菜单、多选批量；Finder 以 Copy/Move 菜单深链进入应用内向导提供平台等价入口（Finder Sync 无右拖回调）",
+      "status": "done"
+    },
+    {
+      "key": "D03",
+      "section": "domain",
+      "title": "Authentication",
+      "raw_status": "✅ 交互凭据提示与缓存复用；Saved Data 通过当前配置的 `svn --config-dir … auth --remove '*'` 清理 SVN 管理的 auth 文件和 macOS Keychain 凭据，空缓存幂等成功，失败不删除残留文件；AI Provider Keychain 凭据隔离保留",
+      "status": "done"
+    },
+    {
+      "key": "D04",
+      "section": "domain",
+      "title": "Import / Import in Place",
+      "raw_status": "✅ `svn import` + 导入后临时检出替换，保留可用工作副本",
+      "status": "done"
+    },
+    {
+      "key": "D05",
+      "section": "domain",
+      "title": "Checkout",
+      "raw_status": "✅ depth/rev/omit-ext；pristines 进阶仍开",
+      "status": "done"
+    },
+    {
+      "key": "D06",
+      "section": "domain",
+      "title": "Commit",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "D07",
+      "section": "domain",
+      "title": "Update",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "D08",
+      "section": "domain",
+      "title": "Conflicts",
+      "raw_status": "✅ 文本三路/树/属性面板 + 批量 Resolved；外置合并工具仍可增强",
+      "status": "done"
+    },
+    {
+      "key": "D09",
+      "section": "domain",
+      "title": "Check for Modifications",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "D10",
+      "section": "domain",
+      "title": "Diff",
+      "raw_status": "✅ T1 核心；EOL/文件夹 T2",
+      "status": "done"
+    },
+    {
+      "key": "D11",
+      "section": "domain",
+      "title": "Change Lists",
+      "raw_status": "✅ status XML 归属；CFM 列/分组与列表移入/移出；Commit 按列表选择并保留 `ignore-on-commit` 语义",
+      "status": "done"
+    },
+    {
+      "key": "D12",
+      "section": "domain",
+      "title": "Shelving",
+      "raw_status": "✅ 官方 `x-shelve`/`x-unshelve`/list/diff/log/drop；能力探测；本地手工快照迁移且失败保留快照",
+      "status": "done"
+    },
+    {
+      "key": "D13",
+      "section": "domain",
+      "title": "Show Log",
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L20；当前过滤结果统计；缓存回退与强制离线；L15/L16 修订属性",
+      "status": "done"
+    },
+    {
+      "key": "D14",
+      "section": "domain",
+      "title": "Add / Ignore",
+      "raw_status": "✅ 文件名/通配；global-ignores T5",
+      "status": "done"
+    },
+    {
+      "key": "D15",
+      "section": "domain",
+      "title": "Copy/Move/Rename/Delete",
+      "raw_status": "✅ Rename/Copy/Move/Delete/Repair/大小写冲突修复向导；keep-local 确认与未版本预览勾选/路径复核齐全",
+      "status": "done"
+    },
+    {
+      "key": "D16",
+      "section": "domain",
+      "title": "Revert / Cleanup",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "D17",
+      "section": "domain",
+      "title": "Properties",
+      "raw_status": "✅ CRUD、多行编辑、文件/目录模板过滤、常用 svn:/tsvn:/bugtraq: 模板，项目属性草稿诊断",
+      "status": "done"
+    },
+    {
+      "key": "D18",
+      "section": "domain",
+      "title": "Externals",
+      "raw_status": "✅ 结构化编辑器支持目录/文件 external、operative/peg revision、注释保留、仓库浏览器 URL 拖拽预填；保存可立即更新且不忽略 externals",
+      "status": "done"
+    },
+    {
+      "key": "D19",
+      "section": "domain",
+      "title": "Branch/Tag / Switch",
+      "raw_status": "✅ HEAD/特定 revision/WC；Switch `-r` + 未提交确认；主窗口/CFM/⌘K 可达",
+      "status": "done"
+    },
+    {
+      "key": "D20",
+      "section": "domain",
+      "title": "Merge",
+      "raw_status": "✅ 范围/两树/现代 complete merge（reintegrate）/dry-run/Unified Diff/mergeinfo/冲突回跳；日志单修订合并也已接入",
+      "status": "done"
+    },
+    {
+      "key": "D21",
+      "section": "domain",
+      "title": "Locking",
+      "raw_status": "✅ lock/unlock/break+确认；needs-lock 提升/钩子仍属 T4/T5",
+      "status": "done"
+    },
+    {
+      "key": "D22",
+      "section": "domain",
+      "title": "Patch",
+      "raw_status": "✅ 按勾选路径生成单一 patch、应用 patch、`.rej` 冲突报告、搁置页/⌘K 入口",
+      "status": "done"
+    },
+    {
+      "key": "D23",
+      "section": "domain",
+      "title": "Blame",
+      "raw_status": "✅ 修订范围/悬停日志；双修订内容+归属差异、BASE/previous、变化筛选；历史 URL/peg 解析",
+      "status": "done"
+    },
+    {
+      "key": "D24",
+      "section": "domain",
+      "title": "Repo Browser",
+      "raw_status": "✅ 远端 mkdir/delete/copy/move/rename 均有提交说明与高危确认；`svn info --xml --depth immediates` 锁信息列展示 owner/comment/created",
+      "status": "done"
+    },
+    {
+      "key": "D25",
+      "section": "domain",
+      "title": "Revision Graph",
+      "raw_status": "✅ repo-root verbose log 构图；拓扑/时间线；标签/未分类/已删除剪枝；Log/Checkout/Blame/Diff 节点动作",
+      "status": "done"
+    },
+    {
+      "key": "D26",
+      "section": "domain",
+      "title": "Export / Unversion / Relocate",
+      "raw_status": "✅ export（含 omit externals）、安全移除 `.svn`、`switch --relocate`",
+      "status": "done"
+    },
+    {
+      "key": "D27",
+      "section": "domain",
+      "title": "Bugtraq / Repo Viewer 集成",
+      "raw_status": "✅ `bugtraq:logregex` 单/双阶段提取 issue，`bugtraq:url` 与 `^/` 仓库根 URL 展开，提交页展示 issue 链接",
+      "status": "done"
+    },
+    {
+      "key": "D28",
+      "section": "domain",
+      "title": "Settings 全页",
+      "raw_status": "✅ General / Dialogs / Colours / Network / External Programs / Saved Data 六类 IA 与 Finder / Revision Graph / AI 专页齐全；S01–S13 均持久化并接入运行时，settings、提交历史与 SVN config/servers 协调保存，后段失败会回滚 settings 与 SVN 配置",
+      "status": "done"
+    },
+    {
+      "key": "cmd.01",
+      "section": "command",
+      "title": "Checkout",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.02",
+      "section": "command",
+      "title": "Update",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.03",
+      "section": "command",
+      "title": "Update to revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.04",
+      "section": "command",
+      "title": "Commit",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.05",
+      "section": "command",
+      "title": "Diff",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.06",
+      "section": "command",
+      "title": "Diff with URL",
+      "raw_status": "✅ URL+revision 表单；peg revision、svn+ssh user@host、认证重试；Unified/左右分栏复用；真实 SVN 跨 URL 验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.07",
+      "section": "command",
+      "title": "Show Log",
+      "raw_status": "✅ 过滤/stop/Next·All/Actions/L01–L17；统计/离线→T3",
+      "status": "done"
+    },
+    {
+      "key": "cmd.08",
+      "section": "command",
+      "title": "Check for Modifications",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.09",
+      "section": "command",
+      "title": "Revision Graph",
+      "raw_status": "✅ copy/history 边；拓扑 Canvas/时间线；分页/All；四类节点动作；真实 SVN copy-edge/Diff 验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.10",
+      "section": "command",
+      "title": "Repo Browser",
+      "raw_status": "✅ `svn info --xml --depth immediates` 返回锁详情；mkdir/delete/copy/move/rename 均需提交说明，delete/move/rename 二次确认",
+      "status": "done"
+    },
+    {
+      "key": "cmd.11",
+      "section": "command",
+      "title": "Edit Conflicts",
+      "raw_status": "✅ CFM/冲突工作区入口；内置三路+树/属性；外置工具可增强",
+      "status": "done"
+    },
+    {
+      "key": "cmd.12",
+      "section": "command",
+      "title": "Resolved",
+      "raw_status": "✅ 冲突工作区勾选批量 + CFM 确认；树冲突排除",
+      "status": "done"
+    },
+    {
+      "key": "cmd.13",
+      "section": "command",
+      "title": "Rename",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.14",
+      "section": "command",
+      "title": "Delete",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.15",
+      "section": "command",
+      "title": "Delete (keep local)",
+      "raw_status": "✅ CFM/⌘K 原子意图、二次确认；真实 SVN 验证调度 deleted 且本地文件保留",
+      "status": "done"
+    },
+    {
+      "key": "cmd.16",
+      "section": "command",
+      "title": "Delete unversioned",
+      "raw_status": "✅ 未版本候选预览/勾选；执行前二次 status、WC 边界与版本状态校验；文件/目录真实往返",
+      "status": "done"
+    },
+    {
+      "key": "cmd.17",
+      "section": "command",
+      "title": "Revert",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.18",
+      "section": "command",
+      "title": "Cleanup",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.19",
+      "section": "command",
+      "title": "Get Lock",
+      "raw_status": "✅ 锁定页+CFM/⌘K；注释与夺锁确认",
+      "status": "done"
+    },
+    {
+      "key": "cmd.20",
+      "section": "command",
+      "title": "Release Lock",
+      "raw_status": "✅ 多选释放；优先本 WC 持有",
+      "status": "done"
+    },
+    {
+      "key": "cmd.21",
+      "section": "command",
+      "title": "Break lock",
+      "raw_status": "✅ `unlock --force` + 确认门控",
+      "status": "done"
+    },
+    {
+      "key": "cmd.22",
+      "section": "command",
+      "title": "Branch/Tag",
+      "raw_status": "✅ 三源表单；peg 仅剥末尾 `@数字`；CFM/⌘K 可达",
+      "status": "done"
+    },
+    {
+      "key": "cmd.23",
+      "section": "command",
+      "title": "Switch",
+      "raw_status": "✅ 可选 revision；未提交变更二次确认并保留目标参数；CFM/⌘K 可达",
+      "status": "done"
+    },
+    {
+      "key": "cmd.24",
+      "section": "command",
+      "title": "Merge",
+      "raw_status": "✅ 范围/两树、dry-run、Unified Diff、大文本门禁、冲突工作区回跳",
+      "status": "done"
+    },
+    {
+      "key": "cmd.25",
+      "section": "command",
+      "title": "Merge reintegrate",
+      "raw_status": "✅ 现代 SVN complete merge 语义；Merge 向导支持 dry-run/执行/冲突回跳；真实 WC 验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.26",
+      "section": "command",
+      "title": "Export",
+      "raw_status": "✅ URL/WC 导出、修订、`--ignore-externals`、UI",
+      "status": "done"
+    },
+    {
+      "key": "cmd.27",
+      "section": "command",
+      "title": "Relocate",
+      "raw_status": "✅ From/To 校验、写锁、认证重试、UI",
+      "status": "done"
+    },
+    {
+      "key": "cmd.28",
+      "section": "command",
+      "title": "Create Repository Here",
+      "raw_status": "✅ 仓库浏览器/⌘K 入口、目录选择、用户工具链同目录 `svnadmin`、真实 FSFS 仓库验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.29",
+      "section": "command",
+      "title": "Add",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.30",
+      "section": "command",
+      "title": "Import",
+      "raw_status": "✅ UTF-8 说明、认证重试、UI",
+      "status": "done"
+    },
+    {
+      "key": "cmd.31",
+      "section": "command",
+      "title": "Blame",
+      "raw_status": "✅ `-r X:Y`、行悬停 revision 日志、作者/日期/路径摘要",
+      "status": "done"
+    },
+    {
+      "key": "cmd.32",
+      "section": "command",
+      "title": "Add to Ignore List",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.33",
+      "section": "command",
+      "title": "Create Patch",
+      "raw_status": "✅ 按选择路径聚合 diff、原子写入 patch、UI",
+      "status": "done"
+    },
+    {
+      "key": "cmd.34",
+      "section": "command",
+      "title": "Apply Patch",
+      "raw_status": "✅ `svn patch`、缺文件校验、新 `.rej` 路径报告、UI",
+      "status": "done"
+    },
+    {
+      "key": "cmd.35",
+      "section": "command",
+      "title": "Properties",
+      "raw_status": "✅ CRUD、多行值、删除确认、文件/目录模板、CFM/⌘K 路径意图",
+      "status": "done"
+    },
+    {
+      "key": "cmd.36",
+      "section": "command",
+      "title": "Copy / Move",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.37",
+      "section": "command",
+      "title": "Shelve / Unshelve",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.38",
+      "section": "command",
+      "title": "Change Lists",
+      "raw_status": "✅ CFM 列/分组、移入/移出、Commit 按列表选择；真实 SVN 往返验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.39",
+      "section": "command",
+      "title": "Externals",
+      "raw_status": "✅ 现代/旧式语法解析、相对 URL、peg/operative revision、注释保留；属性保存与更新行为对齐；真实目录/文件 external 往返验证",
+      "status": "done"
+    },
+    {
+      "key": "cmd.40",
+      "section": "command",
+      "title": "Compare revisions / Blame differences",
+      "raw_status": "✅ Blame 分段模式、双修订/BASE 表单、左右作者/日期/内容、增删改与归属汇总；CFM/⌘K；真实 SVN 往返",
+      "status": "done"
+    },
+    {
+      "key": "cmd.41",
+      "section": "command",
+      "title": "Save revision / Open / Open with",
+      "raw_status": "✅ L05/L06 路径右键；`cat URL@rev` 后原子另存或系统默认应用打开",
+      "status": "done"
+    },
+    {
+      "key": "cmd.42",
+      "section": "command",
+      "title": "Merge revision to…",
+      "raw_status": "✅ `svn merge -c REV`；日志右键确认后合并到当前 WC",
+      "status": "done"
+    },
+    {
+      "key": "cmd.43",
+      "section": "command",
+      "title": "Import in Place",
+      "raw_status": "✅ 导入后临时检出并原子替换目录内容",
+      "status": "done"
+    },
+    {
+      "key": "cmd.44",
+      "section": "command",
+      "title": "Remove from version control",
+      "raw_status": "✅ 路径安全校验，仅删除 `.svn` 元数据并保留工作文件",
+      "status": "done"
+    },
+    {
+      "key": "cmd.45",
+      "section": "command",
+      "title": "Repair Move / Repair Copy",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "cmd.46",
+      "section": "command",
+      "title": "Filename case conflict repair",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L01",
+      "section": "log",
+      "title": "Compare with working copy",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L02",
+      "section": "log",
+      "title": "Compare with previous revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L03",
+      "section": "log",
+      "title": "Compare and blame with BASE/previous",
+      "raw_status": "✅ 日志路径菜单默认 PREV:REV；仓库 URL@peg 原子注入 Blame 差异页；BASE 可直接取目标基线",
+      "status": "done"
+    },
+    {
+      "key": "L04",
+      "section": "log",
+      "title": "Show changes as unified diff",
+      "raw_status": "✅ 统一 Diff 面板；EOL/空白进阶仍开",
+      "status": "done"
+    },
+    {
+      "key": "L05",
+      "section": "log",
+      "title": "Save revision to…",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L06",
+      "section": "log",
+      "title": "Open / Open with…",
+      "raw_status": "✅ 系统默认打开；Open with… 进阶仍开",
+      "status": "done"
+    },
+    {
+      "key": "L07",
+      "section": "log",
+      "title": "Blame…",
+      "raw_status": "✅ 跳转 Blame 并注入路径",
+      "status": "done"
+    },
+    {
+      "key": "L08",
+      "section": "log",
+      "title": "Browse repository",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L09",
+      "section": "log",
+      "title": "Create branch/tag from revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L10",
+      "section": "log",
+      "title": "Update item to revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L11",
+      "section": "log",
+      "title": "Revert to this revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L12",
+      "section": "log",
+      "title": "Revert changes from this revision",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L13",
+      "section": "log",
+      "title": "Merge revision to…",
+      "raw_status": "✅ 日志路径菜单、确认门控、`-c REV` 合并、冲突工作区回跳",
+      "status": "done"
+    },
+    {
+      "key": "L14",
+      "section": "log",
+      "title": "Checkout… / Export…",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L15",
+      "section": "log",
+      "title": "Edit author / log message",
+      "raw_status": "✅ 日志右键/详情与 ⌘K；仅写变化的 `svn:author`/`svn:log`；认证重试、写锁、UTF-8 安全临时文件；hook 拒绝提示与真实 SVN 往返",
+      "status": "done"
+    },
+    {
+      "key": "L16",
+      "section": "log",
+      "title": "Show revision properties",
+      "raw_status": "✅ `proplist --revprop -r` 全量展示内置/自定义属性；Unicode XML 解析；日志右键/详情与 ⌘K 原子修订意图",
+      "status": "done"
+    },
+    {
+      "key": "L17",
+      "section": "log",
+      "title": "Copy to clipboard",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "L18",
+      "section": "log",
+      "title": "Filter / Statistics / Offline cache",
+      "raw_status": "✅ 作者/说明/路径过滤；当前过滤结果统计；在线缓存、网络/认证/环境失败回退、强制离线读取；按仓库目标/stop-on-copy 隔离",
+      "status": "done"
+    },
+    {
+      "key": "L19",
+      "section": "log",
+      "title": "Actions 列图标",
+      "raw_status": "✅ MADR 汇总；Moved/Merged 图标进阶仍开",
+      "status": "done"
+    },
+    {
+      "key": "L20",
+      "section": "log",
+      "title": "stop-on-copy、Next 100、Show All",
+      "raw_status": "✅",
+      "status": "done"
+    },
+    {
+      "key": "S01",
+      "section": "settings",
+      "title": "General",
+      "raw_status": "✅ 中英文资源与运行时 Locale 切换；自动/手动 HTTPS 更新检查；真实 SVN `global-ignores`、`use-commit-times` 与 config/servers 编辑入口；externals 本地属性变更策略接入更新命令",
+      "status": "done"
+    },
+    {
+      "key": "S02",
+      "section": "settings",
+      "title": "Context Menu",
+      "raw_status": "✅ 设置持久化；Finder 同步快照按设置规划顶层/子菜单、needs-lock 自动提升 Lock、未知状态保守不隐藏未版本菜单、排除路径边界匹配",
+      "status": "done"
+    },
+    {
+      "key": "S03",
+      "section": "settings",
+      "title": "Dialogs 1",
+      "raw_status": "✅ 日志批量、字体、短日期、双击前一修订、四档 Auto-close 均热更新；Revert 先入废纸篓且失败恢复/恢复失败聚合；Checkout 路径与 URL 默认值接入表单",
+      "status": "done"
+    },
+    {
+      "key": "S04",
+      "section": "settings",
+      "title": "Dialogs 2",
+      "raw_status": "✅ 递归未版本后台扫描支持取消、ignored 子树边界与 100,000 项上限；自动完成后台限时构建、512 候选/20 结果前缀索引；历史上限、自动勾选、提交后重开、CFM 联网和 Lock 对话框策略均接入运行时",
+      "status": "done"
+    },
+    {
+      "key": "S05",
+      "section": "settings",
+      "title": "Dialogs 3",
+      "raw_status": "✅ Repo Browser 可按设置并发预取直接子目录且不递归扩散，并以 `--include-externals` 显示 externals；设置热更新；官方 Shelve V2/V3 能力探测、双轨操作与本地快照迁移齐全",
+      "status": "done"
+    },
+    {
+      "key": "S06",
+      "section": "settings",
+      "title": "Colours",
+      "raw_status": "✅ 冲突/阻塞、新增、删除/缺失/替换、合并、修改/复制均支持独立亮色与暗色色板；Changes、Commit 与工作副本操作视图热更新使用",
+      "status": "done"
+    },
+    {
+      "key": "S07",
+      "section": "settings",
+      "title": "Revision Graph",
+      "raw_status": "✅ trunk/branches/tags 多 pattern；四类颜色；copy 源色混合开关；SettingsStore 持久化",
+      "status": "done"
+    },
+    {
+      "key": "S08",
+      "section": "settings",
+      "title": "Icon Overlays",
+      "raw_status": "✅ Default/Shell/None 设置、仅 Finder、包含/排除卷与路径、18 类角标可选、设置持久化与 Finder 原子热更新；App Sandbox 下镜像配置到扩展容器，真实 `status/info/proplist` 冒烟通过",
+      "status": "done"
+    },
+    {
+      "key": "S09",
+      "section": "settings",
+      "title": "Network",
+      "raw_status": "✅ 进程超时热更新；HTTP 代理、例外、用户名/密码与 SSH 客户端/参数写入真实 SVN config/servers，并统一传递 `--config-dir`；重复键大小写归一、密码不进入 settings.json 且 servers 权限为 `0600`",
+      "status": "done"
+    },
+    {
+      "key": "S10",
+      "section": "settings",
+      "title": "External Programs",
+      "raw_status": "✅ Diff 保留统一查看器与旧配置兼容；按用途支持扩展名精确匹配（大小写无关）与默认规则（留空、`*`、`*.*`），Merge 传入 base/mine/theirs/result 且不自动 resolve，Blame 传入工作副本文件；参数模板、失败退出码、工作副本边界均有契约测试",
+      "status": "done"
+    },
+    {
+      "key": "S11",
+      "section": "settings",
+      "title": "Saved Data / Hook Scripts",
+      "raw_status": "✅ Saved Data 提供日志缓存策略/清理，认证清理由配置 SVN 的官方 `auth --remove '*'` 同时覆盖 auth 文件与 Keychain（空缓存幂等、失败保留文件）；按 WC 祖先路径匹配的 pre-commit/post-update 客户端钩子、UTF-8 参数文件、超时/退出码、Commit 阻断及 Update/Switch/Checkout 成败后回调均已接线",
+      "status": "done"
+    },
+    {
+      "key": "S12",
+      "section": "settings",
+      "title": "Bugtraq / Issue tracker",
+      "raw_status": "✅ `bugtraq:message/number/append/logregex/url`；输入模式插入/追加 issue，默认 numeric；正则模式提取并链接 issue；非法配置诊断",
+      "status": "done"
+    },
+    {
+      "key": "S13",
+      "section": "settings",
+      "title": "Log Cache",
+      "raw_status": "✅ 启用开关、保留天数、每目标容量、缓存清理与设置持久化",
+      "status": "done"
+    },
+    {
+      "key": "overlay.01",
+      "section": "overlay",
+      "title": "Normal / Modified / Conflicted / Added",
+      "raw_status": "✅ status item/property/tree-conflict；normal 不再清空角标",
+      "status": "done"
+    },
+    {
+      "key": "overlay.02",
+      "section": "overlay",
+      "title": "Deleted / Missing / Replaced",
+      "raw_status": "✅ 独立角标与目录优先级聚合",
+      "status": "done"
+    },
+    {
+      "key": "overlay.03",
+      "section": "overlay",
+      "title": "Locked / needs-lock(readonly)",
+      "raw_status": "✅ WC/仓库 lock XML；`svn:needs-lock` + 文件只读联合判定",
+      "status": "done"
+    },
+    {
+      "key": "overlay.04",
+      "section": "overlay",
+      "title": "Ignored / Unversioned（可选显示）",
+      "raw_status": "✅ `--no-ignore` 采集、独立角标与设置页可选显示",
+      "status": "done"
+    },
+    {
+      "key": "overlay.05",
+      "section": "overlay",
+      "title": "Depth shallow / Nested WC / Externals / Switched",
+      "raw_status": "✅ info depth、嵌套 `.svn`、external/file-external、switched XML",
+      "status": "done"
+    },
+    {
+      "key": "overlay.06",
+      "section": "overlay",
+      "title": "仅 mergeinfo 属性变更",
+      "raw_status": "✅ current/BASE 全属性快照差集仅为 `svn:mergeinfo` 时使用独立角标",
+      "status": "done"
+    },
+    {
+      "key": "overlay.07",
+      "section": "overlay",
+      "title": "Status Cache 三模式 + 包含排除路径",
+      "raw_status": "✅ Default（整棵 WC/8s）、Shell（请求目标/2s）、None（禁用状态采集但保留菜单）；包含/排除卷与路径、exclude 优先；sandbox 内真实 SVN 状态采集与角标冒烟通过",
+      "status": "done"
+    }
+  ]
+}

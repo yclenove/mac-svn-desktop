@@ -21,7 +21,8 @@
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │ L4  Presentation（SwiftUI Views）                                │
-│   SidebarView │ ChangesView │ CommitSheet │ DiffView │ LogView  │
+│   Sidebar(WC列表) │ WorkingCopyWorkspace │ DiffPane │ LogView │
+│                   │ (Changes+Commit)     │          │         │
 │   RepoBrowserView │ BranchView │ MergeEditorView │ SettingsView │
 ├────────────────────────────────────────────────────────────────┤
 │ L3  ViewModel（@Observable，主线程）                             │
@@ -85,16 +86,18 @@ View 事件 → ViewModel(方法) → L2 Service(actor)
 ### 3.2 提交流程（UC1）
 
 ```
-CommitSheet(勾选+说明)
+WorkingCopyWorkspace（变更树勾选 + 提交面板说明）
   → 校验：说明非空、无冲突文件（FR-CM-02/04）
   → SvnService.commit(paths, message)
       argv: commit --encoding UTF-8 -m <msg> --non-interactive <paths...>
-  → 成功：解析 "Committed revision N." → 刷新 status → Toast(rN)
+  → 成功：解析 "Committed revision N." → 刷新 status → 状态文案(rN)
   → 失败：错误分类
       认证类 → 弹凭据框 → 带凭据重试一次
-      过期类(out of date) → 提示先 Update
+      过期类(out of date) → 提示先更新
       其他 → stderr 摘要 + 建议
 ```
+
+> 注：早期设计中的独立 `CommitSheet` 已并入变更工作区底部提交面板（见 `docs/superpowers/specs/2026-07-10-ui-ux-ia-design.md`）。
 
 ### 3.3 冲突解决流程（UC2，P3 核心）
 
@@ -134,7 +137,7 @@ SvnError         enum { environment, authentication, outOfDate, conflict, networ
 AppSettings      { svnPath, logBatchSize, branchLayout, externalDiffTool?, processTimeout }
 ```
 
-持久化文件（`~/Library/Application Support/MacSVN/`）：
+持久化文件（`~/Library/Application Support/SVNStudio/`）：
 
 | 文件 | 内容 |
 |------|------|

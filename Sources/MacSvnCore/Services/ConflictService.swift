@@ -75,6 +75,27 @@ public actor ConflictService {
         try await resolveProvider.resolve(wc: wc, path: conflict.path, accept: accept)
     }
 
+    /// 批量标记已解决（#12）：逐路径 `svn resolve --accept`；部分失败时返回已成功路径，不中断已完成项。
+    public func resolve(wc: URL, paths: [String], accept: ResolveAccept) async throws -> ConflictBatchResolveOutcome {
+        var succeeded: [String] = []
+        var failed: [String] = []
+        var summaries: [String] = []
+        for path in paths {
+            do {
+                try await resolveProvider.resolve(wc: wc, path: path, accept: accept)
+                succeeded.append(path)
+            } catch {
+                failed.append(path)
+                summaries.append("\(path): \(error.localizedDescription)")
+            }
+        }
+        return ConflictBatchResolveOutcome(
+            succeededPaths: succeeded,
+            failedPaths: failed,
+            errorSummaries: summaries
+        )
+    }
+
     public func resolveTreeConflict(_ conflict: ConflictInfo, wc: URL, resolution: TreeConflictResolution) async throws {
         guard conflict.kind == .tree else {
             throw SvnError.parse(detail: "Expected tree conflict for \(conflict.path).")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 将火山方舟 Coding API 写入本机 MacSVN Application Support + Keychain。
+# 将火山方舟 Coding API 写入本机 SVN Studio Application Support + Keychain。
 # 用法：ARK_API_KEY=... ./scripts/seed-volcengine-ark.sh
 # 密钥不会写入仓库；仅落本机 Keychain。
 
@@ -13,16 +13,16 @@ fi
 
 BASE_URL="${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/coding/v3}"
 MODEL="${ARK_MODEL:-doubao-seed-code}"
-SUPPORT="${HOME}/Library/Application Support/MacSVN"
+SUPPORT="${HOME}/Library/Application Support/SVNStudio"
 PROVIDERS_FILE="${SUPPORT}/ai-providers.json"
 PROVIDER_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
 ACCOUNT="$PROVIDER_ID"
-REF="macsvn.ai-provider.${PROVIDER_ID}"
+REF="svnstudio.ai-provider.${PROVIDER_ID}"
 
 mkdir -p "$SUPPORT"
 
-security delete-generic-password -s "MacSVN.AIProvider" -a "$ACCOUNT" >/dev/null 2>&1 || true
-security add-generic-password -s "MacSVN.AIProvider" -a "$ACCOUNT" -w "$ARK_API_KEY" -U
+security delete-generic-password -s "SVNStudio.AIProvider" -a "$ACCOUNT" >/dev/null 2>&1 || true
+security add-generic-password -s "SVNStudio.AIProvider" -a "$ACCOUNT" -w "$ARK_API_KEY" -U
 
 PROVIDERS_FILE="$PROVIDERS_FILE" PROVIDER_ID="$PROVIDER_ID" BASE_URL="$BASE_URL" MODEL="$MODEL" REF="$REF" python3 <<'PY'
 import json, os

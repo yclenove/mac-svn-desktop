@@ -9,7 +9,7 @@ public struct MacSvnReleaseNotesView: View {
     private let session: MacSvnAppSession
 
     @State private var viewModel: AIReleaseNotesViewModel?
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -23,31 +23,50 @@ public struct MacSvnReleaseNotesView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("AI Release Notes")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
+                    .font(.headline)
+                Spacer(minLength: 8)
                 Button("加载最近日志") {
                     Task { await loadLogs() }
                 }
-                .disabled(workspaceController.selectedRecord == nil)
+                .disabled(workspaceController.selectedRecord == nil || isReleaseNotesBusy)
                 Button("生成") {
                     Task { await generate() }
                 }
-                .disabled(viewModel?.entries.isEmpty != false || viewModel?.state == .generating)
+                .disabled(viewModel?.entries.isEmpty != false || isReleaseNotesBusy)
                 .keyboardShortcut(.defaultAction)
                 Button("复制 Markdown") {
                     copyMarkdown()
                 }
-                .disabled(viewModel?.draft == nil)
+                .disabled(viewModel?.draft == nil || isReleaseNotesBusy)
+                Button {
+                    Task { await refreshReleaseNotes() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .frame(
+                    minWidth: MacSvnSpecializedToolsMetrics.iconButtonMinSide,
+                    minHeight: MacSvnSpecializedToolsMetrics.iconButtonMinSide
+                )
+                .keyboardShortcut("r", modifiers: .command)
+                .accessibilityIdentifier("macSvn.st.releaseNotes.refresh")
+                .accessibilityLabel(Text("刷新 Release Notes 日志"))
+                .disabled(workspaceController.selectedRecord == nil || isReleaseNotesBusy)
+                .help("重新加载候选日志")
             }
-            .padding(24)
+            .frame(height: MacSvnSpecializedToolsMetrics.toolbarHeight)
+            .padding(.horizontal, 12)
 
             if let statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: MacSvnSpecializedToolsMetrics.feedbackBarHeight)
+                    .padding(.horizontal, 12)
+                    .accessibilityIdentifier("macSvn.st.releaseNotes.feedback")
             }
 
             Form {
@@ -94,8 +113,12 @@ public struct MacSvnReleaseNotesView: View {
                 Section("生成结果") {
                     if case .generating = viewModel?.state {
                         ProgressView("正在生成…")
+                            .accessibilityIdentifier("macSvn.st.releaseNotes.busy")
                     } else if case .error(let message) = viewModel?.state {
-                        Text(message).foregroundStyle(.red)
+                        Label(message, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                            .accessibilityIdentifier("macSvn.st.releaseNotes.error")
                     } else if let draft = viewModel?.draft {
                         Text(draft.markdown)
                             .font(.system(.body, design: .monospaced))
@@ -117,6 +140,16 @@ public struct MacSvnReleaseNotesView: View {
         .onChange(of: navigator.pendingReleaseNotesEntries?.count) { _, _ in
             applyPendingEntries()
         }
+    }
+
+
+    private var isReleaseNotesBusy: Bool {
+        if case .generating = viewModel?.state { return true }
+        return false
+    }
+
+    private func refreshReleaseNotes() async {
+        await loadLogs()
     }
 
     private func bootstrap() async {
@@ -152,7 +185,7 @@ public struct MacSvnReleaseNotesView: View {
         case .ready:
             statusText = "已加载 \(viewModel.entries.count) 条日志"
         case .error(let message):
-            statusText = message
+            statusText = LocalizedStringKey(message)
         case .idle:
             statusText = "无日志"
         default:
@@ -166,7 +199,7 @@ public struct MacSvnReleaseNotesView: View {
         await viewModel.generate(privacySettings: privacy)
         switch viewModel.state {
         case .completed(let draft):
-            statusText = "已生成（\(draft.entryCount) 条日志，provider \(draft.providerID.uuidString.prefix(8))）"
+            statusText = "已生成（\(draft.entryCount) 条日志，provider \(String(draft.providerID.uuidString.prefix(8)))）"
         case .error(let message):
             statusText = "生成失败：\(message)"
         default:

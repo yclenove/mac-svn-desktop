@@ -3,6 +3,57 @@ import XCTest
 @testable import MacSvnCore
 
 final class SvnCliBackendTests: XCTestCase {
+    func testFilenameCaseConflictRepairUsesTemporaryRenameThenDestinationRename() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.repairFilenameCaseConflict(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            source: "Foo.txt",
+            destination: "foo.txt"
+        )
+
+        XCTAssertEqual(runner.calls.count, 2)
+        XCTAssertEqual(runner.calls[0].arguments.prefix(2), ["rename", "--non-interactive"])
+        XCTAssertEqual(runner.calls[1].arguments.prefix(2), ["rename", "--non-interactive"])
+        XCTAssertEqual(runner.calls[0].arguments.first, "rename")
+        XCTAssertEqual(runner.calls[1].arguments.first, "rename")
+        XCTAssertEqual(runner.calls[0].arguments[2], "Foo.txt")
+        XCTAssertTrue(runner.calls[0].arguments[3].hasPrefix(".svnstudio-case-repair-"))
+        XCTAssertEqual(runner.calls[1].arguments[2], runner.calls[0].arguments[3])
+        XCTAssertEqual(runner.calls[1].arguments[3], "foo.txt")
+    }
+
+    func testFilenameCaseConflictRepairAttemptsRollbackWhenSecondRenameFails() async {
+        let runner = SequenceProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 1, stdout: Data(), stderr: "svn: E155010: rename failed", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        do {
+            try await backend.repairFilenameCaseConflict(
+                wc: URL(fileURLWithPath: "/tmp/wc"),
+                source: "Foo.txt",
+                destination: "foo.txt"
+            )
+            XCTFail("Expected the destination rename to fail")
+        } catch let error as SvnError {
+            XCTAssertEqual(error, .other(code: 155010, stderr: "svn: E155010: rename failed"))
+        } catch {
+            XCTFail("Expected SvnError, got \(error)")
+        }
+
+        XCTAssertEqual(runner.calls.count, 3)
+        XCTAssertEqual(runner.calls[2].arguments[2], runner.calls[0].arguments[3])
+        XCTAssertEqual(runner.calls[2].arguments[3], "Foo.txt")
+    }
     func testVersionRunsQuietVersionAndParsesOutput() async throws {
         let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("1.14.5\n".utf8), stderr: "", duration: 0.01))
         let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
@@ -11,6 +62,80 @@ final class SvnCliBackendTests: XCTestCase {
 
         XCTAssertEqual(version, SvnVersion(major: 1, minor: 14, patch: 5))
         XCTAssertEqual(runner.calls.single?.arguments, ["--version", "--quiet"])
+    }
+
+    func testConfiguredClientDirectoryIsPassedToEverySvnCommand() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("1.14.5\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let configurationDirectory = URL(fileURLWithPath: "/tmp/custom-subversion", isDirectory: true)
+        let backend = SvnCliBackend(
+            svnExecutable: "/usr/bin/svn",
+            runner: runner,
+            configurationDirectory: configurationDirectory
+        )
+
+        _ = try await backend.version()
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "--config-dir", configurationDirectory.path,
+            "--version", "--quiet"
+        ])
+    }
+
+    func testDiffWithURLUsesURLAsOldAndWorkingCopyTargetAsNewWithAuthStdin() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("@@ diff\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let diff = try await backend.diffWithURL(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt@7",
+            revision: Revision(7),
+            auth: Credential(username: "alice", password: "secret")
+        )
+
+        XCTAssertEqual(diff, "@@ diff\n")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "diff", "--non-interactive",
+            "--username", "alice", "--password-from-stdin",
+            "--old", "file:///repo/trunk/README.txt@7",
+            "--new", "README.txt"
+        ])
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testDiffWithURLAppendsIndependentRevisionWhenURLHasNoPegRevision() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.diffWithURL(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            target: "README.txt",
+            url: "file:///repo/trunk/README.txt",
+            revision: Revision(7),
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single.map { Array($0.arguments.suffix(4)) }, [
+            "--old", "file:///repo/trunk/README.txt@7",
+            "--new", "README.txt"
+        ])
     }
 
     func testStatusRunsInWorkingCopyAndParsesXml() async throws {
@@ -27,6 +152,28 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
     }
 
+    func testStatusIncludingIgnoredUsesNoIgnoreInWorkingCopy() async throws {
+        let xml = """
+        <status><target path="."><entry path="build"><wc-status item="ignored"/></entry></target></status>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(xml.utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let statuses = try await backend.statusIncludingIgnored(wc: URL(fileURLWithPath: "/tmp/wc"))
+
+        XCTAssertEqual(statuses.map(\.itemStatus), [.ignored])
+        XCTAssertEqual(
+            runner.calls.single?.arguments,
+            ["status", "-v", "--xml", "--no-ignore", "--non-interactive"]
+        )
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
     func testInfoRunsInWorkingCopyAndParsesXml() async throws {
         let xml = """
         <info><entry path="." revision="3" kind="dir"><url>file:///repo/trunk</url><repository><root>file:///repo</root></repository></entry></info>
@@ -40,6 +187,43 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(info, SvnInfo(path: ".", url: "file:///repo/trunk", repositoryRoot: "file:///repo", revision: Revision(3), kind: "dir"))
         XCTAssertEqual(runner.calls.single?.arguments, ["info", "--xml", "--non-interactive", "."])
         XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+    }
+
+    func testListWithLocksRunsRemoteInfoOnceAndParsesLockDetails() async throws {
+        let xml = """
+        <info>
+          <entry path="trunk" revision="3" kind="dir"><url>file:///repo/trunk</url></entry>
+          <entry path="locked.txt" revision="3" kind="file" size="4">
+            <url>file:///repo/trunk/locked.txt</url>
+            <lock><token>token</token><owner>alice</owner><comment>note</comment><created>2026-07-13T04:02:50.061286Z</created></lock>
+          </entry>
+        </info>
+        """
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data(xml.utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let entries = try await backend.listWithLocks(
+            url: "file:///repo/trunk",
+            depth: .immediates,
+            includeExternals: true,
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(entries.first?.lock?.owner, "alice")
+        XCTAssertEqual(entries.first?.lock?.comment, "note")
+        XCTAssertEqual(runner.calls.count, 1)
+        XCTAssertEqual(runner.calls.single?.stdin, Data("secret\n".utf8))
+        XCTAssertNil(runner.calls.single?.currentDirectory)
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "info", "--xml", "--non-interactive", "--depth", "immediates",
+            "--include-externals",
+            "--username", "u", "--password-from-stdin", "file:///repo/trunk"
+        ])
     }
 
     func testBlameRunsInWorkingCopyAndParsesXml() async throws {
@@ -107,9 +291,55 @@ final class SvnCliBackendTests: XCTestCase {
         try await backend.deleteProperty(wc: wc, target: "README.txt", name: "custom:reviewer")
 
         XCTAssertEqual(runner.calls.map(\.arguments), [
-            ["propset", "--non-interactive", "custom:reviewer", "杨超", "README.txt"],
+            ["propset", "--non-interactive", "--", "custom:reviewer", "杨超", "README.txt"],
             ["propdel", "--non-interactive", "custom:reviewer", "README.txt"]
         ])
+        XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
+    }
+
+    func testRevisionPropertyReadAndWriteUseRevisionXMLAuthenticationAndWorkingDirectory() async throws {
+        let xml = """
+        <properties><revprops rev="7"><property name="svn:author">yangchao</property><property name="svn:log">初始说明</property></revprops></properties>
+        """
+        let runner = SequenceProcessRunner(results: [
+            ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01),
+            ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+        ])
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+        let wc = URL(fileURLWithPath: "/tmp/wc")
+        let auth = Credential(username: "u", password: "p")
+
+        let properties = try await backend.revisionProperties(
+            wc: wc,
+            target: "file:///repo",
+            revision: Revision(7),
+            auth: auth
+        )
+        try await backend.setRevisionProperty(
+            wc: wc,
+            target: "file:///repo",
+            revision: Revision(7),
+            name: "svn:log",
+            value: "修正说明",
+            auth: auth
+        )
+
+        XCTAssertEqual(properties, [
+            SvnProperty(target: "r7", name: "svn:author", value: "yangchao"),
+            SvnProperty(target: "r7", name: "svn:log", value: "初始说明")
+        ])
+        XCTAssertEqual(runner.calls[0].arguments, [
+            "proplist", "--revprop", "--xml", "--verbose", "--non-interactive",
+            "-r", "7", "--username", "u", "--password-from-stdin", "file:///repo"
+        ])
+        let writeArguments = runner.calls[1].arguments
+        XCTAssertEqual(Array(writeArguments.prefix(11)), [
+            "propset", "--revprop", "--encoding", "UTF-8", "--non-interactive",
+            "-r", "7", "--username", "u", "--password-from-stdin", "--file"
+        ])
+        XCTAssertTrue(writeArguments[11].contains("svnstudio-revprop-"))
+        XCTAssertEqual(Array(writeArguments.suffix(3)), ["--", "svn:log", "file:///repo"])
+        XCTAssertEqual(runner.calls.map(\.stdin), [Data("p\n".utf8), Data("p\n".utf8)])
         XCTAssertEqual(runner.calls.map(\.currentDirectory), ["/tmp/wc", "/tmp/wc"])
     }
 
@@ -199,6 +429,7 @@ final class SvnCliBackendTests: XCTestCase {
         let summary = try await backend.switchTo(
             wc: URL(fileURLWithPath: "/tmp/wc"),
             url: "file:///repo/branches/feature-one",
+            revision: Revision(8),
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -208,6 +439,7 @@ final class SvnCliBackendTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, [
             "switch", "--accept", "postpone", "--non-interactive",
             "--username", "u", "--password-from-stdin",
+            "-r", "8",
             "file:///repo/branches/feature-one"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
@@ -239,6 +471,31 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/branches/feature-one"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testTwoTreeMergePassesBothUrlsAndParsesSummary() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(
+            exitCode: 0,
+            stdout: Data("U    README.txt\n".utf8),
+            stderr: "",
+            duration: 0.01
+        ))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        let summary = try await backend.mergeTwoTrees(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "file:///repo/branches/old",
+            to: "file:///repo/branches/new",
+            dryRun: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(summary.updated, 1)
+        XCTAssertEqual(runner.calls.single?.currentDirectory, "/tmp/wc")
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "merge", "--accept", "postpone", "--non-interactive", "--dry-run",
+            "file:///repo/branches/old", "file:///repo/branches/new"
+        ])
     }
 
     func testResolveRunsInWorkingCopy() async throws {
@@ -300,6 +557,7 @@ final class SvnCliBackendTests: XCTestCase {
             url: "file:///repo/trunk",
             to: URL(fileURLWithPath: "/tmp/export"),
             revision: Revision(7),
+            ignoreExternals: false,
             auth: Credential(username: "u", password: "secret")
         )
 
@@ -312,6 +570,63 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/trunk", "/tmp/export"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testExportCanIgnoreExternals() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        try await backend.export(
+            url: "file:///repo/trunk",
+            to: URL(fileURLWithPath: "/tmp/export"),
+            revision: nil,
+            ignoreExternals: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "export", "--non-interactive", "--ignore-externals",
+            "file:///repo/trunk", "/tmp/export"
+        ])
+    }
+
+    func testImportAndRelocateForwardAuthWithoutLeakingPassword() async throws {
+        let runner = RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data("Committed revision 8.\n".utf8), stderr: "", duration: 0.01))
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.importProject(
+            path: URL(fileURLWithPath: "/tmp/project"),
+            url: "file:///repo/trunk",
+            message: "导入",
+            auth: Credential(username: "u", password: "secret")
+        )
+        try await backend.relocate(
+            wc: URL(fileURLWithPath: "/tmp/wc"),
+            from: "https://old.example/svn",
+            to: "https://new.example/svn",
+            auth: Credential(username: "u", password: "secret")
+        )
+
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["import", "--encoding", "UTF-8", "--non-interactive", "-m", "导入", "--username", "u", "--password-from-stdin", "/tmp/project", "file:///repo/trunk"],
+            ["switch", "--relocate", "--non-interactive", "--username", "u", "--password-from-stdin", "https://old.example/svn", "https://new.example/svn", "/tmp/wc"]
+        ])
+        XCTAssertEqual(runner.calls.map(\.stdin), [Data("secret\n".utf8), Data("secret\n".utf8)])
+    }
+
+    func testRemoveFromVersionControlDeletesOnlySVNMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("svnstudio-remove-\(UUID().uuidString)")
+        let metadata = root.appendingPathComponent(".svn")
+        try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: true)
+        let file = root.appendingPathComponent("keep.txt")
+        try Data("keep".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: RecordingProcessRunner(result: ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)))
+        try await backend.removeFromVersionControl(path: root, recursive: true)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: metadata.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 
     func testCopyPassesAuthStdinRunsWithoutWorkingCopyAndParsesRevision() async throws {
@@ -411,6 +726,27 @@ final class SvnCliBackendTests: XCTestCase {
             "file:///repo/trunk"
         ])
         XCTAssertFalse(runner.calls.single?.arguments.contains("secret") ?? true)
+    }
+
+    func testListCanIncludeExternals() async throws {
+        let xml = "<lists><list path=\"file:///repo\"></list></lists>"
+        let runner = RecordingProcessRunner(
+            result: ProcessResult(exitCode: 0, stdout: Data(xml.utf8), stderr: "", duration: 0.01)
+        )
+        let backend = SvnCliBackend(svnExecutable: "/usr/bin/svn", runner: runner)
+
+        _ = try await backend.list(
+            url: "file:///repo",
+            depth: .immediates,
+            includeExternals: true,
+            auth: nil
+        )
+
+        XCTAssertEqual(runner.calls.single?.arguments, [
+            "list", "--xml", "--non-interactive",
+            "--depth", "immediates", "--include-externals",
+            "file:///repo"
+        ])
     }
 
     func testRemoteLogPassesAuthStdinRunsWithoutWorkingCopyAndParsesEntries() async throws {
@@ -552,6 +888,32 @@ private final class RecordingProcessRunner: ProcessRunning, @unchecked Sendable 
             timeout: timeout
         ))
         return result
+    }
+}
+
+private final class SequenceProcessRunner: ProcessRunning, @unchecked Sendable {
+    private(set) var calls: [RecordingProcessRunner.Call] = []
+    private var results: [ProcessResult]
+
+    init(results: [ProcessResult]) {
+        self.results = results
+    }
+
+    func run(
+        executable: String,
+        arguments: [String],
+        stdin: Data?,
+        currentDirectory: String?,
+        timeout: TimeInterval
+    ) async throws -> ProcessResult {
+        calls.append(RecordingProcessRunner.Call(
+            executable: executable,
+            arguments: arguments,
+            stdin: stdin,
+            currentDirectory: currentDirectory,
+            timeout: timeout
+        ))
+        return results.removeFirst()
     }
 }
 

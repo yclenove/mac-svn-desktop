@@ -37,6 +37,7 @@ public final class MergeEditorViewModel {
     private let aiConflictAssistant: (any AIConflictAssisting)?
     private var preservesTrailingNewline = false
     private var loadedBlocksSnapshot: [MergeBlock] = []
+    private var activeAIRequestID: UUID?
 
     public private(set) var state: MergeEditorState = .idle
     public private(set) var aiConflictAssistState: AIConflictAssistViewState = .idle
@@ -102,6 +103,7 @@ public final class MergeEditorViewModel {
         aiConflictAssistState = .idle
         aiConflictSuggestion = nil
         aiConflictPreview = nil
+        activeAIRequestID = nil
 
         do {
             let text = try await provider.loadTextConflict(conflict)
@@ -137,6 +139,12 @@ public final class MergeEditorViewModel {
             return
         }
 
+        let requestID = UUID()
+        let requestedConflict = conflict
+        let requestedConflictIndex = currentConflictIndex
+        let requestedBlockIndex = blockIndex
+        let requestedBlocks = blocks
+        activeAIRequestID = requestID
         aiConflictAssistState = .suggesting
 
         do {
@@ -152,11 +160,28 @@ public final class MergeEditorViewModel {
                 ),
                 privacySettings: privacySettings
             )
-            resolveConflict(atConflictIndex: currentConflictIndex, resolution: .manual(lines: suggestion.mergedLines))
+            guard activeAIRequestID == requestID,
+                  self.conflict == requestedConflict,
+                  currentConflictIndex == requestedConflictIndex,
+                  currentBlockIndex == requestedBlockIndex,
+                  blocks == requestedBlocks else {
+                if activeAIRequestID == requestID {
+                    activeAIRequestID = nil
+                    aiConflictAssistState = .idle
+                }
+                return
+            }
+            activeAIRequestID = nil
+            resolveConflict(
+                atConflictIndex: requestedConflictIndex,
+                resolution: .manual(lines: suggestion.mergedLines)
+            )
             aiConflictSuggestion = suggestion
             aiConflictPreview = nil
             aiConflictAssistState = .suggested(suggestion)
         } catch {
+            guard activeAIRequestID == requestID else { return }
+            activeAIRequestID = nil
             aiConflictAssistState = .error(String(describing: error))
         }
     }
@@ -194,6 +219,10 @@ public final class MergeEditorViewModel {
             return
         }
 
+        let requestID = UUID()
+        let requestedConflict = conflict
+        let requestedBlocks = blocks
+        activeAIRequestID = requestID
         aiConflictAssistState = .suggesting
 
         do {
@@ -201,6 +230,16 @@ public final class MergeEditorViewModel {
                 contexts: contexts,
                 privacySettings: privacySettings
             )
+            guard activeAIRequestID == requestID,
+                  self.conflict == requestedConflict,
+                  blocks == requestedBlocks else {
+                if activeAIRequestID == requestID {
+                    activeAIRequestID = nil
+                    aiConflictAssistState = .idle
+                }
+                return
+            }
+            activeAIRequestID = nil
             aiConflictPreview = preview
             aiConflictSuggestion = nil
 
@@ -213,6 +252,8 @@ public final class MergeEditorViewModel {
 
             aiConflictAssistState = .previewed(preview)
         } catch {
+            guard activeAIRequestID == requestID else { return }
+            activeAIRequestID = nil
             aiConflictAssistState = .error(String(describing: error))
         }
     }

@@ -138,6 +138,36 @@ final class ConflictListViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.selectedConflict, second[0])
     }
+    @MainActor
+    func testMarkCheckedAsResolvedCallsBatchResolverAndRefreshes() async {
+        let conflicts = [
+            conflict(path: "a.txt", kind: .text),
+            conflict(path: "tree", kind: .tree),
+            conflict(path: "b.prop", kind: .property),
+        ]
+        let provider = FakeConflictListProvider(results: [
+            .success(conflicts),
+            .success([conflict(path: "tree", kind: .tree)])
+        ])
+        let resolver = FakeConflictBatchResolver()
+        let viewModel = ConflictListViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            provider: provider,
+            batchResolver: resolver
+        )
+
+        await viewModel.refresh()
+        viewModel.checkAllVisibleEligible()
+        XCTAssertEqual(Set(viewModel.checkedPathsEligibleForMarkResolved), ["a.txt", "b.prop"])
+
+        let count = await viewModel.markCheckedAsResolved()
+        let calls = await resolver.recordedCalls()
+
+        XCTAssertEqual(count, 2)
+        XCTAssertEqual(calls.first?.paths, ["a.txt", "b.prop"])
+        XCTAssertEqual(calls.first?.accept, .working)
+        XCTAssertEqual(viewModel.conflicts.map(\.path), ["tree"])
+    }
 }
 
 private func conflict(path: String, kind: ConflictKind) -> ConflictInfo {
@@ -174,5 +204,24 @@ private actor FakeConflictListProvider: ConflictListing {
 
     func recordedWorkingCopies() -> [URL] {
         workingCopies
+    }
+}
+
+private actor FakeConflictBatchResolver: ConflictBatchResolving {
+    struct Call: Equatable, Sendable {
+        let wc: URL
+        let paths: [String]
+        let accept: ResolveAccept
+    }
+
+    private var calls: [Call] = []
+
+    func resolve(wc: URL, paths: [String], accept: ResolveAccept) async throws -> ConflictBatchResolveOutcome {
+        calls.append(Call(wc: wc, paths: paths, accept: accept))
+        return ConflictBatchResolveOutcome(succeededPaths: paths)
+    }
+
+    func recordedCalls() -> [Call] {
+        calls
     }
 }

@@ -3,7 +3,7 @@ import XCTest
 @testable import MacSvnCore
 
 final class CommitViewModelTests: XCTestCase {
-    func testCommitCandidatesIncludeVersionedChangesAndConflictsOnly() {
+    func testCommitCandidatesIncludeVersionedChangesConflictsAndUnversioned() {
         let candidates = CommitSelectionPolicy.candidates(from: sampleStatuses())
 
         XCTAssertEqual(candidates.map(\.path), [
@@ -12,11 +12,12 @@ final class CommitViewModelTests: XCTestCase {
             "deleted.swift",
             "replaced.swift",
             "conflict.swift",
-            "tree-conflict.swift"
+            "tree-conflict.swift",
+            "scratch.tmp"
         ])
     }
 
-    func testDefaultSelectionExcludesConflictsAndUnsupportedStatuses() {
+    func testDefaultSelectionExcludesConflictsUnversionedAndUnsupportedStatuses() {
         let selected = CommitSelectionPolicy.defaultSelectedPaths(from: sampleStatuses())
 
         XCTAssertEqual(selected, Set([
@@ -25,6 +26,69 @@ final class CommitViewModelTests: XCTestCase {
             "deleted.swift",
             "replaced.swift"
         ]))
+        XCTAssertFalse(selected.contains("scratch.tmp"))
+    }
+
+    @MainActor
+    func testCommitDialogCanStartWithNoAutomaticallySelectedItems() {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            selectItemsAutomatically: false
+        )
+
+        XCTAssertTrue(viewModel.selectedPaths.isEmpty)
+        viewModel.selectChangelist(nil)
+        XCTAssertTrue(viewModel.selectedPaths.isEmpty)
+    }
+
+    @MainActor
+    func testSelectionSettingCanUpdateWithoutRecreatingViewModel() {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            selectItemsAutomatically: false
+        )
+
+        viewModel.updateSettings(
+            selectItemsAutomatically: true,
+            useTrashWhenReverting: false
+        )
+        viewModel.selectChangelist(nil)
+
+        XCTAssertEqual(
+            viewModel.selectedPaths,
+            CommitSelectionPolicy.defaultSelectedPaths(from: sampleStatuses())
+        )
+    }
+
+    @MainActor
+    func testDefaultSelectionExcludesIgnoreOnCommitAndCanSelectNamedChangelist() {
+        let statuses = [
+            FileStatus(path: "normal.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+            FileStatus(path: "release.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "release"),
+            FileStatus(path: "later.swift", itemStatus: .modified, revision: 1, isTreeConflict: false, changelist: "ignore-on-commit")
+        ]
+        XCTAssertEqual(
+            CommitSelectionPolicy.defaultSelectedPaths(from: statuses),
+            Set(["normal.swift", "release.swift"])
+        )
+
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: statuses,
+            commitProvider: FakeCommitProvider(result: .success(Revision(2))),
+            statusProvider: FakeStatusProvider(result: .success([]))
+        )
+        viewModel.selectChangelist("release")
+
+        XCTAssertEqual(viewModel.availableChangelists, ["ignore-on-commit", "release"])
+        XCTAssertEqual(viewModel.selectedChangelist, "release")
+        XCTAssertEqual(viewModel.orderedSelectedPaths, ["release.swift"])
     }
 
     @MainActor
@@ -55,7 +119,8 @@ final class CommitViewModelTests: XCTestCase {
                 paths: ["modified.swift", "added.swift", "replaced.swift"],
                 message: "修复：登录超时",
                 auth: Credential(username: "u", password: "p"),
-                skipGuardWarnings: false
+                skipGuardWarnings: false,
+                keepLocks: false
             )
         ])
         XCTAssertEqual(statusRequests, [URL(fileURLWithPath: "/tmp/wc")])
@@ -78,6 +143,189 @@ final class CommitViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .error("emptyCommitMessage"))
         XCTAssertTrue(commitCalls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitBlocksProjectMinimumMessageLengthBeforeCallingProvider() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectProperties: ProjectPropertyPolicy(properties: [
+                SvnProperty(target: ".", name: "tsvn:logminsize", value: "12")
+            ])
+        )
+        viewModel.message = "too short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:12"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitReloadsProjectPropertiesForCurrentSingleDirectorySelection() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: [
+                FileStatus(path: "Features/A/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+                FileStatus(path: "Features/B/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false)
+            ],
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                ProjectPropertyPolicy(properties: paths == ["Features/A/file.swift"]
+                    ? [SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")]
+                    : [])
+            }
+        )
+        viewModel.setSelected(false, for: "Features/B/file.swift")
+        viewModel.message = "short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 20)
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:20"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitBlocksWhenAnySelectedDirectoryHasStricterProjectConstraint() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let policyA = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")
+        ])
+        let policyB = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/B", name: "tsvn:logminsize", value: "8")
+        ])
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: [
+                FileStatus(path: "Features/A/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false),
+                FileStatus(path: "Features/B/file.swift", itemStatus: .modified, revision: 1, isTreeConflict: false)
+            ],
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in ProjectPropertyPolicy.combining([policyA, policyB]) }
+        )
+        viewModel.message = "short"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 20)
+        XCTAssertEqual(viewModel.state, .error("logMessageTooShort:20"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testCommitBlocksWhenProjectPropertyLoadingFails() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in throw ProjectPropertyLoaderTestError.unavailable }
+        )
+        viewModel.message = "valid message"
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .error("projectPropertiesLoadFailed"))
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
+    func testLaterProjectPropertyRefreshWinsOverEarlierSlowRefresh() async throws {
+        let policyA = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/A", name: "tsvn:logminsize", value: "20")
+        ])
+        let policyB = ProjectPropertyPolicy(properties: [
+            SvnProperty(target: "Features/B", name: "tsvn:logminsize", value: "8")
+        ])
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                if paths == ["Features/A/file.swift"] {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    return policyA
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000)
+                return policyB
+            }
+        )
+
+        let firstRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["Features/A/file.swift"])
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+        let secondRefresh = Task { @MainActor in
+            await viewModel.refreshProjectProperties(for: ["Features/B/file.swift"])
+        }
+
+        await firstRefresh.value
+        await secondRefresh.value
+
+        XCTAssertEqual(viewModel.projectProperties.commit.minimumMessageLength, 8)
+    }
+
+    @MainActor
+    func testFailedBackgroundPropertyRefreshDoesNotInterruptCommitInProgress() async throws {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(42)))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { paths in
+                if paths == ["refresh.swift"] {
+                    throw ProjectPropertyLoaderTestError.unavailable
+                }
+                try await Task.sleep(nanoseconds: 80_000_000)
+                return ProjectPropertyPolicy(properties: [])
+            }
+        )
+        viewModel.message = "valid message"
+
+        let commitTask = Task { @MainActor in
+            await viewModel.commit(auth: nil)
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+        await viewModel.refreshProjectProperties(for: ["refresh.swift"])
+
+        XCTAssertEqual(viewModel.state, .committing)
+        XCTAssertEqual(viewModel.projectPropertyLoadError, "projectPropertiesLoadFailed")
+
+        await commitTask.value
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(42)))
+    }
+
+    @MainActor
+    func testRefreshProjectPropertiesFillsEmptyMessageWithTemplate() async {
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: FakeCommitProvider(result: .success(Revision(42))),
+            statusProvider: FakeStatusProvider(result: .success([])),
+            projectPropertyLoader: { _ in ProjectPropertyPolicy(properties: [
+                SvnProperty(target: "Features/A", name: "tsvn:logtemplatecommit", value: "Feature template")
+            ]) }
+        )
+
+        await viewModel.refreshProjectProperties(for: ["Features/A/file.swift"])
+
+        XCTAssertEqual(viewModel.message, "Feature template")
     }
 
     @MainActor
@@ -132,6 +380,150 @@ final class CommitViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .committed(Revision(42)))
         XCTAssertEqual(skipFlags, [false, true])
+    }
+
+    @MainActor
+    func testCommitPassesKeepLocksFlag() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(7)))
+        let statusProvider = FakeStatusProvider(result: .success([]))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: statusProvider
+        )
+        viewModel.message = "keep locks"
+        viewModel.keepLocks = true
+
+        await viewModel.commit(auth: nil)
+        let calls = await commitProvider.recordedCalls()
+
+        XCTAssertEqual(viewModel.state, .committed(Revision(7)))
+        XCTAssertEqual(calls.map(\.keepLocks), [true])
+    }
+
+    @MainActor
+    func testRevertSelectedCallsProviderAndClearsSelection() async {
+        let commitProvider = FakeCommitProvider(result: .success(Revision(1)))
+        let statusProvider = FakeStatusProvider(result: .success([]))
+        let viewModel = CommitViewModel(
+            workingCopy: URL(fileURLWithPath: "/tmp/wc"),
+            statuses: sampleStatuses(),
+            commitProvider: commitProvider,
+            statusProvider: statusProvider
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+        let revertCalls = await commitProvider.recordedRevertCalls()
+
+        XCTAssertEqual(viewModel.state, .reverted)
+        XCTAssertEqual(revertCalls, [["modified.swift"]])
+        XCTAssertFalse(viewModel.selectedPaths.contains("modified.swift"))
+    }
+
+    @MainActor
+    func testRevertSelectedMovesModifiedFileToTrashWhenEnabled() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(root: root.appendingPathComponent("trash"))
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(result: .success(Revision(1))),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        XCTAssertEqual(viewModel.state, .reverted)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertEqual(trashStore.movedOriginals, [file])
+    }
+
+    @MainActor
+    func testRevertSelectedRestoresTrashedFileWhenProviderFails() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(root: root.appendingPathComponent("trash"))
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(
+                result: .success(Revision(1)),
+                revertResult: .failure(SvnError.parse(detail: "revert failed"))
+            ),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        XCTAssertEqual(
+            try String(contentsOf: file, encoding: .utf8),
+            "local changes"
+        )
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("revert failed"))
+        } else {
+            XCTFail("Expected revert failure")
+        }
+    }
+
+    @MainActor
+    func testRevertSelectedReportsSvnAndRestoreFailuresTogether() async throws {
+        let root = try temporaryWorkingCopy()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("modified.swift")
+        try Data("local changes".utf8).write(to: file)
+        let status = FileStatus(
+            path: "modified.swift",
+            itemStatus: .modified,
+            revision: Revision(1),
+            isTreeConflict: false
+        )
+        let trashStore = CommitRevertTrashStore(
+            root: root.appendingPathComponent("trash"),
+            failOnRestore: true
+        )
+        let viewModel = CommitViewModel(
+            workingCopy: root,
+            statuses: [status],
+            commitProvider: FakeCommitProvider(
+                result: .success(Revision(1)),
+                revertResult: .failure(SvnError.parse(detail: "svn revert failed"))
+            ),
+            statusProvider: FakeStatusProvider(result: .success([status])),
+            useTrashWhenReverting: true,
+            revertSafetyService: RevertSafetyService(store: trashStore)
+        )
+
+        await viewModel.revertSelected(paths: ["modified.swift"])
+
+        if case .error(let message) = viewModel.state {
+            XCTAssertTrue(message.contains("svn revert failed"))
+            XCTAssertTrue(message.contains("trash restore failed"))
+        } else {
+            XCTFail("Expected combined revert recovery error")
+        }
     }
 
     @MainActor
@@ -360,6 +752,13 @@ final class CommitViewModelTests: XCTestCase {
             FileStatus(path: "normal.swift", itemStatus: .normal, revision: Revision(1), isTreeConflict: false)
         ]
     }
+
+    private func temporaryWorkingCopy() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CommitRevert-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
 }
 
 private struct CommitMessageHistoryRecord: Equatable, Sendable {
@@ -411,22 +810,38 @@ private struct CommitCall: Equatable, Sendable {
     let message: String
     let auth: Credential?
     let skipGuardWarnings: Bool
+    let keepLocks: Bool
+}
+
+private enum ProjectPropertyLoaderTestError: Error {
+    case unavailable
 }
 
 private actor FakeCommitProvider: CommitProviding {
     private var results: [Result<Revision, Error>]
+    private let revertResult: Result<Void, Error>
     private var calls: [CommitCall] = []
+    private var revertCalls: [[String]] = []
 
-    init(result: Result<Revision, Error>) {
+    init(
+        result: Result<Revision, Error>,
+        revertResult: Result<Void, Error> = .success(())
+    ) {
         self.results = [result]
+        self.revertResult = revertResult
     }
 
     init(results: [Result<Revision, Error>]) {
         self.results = results
+        self.revertResult = .success(())
     }
 
     func recordedCalls() -> [CommitCall] {
         calls
+    }
+
+    func recordedRevertCalls() -> [[String]] {
+        revertCalls
     }
 
     func commit(
@@ -434,19 +849,52 @@ private actor FakeCommitProvider: CommitProviding {
         paths: [String],
         message: String,
         auth: Credential?,
-        skipGuardWarnings: Bool
+        skipGuardWarnings: Bool,
+        keepLocks: Bool
     ) async throws -> Revision {
         calls.append(CommitCall(
             wc: wc,
             paths: paths,
             message: message,
             auth: auth,
-            skipGuardWarnings: skipGuardWarnings
+            skipGuardWarnings: skipGuardWarnings,
+            keepLocks: keepLocks
         ))
         guard !results.isEmpty else {
             return Revision(0)
         }
         return try results.removeFirst().get()
+    }
+
+    func revert(wc: URL, paths: [String], recursive: Bool) async throws {
+        revertCalls.append(paths)
+        try revertResult.get()
+    }
+}
+
+private final class CommitRevertTrashStore: RevertTrashStoring, @unchecked Sendable {
+    private let root: URL
+    private let failOnRestore: Bool
+    private(set) var movedOriginals: [URL] = []
+
+    init(root: URL, failOnRestore: Bool = false) {
+        self.root = root
+        self.failOnRestore = failOnRestore
+    }
+
+    func moveToTrash(_ sourceURL: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let destination = root.appendingPathComponent(UUID().uuidString + "-" + sourceURL.lastPathComponent)
+        movedOriginals.append(sourceURL)
+        try FileManager.default.moveItem(at: sourceURL, to: destination)
+        return destination
+    }
+
+    func restoreFromTrash(_ trashURL: URL, to originalURL: URL) throws {
+        if failOnRestore {
+            throw SvnError.parse(detail: "trash restore failed")
+        }
+        try FileManager.default.moveItem(at: trashURL, to: originalURL)
     }
 }
 

@@ -21,13 +21,13 @@ final class MacSvnQuickLookPreviewProvider: QLPreviewProvider {
             data
         }
         reply.stringEncoding = .utf8
-        reply.title = "MacSVN Diff — \(fileURL.lastPathComponent)"
+        reply.title = "\(ProductBranding.displayName) Diff — \(fileURL.lastPathComponent)"
         return reply
     }
 
     private func loadPreferredRoots() -> [String] {
         let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacSVN", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/\(ProductBranding.supportDirectoryName)", isDirectory: true)
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
         return (try? FinderSyncRootsExporter.load(from: fileURL)) ?? []
     }

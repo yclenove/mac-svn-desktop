@@ -34,6 +34,7 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
     case commit
     case diff
     case log
+    case revisionGraph
     case repositoryBrowser
     case branches
     case merge
@@ -78,6 +79,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "Diff"
         case .log:
             "日志"
+        case .revisionGraph:
+            "修订图"
         case .repositoryBrowser:
             "仓库浏览器"
         case .branches:
@@ -117,6 +120,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "差异预览"
         case .log:
             "提交历史"
+        case .revisionGraph:
+            "分支拓扑与修订"
         case .repositoryBrowser:
             "远端目录"
         case .branches:
@@ -156,6 +161,8 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             "doc.text.magnifyingglass"
         case .log:
             "clock.arrow.circlepath"
+        case .revisionGraph:
+            "point.3.connected.trianglepath.dotted"
         case .repositoryBrowser:
             "network"
         case .branches:
@@ -191,7 +198,7 @@ public enum MacSvnAppRoute: String, CaseIterable, Identifiable, Hashable, Sendab
             .repository
         case .merge:
             .conflictResolution
-        case .blame, .properties, .locks, .shelve:
+        case .revisionGraph, .blame, .properties, .locks, .shelve:
             .advancedSVN
         case .gitMigration, .teamActivity, .aiAssistant, .releaseNotes:
             .automation

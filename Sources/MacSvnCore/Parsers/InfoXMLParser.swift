@@ -28,6 +28,13 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentRevision: Revision?
     private var currentKind: String?
     private var currentConflicts: [ConflictInfo] = []
+    private var currentLastChangedRevision: Revision?
+    private var currentLastChangedAuthor: String?
+    private var currentLastChangedDate: Date?
+    private var currentLockToken: String?
+    private var currentLockOwner: String?
+    private var currentLockComment: String?
+    private var currentLockCreated: Date?
     private var isCollectingTextConflict = false
     private var currentConflictBaseFile: String?
     private var currentConflictMineFile: String?
@@ -57,6 +64,15 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
             currentURL = ""
             currentRepositoryRoot = nil
             currentConflicts = []
+            currentLastChangedRevision = nil
+            currentLastChangedAuthor = nil
+            currentLastChangedDate = nil
+            currentLockToken = nil
+            currentLockOwner = nil
+            currentLockComment = nil
+            currentLockCreated = nil
+        case "commit":
+            currentLastChangedRevision = attributeDict["revision"].flatMap(Int.init).map { Revision($0) }
         case "conflict":
             isCollectingTextConflict = true
             currentConflictBaseFile = nil
@@ -97,6 +113,18 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
             currentURL = trimmedText
         case "root" where elementStack.suffix(2) == ["repository", "root"] && info == nil:
             currentRepositoryRoot = trimmedText
+        case "author" where elementStack.suffix(2) == ["commit", "author"] && info == nil:
+            currentLastChangedAuthor = trimmedText
+        case "date" where elementStack.suffix(2) == ["commit", "date"] && info == nil:
+            currentLastChangedDate = Self.parseDate(trimmedText)
+        case "token" where elementStack.suffix(2) == ["lock", "token"] && info == nil:
+            currentLockToken = trimmedText
+        case "owner" where elementStack.suffix(2) == ["lock", "owner"] && info == nil:
+            currentLockOwner = trimmedText
+        case "comment" where elementStack.suffix(2) == ["lock", "comment"] && info == nil:
+            currentLockComment = trimmedText
+        case "created" where elementStack.suffix(2) == ["lock", "created"] && info == nil:
+            currentLockCreated = Self.parseDate(trimmedText)
         case "prev-base-file" where isCollectingTextConflict && info == nil:
             currentConflictBaseFile = trimmedText
         case "prev-wc-file" where isCollectingTextConflict && info == nil:
@@ -120,7 +148,11 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
                 repositoryRoot: currentRepositoryRoot,
                 revision: currentRevision,
                 kind: currentKind,
-                conflicts: currentConflicts
+                conflicts: currentConflicts,
+                lastChangedRevision: currentLastChangedRevision,
+                lastChangedAuthor: currentLastChangedAuthor,
+                lastChangedDate: currentLastChangedDate,
+                lock: lockInfo
             )
         default:
             break
@@ -130,5 +162,24 @@ private final class InfoXMLParserDelegate: NSObject, XMLParserDelegate {
         if !elementStack.isEmpty {
             elementStack.removeLast()
         }
+    }
+
+    private var lockInfo: RemoteLockInfo? {
+        guard currentLockToken != nil || currentLockOwner != nil
+                || currentLockComment != nil || currentLockCreated != nil else {
+            return nil
+        }
+        return RemoteLockInfo(
+            token: currentLockToken,
+            owner: currentLockOwner,
+            comment: currentLockComment,
+            created: currentLockCreated
+        )
+    }
+
+    private static func parseDate(_ value: String) -> Date? {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 }

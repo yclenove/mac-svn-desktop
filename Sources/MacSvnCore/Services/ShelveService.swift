@@ -3,6 +3,8 @@ import Foundation
 public enum ShelveServiceError: Error, Equatable, Sendable {
     case emptyPatch
     case noSelectedPaths
+    case officialUnavailable
+    case cannotMigrateSafetySnapshot
 }
 
 public protocol ShelveSvnProviding: Sendable {
@@ -14,10 +16,20 @@ public protocol ShelveSvnProviding: Sendable {
 public struct ShelveService: Sendable {
     private let store: ShelveStore
     private let svn: any ShelveSvnProviding
+    private let official: (any SvnExperimentalShelvingProviding)?
 
     public init(store: ShelveStore, svn: any ShelveSvnProviding) {
+        self.init(store: store, svn: svn, official: nil)
+    }
+
+    public init(
+        store: ShelveStore,
+        svn: any ShelveSvnProviding,
+        official: (any SvnExperimentalShelvingProviding)?
+    ) {
         self.store = store
         self.svn = svn
+        self.official = official
     }
 
     public func load() async throws -> [ShelveSnapshot] {
@@ -49,6 +61,74 @@ public struct ShelveService: Sendable {
 
     public func preview(_ snapshot: ShelveSnapshot) async throws -> String {
         try await store.preview(snapshot)
+    }
+
+    public func officialAvailability(wc: URL) async -> SvnShelvingAvailability {
+        guard let official else {
+            return .unavailable(.v3, reason: "official shelving provider is not configured")
+        }
+        return await official.availability(wc: wc)
+    }
+
+    public func officialShelves(wc: URL) async throws -> [SvnShelf] {
+        try await officialProvider().list(wc: wc)
+    }
+
+    public func officialShelve(
+        wc: URL,
+        name: String,
+        paths: [String],
+        message: String,
+        keepLocal: Bool
+    ) async throws {
+        try await officialProvider().shelve(
+            wc: wc,
+            name: name,
+            paths: paths,
+            message: message,
+            keepLocal: keepLocal
+        )
+    }
+
+    public func officialDiff(wc: URL, name: String, version: Int?) async throws -> String {
+        try await officialProvider().diff(wc: wc, name: name, version: version)
+    }
+
+    public func officialLog(wc: URL, name: String) async throws -> String {
+        try await officialProvider().log(wc: wc, name: name)
+    }
+
+    public func officialUnshelve(wc: URL, name: String, version: Int?, drop: Bool) async throws {
+        try await officialProvider().unshelve(wc: wc, name: name, version: version, drop: drop)
+    }
+
+    public func officialDrop(wc: URL, name: String) async throws {
+        try await officialProvider().drop(wc: wc, name: name)
+    }
+
+    /// 将仍由本地 patch 管理的手工快照迁移为 SVN 官方 shelf。
+    /// 官方命令成功前不删除本地快照，避免迁移失败造成不可恢复的数据损失。
+    public func migrateToOfficial(_ snapshot: ShelveSnapshot) async throws {
+        guard snapshot.kind == .manual else {
+            throw ShelveServiceError.cannotMigrateSafetySnapshot
+        }
+
+        try await restore(snapshot, deleteAfterRestore: false)
+        try await officialProvider().shelve(
+            wc: URL(fileURLWithPath: snapshot.wcPath),
+            name: snapshot.name,
+            paths: snapshot.paths,
+            message: snapshot.name,
+            keepLocal: false
+        )
+        try await store.delete(snapshot)
+    }
+
+    private func officialProvider() throws -> any SvnExperimentalShelvingProviding {
+        guard let official else {
+            throw ShelveServiceError.officialUnavailable
+        }
+        return official
     }
 
     private func createSnapshot(wc: URL, name: String, paths: [String], kind: ShelveKind) async throws -> ShelveSnapshot {

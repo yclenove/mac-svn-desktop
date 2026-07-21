@@ -40,6 +40,44 @@ final class RepoBrowserViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testLoadChildrenCanShowExternalsAndPrefetchDirectDirectories() async {
+        let provider = FakeRepoListProvider(result: .success([
+            RemoteEntry(
+                name: "trunk",
+                path: "trunk",
+                kind: .directory,
+                size: nil,
+                revision: Revision(1),
+                author: "a",
+                date: nil
+            ),
+            RemoteEntry(
+                name: "README.txt",
+                path: "README.txt",
+                kind: .file,
+                size: 1,
+                revision: Revision(1),
+                author: "a",
+                date: nil
+            ),
+        ]))
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            preFetchDirectories: true,
+            showExternals: true
+        )
+
+        await viewModel.loadChildren(of: "file:///repo")
+        let calls = await provider.recordedCalls()
+
+        XCTAssertEqual(calls, [
+            RepoListCall(url: "file:///repo", depth: .immediates, auth: nil, includeExternals: true),
+            RepoListCall(url: "file:///repo/trunk", depth: .immediates, auth: nil, includeExternals: true),
+        ])
+        XCTAssertEqual(viewModel.state(for: "file:///repo/trunk"), .loaded)
+    }
+
+    @MainActor
     func testPreviewTextFileFetchesCatDataAndDecodesUtf8() async {
         let provider = FakeRepoBrowserProvider(
             listResult: .success([]),
@@ -59,10 +97,10 @@ final class RepoBrowserViewModelTests: XCTestCase {
         await viewModel.preview(entry: entry, baseURL: "file:///repo/trunk")
         let calls = await provider.recordedCatCalls()
 
-        XCTAssertEqual(viewModel.previewState(for: "file:///repo/trunk/中文文件.txt"), .loaded("中文内容\n"))
+        XCTAssertEqual(viewModel.previewState(for: "file:///repo/trunk/%E4%B8%AD%E6%96%87%E6%96%87%E4%BB%B6.txt"), .loaded("中文内容\n"))
         XCTAssertEqual(calls, [
             RepoCatCall(
-                url: "file:///repo/trunk/中文文件.txt",
+                url: "file:///repo/trunk/%E4%B8%AD%E6%96%87%E6%96%87%E4%BB%B6.txt",
                 revision: nil,
                 sizeLimit: RepoBrowserViewModel.defaultPreviewSizeLimit,
                 auth: nil
@@ -276,7 +314,7 @@ final class RepoBrowserViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testRemoteOperationsCallProviderUpdateStateAndRefreshChildren() async {
+    func testRemoteOperationsCallProviderUpdateStateAndRefreshChildren() async throws {
         let provider = FakeRepoBrowserProvider(
             listResult: .success([
                 RemoteEntry(name: "docs", path: "docs", kind: .directory, size: nil, revision: Revision(5), author: nil, date: nil)
@@ -306,6 +344,8 @@ final class RepoBrowserViewModelTests: XCTestCase {
 
         await viewModel.createDirectory(named: " docs ", in: "file:///repo/trunk", message: "创建目录：docs")
         await viewModel.delete(entry: entry, baseURL: "file:///repo/trunk", message: "删除旧文件")
+        let deleteConfirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(deleteConfirmation)
         await viewModel.copy(
             entry: entry,
             baseURL: "file:///repo/trunk",
@@ -318,6 +358,8 @@ final class RepoBrowserViewModelTests: XCTestCase {
             to: "file:///repo/trunk/new.txt",
             message: "移动旧文件"
         )
+        let moveConfirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(moveConfirmation)
         let operationCalls = await provider.recordedRemoteOperationCalls()
         let listCalls = await provider.recordedListCalls()
 
@@ -383,6 +425,150 @@ final class RepoBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(remoteViewModel.remoteOperationState, .error("emptyRemoteEntryName"))
     }
 
+    @MainActor
+    func testDeleteRequiresConfirmationAndCancelDoesNotCallProvider() async {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(2))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(
+            name: "obsolete.txt",
+            path: "obsolete.txt",
+            kind: .file,
+            size: 4,
+            revision: Revision(1),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.delete(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            message: "删除旧文件"
+        )
+
+        XCTAssertEqual(
+            viewModel.remoteOperationState,
+            .confirmationRequired(RepoRemoteWriteConfirmation(
+                operation: .delete,
+                sourceURL: "file:///repo/trunk/obsolete.txt",
+                destinationURL: nil
+            ))
+        )
+        viewModel.cancelRemoteOperationConfirmation()
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(viewModel.remoteOperationState, .idle)
+        XCTAssertEqual(calls, [])
+    }
+
+    @MainActor
+    func testRenameRequiresConfirmationThenUsesRemoteMove() async throws {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(3))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(
+            name: "old.txt",
+            path: "old.txt",
+            kind: .file,
+            size: 4,
+            revision: Revision(1),
+            author: nil,
+            date: nil
+        )
+
+        await viewModel.rename(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "new.txt",
+            message: "重命名"
+        )
+        XCTAssertEqual(
+            viewModel.remoteOperationState,
+            .confirmationRequired(RepoRemoteWriteConfirmation(
+                operation: .rename,
+                sourceURL: "file:///repo/trunk/old.txt",
+                destinationURL: "file:///repo/trunk/new.txt"
+            ))
+        )
+
+        let confirmation = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.confirmRemoteOperation(confirmation)
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(viewModel.remoteOperationState, .completed(.rename, revision: Revision(3)))
+        XCTAssertEqual(calls, [
+            RepoRemoteOperationCall(
+                operation: .move,
+                source: "file:///repo/trunk/old.txt",
+                destination: "file:///repo/trunk/new.txt",
+                message: "重命名",
+                auth: nil
+            )
+        ])
+    }
+
+    @MainActor
+    func testStaleRemoteConfirmationCannotExecuteAfterPendingOperationChanges() async throws {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(4))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let first = RemoteEntry(name: "first.txt", path: "first.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+        let second = RemoteEntry(name: "second.txt", path: "second.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+
+        await viewModel.delete(entry: first, baseURL: "file:///repo/trunk", message: "删除 first")
+        let stale = try XCTUnwrap(viewModel.confirmation)
+        await viewModel.delete(entry: second, baseURL: "file:///repo/trunk", message: "删除 second")
+        await viewModel.confirmRemoteOperation(stale)
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(calls, [])
+    }
+
+    @MainActor
+    func testRemoteEntryPathsEncodeSpecialCharactersForProviderURLs() async throws {
+        let provider = FakeRepoBrowserProvider(
+            listResult: .success([]),
+            catResult: .success(Data()),
+            remoteOperationResults: [.success(Revision(5))]
+        )
+        let viewModel = RepoBrowserViewModel(
+            listProvider: provider,
+            previewProvider: provider,
+            remoteOperationProvider: provider
+        )
+        let entry = RemoteEntry(name: "a#b?.txt", path: "a#b?.txt", kind: .file, size: 1, revision: nil, author: nil, date: nil)
+
+        await viewModel.copy(
+            entry: entry,
+            baseURL: "file:///repo/trunk",
+            to: "file:///repo/branches/copy.txt",
+            message: "复制特殊字符文件"
+        )
+
+        let calls = await provider.recordedRemoteOperationCalls()
+        XCTAssertEqual(calls.first?.source, "file:///repo/trunk/a%23b%3F.txt")
+    }
+
     private func repoBookmark(name: String, url: String, username: String?) -> RepoBookmark {
         RepoBookmark(
             id: UUID(),
@@ -403,6 +589,14 @@ private struct RepoListCall: Equatable, Sendable {
     let url: String
     let depth: SvnDepth
     let auth: Credential?
+    let includeExternals: Bool
+
+    init(url: String, depth: SvnDepth, auth: Credential?, includeExternals: Bool = false) {
+        self.url = url
+        self.depth = depth
+        self.auth = auth
+        self.includeExternals = includeExternals
+    }
 }
 
 private struct RepoCatCall: Equatable, Sendable {
@@ -448,6 +642,21 @@ private actor FakeRepoListProvider: RepoListProviding {
 
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
         calls.append(RepoListCall(url: url, depth: depth, auth: auth))
+        return try result.get()
+    }
+
+    func list(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential?
+    ) async throws -> [RemoteEntry] {
+        calls.append(RepoListCall(
+            url: url,
+            depth: depth,
+            auth: auth,
+            includeExternals: includeExternals
+        ))
         return try result.get()
     }
 }

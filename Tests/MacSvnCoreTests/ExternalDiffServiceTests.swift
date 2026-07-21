@@ -121,6 +121,42 @@ final class ExternalDiffServiceTests: XCTestCase {
         XCTAssertEqual(runner.calls.single?.arguments, [result.leftFile.path, result.rightFile.path])
     }
 
+    func testOpenRejectsNonZeroExternalToolExit() async throws {
+        let root = try temporaryRoot()
+        let wc = root.appendingPathComponent("wc", isDirectory: true)
+        let localFile = wc.appendingPathComponent("README.txt")
+        try FileManager.default.createDirectory(at: wc, withIntermediateDirectories: true)
+        try "working\n".write(to: localFile, atomically: true, encoding: .utf8)
+        let provider = FakeExternalDiffContentProvider(
+            info: SvnInfo(
+                path: "README.txt",
+                url: "file:///repo/trunk/README.txt",
+                repositoryRoot: "file:///repo",
+                revision: Revision(7),
+                kind: "file"
+            ),
+            catResults: [.success(Data("base\n".utf8))]
+        )
+        let service = ExternalDiffService(
+            contentProvider: provider,
+            runner: NonZeroExternalDiffRunner(),
+            temporaryDirectory: root.appendingPathComponent("external-diff", isDirectory: true)
+        )
+
+        do {
+            _ = try await service.open(
+                wc: wc,
+                target: "README.txt",
+                tool: ExternalDiffToolConfiguration(name: "Diff", executablePath: "/usr/bin/false"),
+                r1: nil,
+                r2: nil
+            )
+            XCTFail("Expected external tool failure")
+        } catch let error as ExternalToolLaunchError {
+            XCTAssertEqual(error, .commandFailed(exitCode: 4, stderr: "tool failed"))
+        }
+    }
+
     private func temporaryRoot() throws -> URL {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacSvnCoreExternalDiff-\(UUID().uuidString)", isDirectory: true)
@@ -198,6 +234,18 @@ private final class RecordingExternalDiffRunner: ProcessRunning, @unchecked Send
             timeout: timeout
         ))
         return ProcessResult(exitCode: 0, stdout: Data(), stderr: "", duration: 0.01)
+    }
+}
+
+private struct NonZeroExternalDiffRunner: ProcessRunning {
+    func run(
+        executable: String,
+        arguments: [String],
+        stdin: Data?,
+        currentDirectory: String?,
+        timeout: TimeInterval
+    ) async throws -> ProcessResult {
+        ProcessResult(exitCode: 4, stdout: Data(), stderr: "tool failed", duration: 0.01)
     }
 }
 

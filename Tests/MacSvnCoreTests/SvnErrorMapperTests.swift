@@ -22,4 +22,10 @@ final class SvnErrorMapperTests: XCTestCase {
         let error = SvnErrorMapper.map(exitCode: 7, stderr: stderr)
         XCTAssertEqual(error, .other(code: 199999, stderr: stderr))
     }
+
+    func testSvnadminErrorAlsoPreservesStructuredCode() {
+        let stderr = "svnadmin: E000017: File exists"
+        let error = SvnErrorMapper.map(exitCode: 1, stderr: stderr)
+        XCTAssertEqual(error, .other(code: 17, stderr: stderr))
+    }
 }

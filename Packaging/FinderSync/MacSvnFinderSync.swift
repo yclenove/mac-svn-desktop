@@ -1,13 +1,15 @@
 import Cocoa
 import FinderSync
 import MacSvnCore
+import OSLog
 
 /// Finder Sync 扩展：角标 + 右键深链（FR-EX-05）。
-/// 注意：为读取任意 WC 并调用 `svn status`，本扩展关闭 App Sandbox（开发工具常见做法）。
+/// 扩展运行在 App Sandbox 中；主应用把配置镜像到扩展容器。
 final class MacSvnFinderSync: FIFinderSync {
     private let presentationBuilder = FinderSyncPresentationBuilder()
     private let deepLinkBuilder = FinderSyncDeepLinkBuilder()
     private let statusCache = FinderSyncStatusCache()
+    private let menuStateSnapshot = FinderSyncMenuStateSnapshot()
     private var rootsFileObserver: DispatchSourceFileSystemObject?
 
     override init() {
@@ -25,100 +27,170 @@ final class MacSvnFinderSync: FIFinderSync {
         let path = url.path
         let builder = presentationBuilder
         let cache = statusCache
+        let menuSnapshot = menuStateSnapshot
         Task {
-            guard let root = await cache.workingCopyRoot(containing: path) else {
+            guard let context = await cache.requestContext(containing: path) else {
                 await MainActor.run {
                     FIFinderSyncController.default().setBadgeIdentifier("", for: url)
                 }
                 return
             }
 
-            let statuses = await cache.statuses(for: root)
+            let root = context.root
             let relative = MacSvnFinderSync.relativePath(of: path, under: root) ?? "."
-            let presentation = builder.presentation(for: relative, statuses: statuses)
-            let identifier = presentation.badge == .normal ? "" : presentation.badge.rawValue
+            guard await cache.collectsBadges() else {
+                await MainActor.run {
+                    FIFinderSyncController.default().setBadgeIdentifier("", for: url)
+                }
+                return
+            }
+            guard let statuses = await cache.statuses(for: root, requestedTarget: relative) else {
+                await MainActor.run {
+                    FIFinderSyncController.default().setBadgeIdentifier("", for: url)
+                }
+                return
+            }
+            let presentation = builder.presentation(
+                for: relative,
+                statuses: statuses,
+                overlaySettings: context.overlaySettings
+            )
+            menuSnapshot.update(root: root, statuses: statuses)
             await MainActor.run {
-                FIFinderSyncController.default().setBadgeIdentifier(identifier, for: url)
+                FIFinderSyncController.default().setBadgeIdentifier(presentation.badge.rawValue, for: url)
             }
         }
     }
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
-        let menu = NSMenu(title: "MacSVN")
-        let targetURL = FIFinderSyncController.default().targetedURL()
-            ?? FIFinderSyncController.default().selectedItemURLs()?.first
-        let path = targetURL?.path ?? ""
+        let menu = NSMenu(title: ProductBranding.displayName)
+        let paths = selectedMenuPaths()
+        let menuPlan = menuStateSnapshot.plan(for: paths)
+        guard !menuPlan.isHidden else { return menu }
 
-        // Finder 菜单回调是同步的：固定提供深链入口；角标侧仍用 PresentationBuilder 精细态。
-        let items: [(FinderSyncMenuActionID, String)] = [
-            (.update, "更新"),
-            (.commit, "提交"),
-            (.log, "查看日志"),
-            (.diff, "查看差异"),
-            (.revert, "还原"),
-            (.resolve, "解决冲突"),
-        ]
-        for (actionID, title) in items {
-            let item = NSMenuItem(title: title, action: #selector(handleMenuAction(_:)), keyEquivalent: "")
-            item.representedObject = MenuPayload(actionID: actionID, path: path)
+        for commandID in menuPlan.promotedCommandIDs {
+            guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }
+            let item = NSMenuItem(
+                title: descriptor.displayName,
+                action: #selector(handleMenuAction(_:)),
+                keyEquivalent: ""
+            )
+            item.representedObject = MenuPayload(commandID: commandID, paths: paths)
             item.target = self
             menu.addItem(item)
         }
+
+        guard !menuPlan.submenuCommandIDs.isEmpty else { return menu }
+        menu.addItem(.separator())
+        let extendedItem = NSMenuItem(title: "更多命令…", action: nil, keyEquivalent: "")
+        let extendedMenu = NSMenu(title: "更多命令…")
+        for commandID in menuPlan.submenuCommandIDs {
+            guard let descriptor = SvnCommandCatalog.descriptor(for: commandID) else { continue }
+            let item = NSMenuItem(
+                title: descriptor.displayName,
+                action: #selector(handleMenuAction(_:)),
+                keyEquivalent: ""
+            )
+            item.representedObject = MenuPayload(commandID: commandID, paths: paths)
+            item.target = self
+            extendedMenu.addItem(item)
+        }
+        extendedItem.submenu = extendedMenu
+        menu.addItem(extendedItem)
         return menu
     }
 
     @objc private func handleMenuAction(_ sender: NSMenuItem) {
         guard let payload = sender.representedObject as? MenuPayload else { return }
-        let linkPath = payload.path.isEmpty
-            ? (FIFinderSyncController.default().targetedURL()?.path ?? "")
-            : payload.path
-        guard let url = deepLinkBuilder.url(for: payload.actionID, path: linkPath) else { return }
+        let linkPaths = payload.paths.isEmpty ? selectedMenuPaths() : payload.paths
+        let url: URL?
+        if let commandID = payload.commandID {
+            url = deepLinkBuilder.commandURL(for: commandID, paths: linkPaths)
+        } else if let actionID = payload.actionID {
+            url = deepLinkBuilder.url(for: actionID, path: linkPaths.first ?? "")
+        } else {
+            return
+        }
+        guard let url else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    private func selectedMenuPaths() -> [String] {
+        let selectedPaths = FIFinderSyncController.default()
+            .selectedItemURLs()?
+            .map(\.path)
+            .filter { !$0.isEmpty } ?? []
+        if !selectedPaths.isEmpty {
+            return selectedPaths
+        }
+        guard let targetedPath = FIFinderSyncController.default().targetedURL()?.path,
+              !targetedPath.isEmpty else {
+            return []
+        }
+        return [targetedPath]
     }
 
     private func registerBadgeImages() {
         let controller = FIFinderSyncController.default()
-        let badges: [(FinderSyncBadge, NSColor, String)] = [
-            (.modified, .systemOrange, "修改"),
-            (.added, .systemGreen, "新增"),
-            (.deleted, .systemRed, "删除"),
-            (.missing, .systemRed, "缺失"),
-            (.conflicted, .systemPurple, "冲突"),
-            (.replaced, .systemOrange, "替换"),
-            (.unversioned, .systemGray, "未版本"),
-            (.ignored, .systemGray, "忽略"),
-            (.external, .systemBlue, "外部"),
-            (.incomplete, .systemYellow, "不完整"),
-            (.obstructed, .systemRed, "阻碍"),
+        let badges: [(FinderSyncBadge, NSColor, String, String)] = [
+            (.normal, .systemGreen, "checkmark.circle.fill", "正常"),
+            (.modified, .systemOrange, "pencil.circle.fill", "修改"),
+            (.added, .systemGreen, "plus.circle.fill", "新增"),
+            (.deleted, .systemRed, "minus.circle.fill", "删除"),
+            (.missing, .systemRed, "questionmark.circle.fill", "缺失"),
+            (.conflicted, .systemPurple, "exclamationmark.triangle.fill", "冲突"),
+            (.replaced, .systemOrange, "arrow.triangle.2.circlepath.circle.fill", "替换"),
+            (.locked, .systemBlue, "lock.fill", "已锁定"),
+            (.needsLock, .systemYellow, "lock.open.fill", "需要锁定"),
+            (.unversioned, .systemGray, "questionmark.circle.fill", "未版本"),
+            (.ignored, .systemGray, "eye.slash.fill", "忽略"),
+            (.shallow, .systemYellow, "arrow.down.to.line.compact", "稀疏深度"),
+            (.nested, .systemTeal, "square.stack.3d.up.fill", "嵌套工作副本"),
+            (.external, .systemBlue, "link.circle.fill", "外部项"),
+            (.switched, .systemIndigo, "arrow.triangle.branch", "已切换"),
+            (.mergeInfo, .systemTeal, "arrow.triangle.merge", "仅合并信息"),
+            (.incomplete, .systemYellow, "ellipsis.circle.fill", "不完整"),
+            (.obstructed, .systemRed, "nosign", "阻碍"),
         ]
-        for (badge, color, label) in badges {
-            controller.setBadgeImage(Self.makeBadgeImage(color: color), label: label, forBadgeIdentifier: badge.rawValue)
+        for (badge, color, symbol, label) in badges {
+            controller.setBadgeImage(
+                Self.makeBadgeImage(color: color, symbolName: symbol),
+                label: label,
+                forBadgeIdentifier: badge.rawValue
+            )
         }
     }
 
     private func reloadMonitoredDirectories() {
-        let roots = loadRoots()
+        let configuration = loadConfiguration()
+        menuStateSnapshot.update(configuration: configuration)
         let cache = statusCache
+        let directoryURLs = Set(
+            configuration.overlaySettings
+                .monitoredDirectories(for: configuration.roots)
+                .map { URL(fileURLWithPath: $0, isDirectory: true) }
+        )
         Task {
-            await cache.updateRoots(roots)
+            await cache.updateConfiguration(configuration)
+            await MainActor.run {
+                FIFinderSyncController.default().directoryURLs = directoryURLs
+            }
         }
-        FIFinderSyncController.default().directoryURLs = Set(roots.map { URL(fileURLWithPath: $0, isDirectory: true) })
     }
 
-    private func loadRoots() -> [String] {
-        let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacSVN", isDirectory: true)
+    private func loadConfiguration() -> FinderSyncRootsFile {
+        guard let support = try? ProductBranding.supportDirectoryURL else {
+            return FinderSyncRootsFile()
+        }
         let fileURL = FinderSyncRootsExporter.fileURL(in: support)
-        return (try? FinderSyncRootsExporter.load(from: fileURL)) ?? []
+        return (try? FinderSyncRootsExporter.loadConfiguration(from: fileURL)) ?? FinderSyncRootsFile()
     }
 
     private func watchRootsFile() {
-        let support = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacSVN", isDirectory: true)
-        let fileURL = FinderSyncRootsExporter.fileURL(in: support)
-        let path = fileURL.path
-        guard FileManager.default.fileExists(atPath: path) else { return }
-        let fd = open(path, O_EVTONLY)
+        guard let support = try? ProductBranding.supportDirectoryURL else { return }
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        let directoryPath = support.path
+        let fd = open(directoryPath, O_EVTONLY)
         guard fd >= 0 else { return }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
@@ -147,8 +219,22 @@ final class MacSvnFinderSync: FIFinderSync {
         return String(normalizedPath.dropFirst(normalizedRoot.count + 1))
     }
 
-    private static func makeBadgeImage(color: NSColor) -> NSImage {
+    private static func makeBadgeImage(color: NSColor, symbolName: String) -> NSImage {
         let size = NSSize(width: 16, height: 16)
+        if let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
+            let image = NSImage(size: size)
+            image.lockFocus()
+            color.set()
+            symbol.draw(
+                in: NSRect(origin: .zero, size: size),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+            image.unlockFocus()
+            image.isTemplate = false
+            return image
+        }
         let image = NSImage(size: size)
         image.lockFocus()
         color.setFill()
@@ -159,70 +245,303 @@ final class MacSvnFinderSync: FIFinderSync {
     }
 }
 
+private final class FinderSyncMenuStateSnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private var configuration = FinderSyncRootsFile()
+    private var states: [String: FinderSyncMenuTargetState] = [:]
+    private let builder = FinderSyncContextMenuBuilder()
+
+    func update(configuration: FinderSyncRootsFile) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.configuration = configuration
+        states.removeAll()
+    }
+
+    func update(root: String, statuses: [FileStatus]) {
+        lock.lock()
+        defer { lock.unlock() }
+        let normalizedRoot = (root as NSString).standardizingPath
+        for status in statuses {
+            let relative = status.path == "." ? "" : status.path
+            let absolute = relative.isEmpty
+                ? normalizedRoot
+                : (normalizedRoot as NSString).appendingPathComponent(relative)
+            states[(absolute as NSString).standardizingPath] = FinderSyncMenuTargetState(
+                path: absolute,
+                itemStatus: status.itemStatus,
+                hasNeedsLock: status.overlay.hasNeedsLock,
+                isReadOnly: status.overlay.isReadOnly,
+                isRepositoryLocked: status.overlay.isRepositoryLocked
+            )
+        }
+    }
+
+    func plan(for paths: [String]) -> FinderSyncContextMenuPlan {
+        lock.lock()
+        defer { lock.unlock() }
+        let targets = paths.map { path in
+            states[(path as NSString).standardizingPath]
+                ?? FinderSyncMenuTargetState(path: path, itemStatus: nil)
+        }
+        return builder.plan(
+            targets: targets,
+            settings: configuration.contextMenuSettings
+        )
+    }
+}
+
 private struct MenuPayload {
-    let actionID: FinderSyncMenuActionID
-    let path: String
+    let actionID: FinderSyncMenuActionID?
+    let commandID: SvnCommandID?
+    let paths: [String]
+
+    init(actionID: FinderSyncMenuActionID, path: String) {
+        self.actionID = actionID
+        self.commandID = nil
+        self.paths = [path]
+    }
+
+    init(commandID: SvnCommandID, paths: [String]) {
+        self.actionID = nil
+        self.commandID = commandID
+        self.paths = paths
+    }
+}
+
+private struct FinderSyncRequestContext: Sendable {
+    let root: String
+    let overlaySettings: FinderSyncOverlaySettings
+}
+
+private final class FinderSyncDataCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    func store(_ data: Data) {
+        lock.lock()
+        storage = data
+        lock.unlock()
+    }
+
+    func snapshot() -> Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
 }
 
 /// 按 WC 根缓存 `svn status --xml` 结果，避免 Finder 刷角标时频繁打进程。
 actor FinderSyncStatusCache {
+    private static let logger = Logger(
+        subsystem: ProductBranding.finderSyncBundleIdentifier,
+        category: "status"
+    )
     private var roots: [String] = []
+    private var mode: FinderSyncCacheMode = .defaultCache
+    private var overlaySettings = FinderSyncOverlaySettings()
     private var cache: [String: (date: Date, statuses: [FileStatus])] = [:]
-    private let ttl: TimeInterval = 8
+    private var inFlight: [String: Task<[FileStatus], Never>] = [:]
+    private var configurationGeneration = 0
 
-    func updateRoots(_ roots: [String]) {
-        self.roots = roots.map { ($0 as NSString).standardizingPath }
+    func updateConfiguration(_ configuration: FinderSyncRootsFile) {
+        let normalizedRoots = configuration.roots.map { ($0 as NSString).standardizingPath }
+        guard roots != normalizedRoots
+                || mode != configuration.cacheMode
+                || overlaySettings != configuration.overlaySettings else { return }
+        configurationGeneration += 1
+        roots = normalizedRoots
+        mode = configuration.cacheMode
+        overlaySettings = configuration.overlaySettings
+        cache.removeAll()
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
     }
 
-    func workingCopyRoot(containing path: String) -> String? {
+    func collectsBadges() -> Bool {
+        FinderSyncCachePolicy(mode: mode).collectsBadges
+    }
+
+    fileprivate func requestContext(containing path: String) -> FinderSyncRequestContext? {
         let normalized = (path as NSString).standardizingPath
-        return roots
+        guard overlaySettings.allows(path: normalized) else { return nil }
+        let matchingRoots = roots
             .filter { normalized == $0 || normalized.hasPrefix($0 + "/") }
-            .max(by: { $0.count < $1.count })
+        guard let root = matchingRoots.max(by: { $0.count < $1.count }) else { return nil }
+        return FinderSyncRequestContext(root: root, overlaySettings: overlaySettings)
     }
 
-    func cachedStatuses(for root: String) -> [FileStatus]? {
-        let key = (root as NSString).standardizingPath
+    func cachedStatuses(for key: String, ttl: TimeInterval) -> [FileStatus]? {
         guard let entry = cache[key], Date().timeIntervalSince(entry.date) < ttl else {
             return nil
         }
         return entry.statuses
     }
 
-    func statuses(for root: String) async -> [FileStatus] {
-        let key = (root as NSString).standardizingPath
-        if let cached = cachedStatuses(for: key) {
+    func statuses(for root: String, requestedTarget: String) async -> [FileStatus]? {
+        let policy = FinderSyncCachePolicy(mode: mode)
+        guard policy.collectsBadges,
+              let scope = policy.statusScope(requestedTarget: requestedTarget) else {
+            return nil
+        }
+        let generation = configurationGeneration
+        let normalizedRoot = (root as NSString).standardizingPath
+        let key = normalizedRoot + "\u{0}" + scope + "\u{0}" + String(generation)
+        if let cached = cachedStatuses(for: key, ttl: policy.cacheTTL) {
             return cached
         }
-        let loaded = await Self.runSvnStatus(wc: URL(fileURLWithPath: key, isDirectory: true))
+        if let task = inFlight[key] {
+            return await task.value
+        }
+        let task = Task {
+            await Self.runSvnStatus(
+                wc: URL(fileURLWithPath: normalizedRoot, isDirectory: true),
+                requestedTarget: scope
+            )
+        }
+        inFlight[key] = task
+        let loaded = await task.value
+        guard generation == configurationGeneration else {
+            inFlight[key] = nil
+            return nil
+        }
         cache[key] = (Date(), loaded)
+        inFlight[key] = nil
         return loaded
     }
 
-    private static func runSvnStatus(wc: URL) async -> [FileStatus] {
+    private static func runSvnStatus(wc: URL, requestedTarget: String) async -> [FileStatus] {
+        guard let statusData = await runSvn(
+            arguments: [
+                "status", "--xml", "--verbose", "--no-ignore", "--non-interactive",
+                requestedTarget
+            ],
+            wc: wc
+        ), let statuses = try? StatusXMLParser.parse(statusData) else {
+            return []
+        }
+
+        async let infoData = runSvn(
+            arguments: ["info", "--xml", "--recursive", "--non-interactive", requestedTarget],
+            wc: wc
+        )
+        async let currentPropertyData = runSvn(
+            arguments: [
+                "proplist", "--xml", "--verbose", "--recursive", "--non-interactive",
+                requestedTarget
+            ],
+            wc: wc
+        )
+        async let basePropertyData = runSvn(
+            arguments: [
+                "proplist", "--xml", "--verbose", "--recursive",
+                "--revision", "BASE", "--non-interactive", requestedTarget
+            ],
+            wc: wc
+        )
+        let (loadedInfoData, loadedCurrentPropertyData, loadedBasePropertyData) = await (
+            infoData,
+            currentPropertyData,
+            basePropertyData
+        )
+
+        let depths = loadedInfoData.flatMap { try? FinderSyncInfoXMLParser.parseDepths($0) } ?? [:]
+        let currentProperties = loadedCurrentPropertyData.flatMap { try? PropertyXMLParser.parse($0) } ?? []
+        let baseProperties = loadedBasePropertyData.flatMap { try? PropertyXMLParser.parse($0) }
+        let pathMetadata = statuses.map { status in
+            let url = status.path == "." ? wc : wc.appendingPathComponent(status.path)
+            var isDirectory: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            let nestedMetadata = url.appendingPathComponent(".svn", isDirectory: true)
+            return FinderSyncPathMetadata(
+                path: status.path,
+                isReadOnly: exists && !FileManager.default.isWritableFile(atPath: url.path),
+                depth: depths[status.path],
+                isNestedWorkingCopy: status.path != "."
+                    && isDirectory.boolValue
+                    && FileManager.default.fileExists(atPath: nestedMetadata.path)
+            )
+        }
+        return FinderSyncStatusEnricher.enrich(
+            statuses: statuses,
+            currentProperties: currentProperties,
+            baseProperties: baseProperties,
+            pathMetadata: pathMetadata
+        )
+    }
+
+    private static func svnExecutableURL() -> URL? {
+        let candidates = [
+            "/opt/homebrew/bin/svn",
+            "/usr/local/bin/svn",
+            "/usr/bin/svn",
+        ]
+        guard let path = candidates.first(where: FileManager.default.isExecutableFile(atPath:)) else {
+            return nil
+        }
+        return URL(fileURLWithPath: path)
+    }
+
+    private static func drainOutput(
+        from pipe: Pipe,
+        into capture: FinderSyncDataCapture,
+        group: DispatchGroup
+    ) {
+        group.enter()
+        DispatchQueue.global(qos: .utility).async {
+            defer { group.leave() }
+            capture.store(pipe.fileHandleForReading.readDataToEndOfFile())
+        }
+    }
+
+    private static func runSvn(arguments: [String], wc: URL) async -> Data? {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
+                guard let executableURL = svnExecutableURL() else {
+                    logger.error("svn command failed to launch: executable not found")
+                    continuation.resume(returning: nil)
+                    return
+                }
                 let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                process.arguments = ["svn", "status", "--xml", "--non-interactive"]
+                process.executableURL = executableURL
+                process.arguments = arguments
                 process.currentDirectoryURL = wc
                 process.environment = ProcessInfo.processInfo.environment.merging([
                     "LC_ALL": "C",
-                    "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
-                        + (ProcessInfo.processInfo.environment["PATH"] ?? ""),
                 ]) { _, new in new }
 
                 let stdout = Pipe()
+                let stderr = Pipe()
                 process.standardOutput = stdout
-                process.standardError = Pipe()
+                process.standardError = stderr
                 do {
                     try process.run()
+                    let stdoutCapture = FinderSyncDataCapture()
+                    let stderrCapture = FinderSyncDataCapture()
+                    let outputReaders = DispatchGroup()
+                    drainOutput(from: stdout, into: stdoutCapture, group: outputReaders)
+                    drainOutput(from: stderr, into: stderrCapture, group: outputReaders)
                     process.waitUntilExit()
-                    let data = stdout.fileHandleForReading.readDataToEndOfFile()
-                    let statuses = (try? StatusXMLParser.parse(data)) ?? []
-                    continuation.resume(returning: statuses)
+                    outputReaders.wait()
+                    let data = stdoutCapture.snapshot()
+                    let errorData = stderrCapture.snapshot()
+                    let command = arguments.first ?? "unknown"
+                    guard process.terminationStatus == 0 else {
+                        let message = String(data: errorData, encoding: .utf8) ?? ""
+                        logger.error(
+                            "svn command failed: \(command, privacy: .public) exit=\(process.terminationStatus) stderr=\(String(message.prefix(500)), privacy: .public)"
+                        )
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    logger.debug("svn command succeeded: \(command, privacy: .public)")
+                    continuation.resume(returning: data)
                 } catch {
-                    continuation.resume(returning: [])
+                    let command = arguments.first ?? "unknown"
+                    logger.error(
+                        "svn command failed to launch: \(command, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+                    )
+                    continuation.resume(returning: nil)
                 }
             }
         }

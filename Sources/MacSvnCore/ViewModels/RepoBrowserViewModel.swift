@@ -3,6 +3,28 @@ import Observation
 
 public protocol RepoListProviding: Sendable {
     func list(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
+    func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry]
+    func listWithLocks(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry]
+}
+
+public extension RepoListProviding {
+    func listWithLocks(url: String, depth: SvnDepth, auth: Credential?) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func list(url: String, depth: SvnDepth, includeExternals: Bool, auth: Credential?) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, auth: auth)
+    }
+
+    func listWithLocks(
+        url: String,
+        depth: SvnDepth,
+        includeExternals: Bool,
+        auth: Credential?
+    ) async throws -> [RemoteEntry] {
+        try await list(url: url, depth: depth, includeExternals: includeExternals, auth: auth)
+    }
 }
 
 public protocol RepoPreviewProviding: Sendable {
@@ -51,15 +73,9 @@ public enum RepoLogState: Equatable, Sendable {
     case error(String)
 }
 
-public enum RepoRemoteOperation: Equatable, Sendable {
-    case mkdir
-    case delete
-    case copy
-    case move
-}
-
 public enum RepoRemoteOperationState: Equatable, Sendable {
     case idle
+    case confirmationRequired(RepoRemoteWriteConfirmation)
     case running(RepoRemoteOperation)
     case completed(RepoRemoteOperation, revision: Revision)
     case error(String)
@@ -76,6 +92,8 @@ public final class RepoBrowserViewModel {
     private let remoteOperationProvider: (any RepoRemoteOperationProviding)?
     private let bookmarkManager: (any RepoBookmarkManaging)?
     private let logBatchSize: Int
+    private var preFetchDirectories: Bool
+    private var showExternals: Bool
 
     private var statesByURL: [String: RepoBrowserState] = [:]
     private var childrenByURL: [String: [RemoteEntry]] = [:]
@@ -84,9 +102,21 @@ public final class RepoBrowserViewModel {
     private var logEntriesByURL: [String: [LogEntry]] = [:]
     private var nextLogRevisionByURL: [String: Revision] = [:]
     private var hasMoreLogByURL: [String: Bool] = [:]
+    private struct PendingRemoteOperation {
+        let confirmation: RepoRemoteWriteConfirmation
+        let refreshURL: String
+        let message: String
+        let auth: Credential?
+    }
+
+    private var pendingRemoteOperation: PendingRemoteOperation?
     public private(set) var bookmarks: [RepoBookmark] = []
     public private(set) var bookmarkState: RepoBookmarkState = .idle
     public private(set) var remoteOperationState: RepoRemoteOperationState = .idle
+
+    public var confirmation: RepoRemoteWriteConfirmation? {
+        pendingRemoteOperation?.confirmation
+    }
 
     public init(
         listProvider: any RepoListProviding,
@@ -94,7 +124,9 @@ public final class RepoBrowserViewModel {
         bookmarkManager: (any RepoBookmarkManaging)? = nil,
         logProvider: (any RepoLogProviding)? = nil,
         remoteOperationProvider: (any RepoRemoteOperationProviding)? = nil,
-        logBatchSize: Int = 100
+        logBatchSize: Int = 100,
+        preFetchDirectories: Bool = false,
+        showExternals: Bool = false
     ) {
         self.listProvider = listProvider
         self.previewProvider = previewProvider ?? (listProvider as? any RepoPreviewProviding)
@@ -102,6 +134,8 @@ public final class RepoBrowserViewModel {
         self.remoteOperationProvider = remoteOperationProvider ?? (listProvider as? any RepoRemoteOperationProviding)
         self.bookmarkManager = bookmarkManager
         self.logBatchSize = max(1, logBatchSize)
+        self.preFetchDirectories = preFetchDirectories
+        self.showExternals = showExternals
     }
 
     public func state(for url: String) -> RepoBrowserState {
@@ -132,11 +166,67 @@ public final class RepoBrowserViewModel {
         statesByURL[url] = .loading
 
         do {
-            childrenByURL[url] = try await listProvider.list(url: url, depth: .immediates, auth: auth)
+            let children = try await listProvider.listWithLocks(
+                url: url,
+                depth: .immediates,
+                includeExternals: showExternals,
+                auth: auth
+            )
+            childrenByURL[url] = children
             statesByURL[url] = .loaded
+            if preFetchDirectories {
+                await preFetchChildren(of: children, baseURL: url, auth: auth)
+            }
         } catch {
             childrenByURL[url] = []
             statesByURL[url] = .error(String(describing: error))
+        }
+    }
+
+    public func updateSettings(preFetchDirectories: Bool, showExternals: Bool) {
+        self.preFetchDirectories = preFetchDirectories
+        self.showExternals = showExternals
+    }
+
+    private func preFetchChildren(of entries: [RemoteEntry], baseURL: String, auth: Credential?) async {
+        let childURLs = entries
+            .filter { $0.kind == .directory }
+            .map { remoteURL(baseURL: baseURL, entryPath: $0.path) }
+        guard !childURLs.isEmpty else { return }
+
+        for childURL in childURLs {
+            statesByURL[childURL] = .loading
+        }
+
+        let provider = listProvider
+        let includeExternals = showExternals
+        await withTaskGroup(of: (String, Result<[RemoteEntry], Error>).self) { group in
+            for childURL in childURLs {
+                group.addTask {
+                    do {
+                        let children = try await provider.listWithLocks(
+                            url: childURL,
+                            depth: .immediates,
+                            includeExternals: includeExternals,
+                            auth: auth
+                        )
+                        return (childURL, .success(children))
+                    } catch {
+                        return (childURL, .failure(error))
+                    }
+                }
+            }
+
+            for await (childURL, result) in group {
+                switch result {
+                case .success(let children):
+                    childrenByURL[childURL] = children
+                    statesByURL[childURL] = .loaded
+                case .failure(let error):
+                    childrenByURL[childURL] = []
+                    statesByURL[childURL] = .error(String(describing: error))
+                }
+            }
         }
     }
 
@@ -273,6 +363,15 @@ public final class RepoBrowserViewModel {
         auth: Credential? = nil
     ) async {
         let url = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        guard !requestConfirmation(
+            for: .delete,
+            sourceURL: url,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
+            return
+        }
         await performRemoteOperation(.delete, refreshURL: baseURL, auth: auth) { provider in
             try await provider.delete(url: url, message: message, auth: auth)
         }
@@ -299,8 +398,97 @@ public final class RepoBrowserViewModel {
         auth: Credential? = nil
     ) async {
         let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        guard !requestConfirmation(
+            for: .move,
+            sourceURL: sourceURL,
+            destinationURL: destinationURL,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
+            return
+        }
         await performRemoteOperation(.move, refreshURL: baseURL, auth: auth) { provider in
             try await provider.move(source: sourceURL, destination: destinationURL, message: message, auth: auth)
+        }
+    }
+
+    public func rename(
+        entry: RemoteEntry,
+        baseURL: String,
+        to newName: String,
+        message: String,
+        auth: Credential? = nil
+    ) async {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty,
+              trimmedName != ".",
+              trimmedName != "..",
+              !trimmedName.contains("/"),
+              !trimmedName.contains("\\")
+        else {
+            remoteOperationState = .error("invalidRemoteEntryName")
+            return
+        }
+
+        let sourceURL = remoteURL(baseURL: baseURL, entryPath: entry.path)
+        let destinationURL = remoteURL(baseURL: baseURL, entryPath: trimmedName)
+        guard !requestConfirmation(
+            for: .rename,
+            sourceURL: sourceURL,
+            destinationURL: destinationURL,
+            message: message,
+            refreshURL: baseURL,
+            auth: auth
+        ) else {
+            return
+        }
+        await performRemoteOperation(.rename, refreshURL: baseURL, auth: auth) { provider in
+            try await provider.move(source: sourceURL, destination: destinationURL, message: message, auth: auth)
+        }
+    }
+
+    public func cancelRemoteOperationConfirmation() {
+        guard case .confirmationRequired = remoteOperationState else {
+            return
+        }
+        pendingRemoteOperation = nil
+        remoteOperationState = .idle
+    }
+
+    public func confirmRemoteOperation(_ confirmation: RepoRemoteWriteConfirmation) async {
+        guard let pendingRemoteOperation,
+              pendingRemoteOperation.confirmation == confirmation,
+              remoteOperationState == .confirmationRequired(confirmation)
+        else {
+            return
+        }
+
+        self.pendingRemoteOperation = nil
+        switch confirmation.operation {
+        case .delete:
+            await performRemoteOperation(.delete, refreshURL: pendingRemoteOperation.refreshURL, auth: pendingRemoteOperation.auth) { provider in
+                try await provider.delete(
+                    url: confirmation.sourceURL,
+                    message: pendingRemoteOperation.message,
+                    auth: pendingRemoteOperation.auth
+                )
+            }
+        case .move, .rename:
+            guard let destinationURL = confirmation.destinationURL else {
+                remoteOperationState = .error("missingRemoteDestination")
+                return
+            }
+            await performRemoteOperation(confirmation.operation, refreshURL: pendingRemoteOperation.refreshURL, auth: pendingRemoteOperation.auth) { provider in
+                try await provider.move(
+                    source: confirmation.sourceURL,
+                    destination: destinationURL,
+                    message: pendingRemoteOperation.message,
+                    auth: pendingRemoteOperation.auth
+                )
+            }
+        case .mkdir, .copy:
+            return
         }
     }
 
@@ -377,9 +565,35 @@ public final class RepoBrowserViewModel {
         }
     }
 
+    @discardableResult
+    private func requestConfirmation(
+        for operation: RepoRemoteOperation,
+        sourceURL: String,
+        destinationURL: String? = nil,
+        message: String,
+        refreshURL: String,
+        auth: Credential?
+    ) -> Bool {
+        let confirmation = RepoRemoteWriteConfirmationPolicy.confirmation(
+            for: operation,
+            sourceURL: sourceURL,
+            destinationURL: destinationURL
+        )
+        if let confirmation {
+            pendingRemoteOperation = PendingRemoteOperation(
+                confirmation: confirmation,
+                refreshURL: refreshURL,
+                message: message,
+                auth: auth
+            )
+            remoteOperationState = .confirmationRequired(confirmation)
+        }
+        return confirmation != nil
+    }
+
     private func remoteURL(baseURL: String, entryPath: String) -> String {
-        if baseURL.hasSuffix("/") {
-            return baseURL + entryPath
+        if let base = URL(string: baseURL) {
+            return base.appendingPathComponent(entryPath, isDirectory: false).absoluteString
         }
 
         return baseURL + "/" + entryPath

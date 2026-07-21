@@ -249,8 +249,8 @@ GitMigrationService (actor)
 
 ## FR-EX-07 URL Scheme 与自动化
 
-- `macsvn://` scheme：`open?path=…`、`log?url=…&rev=…`、`diff?…`——供 CI 通知、聊天工具消息深链跳转；
-- 提供轻量 CLI 伴生命令 `macsvn`（open/status/commit-ui），方便终端用户唤起 GUI。
+- `svnstudio://` scheme：`open?path=…`、`log?url=…&rev=…`、`diff?…`——供 CI 通知、聊天工具消息深链跳转；
+- 提供轻量 CLI 伴生命令（open/status/commit-ui），方便终端用户唤起 GUI。
 
 ## FR-EX-08 Quick Look 插件
 

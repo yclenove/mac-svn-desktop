@@ -21,9 +21,31 @@ public enum PropertyViewState: Equatable, Sendable {
 public final class PropertyViewModel {
     nonisolated public static let commonTemplates: [SvnPropertyTemplate] = [
         SvnPropertyTemplate(name: "svn:ignore", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "svn:global-ignores", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "svn:externals", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "svn:mergeinfo", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
         SvnPropertyTemplate(name: "svn:eol-style", defaultValue: "native", appliesToDirectory: false, appliesToFile: true),
+        SvnPropertyTemplate(name: "svn:keywords", defaultValue: "Id Author Date Rev HeadURL", appliesToDirectory: false, appliesToFile: true),
         SvnPropertyTemplate(name: "svn:executable", defaultValue: "*", appliesToDirectory: false, appliesToFile: true),
-        SvnPropertyTemplate(name: "svn:needs-lock", defaultValue: "*", appliesToDirectory: false, appliesToFile: true)
+        SvnPropertyTemplate(name: "svn:needs-lock", defaultValue: "*", appliesToDirectory: false, appliesToFile: true),
+        SvnPropertyTemplate(name: "tsvn:logminsize", defaultValue: "0", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logwidthmarker", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplate", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatecommit", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatebranch", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplateimport", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatedelete", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatemove", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatemkdir", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatepropset", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:logtemplatelock", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:projectlanguage", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "tsvn:lockmsgminsize", defaultValue: "0", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "bugtraq:url", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "bugtraq:message", defaultValue: "", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "bugtraq:number", defaultValue: "true", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "bugtraq:append", defaultValue: "false", appliesToDirectory: true, appliesToFile: false),
+        SvnPropertyTemplate(name: "bugtraq:logregex", defaultValue: "", appliesToDirectory: true, appliesToFile: false)
     ]
 
     private let workingCopy: URL

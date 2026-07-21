@@ -1,7 +1,7 @@
 import SwiftUI
 import MacSvnCore
 
-/// ⌘K 命令面板：动作 / 文件 / 日志模糊搜索。
+/// ⌘K 命令面板：动作 / 路由 / 文件 / 日志模糊搜索。
 public struct MacSvnCommandPaletteView: View {
     @ObservedObject private var navigator: MacSvnAppNavigator
     @ObservedObject private var workspaceController: MacSvnWorkspaceController
@@ -26,7 +26,7 @@ public struct MacSvnCommandPaletteView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            TextField("搜索命令、文件、日志…", text: $query)
+            TextField("搜索命令、页面、文件、日志…", text: $query)
                 .textFieldStyle(.roundedBorder)
                 .padding(16)
                 .onChange(of: query) { _, _ in
@@ -38,7 +38,7 @@ public struct MacSvnCommandPaletteView: View {
                     select(result)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(result.title)
+                        Text(LocalizedStringKey(result.title))
                         if let subtitle = result.subtitle {
                             Text(subtitle)
                                 .font(.caption)
@@ -54,11 +54,26 @@ public struct MacSvnCommandPaletteView: View {
     }
 
     private func rebuildEngine() async {
-        let actions = [
+        let actions: [CommandPaletteAction] = [
             CommandPaletteAction(id: .commit, title: "提交更改", keywords: ["commit", "ci", "提交"]),
             CommandPaletteAction(id: .update, title: "更新工作副本", keywords: ["update", "更新"]),
             CommandPaletteAction(id: .switchBranch, title: "切换分支", keywords: ["branch", "switch", "分支"]),
-            CommandPaletteAction(id: .openWorkingCopy, title: "打开工作副本", keywords: ["workspace", "wc", "工作副本"])
+            CommandPaletteAction(id: .openWorkingCopy, title: "添加工作副本", keywords: ["workspace", "wc", "工作副本", "添加"]),
+            CommandPaletteAction(id: .goChanges, title: "打开：变更工作区", keywords: ["changes", "变更", "status"]),
+            CommandPaletteAction(id: .goHistory, title: "打开：历史", keywords: ["log", "历史", "日志"]),
+            CommandPaletteAction(id: .goBrowser, title: "打开：仓库浏览器", keywords: ["browser", "浏览", "repo"]),
+            CommandPaletteAction(id: .goBranches, title: "打开：分支与标签", keywords: ["branches", "分支", "tag"]),
+            CommandPaletteAction(id: .goConflicts, title: "打开：冲突合并", keywords: ["merge", "冲突", "conflict"]),
+            CommandPaletteAction(id: .goBlame, title: "打开：Blame", keywords: ["blame", "追溯"]),
+            CommandPaletteAction(id: .goProperties, title: "打开：属性", keywords: ["properties", "属性", "prop"]),
+            CommandPaletteAction(id: .goLocks, title: "打开：锁定", keywords: ["lock", "锁定"]),
+            CommandPaletteAction(id: .goShelve, title: "打开：本地搁置", keywords: ["shelve", "搁置"]),
+            CommandPaletteAction(id: .goGitMigration, title: "打开：Git 迁移", keywords: ["git", "迁移"]),
+            CommandPaletteAction(id: .goTeamActivity, title: "打开：团队动态", keywords: ["team", "团队", "heatmap"]),
+            CommandPaletteAction(id: .goAIAssistant, title: "打开：AI 助手", keywords: ["ai", "助手", "chat"]),
+            CommandPaletteAction(id: .goReleaseNotes, title: "打开：Release Notes", keywords: ["release", "notes", "发布"]),
+            CommandPaletteAction(id: .goSettings, title: "打开：设置", keywords: ["settings", "设置", "prefs"]),
+            CommandPaletteAction(id: .goDiff, title: "打开：差异（变更工作区）", keywords: ["diff", "差异"])
         ]
 
         var files: [CommandPaletteFileItem] = []
@@ -88,18 +103,46 @@ public struct MacSvnCommandPaletteView: View {
         case .action(let id):
             switch id {
             case .commit:
-                navigator.selectedRoute = .commit
-            case .update:
-                navigator.selectedRoute = .changes
-            case .switchBranch:
-                navigator.selectedRoute = .branches
+                navigator.selectRoute(.commit)
+            case .update, .goChanges, .goDiff:
+                navigator.selectMode(.changes)
+            case .switchBranch, .goBranches:
+                navigator.selectMode(.branches)
             case .openWorkingCopy:
-                navigator.selectedRoute = .workspace
+                workspaceController.presentAddPanel()
+            case .goHistory:
+                navigator.selectMode(.history)
+            case .goBrowser:
+                navigator.selectMode(.browser)
+            case .goConflicts:
+                navigator.selectMode(.conflicts)
+            case .goBlame:
+                navigator.selectMode(.blame)
+            case .goProperties:
+                navigator.selectMode(.properties)
+            case .goLocks:
+                navigator.selectMode(.locks)
+            case .goShelve:
+                navigator.selectMode(.shelve)
+            case .goGitMigration:
+                navigator.selectMode(.gitMigration)
+            case .goTeamActivity:
+                navigator.selectMode(.teamActivity)
+            case .goAIAssistant:
+                navigator.selectMode(.aiAssistant)
+            case .goReleaseNotes:
+                navigator.selectMode(.releaseNotes)
+            case .goSettings:
+                navigator.selectMode(.settings)
             }
-        case .file:
-            navigator.selectedRoute = .changes
+        case .svnCommand(let command):
+            // Catalog 日常命令：经 Navigator 统一分发（与 CFM 右键同源）
+            _ = navigator.perform(command: command)
+        case .file(let path):
+            navigator.pendingDiffPath = path
+            navigator.selectMode(.changes)
         case .log:
-            navigator.selectedRoute = .log
+            navigator.selectMode(.history)
         case .aiChat(let query):
             navigator.handoffCommandPaletteQueryToAIChat(query)
         }

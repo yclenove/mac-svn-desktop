@@ -125,7 +125,14 @@ public struct AIBlameEvolutionExplainer: AIBlameEvolutionExplaining, Sendable {
                 continue
             }
 
-            let logEntries = try await logProvider.log(wc: wc, target: target, from: revision, batch: 1, verbose: true)
+            let logEntries = try await logProvider.log(
+                wc: wc,
+                target: target,
+                from: revision,
+                batch: 1,
+                verbose: true,
+                stopOnCopy: false
+            )
             let logEntry = logEntries.first
             let lineNumbers = selectedLines
                 .filter { $0.revision == revision }

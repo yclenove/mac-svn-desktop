@@ -1,5 +1,14 @@
 import Foundation
+import Combine
 import MacSvnCore
+
+public enum MacSvnAppUpdateStatus: Equatable, Sendable {
+    case idle
+    case checking
+    case upToDate(String)
+    case updateAvailable(AppRelease)
+    case failed(String)
+}
 
 /// 应用级依赖注入容器：集中创建并持有 SVN 后端、业务服务与持久化存储。
 ///
@@ -10,7 +19,12 @@ import MacSvnCore
 @MainActor
 public final class MacSvnAppSession: ObservableObject {
     public let supportDirectory: URL
+    public let finderSyncConfigurationFileURLs: [URL]
     public let settingsStore: SettingsStore
+    public let svnClientConfigurationStore: SvnClientConfigurationStore
+    public let appUpdateService: AppUpdateService
+    @Published public private(set) var settingsSnapshot: AppSettings
+    @Published public private(set) var updateStatus: MacSvnAppUpdateStatus = .idle
     public let workspaceStore: WorkspaceStore
     public let commitMessageHistoryStore: CommitMessageHistoryStore
     public let repoBookmarkStore: RepoBookmarkStore
@@ -18,8 +32,11 @@ public final class MacSvnAppSession: ObservableObject {
     public let conflictService: ConflictService
     public let shelveService: ShelveService
     public let svnService: SvnService
+    public let logCacheStore: LogCacheStore
+    public let svnAuthenticationCacheStore: SvnAuthenticationCacheStore
     public let environmentChecker: SvnEnvironmentChecker
     public let svnExecutablePath: String
+    public let repositoryCreator: SvnRepositoryCreator
     public let gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer
     public let gitMigrationService: GitMigrationService
     public let gitMigrationSyncService: GitMigrationSyncService
@@ -40,7 +57,11 @@ public final class MacSvnAppSession: ObservableObject {
 
     public init(
         supportDirectory: URL,
+        finderSyncConfigurationFileURLs: [URL]? = nil,
         settingsStore: SettingsStore,
+        settingsSnapshot: AppSettings,
+        svnClientConfigurationStore: SvnClientConfigurationStore,
+        appUpdateService: AppUpdateService,
         workspaceStore: WorkspaceStore,
         commitMessageHistoryStore: CommitMessageHistoryStore,
         repoBookmarkStore: RepoBookmarkStore,
@@ -48,8 +69,11 @@ public final class MacSvnAppSession: ObservableObject {
         conflictService: ConflictService,
         shelveService: ShelveService,
         svnService: SvnService,
+        logCacheStore: LogCacheStore? = nil,
+        svnAuthenticationCacheStore: SvnAuthenticationCacheStore? = nil,
         environmentChecker: SvnEnvironmentChecker = SvnEnvironmentChecker(),
         svnExecutablePath: String,
+        repositoryCreator: SvnRepositoryCreator,
         gitMigrationSourceAnalyzer: GitMigrationSourceAnalyzer,
         gitMigrationService: GitMigrationService,
         gitMigrationSyncService: GitMigrationSyncService,
@@ -69,7 +93,13 @@ public final class MacSvnAppSession: ObservableObject {
         aiToolAuditStore: AIToolAuditStore
     ) {
         self.supportDirectory = supportDirectory
+        self.finderSyncConfigurationFileURLs = finderSyncConfigurationFileURLs ?? [
+            FinderSyncRootsExporter.fileURL(in: supportDirectory)
+        ]
         self.settingsStore = settingsStore
+        self.settingsSnapshot = settingsSnapshot
+        self.svnClientConfigurationStore = svnClientConfigurationStore
+        self.appUpdateService = appUpdateService
         self.workspaceStore = workspaceStore
         self.commitMessageHistoryStore = commitMessageHistoryStore
         self.repoBookmarkStore = repoBookmarkStore
@@ -77,8 +107,15 @@ public final class MacSvnAppSession: ObservableObject {
         self.conflictService = conflictService
         self.shelveService = shelveService
         self.svnService = svnService
+        self.logCacheStore = logCacheStore ?? LogCacheStore(
+            fileURL: supportDirectory.appendingPathComponent("log-cache.json")
+        )
+        self.svnAuthenticationCacheStore = svnAuthenticationCacheStore ?? SvnAuthenticationCacheStore(
+            svnExecutable: svnExecutablePath
+        )
         self.environmentChecker = environmentChecker
         self.svnExecutablePath = svnExecutablePath
+        self.repositoryCreator = repositoryCreator
         self.gitMigrationSourceAnalyzer = gitMigrationSourceAnalyzer
         self.gitMigrationService = gitMigrationService
         self.gitMigrationSyncService = gitMigrationSyncService
@@ -103,21 +140,65 @@ public final class MacSvnAppSession: ObservableObject {
         await settingsStore.settings().aiPrivacy
     }
 
+    public func publish(settings: AppSettings) {
+        settingsSnapshot = settings
+    }
+
+    public func checkForUpdates(currentVersion: String? = nil) async {
+        updateStatus = .checking
+        let installedVersion = currentVersion
+            ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+            ?? "0.0.0"
+        do {
+            switch try await appUpdateService.check(currentVersion: installedVersion) {
+            case .upToDate(let version):
+                updateStatus = .upToDate(version)
+            case .updateAvailable(let release):
+                updateStatus = .updateAvailable(release)
+            }
+        } catch {
+            updateStatus = .failed(error.localizedDescription)
+        }
+    }
+
     /// 从 support 目录引导会话：加载设置、创建后端与服务、确保持久化文件存在。
-    public static func bootstrap(supportDirectory: URL? = nil) async throws -> MacSvnAppSession {
+    public static func bootstrap(
+        supportDirectory: URL? = nil,
+        finderSyncExtensionSupportDirectory: URL? = nil,
+        svnConfigurationDirectory: URL? = nil
+    ) async throws -> MacSvnAppSession {
         let directory = try resolveSupportDirectory(supportDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var finderSyncConfigurationFileURLs = [FinderSyncRootsExporter.fileURL(in: directory)]
+        let extensionSupportDirectory = finderSyncExtensionSupportDirectory
+            ?? (supportDirectory == nil
+                ? FinderSyncRootsExporter.extensionContainerSupportDirectory()
+                : nil)
+        if let extensionSupportDirectory {
+            let extensionFileURL = FinderSyncRootsExporter.fileURL(in: extensionSupportDirectory)
+            if extensionFileURL.standardizedFileURL != finderSyncConfigurationFileURLs[0].standardizedFileURL {
+                finderSyncConfigurationFileURLs.append(extensionFileURL)
+            }
+        }
 
         let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
         let workspaceStore = WorkspaceStore(fileURL: directory.appendingPathComponent("workspaces.json"))
-        let commitMessageHistoryStore = CommitMessageHistoryStore(
-            fileURL: directory.appendingPathComponent("commit-history.json")
-        )
         let repoBookmarkStore = RepoBookmarkStore(
             fileURL: directory.appendingPathComponent("bookmarks.json")
         )
+        let logCacheStore = LogCacheStore(
+            fileURL: directory.appendingPathComponent("log-cache.json")
+        )
 
         let settings = try await settingsStore.load()
+        let commitMessageHistoryStore = CommitMessageHistoryStore(
+            fileURL: directory.appendingPathComponent("commit-history.json"),
+            limit: settings.dialogs.commitMessageHistoryLimit
+        )
+        let svnClientConfigurationStore = SvnClientConfigurationStore(
+            directoryURL: svnConfigurationDirectory ?? SvnConfigurationDirectoryResolver().resolve()
+        )
+        let appUpdateService = AppUpdateService(endpoint: ProductBranding.latestReleaseAPIURL)
         // 首次引导时落盘默认文件，保证 Application Support 目录可观测、可备份
         try await settingsStore.update(settings)
         let workspaces = try await workspaceStore.load()
@@ -133,14 +214,28 @@ public final class MacSvnAppSession: ObservableObject {
         // 同步导出 Finder Sync 监视根目录（扩展启动时读取）
         try? FinderSyncRootsExporter.export(
             records: workspaces,
-            to: FinderSyncRootsExporter.fileURL(in: directory)
+            cacheMode: settings.finderSyncCacheMode,
+            overlaySettings: settings.finderSyncOverlaySettings,
+            contextMenuSettings: settings.finderSyncContextMenuSettings,
+            to: finderSyncConfigurationFileURLs
         )
 
         let svnPath = resolveSvnExecutablePath(configured: settings.svnPath)
+        let repositoryCreator = SvnRepositoryCreator(
+            svnadminExecutable: resolveSvnadminExecutablePath(svnExecutablePath: svnPath),
+            runner: ProcessRunner(),
+            timeout: settings.processTimeout
+        )
+        let svnAuthenticationCacheStore = SvnAuthenticationCacheStore(
+            configurationDirectory: svnClientConfigurationStore.directoryURL,
+            svnExecutable: svnPath,
+            timeout: TimeInterval(settings.processTimeout)
+        )
         let backend = SvnCliBackend(
             svnExecutable: svnPath,
             runner: ProcessRunner(),
-            timeout: settings.processTimeout
+            timeout: settings.processTimeout,
+            configurationDirectory: svnClientConfigurationStore.directoryURL
         )
         var guardConfig = CommitGuardConfiguration()
         if settings.commitGuardHardBlockConflictMarkers {
@@ -149,7 +244,11 @@ public final class MacSvnAppSession: ObservableObject {
         let svnService = SvnService(
             backend: backend,
             credentialProvider: MacSvnInteractiveCredentialProvider(),
-            commitGuard: CommitGuardService(configuration: guardConfig)
+            commitGuard: CommitGuardService(configuration: guardConfig),
+            clientHooks: ClientHookService(
+                configurations: settings.clientHooks,
+                runner: ProcessRunner()
+            )
         )
         let branchListService = BranchListService(listProvider: svnService)
         let conflictService = ConflictService(
@@ -160,9 +259,16 @@ public final class MacSvnAppSession: ObservableObject {
         )
         let shelveRoot = directory.appendingPathComponent("shelves", isDirectory: true)
         try FileManager.default.createDirectory(at: shelveRoot, withIntermediateDirectories: true)
+        let officialShelving = SvnExperimentalShelvingClient(
+            svnExecutable: svnPath,
+            runner: ProcessRunner(),
+            timeout: settings.processTimeout,
+            version: settings.shelvingVersion
+        )
         let shelveService = ShelveService(
             store: ShelveStore(rootDirectory: shelveRoot),
-            svn: svnService
+            svn: svnService,
+            official: officialShelving
         )
 
         let processRunner = ProcessRunner()
@@ -240,7 +346,11 @@ public final class MacSvnAppSession: ObservableObject {
 
         return MacSvnAppSession(
             supportDirectory: directory,
+            finderSyncConfigurationFileURLs: finderSyncConfigurationFileURLs,
             settingsStore: settingsStore,
+            settingsSnapshot: settings,
+            svnClientConfigurationStore: svnClientConfigurationStore,
+            appUpdateService: appUpdateService,
             workspaceStore: workspaceStore,
             commitMessageHistoryStore: commitMessageHistoryStore,
             repoBookmarkStore: repoBookmarkStore,
@@ -248,7 +358,10 @@ public final class MacSvnAppSession: ObservableObject {
             conflictService: conflictService,
             shelveService: shelveService,
             svnService: svnService,
+            logCacheStore: logCacheStore,
+            svnAuthenticationCacheStore: svnAuthenticationCacheStore,
             svnExecutablePath: svnPath,
+            repositoryCreator: repositoryCreator,
             gitMigrationSourceAnalyzer: gitMigrationSourceAnalyzer,
             gitMigrationService: gitMigrationService,
             gitMigrationSyncService: gitMigrationSyncService,
@@ -274,7 +387,7 @@ public final class MacSvnAppSession: ObservableObject {
         try defaultJSON.data(using: .utf8)?.write(to: url, options: .atomic)
     }
 
-    /// 默认 Application Support 目录：`~/Library/Application Support/MacSVN/`
+    /// 默认 Application Support 目录：`~/Library/Application Support/SVNStudio/`
     public static func defaultSupportDirectory() throws -> URL {
         try resolveSupportDirectory(nil)
     }
@@ -283,14 +396,7 @@ public final class MacSvnAppSession: ObservableObject {
         if let override {
             return override
         }
-
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        return base.appendingPathComponent("MacSVN", isDirectory: true)
+        return try ProductBranding.supportDirectoryURL
     }
 
     /// 解析 svn 可执行路径：用户配置非空时始终优先（即使当前不可执行，交由环境门禁提示）；
@@ -311,5 +417,22 @@ public final class MacSvnAppSession: ObservableObject {
         }
 
         return "/opt/homebrew/bin/svn"
+    }
+
+    public static func resolveSvnadminExecutablePath(svnExecutablePath: String) -> String {
+        let sibling = URL(fileURLWithPath: svnExecutablePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("svnadmin")
+            .path
+        if FileManager.default.isExecutableFile(atPath: sibling) {
+            return sibling
+        }
+
+        let candidates = [
+            "/opt/homebrew/bin/svnadmin",
+            "/usr/local/bin/svnadmin",
+            "/usr/bin/svnadmin"
+        ]
+        return candidates.first(where: FileManager.default.isExecutableFile(atPath:)) ?? sibling
     }
 }

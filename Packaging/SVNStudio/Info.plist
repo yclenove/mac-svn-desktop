@@ -5,15 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>zh-Hans</string>
 	<key>CFBundleDisplayName</key>
-	<string>MacSVN</string>
+	<string>SVN Studio</string>
 	<key>CFBundleExecutable</key>
-	<string>MacSVN</string>
+	<string>SVNStudio</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleIconFile</key>
+	<string>SVNStudio.icns</string>
 	<key>CFBundleName</key>
-	<string>MacSVN</string>
+	<string>SVN Studio</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -30,10 +32,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.yclenove.MacSVN</string>
+			<string>dev.yclenove.svnstudio</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>macsvn</string>
+				<string>svnstudio</string>
 			</array>
 		</dict>
 	</array>

@@ -91,11 +91,21 @@ public struct ExternalDiffService: ExternalDiffOpening {
 
         let processResult = try await runner.run(
             executable: tool.executablePath,
-            arguments: resolvedArguments(tool.arguments, left: leftFile, right: rightFile),
+            arguments: ExternalToolArgumentResolver.resolve(
+                template: tool.arguments,
+                defaultArguments: ["{left}", "{right}"],
+                replacements: ["{left}": leftFile, "{right}": rightFile]
+            ),
             stdin: nil,
             currentDirectory: nil,
             timeout: timeout
         )
+        guard processResult.exitCode == 0 else {
+            throw ExternalToolLaunchError.commandFailed(
+                exitCode: processResult.exitCode,
+                stderr: processResult.stderr
+            )
+        }
 
         return ExternalDiffLaunchResult(leftFile: leftFile, rightFile: rightFile, processResult: processResult)
     }
@@ -119,15 +129,6 @@ public struct ExternalDiffService: ExternalDiffOpening {
         let file = temporaryDirectory.appendingPathComponent("\(UUID().uuidString)-\(side)-\(basename)")
         try data.write(to: file, options: .atomic)
         return file
-    }
-
-    private func resolvedArguments(_ template: [String], left: URL, right: URL) -> [String] {
-        let arguments = template.isEmpty ? ["{left}", "{right}"] : template
-        return arguments.map { argument in
-            argument
-                .replacingOccurrences(of: "{left}", with: left.path)
-                .replacingOccurrences(of: "{right}", with: right.path)
-        }
     }
 }
 

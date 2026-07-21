@@ -13,7 +13,7 @@ public struct MacSvnGitMigrationView: View {
     @State private var commitMessage = "Initial import from SVN"
     @State private var destinationPath = ""
     @State private var targetRemote = ""
-    @State private var statusText: String?
+    @State private var statusText: LocalizedStringKey?
 
     @State private var analysisVM: GitMigrationSourceAnalysisViewModel?
     @State private var authorVM: GitMigrationAuthorMappingViewModel?
@@ -39,25 +39,31 @@ public struct MacSvnGitMigrationView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("Git 迁移")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
+                    .font(.headline)
+                Spacer(minLength: 8)
                 Picker("", selection: $step) {
                     ForEach(Step.allCases) { item in
-                        Text(item.rawValue).tag(item)
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
                     }
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 520)
+                .disabled(isMigrationBusy)
+                .accessibilityIdentifier("macSvn.st.gitMigration.steps")
             }
-            .padding(24)
+            .frame(height: MacSvnSpecializedToolsMetrics.toolbarHeight)
+            .padding(.horizontal, 12)
 
             if let statusText {
                 Text(statusText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .foregroundStyle(migrationFeedbackIsError ? Color.red : Color.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: MacSvnSpecializedToolsMetrics.feedbackBarHeight)
+                    .padding(.horizontal, 12)
+                    .accessibilityIdentifier("macSvn.st.gitMigration.feedback")
             }
 
             Form {
@@ -218,8 +224,9 @@ public struct MacSvnGitMigrationView: View {
             Button(mode == .snapshot ? "执行快照迁移" : "执行历史保真迁移") {
                 Task { await runMigrate() }
             }
-            .disabled(destinationPath.isEmpty || sourceURL.isEmpty)
+            .disabled(destinationPath.isEmpty || sourceURL.isEmpty || isMigrationBusy)
             .keyboardShortcut(.defaultAction)
+            .accessibilityIdentifier("macSvn.st.gitMigration.execute")
 
             if case .running = migrateVM?.state {
                 ProgressView("迁移进行中…")
@@ -240,7 +247,8 @@ public struct MacSvnGitMigrationView: View {
                 Button("运行对账") {
                     Task { await runReconciliation() }
                 }
-                .disabled(destinationPath.isEmpty)
+                .disabled(destinationPath.isEmpty || isMigrationBusy)
+                .accessibilityIdentifier("macSvn.st.gitMigration.reconcile")
 
                 if case .running = reconciliationVM?.state {
                     ProgressView("对账中…")
@@ -323,6 +331,26 @@ public struct MacSvnGitMigrationView: View {
         }
     }
 
+
+    private var isMigrationBusy: Bool {
+        if case .running = migrateVM?.state { return true }
+        if case .running = reconciliationVM?.state { return true }
+        if case .running = syncVM?.state { return true }
+        if case .inferring = authorVM?.state { return true }
+        return false
+    }
+
+    private var migrationFeedbackIsError: Bool {
+        if case .error = migrateVM?.state { return true }
+        if case .error = analysisVM?.state { return true }
+        if case .error = reconciliationVM?.state { return true }
+        if case .error = authorVM?.state { return true }
+        if let statusText, String(describing: statusText).contains("失败") {
+            return true
+        }
+        return false
+    }
+
     private func bootstrap() async {
         analysisVM = GitMigrationSourceAnalysisViewModel(provider: session.gitMigrationSourceAnalyzer)
         authorVM = GitMigrationAuthorMappingViewModel(mapper: GitMigrationAuthorMapper())
@@ -343,7 +371,7 @@ public struct MacSvnGitMigrationView: View {
             statusText = "分析完成：\(analysis.totalRevisionCount) revisions / \(analysis.authors.count) authors"
             step = mode == .historyPreserving ? .authors : .cleanup
         } else if case .error(let message) = analysisVM.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         }
     }
 
@@ -404,7 +432,7 @@ public struct MacSvnGitMigrationView: View {
                 targetRemote: remote.isEmpty ? nil : remote
             )
         } else if case .error(let message) = migrateVM.state {
-            statusText = message
+            statusText = LocalizedStringKey(message)
         }
     }
 

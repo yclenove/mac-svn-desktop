@@ -32,6 +32,8 @@ private final class PropertyXMLParserDelegate: NSObject, XMLParserDelegate {
         switch elementName {
         case "target":
             currentTarget = attributeDict["path"]
+        case "revprops":
+            currentTarget = attributeDict["rev"].map { "r\($0)" }
         case "property":
             currentPropertyName = attributeDict["name"]
             currentPropertyValue = ""
@@ -65,7 +67,7 @@ private final class PropertyXMLParserDelegate: NSObject, XMLParserDelegate {
             }
             currentPropertyName = nil
             currentPropertyValue = ""
-        case "target":
+        case "target", "revprops":
             currentTarget = nil
         default:
             break
