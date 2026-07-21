@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-22
+
+- Summary: 工程收口 RC：合入 main 准备与发布说明
+- Affected: docs/superpowers/specs/2026-07-22-release-closeout-design.md, docs/superpowers/plans/2026-07-22-release-closeout.md, docs/acceptance/release-notes-rc-2026-07-22.md, docs/acceptance/release-closeout-2026-07-22.md, docs/superpowers/plans/2026-07-10-long-term-iteration-roadmap.md, README.md, docs/README.md, CHANGELOG.md
+- Impact: 将 `main` 通知授权 MainActor 修复合并入 `feat/tortoise-parity-perfect-loop`（behind 0）；交付产品级发布说明与 residual 单一矩阵；长程 roadmap 标注历史归档（勾选过时，以 inventory 114/114 为准）；不改 inventory/H-tortoise；不实现公证/真 a11y；不重启 Perfect Loop。全量 1150/1150 绿（真实 SVN 49/49），parity 114/114，build/verify/smoke 与 git diff --check 通过。门禁明细见 docs/acceptance/release-closeout-2026-07-22.md
+
 ## 2026-07-21
 
 - Summary: 人本专业工具面（ST）：完成 Blame / AI 助手 / Git 迁移 / Release Notes 统一

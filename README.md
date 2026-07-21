@@ -2,7 +2,7 @@
 
 面向 macOS 的开源 Subversion（SVN）桌面客户端。SVN Studio 覆盖工作副本管理、提交与更新、差异对比、日志、分支与合并、仓库浏览、冲突解决、Finder 集成和完整设置体系。
 
-> 当前状态（2026-07-21）：TortoiseSVN inventory v2 **114/114（100%）**；Human UI **U5–U8 已完成**；[专业工具面人本化 ST](docs/superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) **已完成**。验收真相见 [能力清单](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，手工证据见 [H-Tortoise](docs/acceptance/H-tortoise-parity.md)，覆盖率见 [parity-coverage.json](docs/acceptance/parity-coverage.json)。
+> 当前状态（2026-07-22）：TortoiseSVN inventory v2 **114/114（100%）**；Human UI **U5–U8 已完成**；[专业工具面人本化 ST](docs/superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) **已完成**；[工程收口 RC](docs/superpowers/specs/2026-07-22-release-closeout-design.md) **已完成**（`feat/tortoise-parity-perfect-loop` 已对齐 `main`，见 [发布说明](docs/acceptance/release-notes-rc-2026-07-22.md)）。Perfect Loop **已停止**。验收真相见 [能力清单](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，手工证据见 [H-Tortoise](docs/acceptance/H-tortoise-parity.md)，覆盖率见 [parity-coverage.json](docs/acceptance/parity-coverage.json)。
 
 ## 为什么做
 
@@ -154,7 +154,7 @@ mac-svn-desktop/
 - App 包装：[docs/packaging/README.md](docs/packaging/README.md)
 - Developer ID 签名与公证：[docs/packaging/signing-and-notarization.md](docs/packaging/signing-and-notarization.md)
 
-当前机器没有 Developer ID Application 身份和公证凭据；仓库已提供签名、公证、Gatekeeper 与干净机流程，实际公证需要在持有凭据的发布环境执行。
+当前机器没有 Developer ID Application 身份和公证凭据；仓库已提供签名、公证、Gatekeeper 与干净机流程，实际公证需要在持有凭据的发布环境执行。**ad-hoc / 本机构建包不等于已公证公开分发包。** 阻塞记录见 [distribution-smoke-2026-07-15.md](docs/acceptance/distribution-smoke-2026-07-15.md)；RC residual 与发布说明见 [release-closeout-2026-07-22.md](docs/acceptance/release-closeout-2026-07-22.md) 与 [release-notes-rc-2026-07-22.md](docs/acceptance/release-notes-rc-2026-07-22.md)。
 
 ## License
 

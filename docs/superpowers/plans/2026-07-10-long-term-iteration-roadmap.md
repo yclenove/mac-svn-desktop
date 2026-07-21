@@ -1,5 +1,16 @@
 # SVN Studio 长期迭代路线图（TortoiseSVN 全量对标）
 
+> **⚠️ 历史归档（2026-07-22 RC）——勾选表已过时，不可再作为未完成真相。**
+>
+> Tortoise 能力验收唯一真相为：
+> - [inventory v2](../specs/2026-07-10-tortoisesvn-feature-inventory.md) **114/114（100%）**
+> - [H-Tortoise](../../acceptance/H-tortoise-parity.md)
+> - [parity-coverage.json](../../acceptance/parity-coverage.json)
+>
+> Perfect Loop 已于 GP.6 **停止**。下文 T0–T5 的 `[ ]` 为早期规划残留，**禁止**据此重新开启 T0–T5 能力开发或重启 Loop。
+> 工程收口与 residual 见 [RC 规格](../specs/2026-07-22-release-closeout-design.md) 与 [release-closeout-2026-07-22.md](../../acceptance/release-closeout-2026-07-22.md)。
+
+
 | 项 | 内容 |
 |----|------|
 | 日期 | 2026-07-10 |

@@ -24,7 +24,11 @@
 | [superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md](superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md) | Human UI U8：全局体验收口 | 完成 |
 | [superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) | **ST：专业工具面人本化**（Blame/AI/迁移/Release Notes） | 完成 |
 | [superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md) | ST 实现计划（任务 1–5） | 完成 |
-| [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
+| [superpowers/specs/2026-07-22-release-closeout-design.md](superpowers/specs/2026-07-22-release-closeout-design.md) | **RC：工程收口与发布说明**（合入 main 准备） | 完成 |
+| [superpowers/plans/2026-07-22-release-closeout.md](superpowers/plans/2026-07-22-release-closeout.md) | RC 实现计划（任务 1–5） | 完成 |
+| [acceptance/release-notes-rc-2026-07-22.md](acceptance/release-notes-rc-2026-07-22.md) | RC 产品发布说明（里程碑，非公证） | 完成 |
+| [acceptance/release-closeout-2026-07-22.md](acceptance/release-closeout-2026-07-22.md) | RC merge/门禁/residual 现场记录 | 完成 |
+| [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（历史归档；勾选过时，以 inventory 114/114 为准） | 历史归档 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 旧版真实 WC 手工验收清单 | 旧版，已由 H-Tortoise 接替 |
 | [acceptance/H-tortoise-parity.md](acceptance/H-tortoise-parity.md) | Tortoise 全量对标手工验收（按 T0–T5/GP 分节） | T0–T5、GP.1–GP.6 已通过 |
@@ -34,5 +38,5 @@
 - 了解产品做什么：01 → 02
 - 参与开发：03 → 04（先看第 2 节 `SvnBackend` 协议）
 - 参与测试：01 第 6 节验收标准 → 05
-- Human UI（U5–U8 已完成）之后的体验迭代：见 [ST 专业工具面规格](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) 与 [ST 计划](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md)
+- Human UI（U5–U8）与 [ST 专业工具面](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) 均已完成；工程收口见 [RC 规格](superpowers/specs/2026-07-22-release-closeout-design.md)、[发布说明](acceptance/release-notes-rc-2026-07-22.md) 与 [closeout 记录](acceptance/release-closeout-2026-07-22.md)。后续 DX/A11Y/T6+/UX-N 需用户显式新开规划。
 - 继续长程交付（小乌龟完美 Loop，**已停止**）：[完美 Loop 规划](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) 为执行队列，[Codex 长程 Loop](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) 为续跑入口；真相源是 [能力清单 v2](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，验收证据见 [H-Tortoise](acceptance/H-tortoise-parity.md) 与 [覆盖率快照](acceptance/parity-coverage.json)
