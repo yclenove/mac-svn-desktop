@@ -18,6 +18,12 @@
 | [superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) | Codex 长程 Loop 交接、续跑协议与逐项进度日志 | GP.6 已完成，Loop 已停止 |
 | [acceptance/performance-guards.md](acceptance/performance-guards.md) | UI 性能门禁（AttributeGraph / Diff 阈值，T0.1） | 生效 |
 | [acceptance/parity-coverage.json](acceptance/parity-coverage.json) | Tortoise 对标覆盖率快照（由 `scripts/parity-coverage.py` 生成） | 114/114（100%） |
+| [superpowers/specs/2026-07-15-human-centered-working-copy-ui-design.md](superpowers/specs/2026-07-15-human-centered-working-copy-ui-design.md) | Human UI U5：变更工作区与全局弹窗关闭 | 完成 |
+| [superpowers/specs/2026-07-15-human-centered-core-modes-ui-design.md](superpowers/specs/2026-07-15-human-centered-core-modes-ui-design.md) | Human UI U6：核心模式统一 | 完成 |
+| [superpowers/specs/2026-07-15-human-centered-auxiliary-workflows-ui-design.md](superpowers/specs/2026-07-15-human-centered-auxiliary-workflows-ui-design.md) | Human UI U7：辅助工作流统一 | 完成 |
+| [superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md](superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md) | Human UI U8：全局体验收口 | 完成 |
+| [superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) | **ST：专业工具面人本化**（Blame/AI/迁移/Release Notes） | 规划中 |
+| [superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md) | ST 实现计划（任务 1–5） | 规划中 |
 | [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 旧版真实 WC 手工验收清单 | 旧版，已由 H-Tortoise 接替 |
@@ -28,4 +34,5 @@
 - 了解产品做什么：01 → 02
 - 参与开发：03 → 04（先看第 2 节 `SvnBackend` 协议）
 - 参与测试：01 第 6 节验收标准 → 05
-- 继续长程交付（小乌龟完美 Loop）：[完美 Loop 规划](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) 为执行队列，[Codex 长程 Loop](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) 为续跑入口；真相源是 [能力清单 v2](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，验收证据见 [H-Tortoise](acceptance/H-tortoise-parity.md) 与 [覆盖率快照](acceptance/parity-coverage.json)
+- Human UI（U5–U8 已完成）之后的体验迭代：见 [ST 专业工具面规格](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) 与 [ST 计划](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md)
+- 继续长程交付（小乌龟完美 Loop，**已停止**）：[完美 Loop 规划](superpowers/plans/2026-07-10-tortoise-parity-perfect-loop.md) 为执行队列，[Codex 长程 Loop](superpowers/plans/2026-07-11-codex-tortoise-parity-long-loop.md) 为续跑入口；真相源是 [能力清单 v2](superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，验收证据见 [H-Tortoise](acceptance/H-tortoise-parity.md) 与 [覆盖率快照](acceptance/parity-coverage.json)

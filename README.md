@@ -2,7 +2,7 @@
 
 面向 macOS 的开源 Subversion（SVN）桌面客户端。SVN Studio 覆盖工作副本管理、提交与更新、差异对比、日志、分支与合并、仓库浏览、冲突解决、Finder 集成和完整设置体系。
 
-> 当前状态（2026-07-15）：TortoiseSVN inventory v2 必须行已完成 **114/114（100%）**。验收真相见 [能力清单](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，手工证据见 [H-Tortoise](docs/acceptance/H-tortoise-parity.md)，机器可读结果见 [覆盖率快照](docs/acceptance/parity-coverage.json)。
+> 当前状态（2026-07-21）：TortoiseSVN inventory v2 **114/114（100%）**；Human UI **U5–U8 已完成**；下一波次为 [专业工具面人本化 ST](docs/superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md)。验收真相见 [能力清单](docs/superpowers/specs/2026-07-10-tortoisesvn-feature-inventory.md)，手工证据见 [H-Tortoise](docs/acceptance/H-tortoise-parity.md)，覆盖率见 [parity-coverage.json](docs/acceptance/parity-coverage.json)。
 
 ## 为什么做
 
