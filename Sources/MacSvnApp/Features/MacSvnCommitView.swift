@@ -152,6 +152,8 @@ public struct MacSvnCommitView: View {
             .buttonStyle(.plain)
             .help("刷新提交候选")
             .accessibilityLabel("刷新提交候选")
+            .accessibilityIdentifier("macSvn.commit.refresh")
+            .modifier(MacSvnCommandRShortcutModifier(enabled: !embedded))
 
             Button("提交") {
                 Task { await commit(skipWarnings: false) }
@@ -201,6 +203,8 @@ public struct MacSvnCommitView: View {
             Button("刷新候选") {
                 Task { await reloadCandidates() }
             }
+            .accessibilityIdentifier("macSvn.commit.refresh")
+            .keyboardShortcut("r", modifiers: .command)
             Button("提交") {
                 Task { await commit(skipWarnings: false) }
             }
@@ -287,12 +291,11 @@ public struct MacSvnCommitView: View {
     }
 
     private func toggleInspector() {
-        if reduceMotionOverride ?? accessibilityReduceMotion {
+        MacSvnMotionPolicy.run(
+            accessibilityReduceMotion: accessibilityReduceMotion,
+            override: reduceMotionOverride
+        ) {
             isExpanded.toggle()
-        } else {
-            withAnimation(.easeInOut(duration: 0.18)) {
-                isExpanded.toggle()
-            }
         }
     }
 

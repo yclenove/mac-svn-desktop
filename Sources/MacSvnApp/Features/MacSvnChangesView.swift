@@ -56,6 +56,7 @@ public struct MacSvnChangesView: View {
     @State private var changelistDepth: SvnDepth = .empty
     @State private var changelistOperation: ChangelistOperation = .assign
     @State private var showSearchPopover = false
+    @FocusState private var isSearchFocused: Bool
 
     private enum FilterMode: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -114,6 +115,12 @@ public struct MacSvnChangesView: View {
 
     public var body: some View {
         configuredBody
+            .background {
+                Button("") { isSearchFocused = true }
+                    .keyboardShortcut("f", modifiers: .command)
+                    .opacity(0)
+                    .accessibilityHidden(true)
+            }
             .onChange(of: navigator?.pendingCopyMoveIntent) { _, _ in
                 consumePendingCopyMoveIntentIfReady()
             }
@@ -407,6 +414,8 @@ public struct MacSvnChangesView: View {
             .disabled(changesVM == nil || actionsVM?.isRunning == true)
             .help("刷新本地状态。\(refreshSummary)")
             .accessibilityLabel("刷新本地状态")
+            .accessibilityIdentifier("macSvn.changes.refresh")
+            .keyboardShortcut("r", modifiers: .command)
 
             Button {
                 Task { await changesVM?.checkRepository() }
@@ -454,6 +463,8 @@ public struct MacSvnChangesView: View {
                 .frame(width: embedded ? 126 : 190)
             TextField("搜索文件名", text: $searchText)
                 .textFieldStyle(.roundedBorder)
+                .focused($isSearchFocused)
+                .accessibilityIdentifier("macSvn.changes.search")
                 .frame(minWidth: 110, idealWidth: 150, maxWidth: 220)
             columnsMenu
         }
@@ -478,6 +489,8 @@ public struct MacSvnChangesView: View {
             .popover(isPresented: $showSearchPopover, arrowEdge: .bottom) {
                 TextField("搜索文件名", text: $searchText)
                     .textFieldStyle(.roundedBorder)
+                    .focused($isSearchFocused)
+                    .accessibilityIdentifier("macSvn.changes.search")
                     .padding(12)
                     .frame(width: 260)
                     .macSvnDismissiblePopover()

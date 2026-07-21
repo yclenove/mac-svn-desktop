@@ -161,6 +161,7 @@ public struct MacSvnRepoBrowserView: View {
             .disabled(browserVM == nil || rootURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .help("刷新当前目录")
             .accessibilityLabel("刷新当前目录")
+            .accessibilityIdentifier("macSvn.repoBrowser.refresh")
             favoritesMenu
             repositoryOperationsMenu
             if widthClass == .compact {

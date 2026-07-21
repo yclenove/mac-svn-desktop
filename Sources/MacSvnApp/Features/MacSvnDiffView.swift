@@ -167,6 +167,8 @@ public struct MacSvnDiffView: View {
             .disabled(selectedPath == nil)
             .help("刷新当前差异")
             .accessibilityLabel("刷新当前差异")
+            .accessibilityIdentifier("macSvn.diff.refresh")
+            .modifier(MacSvnCommandRShortcutModifier(enabled: !embedded))
 
             moreDiffActionsMenu
         }
@@ -192,6 +194,18 @@ public struct MacSvnDiffView: View {
                     Task { await openExternal() }
                 }
                 .disabled(selectedPath == nil || externalDiffTool == nil)
+                Button {
+                    Task { await reloadSelected() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .disabled(selectedPath == nil)
+                .help("刷新当前差异")
+                .accessibilityLabel("刷新当前差异")
+                .accessibilityIdentifier("macSvn.diff.refresh")
+                .keyboardShortcut("r", modifiers: .command)
                 moreDiffActionsMenu
             }
             HStack(spacing: 8) {

@@ -227,6 +227,7 @@ public struct MacSvnShelveView: View {
             .buttonStyle(.plain)
             .help("刷新搁置记录")
             .accessibilityLabel("刷新搁置记录")
+            .accessibilityIdentifier("macSvn.shelve.refresh")
             .keyboardShortcut("r", modifiers: .command)
             .disabled(isBusy)
 
@@ -351,6 +352,7 @@ public struct MacSvnShelveView: View {
                 TextField("搜索搁置记录", text: $recordSearchText)
                     .textFieldStyle(.plain)
                     .focused($isRecordSearchFocused)
+                    .accessibilityIdentifier("macSvn.shelve.search")
             }
             .padding(.horizontal, 10)
             .frame(height: 36)

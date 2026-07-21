@@ -247,6 +247,7 @@ public struct MacSvnSettingsView: View {
                     TextField("搜索设置", text: $settingsSearchText)
                         .textFieldStyle(.plain)
                         .focused($isSettingsSearchFocused)
+                        .accessibilityIdentifier("macSvn.settings.search")
                 }
                 .padding(.horizontal, 10)
                 .frame(height: 36)
@@ -284,6 +285,7 @@ public struct MacSvnSettingsView: View {
             .buttonStyle(.plain)
             .help("重新加载设置")
             .accessibilityLabel("重新加载设置")
+            .accessibilityIdentifier("macSvn.settings.refresh")
             .keyboardShortcut("r", modifiers: .command)
             .disabled(isLoading || isSaving || hasUnsavedChanges)
 

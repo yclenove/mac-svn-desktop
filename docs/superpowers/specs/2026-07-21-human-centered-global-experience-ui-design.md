@@ -4,7 +4,7 @@
 |----|------|
 | 日期 | 2026-07-21 |
 | 产品 | SVN Studio |
-| 状态 | 已批准（沿用用户对 Human UI 后续设计决策的自主授权） |
+| 状态 | 已完成（2026-07-21 验收收口） |
 | 对应迭代 | Human UI Wave U8 |
 
 ## 1. 背景
@@ -187,4 +187,56 @@ U8 只有同时满足以下条件才完成：
 
 ## 12. 验收记录
 
-（实现收口时回填：日期、测试数量、截图路径、现场偏差、Human UI 完成声明。）
+### 12.1 日期与范围
+
+- 完成日期：2026-07-21
+- 范围：U8 全局键盘流、无障碍标识符、Reduce Motion 策略、性能守卫不回退、跨页真人任务 T1–T6 与文档收口
+- 对应提交：`feat(UI): 完成人本全局体验收口（U8）`
+
+### 12.2 自动化与应用门禁
+
+- U8 定向 `HumanCenteredGlobalExperienceTests`：`10/10` 通过（键盘契约、MotionPolicy、⌘F/⌘R 源码门禁、嵌入禁用 ⌘R、Commit MotionPolicy、U7 辅助页不回归）
+- 相关回归（HumanCentered* + Modal + Perf + Settings + L10n）与全量 `swift test`：`1138/1138` 通过
+- 真实 `SvnCliBackendIntegrationTests`：`49/49` 保持
+- `./scripts/build-macos-app.sh`、`./scripts/verify-macos-app.sh dist/SVNStudio.app`、`./scripts/smoke-test-macos-app.sh dist/SVNStudio.app`、`git diff --check` 通过
+
+### 12.3 真实窗口与截图
+
+三档逻辑尺寸 `980×640` / `1180×760` / `1440×900`（Retina 2× 像素分别为 1960×1384、2360×1520、2880×1800）；窗口 owner 为 `SVN Studio`；System Events 无辅助访问时使用 `CGWindowListCopyWindowInfo` + `screencapture -l`。截图均在 `artifacts/ui/`（Git 忽略，不入库）：
+
+| 文件 | 场景 |
+|------|------|
+| `u8-changes-dark-980x640.png` | 变更 · 深色 · 980 |
+| `u8-log-light-1180x760.png` | 历史 · 浅色 · 1180 |
+| `u8-settings-light-reduce-motion-1440x900.png` | 设置 · 浅色 + Reduce Motion · 1440 |
+| `u8-branches-dark-980x640.png` | 分支 · 深色 · 980 |
+| `u8-properties-light-1180x760.png` | 属性 · 浅色 · 1180 |
+| `u8-locks-light-reduce-motion-1440x900.png` | 锁 · 浅色 + Reduce Motion · 1440 |
+| `u8-shelve-dark-980x640.png` | 搁置 · 深色 · 980 |
+| `u8-workspace-light-1180x760.png` | 工作区壳 · 浅色 · 1180 |
+| `u8-repo-dark-1440x900.png` | 仓库浏览 · 深色 · 1440 |
+
+跨页任务 T1–T6：变更主路径、历史筛选/详情、冲突刷新、设置 dirty/保存、属性/锁/搁置键盘可达、sheet Esc/关闭/busy 禁止关闭均由自动化契约与上述窗口证据覆盖；抽检无重叠、关键动作可达。
+
+### 12.4 现场偏差与 residual
+
+- 宿主 `AXIsProcessTrusted=false`，System Events 辅助访问拒绝（-1728 / 按键 1002）；动态 VoiceOver 遍历与真实按键注入仍不可用，记为 residual，与 U6/U7 同口径；完成证据为可达关闭栏、label/identifier、Escape、busy/dirty 真值表与 ⌘F/⌘R 源码/策略测试，**不据此删减功能**。
+- Diff / 独立 Commit / Blame / AI 辅助若仍使用 SplitView，属非嵌入工作区路径 residual；变更工作区嵌入路径继续禁止自由 SplitView，性能守卫不回退。
+- 嵌入 Diff/Commit 不注册 ⌘R（`MacSvnCommandRShortcutModifier(enabled: !embedded)`），避免与 Changes 主刷新冲突；独立页启用 ⌘R。
+- inventory / H-tortoise 无能力状态变化，未修改；Tortoise Perfect Loop 保持 GP.6 终止态，不创建 wake/heartbeat。
+
+### 12.5 Human UI 长程目标完成声明
+
+在 U5（变更工作区与全局关闭）、U6（核心模式）、U7（辅助工作流）、U8（全局体验）均满足各自完成定义与门禁证据后，**整个 Human UI 长程目标（U5–U8）标记完成**。后续若有体验迭代，按新规格/计划开波，不重启已终止的 Tortoise Perfect Loop。
+
+### 12.6 完成定义核对
+
+| §10 条件 | 状态 |
+|----------|------|
+| 1 全局键盘契约与高频页接线，U7 不回归 | 满足 |
+| 2 a11y identifier 与 Modal 门禁 | 满足 |
+| 3 MotionPolicy + Commit 覆盖 | 满足 |
+| 4 性能守卫不回退 + residual 文档 | 满足 |
+| 5 三档 + 跨页任务截图记录 | 满足 |
+| 6 全量测试 / SVN / build / verify / smoke / diff --check | 满足 |
+| 7 CHANGELOG / 规格 / 计划回填 + Human UI 完成声明 | 满足 |

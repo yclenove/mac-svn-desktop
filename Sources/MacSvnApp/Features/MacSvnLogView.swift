@@ -154,6 +154,8 @@ public struct MacSvnLogView: View {
             .disabled(viewModel?.isLoading == true)
             .help("刷新历史")
             .accessibilityLabel("刷新历史")
+            .accessibilityIdentifier("macSvn.log.refresh")
+            .keyboardShortcut("r", modifiers: .command)
             historyLoadMenu
             historyMoreActionsMenu
         }
@@ -168,6 +170,7 @@ public struct MacSvnLogView: View {
                 TextField("搜索提交说明", text: $messageFilter)
                     .textFieldStyle(.roundedBorder)
                     .focused($isMessageFilterFocused)
+                    .accessibilityIdentifier("macSvn.log.search")
                     .frame(minWidth: 180, idealWidth: 280, maxWidth: 360)
                 Button {
                     showFilterPopover.toggle()

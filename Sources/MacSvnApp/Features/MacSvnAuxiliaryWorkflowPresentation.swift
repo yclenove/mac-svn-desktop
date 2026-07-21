@@ -527,19 +527,22 @@ struct MacSvnAuxiliaryPathList: View {
     @Binding var searchText: String
     var allowsMultiple: Bool
     var searchFocus: FocusState<Bool>.Binding?
+    var searchAccessibilityIdentifier: String?
 
     init(
         paths: [String],
         selection: Binding<Set<String>>,
         searchText: Binding<String>,
         allowsMultiple: Bool = true,
-        searchFocus: FocusState<Bool>.Binding? = nil
+        searchFocus: FocusState<Bool>.Binding? = nil,
+        searchAccessibilityIdentifier: String? = nil
     ) {
         self.paths = paths
         _selection = selection
         _searchText = searchText
         self.allowsMultiple = allowsMultiple
         self.searchFocus = searchFocus
+        self.searchAccessibilityIdentifier = searchAccessibilityIdentifier
     }
 
     var body: some View {
@@ -552,9 +555,11 @@ struct MacSvnAuxiliaryPathList: View {
                     TextField("筛选目标", text: $searchText)
                         .textFieldStyle(.plain)
                         .focused(searchFocus)
+                        .accessibilityIdentifier(searchAccessibilityIdentifier ?? "macSvn.auxiliary.search")
                 } else {
                     TextField("筛选目标", text: $searchText)
                         .textFieldStyle(.plain)
+                        .accessibilityIdentifier(searchAccessibilityIdentifier ?? "macSvn.auxiliary.search")
                 }
                 Text("\(filteredPaths.count)")
                     .font(.caption.monospacedDigit())

@@ -144,6 +144,8 @@ public struct MacSvnConflictWorkspaceView: View {
             .disabled(listVM?.state == .loading || listVM?.state == .resolving)
             .help("刷新冲突")
             .accessibilityLabel("刷新冲突")
+            .accessibilityIdentifier("macSvn.conflicts.refresh")
+            .keyboardShortcut("r", modifiers: .command)
             Button {
                 onReturnToChanges?()
             } label: {

@@ -121,6 +121,8 @@ public struct MacSvnBranchesView: View {
             .disabled(browserVM == nil)
             .help("刷新分支与标签")
             .accessibilityLabel("刷新分支与标签")
+            .accessibilityIdentifier("macSvn.branches.refresh")
+            .keyboardShortcut("r", modifiers: .command)
             Button {
                 showCreateSheet = true
             } label: {

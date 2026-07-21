@@ -150,6 +150,7 @@ public struct MacSvnLocksView: View {
             .buttonStyle(.plain)
             .help("刷新锁记录")
             .accessibilityLabel("刷新锁记录")
+            .accessibilityIdentifier("macSvn.locks.refresh")
             .keyboardShortcut("r", modifiers: .command)
             .disabled(isBusy)
 
@@ -222,7 +223,8 @@ public struct MacSvnLocksView: View {
             paths: paths,
             selection: $selected,
             searchText: $searchText,
-            searchFocus: $isSearchFocused
+            searchFocus: $isSearchFocused,
+            searchAccessibilityIdentifier: "macSvn.locks.search"
         )
         .disabled(isBusy)
     }

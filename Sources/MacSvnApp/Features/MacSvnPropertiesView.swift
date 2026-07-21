@@ -163,6 +163,7 @@ public struct MacSvnPropertiesView: View {
             .buttonStyle(.plain)
             .help("刷新属性")
             .accessibilityLabel("刷新属性")
+            .accessibilityIdentifier("macSvn.properties.refresh")
             .keyboardShortcut("r", modifiers: .command)
             .disabled(isPropertyBusy)
 
@@ -260,7 +261,8 @@ public struct MacSvnPropertiesView: View {
             selection: $selected,
             searchText: $searchText,
             allowsMultiple: false,
-            searchFocus: $isSearchFocused
+            searchFocus: $isSearchFocused,
+            searchAccessibilityIdentifier: "macSvn.properties.search"
         )
         .onChange(of: selected) { _, _ in
             Task { await loadProperties() }
