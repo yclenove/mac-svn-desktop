@@ -37,7 +37,7 @@
 - 创建：`Sources/MacSvnApp/Features/MacSvnSpecializedToolsPresentation.swift`
 - 创建：`Tests/MacSvnAppTests/HumanCenteredSpecializedToolsTests.swift`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 断言：
 
@@ -56,13 +56,13 @@ func testSpecializedPagesExposeStableAccessibilityIdentifiers() {
 }
 ```
 
-- [ ] **步骤 2：运行确认失败**
+- [x] **步骤 2：运行确认失败**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
 ```
 
-- [ ] **步骤 3：实现策略模块**
+- [x] **步骤 3：实现策略模块**
 
 ```swift
 enum MacSvnSpecializedToolsPage: String, CaseIterable, Sendable {
@@ -83,7 +83,7 @@ enum MacSvnSpecializedToolsContract {
 }
 ```
 
-- [ ] **步骤 4：定向测试通过并提交**
+- [x] **步骤 4：定向测试通过并提交**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
@@ -93,6 +93,13 @@ git commit -m "feat(UI): 增加专业工具面契约模块（ST 任务 1）"
 ```
 
 ---
+
+
+### 任务 1 执行结果（2026-07-21）
+
+- 新增 `MacSvnSpecializedToolsPresentation.swift` 与 `HumanCenteredSpecializedToolsTests`（11 项）通过；
+- 页面接线源码门禁采用增量软门：后续任务接线后强制 ⌘R + identifier 成对；
+- SplitView 边界门禁已对四目标文件生效（H≤1、V=0）。
 
 ## 任务 2：Blame 人本接线
 
