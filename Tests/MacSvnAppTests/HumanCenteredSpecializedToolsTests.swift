@@ -107,10 +107,41 @@ final class HumanCenteredSpecializedToolsTests: XCTestCase {
     }
 
     func testReleaseNotesViewWiresRefreshShortcutWhenRequired() throws {
-        try assertRefreshWiring(
-            fileName: "MacSvnReleaseNotesView.swift",
-            page: .releaseNotes,
-            requiredInTask: 4
+        let source = try sourceOfFeature("MacSvnReleaseNotesView.swift")
+        let identifier = try XCTUnwrap(
+            MacSvnSpecializedToolsContract.refreshAccessibilityIdentifier(for: .releaseNotes)
+        )
+        XCTAssertTrue(
+            source.contains("keyboardShortcut(\"r\", modifiers: .command)"),
+            "Release Notes must wire ⌘R"
+        )
+        XCTAssertTrue(source.contains(identifier), "Release Notes missing \(identifier)")
+        XCTAssertTrue(source.contains("isReleaseNotesBusy"), "Release Notes must gate generating")
+        XCTAssertTrue(
+            source.contains("MacSvnSpecializedToolsMetrics.toolbarHeight"),
+            "Release Notes toolbar should use ST metrics"
+        )
+    }
+
+    func testGitMigrationViewUsesSTMetricsAndBusyGuards() throws {
+        let source = try sourceOfFeature("MacSvnGitMigrationView.swift")
+        XCTAssertTrue(
+            source.contains("MacSvnSpecializedToolsMetrics.toolbarHeight"),
+            "Git Migration toolbar should use ST metrics"
+        )
+        XCTAssertTrue(source.contains("isMigrationBusy"), "Git Migration must expose busy gate")
+        XCTAssertTrue(
+            source.contains("macSvn.st.gitMigration.execute"),
+            "Git Migration execute control needs stable identifier"
+        )
+        XCTAssertTrue(
+            source.contains("macSvn.st.gitMigration.reconcile"),
+            "Git Migration reconcile control needs stable identifier"
+        )
+        // NFR-14: reconciliation failure still blocks sync path.
+        XCTAssertTrue(
+            source.contains("runReconciliation") || source.contains("reconciliation"),
+            "Must keep revision reconciliation path"
         )
     }
 

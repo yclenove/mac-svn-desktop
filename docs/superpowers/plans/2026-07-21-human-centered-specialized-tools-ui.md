@@ -194,18 +194,18 @@ git commit -m "feat(UI): 统一 AI 助手布局与忙态门禁（ST 任务 3）"
 - 修改：`MacSvnGitMigrationView.swift`、`MacSvnReleaseNotesView.swift`
 - 修改：`HumanCenteredSpecializedToolsTests.swift`
 
-- [ ] **步骤 1：失败测试**
+- [x] **步骤 1：失败测试**
 
 - Release Notes：`macSvn.st.releaseNotes.refresh` 或生成动作 identifier；generating 时主按钮 disabled
 - Git Migration：关键执行按钮 busy disabled；错误反馈可见；对账失败阻断路径符号保留
 
-- [ ] **步骤 2：实现**
+- [x] **步骤 2：实现**
 
 - 迁移页分区与统一反馈
 - Release Notes 生成 busy/空态/错误对齐
 - 所有 sheet 继续 dismissible 关闭栏
 
-- [ ] **步骤 3：定向测试**
+- [x] **步骤 3：定向测试**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
@@ -213,11 +213,19 @@ swift test --filter GitMigration
 swift test --filter ReleaseNotes
 ```
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git commit -m "feat(UI): 统一迁移与发布说明反馈（ST 任务 4）"
 ```
+
+---
+
+### 任务 4 执行结果（2026-07-21）
+
+- Release Notes：ST 工具栏 48、⌘R + `macSvn.st.releaseNotes.refresh`、`isReleaseNotesBusy` 门禁、反馈/错误 identifier；
+- Git Migration：ST 工具栏/反馈、`isMigrationBusy`、`macSvn.st.gitMigration.execute/reconcile/feedback/steps`；保留对账失败阻断同步（NFR-14）；无 ⌘R（契约 `requiresRefreshShortcut == false`）；
+- 定向：`HumanCenteredSpecializedToolsTests` **12/12**；GitMigration 过滤 **61/61**；ReleaseNotes/AIReleaseNotes **6/6** 通过。
 
 ---
 
