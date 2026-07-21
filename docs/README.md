@@ -22,8 +22,8 @@
 | [superpowers/specs/2026-07-15-human-centered-core-modes-ui-design.md](superpowers/specs/2026-07-15-human-centered-core-modes-ui-design.md) | Human UI U6：核心模式统一 | 完成 |
 | [superpowers/specs/2026-07-15-human-centered-auxiliary-workflows-ui-design.md](superpowers/specs/2026-07-15-human-centered-auxiliary-workflows-ui-design.md) | Human UI U7：辅助工作流统一 | 完成 |
 | [superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md](superpowers/specs/2026-07-21-human-centered-global-experience-ui-design.md) | Human UI U8：全局体验收口 | 完成 |
-| [superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) | **ST：专业工具面人本化**（Blame/AI/迁移/Release Notes） | 规划中 |
-| [superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md) | ST 实现计划（任务 1–5） | 规划中 |
+| [superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md](superpowers/specs/2026-07-21-human-centered-specialized-tools-ui-design.md) | **ST：专业工具面人本化**（Blame/AI/迁移/Release Notes） | 完成 |
+| [superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md](superpowers/plans/2026-07-21-human-centered-specialized-tools-ui.md) | ST 实现计划（任务 1–5） | 完成 |
 | [superpowers/plans/2026-07-10-long-term-iteration-roadmap.md](superpowers/plans/2026-07-10-long-term-iteration-roadmap.md) | 长期迭代路线图 **T0–T6**（全量对标小乌龟；旧 L0–L8 已映射） | 草案 |
 | [superpowers/specs/2026-07-10-long-term-product-design.md](superpowers/specs/2026-07-10-long-term-product-design.md) | 长期产品开发详设（对标原则、模块、性能规范、风险） | 草案 |
 | [acceptance/H1-manual-checklist.md](acceptance/H1-manual-checklist.md) | 旧版真实 WC 手工验收清单 | 旧版，已由 H-Tortoise 接替 |

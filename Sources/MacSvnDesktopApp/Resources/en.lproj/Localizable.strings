@@ -174,6 +174,9 @@
 "刷新冲突" = "Refresh Conflicts";
 "刷新同步记录" = "Refresh sync record";
 "刷新文件列表" = "Refresh File List";
+"刷新 AI 助手上下文" = "Refresh AI Assistant Context";
+"刷新 Blame" = "Refresh Blame";
+"刷新 Release Notes 日志" = "Refresh Release Notes Logs";
 "加载失败" = "Loading failed";
 "加载最近日志" = "Load Recent Logs";
 "动作列图标" = "Action Column Icons";
@@ -665,6 +668,7 @@
 "Blame 差异：%@ r%@–r%@" = "Blame difference: %1$@ r%2$@-r%3$@";
 "Blame 节点文件：%@ @ r%@" = "Blame node file: %1$@ @ r%2$@";
 "Blame 起始修订不能大于结束修订" = "Blame start revision cannot exceed the end revision";
+"Blame 加载失败" = "Blame failed to load";
 "Diff 失败：%@" = "Diff failed: %@";
 "Keychain 写入失败：%@" = "Keychain write failed: %@";
 "Markdown 已复制到剪贴板" = "Markdown copied to the clipboard";
@@ -994,6 +998,7 @@
 "选择要保存的变更，并决定使用官方 shelf 或本地快照。" = "Select the changes to save, then choose an official shelf or local snapshot.";
 "选择记录后将在此显示 Diff、Log 或 Patch" = "Select a record to show its diff, log, or patch here.";
 "已刷新搁置记录" = "Shelf records refreshed";
+"已刷新路径列表" = "Path list refreshed";
 "Patch 文件" = "Patch File";
 "刷新搁置记录" = "Refresh Shelf Records";
 "搜索搁置记录" = "Search shelf records";

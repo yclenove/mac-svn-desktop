@@ -2,6 +2,11 @@
 
 ## 2026-07-21
 
+- Summary: 人本专业工具面（ST）：完成 Blame / AI 助手 / Git 迁移 / Release Notes 统一
+- Affected: MacSvnSpecializedToolsPresentation, MacSvnBlameView, MacSvnAIAssistantView, MacSvnGitMigrationView, MacSvnReleaseNotesView, HumanCenteredSpecializedToolsTests, en.lproj Localizable.strings, ST design/plan
+- Impact: 新增 ST 契约与度量（工具栏 48、反馈 30、图标命中 ≥28、a11y 前缀 `macSvn.st.*`）；Blame/AI/Release Notes 接线 ⌘R 与 busy 门禁；Git 迁移统一反馈与 `isMigrationBusy`，保留对账失败阻断同步；独立页单层 HSplitView 门禁（H≤1、V=0）。ST 定向 12/12、全量 1150/1150、真实 SVN 49/49；Release App 构建、结构校验、隔离启动冒烟与八张三档真实窗口截图通过。VoiceOver/真实按键仍以自动化契约 + residual 验收（与 U6–U8 同口径）；inventory/H-tortoise 无能力状态变化。**ST 波次完成**；不重启 Tortoise Perfect Loop。
+
+
 - Summary: Human UI Wave U8：完成人本全局体验收口（Human UI 长程收口）
 - Affected: MacSvnGlobalExperiencePresentation, Changes/Log/Branches/Conflicts/Diff/Commit/Repo/Properties/Locks/Shelve/Settings/AuxiliaryWorkflowPresentation, HumanCenteredGlobalExperienceTests, U8 design/plan
 - Impact: 落地全局键盘契约与 a11y 标识符命名（macSvn.<page>.search/refresh），变更页补齐 ⌘F 搜索焦点与 ⌘R 刷新，历史/分支/冲突/仓库/属性/锁/搁置/设置保持或补齐 ⌘R；Diff/Commit 独立页启用 ⌘R，嵌入工作区时关闭 ⌘R 以免与变更主刷新冲突。统一 MacSvnMotionPolicy，提交检查器折叠走 Reduce Motion 策略。U8 定向 10/10、HumanCentered*+Modal+Perf+Settings+L10n 相关回归与全量 1138/1138 通过，真实 SVN 49/49；Release App 构建、结构校验、隔离启动冒烟和九张三档跨页真实窗口截图通过。VoiceOver/真实按键仍以自动化契约 + residual 验收（与 U6/U7 同口径，AXIsProcessTrusted=false）；inventory/H-tortoise 无能力状态变化。**Human UI 长程目标（U5–U8）至此完成**；不重启 Tortoise Perfect Loop

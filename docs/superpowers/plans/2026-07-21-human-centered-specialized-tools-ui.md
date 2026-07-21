@@ -236,7 +236,7 @@ git commit -m "feat(UI): 统一迁移与发布说明反馈（ST 任务 4）"
 - 修改：`CHANGELOG.md`、ST 规格 §10、本计划、`docs/README.md`、必要时 README 状态行
 - 截图：`artifacts/ui/st-*.png`（不提交）
 
-- [ ] **步骤 1：定向 + 全量**
+- [x] **步骤 1：定向 + 全量**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
@@ -244,7 +244,7 @@ swift test
 # 真实 SVN 49/49 保持
 ```
 
-- [ ] **步骤 2：构建与冒烟**
+- [x] **步骤 2：构建与冒烟**
 
 ```bash
 ./scripts/build-macos-app.sh
@@ -253,20 +253,30 @@ swift test
 git diff --check
 ```
 
-- [ ] **步骤 3：三档真实窗口**
+- [x] **步骤 3：三档真实窗口**
 
 覆盖 Blame / AI / Git Migration / Release Notes 至少各一档组合，浅色/深色/Reduce Motion 抽样；截图 `artifacts/ui/st-*.png`。
 
-- [ ] **步骤 4：回填文档**
+- [x] **步骤 4：回填文档**
 
 测试数量、截图、residual（含独立 HSplitView、TCC a11y、Developer ID 凭据阻塞仍在包装层）。
 
-- [ ] **步骤 5：最终提交**
+- [x] **步骤 5：最终提交**
 
 ```bash
 git add CHANGELOG.md docs Sources/MacSvnApp Tests/MacSvnAppTests
 git commit -m "feat(UI): 完成人本专业工具面统一（ST）"
 ```
+
+---
+
+### 任务 5 执行结果（2026-07-21）
+
+- ST 定向 **12/12**；全量 **1150/1150**；真实 SVN **49/49**；
+- `build` / `verify` / `smoke` / `git diff --check` 通过；
+- 8 张真实窗口截图：`artifacts/ui/st-*.png`（三档 + 浅/深/Reduce Motion，不入库）；
+- 补齐 ST 相关英文本地化 5 键；规格 §10、本计划、CHANGELOG、docs 索引与 README 状态回填；
+- inventory / H-tortoise 无能力变化；**ST 波次完成**。
 
 ---
 
