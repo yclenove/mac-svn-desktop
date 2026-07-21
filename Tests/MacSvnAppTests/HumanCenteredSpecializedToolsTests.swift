@@ -88,11 +88,22 @@ final class HumanCenteredSpecializedToolsTests: XCTestCase {
     }
 
     func testAIAssistantViewWiresRefreshShortcutWhenRequired() throws {
-        try assertRefreshWiring(
-            fileName: "MacSvnAIAssistantView.swift",
-            page: .aiAssistant,
-            requiredInTask: 3
+        let source = try sourceOfFeature("MacSvnAIAssistantView.swift")
+        let identifier = try XCTUnwrap(
+            MacSvnSpecializedToolsContract.refreshAccessibilityIdentifier(for: .aiAssistant)
         )
+        XCTAssertTrue(
+            source.contains("keyboardShortcut(\"r\", modifiers: .command)"),
+            "AI Assistant must wire ⌘R"
+        )
+        XCTAssertTrue(source.contains(identifier), "AI Assistant missing \(identifier)")
+        XCTAssertTrue(source.contains("confirmPendingTool"), "Must keep write confirmation gate")
+        XCTAssertTrue(source.contains("refreshAudit"), "Must keep audit refresh path")
+        XCTAssertTrue(
+            source.contains("MacSvnSpecializedToolsMetrics.toolbarHeight"),
+            "AI Assistant toolbar should use ST metrics"
+        )
+        XCTAssertTrue(source.contains("isAssistantBusy"), "AI Assistant must gate busy actions")
     }
 
     func testReleaseNotesViewWiresRefreshShortcutWhenRequired() throws {

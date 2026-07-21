@@ -22,24 +22,40 @@ public struct MacSvnAIAssistantView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("AI 助手")
-                    .font(.largeTitle.weight(.semibold))
-                Spacer()
+                    .font(.headline)
+                Spacer(minLength: 8)
                 Toggle("审计", isOn: $showAudit)
                     .toggleStyle(.switch)
-                Button("打开 Provider 设置") {
-                    // 用户可从侧边栏进入设置；此处提示路径
+                    .disabled(isAssistantBusy)
+                Button {
+                    Task { await refreshAssistantContext() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
                 }
-                .hidden()
+                .buttonStyle(.borderless)
+                .frame(
+                    minWidth: MacSvnSpecializedToolsMetrics.iconButtonMinSide,
+                    minHeight: MacSvnSpecializedToolsMetrics.iconButtonMinSide
+                )
+                .keyboardShortcut("r", modifiers: .command)
+                .accessibilityIdentifier("macSvn.st.aiAssistant.refresh")
+                .accessibilityLabel(Text("刷新 AI 助手上下文"))
+                .disabled(isAssistantBusy || viewModel == nil)
+                .help("刷新工具审计与助手上下文")
             }
-            .padding(24)
+            .frame(height: MacSvnSpecializedToolsMetrics.toolbarHeight)
+            .padding(.horizontal, 12)
 
-            if workspaceController.selectedRecord == nil {
-                Text("提示：选择工作副本后可使用 status/diff/log 等本地指令。")
+            if let feedback = assistantFeedbackText {
+                Text(feedback)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .foregroundStyle(assistantFeedbackIsError ? Color.red : Color.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: MacSvnSpecializedToolsMetrics.feedbackBarHeight)
+                    .padding(.horizontal, 12)
+                    .accessibilityIdentifier("macSvn.st.aiAssistant.feedback")
             }
 
             HSplitView {
@@ -67,6 +83,35 @@ public struct MacSvnAIAssistantView: View {
         }
     }
 
+    private var isAssistantBusy: Bool {
+        viewModel?.state == .thinking
+    }
+
+    private var assistantFeedbackIsError: Bool {
+        if case .error = viewModel?.state { return true }
+        return false
+    }
+
+    private var assistantFeedbackText: String? {
+        if workspaceController.selectedRecord == nil {
+            return "提示：选择工作副本后可使用 status/diff/log 等本地指令。"
+        }
+        switch viewModel?.state {
+        case .thinking:
+            return "正在思考或执行工具…"
+        case .awaitingConfirmation:
+            return "写操作待确认：确认后才会执行，并写入审计。"
+        case .error(let message):
+            return message
+        case .idle, .none:
+            return nil
+        }
+    }
+
+    private func refreshAssistantContext() async {
+        await viewModel?.refreshAudit()
+    }
+
     private func consumePendingQueryIfNeeded() async {
         guard let query = navigator.consumePendingAIChatQuery(), let viewModel else { return }
         viewModel.draft = query
@@ -75,7 +120,7 @@ public struct MacSvnAIAssistantView: View {
 
     @ViewBuilder
     private var chatPane: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(viewModel?.messages ?? []) { message in
@@ -105,11 +150,14 @@ public struct MacSvnAIAssistantView: View {
                         Task { await viewModel?.confirmPendingTool() }
                     }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(isAssistantBusy)
                     Button("取消", role: .cancel) {
                         Task { await viewModel?.cancelPendingTool() }
                     }
+                    .disabled(isAssistantBusy)
                 }
                 .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
 
             HStack(alignment: .bottom) {
@@ -120,6 +168,7 @@ public struct MacSvnAIAssistantView: View {
                 .font(.body)
                 .frame(minHeight: 60, maxHeight: 120)
                 .border(Color.secondary.opacity(0.3))
+                .disabled(isAssistantBusy)
 
                 Button("发送") {
                     Task {
@@ -128,7 +177,7 @@ public struct MacSvnAIAssistantView: View {
                         )
                     }
                 }
-                .disabled(viewModel == nil || viewModel?.state == .thinking)
+                .disabled(viewModel == nil || isAssistantBusy)
             }
             .padding(16)
         }

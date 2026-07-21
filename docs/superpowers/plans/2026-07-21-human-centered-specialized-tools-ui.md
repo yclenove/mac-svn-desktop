@@ -152,34 +152,40 @@ git commit -m "feat(UI): 统一 Blame 工具栏与刷新契约（ST 任务 2）"
 - 修改：`Sources/MacSvnApp/Features/MacSvnAIAssistantView.swift`
 - 修改：`HumanCenteredSpecializedToolsTests.swift`
 
-- [ ] **步骤 1：失败测试**
+- [x] **步骤 1：失败测试**
 
 - `macSvn.st.aiAssistant.refresh`（或明确「无刷新语义」时契约 `requiresRefreshShortcut == false` 且测试同步）
 - 发送/主操作 busy 时 disabled 可测路径
 - 单层 `HSplitView` 边界
 - **禁止**削弱写工具确认门：源码仍含确认/审计相关符号（现有命名）
 
-- [ ] **步骤 2：实现**
+- [x] **步骤 2：实现**
 
 - 固定列表 | 消息 | 输入层级
 - 发送中防重入
 - 错误反馈条
 - 可选 ⌘R 刷新上下文
 
-- [ ] **步骤 3：定向测试**
+- [x] **步骤 3：定向测试**
 
 ```bash
 swift test --filter HumanCenteredSpecializedToolsTests
 swift test --filter AI
 ```
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git commit -m "feat(UI): 统一 AI 助手布局与忙态门禁（ST 任务 3）"
 ```
 
 ---
+
+
+### 任务 3 执行结果（2026-07-21）
+
+- AI 助手工具栏 ST 度量、⌘R 刷新审计、反馈条、busy 门禁；保留确认写操作与审计；
+- ST 11/11；AI 相关过滤 63/63 通过。
 
 ## 任务 4：Git 迁移 + Release Notes
 
