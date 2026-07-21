@@ -100,6 +100,7 @@ public struct MacSvnSettingsView: View {
     @State private var showClearAuthenticationConfirmation = false
     @State private var isClearingAuthenticationCache = false
     @State private var isClearingLogCache = false
+    @FocusState private var isSettingsSearchFocused: Bool
 
     public init(session: MacSvnAppSession) {
         self.session = session
@@ -138,6 +139,12 @@ public struct MacSvnSettingsView: View {
         }
         .frame(minWidth: 720, minHeight: 520)
         .navigationTitle(settingsNavigationTitle)
+        .background {
+            Button("") { isSettingsSearchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .task { await load() }
         .onChange(of: settingsSearchText) { _, _ in
             synchronizeSettingsCategorySelection()
@@ -225,7 +232,31 @@ public struct MacSvnSettingsView: View {
         return "设置 · \(selectedCategory.title)"
     }
 
+    @ViewBuilder
     private var settingsSidebar: some View {
+        if #available(macOS 15.0, *) {
+            settingsCategoryList
+                .searchable(text: $settingsSearchText, placement: .sidebar, prompt: "搜索设置")
+                .searchFocused($isSettingsSearchFocused)
+        } else {
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    TextField("搜索设置", text: $settingsSearchText)
+                        .textFieldStyle(.plain)
+                        .focused($isSettingsSearchFocused)
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 36)
+                Divider()
+                settingsCategoryList
+            }
+        }
+    }
+
+    private var settingsCategoryList: some View {
         List(selection: $selectedCategory) {
             ForEach(filteredCategories) { category in
                 Label {
@@ -236,7 +267,6 @@ public struct MacSvnSettingsView: View {
                 .tag(category)
             }
         }
-        .searchable(text: $settingsSearchText, placement: .sidebar, prompt: "搜索设置")
         .listStyle(.sidebar)
         .frame(minWidth: 200, idealWidth: 220, maxWidth: 250)
     }
@@ -245,6 +275,18 @@ public struct MacSvnSettingsView: View {
         HStack(spacing: 10) {
             settingsActionStatus
             Spacer(minLength: 12)
+            Button {
+                Task { await reloadSettings() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("重新加载设置")
+            .accessibilityLabel("重新加载设置")
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(isLoading || isSaving || hasUnsavedChanges)
+
             Button("保存", systemImage: "square.and.arrow.down") {
                 Task { await save() }
             }
@@ -686,6 +728,15 @@ public struct MacSvnSettingsView: View {
 
     private func load() async {
         guard baselineDraft == nil else { return }
+        await loadSettings()
+    }
+
+    private func reloadSettings() async {
+        guard !isLoading, !isSaving, !hasUnsavedChanges else { return }
+        await loadSettings()
+    }
+
+    private func loadSettings() async {
         isLoading = true
         defer { isLoading = false }
         feedback = nil

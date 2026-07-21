@@ -64,6 +64,7 @@ public struct MacSvnShelveView: View {
     @State private var keepLocalChanges = false
     @State private var createSearchText = ""
     @State private var patchSearchText = ""
+    @State private var recordSearchText = ""
     @State private var recordScope: MacSvnShelfRecordScope = .official
     @State private var creationKind: MacSvnShelfCreationKind = .official
     @State private var previewKind: MacSvnShelfPreviewKind = .diff
@@ -85,6 +86,8 @@ public struct MacSvnShelveView: View {
     @State private var pendingLocalSnapshot: ShelveSnapshot?
     @State private var confirmMigration = false
     @State private var pendingMigrationSnapshot: ShelveSnapshot?
+    @State private var isRefreshingShelves = false
+    @FocusState private var isRecordSearchFocused: Bool
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -109,6 +112,12 @@ public struct MacSvnShelveView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            Button("") { isRecordSearchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .task { await bootstrap() }
         .onChange(of: workspaceController.selectedID) { _, _ in
             Task { await bootstrap() }
@@ -121,6 +130,9 @@ public struct MacSvnShelveView: View {
         }
         .onChange(of: recordScope) { _, _ in
             synchronizeRecordSelection()
+        }
+        .onChange(of: recordSearchText) { _, _ in
+            synchronizeRecordSelection(resetPreviewKind: false)
         }
         .onChange(of: selectedShelfID) { _, _ in
             enqueueSelectedPreview()
@@ -167,6 +179,7 @@ public struct MacSvnShelveView: View {
             Button(officialDestructiveActionTitle, role: .destructive) {
                 Task { await runPendingOfficialDestructiveAction() }
             }
+            .disabled(isBusy)
             Button("取消", role: .cancel) {
                 clearPendingOfficialDestructiveAction()
             }
@@ -177,10 +190,9 @@ public struct MacSvnShelveView: View {
             titleVisibility: .visible
         ) {
             Button("删除", role: .destructive) {
-                guard let snapshot = pendingLocalSnapshot else { return }
-                pendingLocalSnapshot = nil
-                Task { await deleteLocalSnapshot(snapshot) }
+                Task { await runPendingLocalDelete() }
             }
+            .disabled(isBusy)
             Button("取消", role: .cancel) {
                 pendingLocalSnapshot = nil
             }
@@ -191,10 +203,9 @@ public struct MacSvnShelveView: View {
             titleVisibility: .visible
         ) {
             Button("迁移到官方", role: .destructive) {
-                guard let snapshot = pendingMigrationSnapshot else { return }
-                pendingMigrationSnapshot = nil
-                Task { await migrate(snapshot) }
+                Task { await runPendingMigration() }
             }
+            .disabled(isBusy)
             Button("取消", role: .cancel) {
                 pendingMigrationSnapshot = nil
             }
@@ -208,7 +219,7 @@ public struct MacSvnShelveView: View {
             officialAvailabilityView
             Spacer(minLength: 8)
             Button {
-                Task { await refreshShelves() }
+                requestShelvesRefresh()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .frame(width: 28, height: 28)
@@ -216,6 +227,7 @@ public struct MacSvnShelveView: View {
             .buttonStyle(.plain)
             .help("刷新搁置记录")
             .accessibilityLabel("刷新搁置记录")
+            .keyboardShortcut("r", modifiers: .command)
             .disabled(isBusy)
 
             Menu {
@@ -332,6 +344,19 @@ public struct MacSvnShelveView: View {
             .labelsHidden()
             .padding(10)
 
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                TextField("搜索搁置记录", text: $recordSearchText)
+                    .textFieldStyle(.plain)
+                    .focused($isRecordSearchFocused)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 36)
+
+            Divider()
+
             HStack {
                 Text(recordScope == .official
                     ? LocalizedStringKey("官方 Shelves")
@@ -347,7 +372,7 @@ public struct MacSvnShelveView: View {
 
             Divider()
 
-            if visibleRecordCount == 0 {
+            if totalRecordCount == 0 {
                 ContentUnavailableView("没有搁置记录",
                     systemImage: "archivebox",
                     description: Text(recordScope == .official
@@ -355,15 +380,21 @@ public struct MacSvnShelveView: View {
                         : LocalizedStringKey("还没有本地快照"))
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if visibleRecordCount == 0 {
+                ContentUnavailableView("没有匹配的搁置记录",
+                    systemImage: "magnifyingglass",
+                    description: Text("换个关键词后重试")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(selection: $selectedShelfID) {
                     if recordScope == .official {
-                        ForEach(viewModel?.officialShelves ?? []) { shelf in
+                        ForEach(filteredOfficialShelves) { shelf in
                             officialShelfRow(shelf)
                                 .tag(officialID(for: shelf))
                         }
                     } else {
-                        ForEach(viewModel?.snapshots ?? []) { snapshot in
+                        ForEach(filteredLocalSnapshots) { snapshot in
                             localSnapshotRow(snapshot)
                                 .tag(localID(for: snapshot))
                         }
@@ -806,7 +837,7 @@ public struct MacSvnShelveView: View {
     }
 
     private var isBusy: Bool {
-        isShelveBusy || isPatchBusy
+        isRefreshingShelves || isShelveBusy || isPatchBusy
     }
 
     private var currentCreateShelfDraft: CreateShelfDraftSnapshot {
@@ -861,19 +892,47 @@ public struct MacSvnShelveView: View {
 
     private var visibleRecordCount: Int {
         switch recordScope {
+        case .official: filteredOfficialShelves.count
+        case .local: filteredLocalSnapshots.count
+        }
+    }
+
+    private var totalRecordCount: Int {
+        switch recordScope {
         case .official: viewModel?.officialShelves.count ?? 0
         case .local: viewModel?.snapshots.count ?? 0
         }
     }
 
+    private var filteredOfficialShelves: [SvnShelf] {
+        let shelves = viewModel?.officialShelves ?? []
+        let query = recordSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return shelves }
+        return shelves.filter { shelf in
+            shelf.name.localizedCaseInsensitiveContains(query)
+                || (shelf.message?.localizedCaseInsensitiveContains(query) ?? false)
+        }
+    }
+
+    private var filteredLocalSnapshots: [ShelveSnapshot] {
+        let snapshots = viewModel?.snapshots ?? []
+        let query = recordSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return snapshots }
+        return snapshots.filter { snapshot in
+            snapshot.name.localizedCaseInsensitiveContains(query)
+                || snapshot.patchFileName.localizedCaseInsensitiveContains(query)
+                || snapshot.paths.contains { $0.localizedCaseInsensitiveContains(query) }
+        }
+    }
+
     private var selectedOfficialShelf: SvnShelf? {
         guard recordScope == .official, let selectedShelfID else { return nil }
-        return viewModel?.officialShelves.first { officialID(for: $0) == selectedShelfID }
+        return filteredOfficialShelves.first { officialID(for: $0) == selectedShelfID }
     }
 
     private var selectedLocalSnapshot: ShelveSnapshot? {
         guard recordScope == .local, let selectedShelfID else { return nil }
-        return viewModel?.snapshots.first { localID(for: $0) == selectedShelfID }
+        return filteredLocalSnapshots.first { localID(for: $0) == selectedShelfID }
     }
 
     @ViewBuilder
@@ -946,7 +1005,15 @@ public struct MacSvnShelveView: View {
         }
     }
 
+    private func requestShelvesRefresh() {
+        guard !isRefreshingShelves else { return }
+        guard !isBusy else { return }
+        isRefreshingShelves = true
+        Task { await refreshShelves() }
+    }
+
     private func refreshShelves() async {
+        defer { isRefreshingShelves = false }
         cancelPreview()
         await viewModel?.load()
         synchronizeRecordSelection()
@@ -1042,6 +1109,7 @@ public struct MacSvnShelveView: View {
     }
 
     private func deleteLocalSnapshot(_ snapshot: ShelveSnapshot) async {
+        guard !isBusy else { return }
         await viewModel?.delete(snapshot)
         if updateStatus(for: .delete, success: "已删除本地快照 \(snapshot.name)") {
             synchronizeRecordSelection()
@@ -1049,6 +1117,7 @@ public struct MacSvnShelveView: View {
     }
 
     private func migrate(_ snapshot: ShelveSnapshot) async {
+        guard !isBusy else { return }
         await viewModel?.migrateToOfficial(snapshot)
         if updateStatus(for: .migrate, success: "已将 \(snapshot.name) 迁移到官方 shelf") {
             recordScope = .official
@@ -1067,6 +1136,7 @@ public struct MacSvnShelveView: View {
     }
 
     private func runPendingOfficialDestructiveAction() async {
+        guard !isBusy else { return }
         guard let shelf = pendingOfficialShelf, let action = pendingOfficialAction else { return }
         clearPendingOfficialDestructiveAction()
         switch action {
@@ -1075,6 +1145,20 @@ public struct MacSvnShelveView: View {
         case .drop:
             await dropOfficialShelf(shelf)
         }
+    }
+
+    private func runPendingLocalDelete() async {
+        guard !isBusy else { return }
+        guard let snapshot = pendingLocalSnapshot else { return }
+        await deleteLocalSnapshot(snapshot)
+        pendingLocalSnapshot = nil
+    }
+
+    private func runPendingMigration() async {
+        guard !isBusy else { return }
+        guard let snapshot = pendingMigrationSnapshot else { return }
+        await migrate(snapshot)
+        pendingMigrationSnapshot = nil
     }
 
     private func clearPendingOfficialDestructiveAction() {
@@ -1176,15 +1260,22 @@ public struct MacSvnShelveView: View {
         previewErrorText = nil
     }
 
-    private func synchronizeRecordSelection(preferredID: String? = nil) {
+    private func synchronizeRecordSelection(
+        preferredID: String? = nil,
+        resetPreviewKind: Bool = true
+    ) {
         let availableIDs: [String]
         switch recordScope {
         case .official:
-            availableIDs = (viewModel?.officialShelves ?? []).map(officialID)
-            previewKind = .diff
+            availableIDs = filteredOfficialShelves.map(officialID)
+            if resetPreviewKind {
+                previewKind = .diff
+            }
         case .local:
-            availableIDs = (viewModel?.snapshots ?? []).map(localID)
-            previewKind = .patch
+            availableIDs = filteredLocalSnapshots.map(localID)
+            if resetPreviewKind {
+                previewKind = .patch
+            }
         }
         if let preferredID, availableIDs.contains(preferredID) {
             selectedShelfID = preferredID

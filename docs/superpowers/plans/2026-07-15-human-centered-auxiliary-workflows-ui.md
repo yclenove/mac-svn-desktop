@@ -400,7 +400,7 @@ git commit -m "feat(UI): 统一辅助任务反馈与弹窗状态（U7 任务 5/6
 - 修改：`docs/superpowers/plans/2026-07-15-human-centered-auxiliary-workflows-ui.md`
 - 修改：真实窗口验收暴露问题对应的 U7 SwiftUI 文件和测试
 
-- [ ] **步骤 1：运行 U7 定向门禁**
+- [x] **步骤 1：运行 U7 定向门禁**
 
 ```bash
 swift test --filter HumanCenteredAuxiliaryWorkflowsTests
@@ -410,11 +410,11 @@ swift test --filter SettingsInformationArchitectureTests
 swift test --filter LocalizationResourceTests
 ```
 
-- [ ] **步骤 2：运行全量测试**
+- [x] **步骤 2：运行全量测试**
 
 运行 `swift test`，要求全部通过且真实 SVN `49/49` 保持。
 
-- [ ] **步骤 3：构建、校验和冒烟最终 App**
+- [x] **步骤 3：构建、校验和冒烟最终 App**
 
 ```bash
 ./scripts/build-macos-app.sh
@@ -422,15 +422,15 @@ swift test --filter LocalizationResourceTests
 ./scripts/smoke-test-macos-app.sh dist/SVNStudio.app
 ```
 
-- [ ] **步骤 4：三档四页真实窗口验收**
+- [x] **步骤 4：三档四页真实窗口验收**
 
 在 `980 x 640`、`1180 x 760`、`1440 x 900` 检查属性、锁、搁置和设置；覆盖浅色、深色、Reduce Motion、长文本、空态、错误、busy、sheet、Escape、键盘焦点和 VoiceOver。截图保存为 `artifacts/ui/u7-*.png`。
 
-- [ ] **步骤 5：按截图问题继续 TDD 修正**
+- [x] **步骤 5：按截图问题继续 TDD 修正**
 
 每个重叠、截断失控、动作不可达、状态跳动或关闭缺口先在 U7 测试增加精确失败断言，再修改视图并重跑定向测试和截图。
 
-- [ ] **步骤 6：更新文档和最终验证**
+- [x] **步骤 6：更新文档和最终验证**
 
 CHANGELOG 记录辅助工作流、设置、反馈和能力保留；U7 规格追加测试数量、截图路径、现场偏差和 U8 边界。运行：
 
@@ -443,7 +443,7 @@ swift test
 git status --short
 ```
 
-- [ ] **步骤 7：提交 U7 收口**
+- [x] **步骤 7：提交 U7 收口**
 
 ```bash
 git add CHANGELOG.md \
@@ -455,3 +455,17 @@ git commit -m "feat(UI): 完成人本辅助工作流统一（U7 任务 6/6）"
 ```
 
 完成 U7 后继续 U8 全局体验收口；不得把 U7 完成误报为整个 Human UI 长程目标完成。
+
+### 任务 6 执行结果（2026-07-21 完成）
+
+- U7 五组定向门禁 `78/78` 通过：Human-centered `39`、Performance Guard `13`、Modal `6`、Settings IA `13`、Localization `7`；本切片直接修改的 `ShelveViewModelTests` 另为 `14/14`；
+- 全量 `swift test` 为 `1128/1128`，真实 SVN `49/49`；Release App 构建、结构校验和隔离启动冒烟通过；
+- 三档四页最终截图为 `artifacts/ui/u7-final-{properties,locks,shelve,settings}-*.png`，覆盖深色 `980 x 640`、浅色 `1180 x 760`、浅色 + Reduce Motion `1440 x 900`；长文本、空态、错误、成功和固定动作可达性均有真实窗口证据；
+- dirty、busy、sheet、Escape、默认动作和关闭入口由最终窗口、任务 1-4 sheet 截图及自动化门禁共同覆盖；全仓 `28` 个 sheet 与 `4` 个 popover 的共享关闭契约保持；
+- 独立复审发现四页缺少 Command-F/Command-R 与明确焦点接线；按 TDD 补齐页面搜索焦点、Shelve 记录搜索、Settings 安全重载及完整刷新 busy 门禁。后续红绿测试继续修复 ShelveVM official/snapshot/provider 晚到竞态、确认动作重复提交、英文资源和 Settings `load()` 契约回归；最终两阶段复审无 Critical/Important/Minor；
+- 首轮 Release 编译遇到内容未变但 mtime 被外部刷新导致的编译器中止，工作树仍干净；原样重跑成功；
+- VoiceOver 验收口径与 U6 对齐：共享关闭栏提供 tooltip、accessibility label/identifier，Modal/U7 自动化覆盖关闭/Escape/dirty/busy 与 ⌘F/⌘R 接线契约。宿主 TCC 下动态 VO 遍历与真实 Command-F 注入仍不可用（`AXIsProcessTrusted=false`、`System Events` 1002、VO cursor `-1728`），记为 residual 风险，交 U8 全局无障碍与键盘流继续；旧 `u7-final-properties-dark-980x640-keyboard.png` 与普通截图相同，明确排除为键盘证据；
+- Settings 深色 `980` 窗口在 UI testing 启动下略小于逻辑宽，属布局现场偏差，主工作区与固定动作仍可达；
+- 步骤 1–7 全部完成并提交 `feat(UI): 完成人本辅助工作流统一（U7 任务 6/6）`；截图位于被 Git 忽略的 `artifacts/`，不提交；
+- inventory 与 `docs/acceptance/H-tortoise-parity.md` 无能力状态变化，保持不修改；Perfect Loop 维持 GP.6 终止态，未创建 wake/heartbeat；
+- U8 边界不变：全局键盘流、全局无障碍、动效、性能、视觉一致性和跨页真人任务验收；不在本切片推进 U8，也不把 U7 完成误报为整个 Human UI 长程目标完成。

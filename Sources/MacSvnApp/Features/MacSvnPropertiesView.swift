@@ -60,6 +60,8 @@ public struct MacSvnPropertiesView: View {
     @State private var isSavingExternals = false
     @State private var externalsInitialDraft: ExternalsEditorDraftSnapshot?
     @State private var showDiscardExternalsConfirmation = false
+    @State private var isRefreshingProperties = false
+    @FocusState private var isSearchFocused: Bool
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -84,6 +86,12 @@ public struct MacSvnPropertiesView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            Button("") { isSearchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .task {
             updateExternalsAfterSave = session.settingsSnapshot.general.applyLocalExternalsPropertyChanges
             await reloadPaths()
@@ -147,7 +155,7 @@ public struct MacSvnPropertiesView: View {
             }
             Spacer(minLength: 8)
             Button {
-                Task { await loadProperties() }
+                requestPropertiesRefresh()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .frame(width: 28, height: 28)
@@ -155,6 +163,8 @@ public struct MacSvnPropertiesView: View {
             .buttonStyle(.plain)
             .help("刷新属性")
             .accessibilityLabel("刷新属性")
+            .keyboardShortcut("r", modifiers: .command)
+            .disabled(isPropertyBusy)
 
             Menu {
                 Button("外部定义…", systemImage: "shippingbox") {
@@ -249,7 +259,8 @@ public struct MacSvnPropertiesView: View {
             paths: paths,
             selection: $selected,
             searchText: $searchText,
-            allowsMultiple: false
+            allowsMultiple: false,
+            searchFocus: $isSearchFocused
         )
         .onChange(of: selected) { _, _ in
             Task { await loadProperties() }
@@ -560,6 +571,24 @@ public struct MacSvnPropertiesView: View {
         externalsDismissalDecision.preventsDismissal
     }
 
+    private var isPropertyBusy: Bool {
+        if isRefreshingProperties { return true }
+        if isSavingExternals { return true }
+        switch viewModel?.state {
+        case .loading, .saving, .deleting:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func requestPropertiesRefresh() {
+        guard !isRefreshingProperties else { return }
+        guard !isPropertyBusy else { return }
+        isRefreshingProperties = true
+        Task { await loadProperties() }
+    }
+
     private func reloadPaths() async {
         guard let record = workspaceController.selectedRecord, record.isValid else {
             paths = ["."]; selected = ["."]; return
@@ -575,6 +604,12 @@ public struct MacSvnPropertiesView: View {
     private func loadProperties(preservingFeedback: Bool = false) async {
         loadGeneration += 1
         let generation = loadGeneration
+        isRefreshingProperties = true
+        defer {
+            if generation == loadGeneration {
+                isRefreshingProperties = false
+            }
+        }
         if !preservingFeedback {
             feedback = nil
         }

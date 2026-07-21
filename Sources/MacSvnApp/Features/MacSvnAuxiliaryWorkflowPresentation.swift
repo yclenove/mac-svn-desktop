@@ -525,7 +525,22 @@ struct MacSvnAuxiliaryPathList: View {
     let paths: [String]
     @Binding var selection: Set<String>
     @Binding var searchText: String
-    var allowsMultiple = true
+    var allowsMultiple: Bool
+    var searchFocus: FocusState<Bool>.Binding?
+
+    init(
+        paths: [String],
+        selection: Binding<Set<String>>,
+        searchText: Binding<String>,
+        allowsMultiple: Bool = true,
+        searchFocus: FocusState<Bool>.Binding? = nil
+    ) {
+        self.paths = paths
+        _selection = selection
+        _searchText = searchText
+        self.allowsMultiple = allowsMultiple
+        self.searchFocus = searchFocus
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -533,8 +548,14 @@ struct MacSvnAuxiliaryPathList: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
-                TextField("筛选目标", text: $searchText)
-                    .textFieldStyle(.plain)
+                if let searchFocus {
+                    TextField("筛选目标", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .focused(searchFocus)
+                } else {
+                    TextField("筛选目标", text: $searchText)
+                        .textFieldStyle(.plain)
+                }
                 Text("\(filteredPaths.count)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)

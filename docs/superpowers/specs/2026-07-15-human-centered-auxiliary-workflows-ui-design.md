@@ -211,3 +211,36 @@ U7 只有同时满足以下条件才完成：
 - 进度、成功、警告和错误具有明确语义，原始诊断仍可访问；
 - 全量测试、真实 SVN、Localization、Release 构建、结构校验、隔离冒烟和真实窗口验收通过；
 - U8 全局键盘流、无障碍、动效、性能、视觉一致性和真人任务验收仍作为下一波次，不把 U7 完成误报为整个 Human UI 长程目标完成。
+
+## 14. 2026-07-21 任务 6 完成证据
+
+### 14.1 自动化与应用门禁
+
+- U7 五组定向门禁共 `78/78` 通过：Human-centered `39`、Performance Guard `13`、Modal `6`、Settings IA `13`、Localization `7`；本切片直接修改的 `ShelveViewModelTests` 另为 `14/14`；
+- 全量 `swift test` 为 `1128/1128` 通过，真实 `SvnCliBackendIntegrationTests` 保持 `49/49`；
+- `./scripts/build-macos-app.sh`、`./scripts/verify-macos-app.sh dist/SVNStudio.app` 和 `./scripts/smoke-test-macos-app.sh dist/SVNStudio.app` 通过；
+- 首次 Release 编译期间 `MacSvnGitMigrationView.swift` 仅 mtime 被外部刷新，内容与 HEAD 相同且工作树保持干净，编译器因此中止；原样重跑后成功，不修改或回滚该文件。
+
+### 14.2 三档四页窗口证据
+
+每页均保存深色 `980 x 640`、浅色 `1180 x 760`、浅色 + Reduce Motion `1440 x 900` 三档最终截图：
+
+- Properties：`artifacts/ui/u7-final-properties-{dark-980x640,light-1180x760,light-reduce-motion-1440x900}.png`；旧 `u7-final-properties-dark-980x640-keyboard.png` 与普通截图相同，不计为键盘焦点证据；
+- Locks：`artifacts/ui/u7-final-locks-{dark-980x640,light-1180x760,light-reduce-motion-1440x900}.png`；
+- Shelve：`artifacts/ui/u7-final-shelve-{dark-980x640,light-1180x760,light-reduce-motion-1440x900}.png`；
+- Settings：`artifacts/ui/u7-final-settings-{dark-980x640,light-1180x760,light-reduce-motion-1440x900}.png`。
+
+现场自然覆盖 Properties 长路径/长 URL、Locks 错误与空态、Shelve 成功与双空态、Settings 长错误摘要；三档均未发现重叠、失控换行、工具栏横向滚动或关键动作不可达。任务 1-4 的 `u7-*-sheet-*.png` 继续作为 sheet 视觉证据；最终 Modal/U7 源码门禁确认全仓 `28` 个 sheet、`4` 个 popover，以及 dirty、busy、Escape、默认动作和关闭策略未回归。四页 Command-F/Command-R、Shelve 搜索、Settings 安全重载、确认 busy 门禁和异步 generation 隔离均由先红后绿的契约/行为测试覆盖。截图均位于被 Git 忽略的 `artifacts/`，不提交。
+
+### 14.3 现场偏差与 residual 风险
+
+- 宿主拒绝 `System Events` 辅助访问，`AXIsProcessTrusted()` 为 `false`；真实 Command-F 注入返回“不允许发送按键”(1002)，读取 VO cursor 返回 `-1728`。因此本轮不能声称动态 VoiceOver 遍历或真实按键注入通过。
+- U7 VoiceOver 完成口径与 U6 对齐：可达关闭按钮、tooltip、VoiceOver label/identifier、Escape、busy/dirty 真值表与 ⌘F/⌘R 接线由 `ModalDismissalAccessibilityTests` 与 `HumanCenteredAuxiliaryWorkflowsTests` 提供自动化证据；动态遍历与真人按键焦点记为 residual，交 U8 全局无障碍/键盘流继续，不据此删减功能。
+- Settings 深色 `980` 在 UI testing 启动参数下窗口略小于逻辑宽，属布局现场偏差；主工作区、侧栏分类与固定保存动作仍可达。旧 `u7-final-properties-dark-980x640-keyboard.png` 排除为键盘证据。
+- inventory / H-tortoise 无能力状态变化，未修改；Perfect Loop 保持 GP.6 终止态。
+
+### 14.4 U8 边界
+
+- U8 仍只承接全局键盘流、全局无障碍、动效、性能、视觉一致性和跨页真人任务验收。
+- U7 收口不代表整个 Human UI 长程目标完成，也不重启已终止的 Tortoise Perfect Loop。
+- 本规格 §13 完成定义在任务 1–6 与上述门禁/截图/文档证据下已满足；residual 动态 VO 不阻塞 U7 收口。

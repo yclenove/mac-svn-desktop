@@ -996,6 +996,9 @@
 "已刷新搁置记录" = "Shelf records refreshed";
 "Patch 文件" = "Patch File";
 "刷新搁置记录" = "Refresh Shelf Records";
+"搜索搁置记录" = "Search shelf records";
+"没有匹配的搁置记录" = "No matching shelf records";
+"换个关键词后重试" = "Try a different search term";
 "当前 SVN 不支持官方 Shelve，请改用本地搁置。" = "This SVN installation does not support official shelving. Use a local shelf instead.";
 "搁置类型" = "Shelf Type";
 "时间" = "Time";
@@ -1029,6 +1032,7 @@
 "输出文件路径" = "Output File Path";
 "Patch 文件路径" = "Patch File Path";
 "搜索设置" = "Search settings";
+"重新加载设置" = "Reload settings";
 "没有匹配的设置" = "No Matching Settings";
 "换个关键词，或清除搜索后查看全部九类设置。" = "Try another keyword, or clear the search to see all nine categories.";
 "清除搜索" = "Clear Search";

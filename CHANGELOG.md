@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-21
+
+- Summary: Human UI Wave U7：完成人本辅助工作流统一（任务 6/6）
+- Affected: Properties/Locks/Shelve/Settings views, AuxiliaryWorkflowPresentation, ShelveViewModel, English Localization, HumanCenteredAuxiliaryWorkflows/Localization/ShelveViewModel tests, U7 design/plan
+- Impact: 属性、锁、搁置/Patch 和设置统一为稳定的工具栏、反馈、主从工作区与固定动作层级；四页补齐 Command-F 搜索焦点和 Command-R 刷新，刷新、确认与 Shelve 异步结果使用完整 busy/generation 门禁。28 个 sheet 与 4 个 popover 继续提供可见关闭入口、Escape 和显式取消；dirty 关闭统一请求放弃确认，busy 时禁止关闭和重复提交。U7 五组定向门禁 78/78、ShelveVM 14/14、全量 1128/1128 通过，其中真实 SVN 49/49；Release App 构建、结构校验、隔离启动冒烟和三档四页 12 张真实窗口截图通过。VoiceOver 以共享关闭栏标签/identifier 与 Modal/U7 自动化契约验收（与 U6 同口径）；宿主 TCC 下动态 VO 遍历与真实按键注入仍为 residual 风险（`AXIsProcessTrusted=false`），交 U8 全局无障碍/键盘流继续；Tortoise inventory/H 清单无能力状态变化，U8 边界保持不变
+
 ## 2026-07-15
 
 - Summary: Human UI Wave U6：完成人本核心模式统一与弹窗关闭收口

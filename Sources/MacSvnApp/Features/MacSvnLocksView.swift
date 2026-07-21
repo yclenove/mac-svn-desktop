@@ -31,6 +31,9 @@ public struct MacSvnLocksView: View {
     @State private var isApplyingLockIntent = false
     @State private var lockIntentTask: Task<Void, Never>?
     @State private var targetRefreshTask: Task<Void, Never>?
+    @State private var isRefreshingTargets = false
+    @State private var targetRefreshGeneration = 0
+    @FocusState private var isSearchFocused: Bool
 
     public init(
         workspaceController: MacSvnWorkspaceController,
@@ -55,6 +58,12 @@ public struct MacSvnLocksView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            Button("") { isSearchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .task {
             await bootstrap()
             enqueueConsumePendingLockIntent()
@@ -133,7 +142,7 @@ public struct MacSvnLocksView: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             Button {
-                enqueueTargetRefresh()
+                requestTargetRefresh()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .frame(width: 28, height: 28)
@@ -141,6 +150,7 @@ public struct MacSvnLocksView: View {
             .buttonStyle(.plain)
             .help("刷新锁记录")
             .accessibilityLabel("刷新锁记录")
+            .keyboardShortcut("r", modifiers: .command)
             .disabled(isBusy)
 
             Button("获取锁", systemImage: "lock.fill") {
@@ -211,7 +221,8 @@ public struct MacSvnLocksView: View {
         MacSvnAuxiliaryPathList(
             paths: paths,
             selection: $selected,
-            searchText: $searchText
+            searchText: $searchText,
+            searchFocus: $isSearchFocused
         )
         .disabled(isBusy)
     }
@@ -364,6 +375,7 @@ public struct MacSvnLocksView: View {
     }
 
     private var isBusy: Bool {
+        if isRefreshingTargets { return true }
         switch viewModel?.state {
         case .loading, .locking, .unlocking:
             return true
@@ -599,9 +611,19 @@ public struct MacSvnLocksView: View {
         }
     }
 
+    private func requestTargetRefresh() {
+        guard !isRefreshingTargets else { return }
+        guard !isBusy else { return }
+        guard viewModel != nil else { return }
+        enqueueTargetRefresh()
+    }
+
     private func enqueueTargetRefresh() {
         guard let viewModel else { return }
         targetRefreshTask?.cancel()
+        targetRefreshGeneration += 1
+        let refreshGeneration = targetRefreshGeneration
+        isRefreshingTargets = true
         let selectionSnapshot = selected
         let projectPropertyTargets = selectionSnapshot.isEmpty
             ? paths
@@ -610,6 +632,11 @@ public struct MacSvnLocksView: View {
             ? []
             : Array(selectionSnapshot).sorted()
         targetRefreshTask = Task {
+            defer {
+                if refreshGeneration == targetRefreshGeneration {
+                    isRefreshingTargets = false
+                }
+            }
             let didApplyProjectProperties = await viewModel.refreshProjectProperties(
                 for: projectPropertyTargets
             )

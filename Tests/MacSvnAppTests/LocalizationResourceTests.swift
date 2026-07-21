@@ -2,6 +2,15 @@ import Foundation
 import XCTest
 
 final class LocalizationResourceTests: XCTestCase {
+    func testAuxiliarySearchAndReloadLabelsHaveEnglishTranslations() throws {
+        let translations = try Self.englishTranslations()
+
+        XCTAssertEqual(translations["搜索搁置记录"], "Search shelf records")
+        XCTAssertEqual(translations["没有匹配的搁置记录"], "No matching shelf records")
+        XCTAssertEqual(translations["换个关键词后重试"], "Try a different search term")
+        XCTAssertEqual(translations["重新加载设置"], "Reload settings")
+    }
+
     func testEnglishLocalizationCoversStaticSwiftUIControlLabels() throws {
         let translations = try Self.englishTranslations()
         let pattern = try NSRegularExpression(

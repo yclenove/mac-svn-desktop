@@ -489,7 +489,10 @@ final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
         XCTAssertTrue(locks.contains("MacSvnLockFeedbackPresentation.feedback("))
         XCTAssertTrue(locks.contains("projectPropertyLoadError: viewModel.projectPropertyLoadError"))
         XCTAssertTrue(locks.contains("projectPropertyLoadDiagnostic: viewModel.projectPropertyLoadDiagnostic"))
-        let targetRefresh = try Self.sourceSection(startingAt: "private func enqueueTargetRefresh()", in: locks)
+        let targetRefresh = try Self.sourceSection(
+            startingAt: "private func enqueueTargetRefresh()",
+            in: locks
+        )
         XCTAssertTrue(targetRefresh.contains("let didApplyProjectProperties = await viewModel.refreshProjectProperties("))
         XCTAssertTrue(targetRefresh.contains("guard didApplyProjectProperties else {\n                await syncStatus()\n                return\n            }"))
         let applyGuard = try XCTUnwrap(targetRefresh.range(of: "guard didApplyProjectProperties else"))
@@ -506,9 +509,11 @@ final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
     func testLockToolbarRefreshUsesFullTargetRefreshPath() throws {
         let locks = try Self.readFeatureSource(named: "MacSvnLocksView.swift")
         let toolbar = try Self.sourceSection(startingAt: "private var locksToolbar", in: locks)
+        let request = try Self.sourceSection(startingAt: "private func requestTargetRefresh()", in: locks)
 
-        XCTAssertTrue(toolbar.contains("enqueueTargetRefresh()"))
+        XCTAssertTrue(toolbar.contains("requestTargetRefresh()"))
         XCTAssertFalse(toolbar.contains("await reload()"))
+        XCTAssertTrue(request.contains("enqueueTargetRefresh()"))
     }
 
     func testPropertiesLoadingClearsActionFeedbackUnlessCallerPreservesIt() throws {
@@ -930,6 +935,192 @@ final class HumanCenteredAuxiliaryWorkflowsTests: XCTestCase {
         let navigation = source[navigationStart..<navigationEnd]
         XCTAssertTrue(navigation.contains("settingsSearchText = \"\""))
         XCTAssertTrue(navigation.contains("selectedCategory = category"))
+    }
+
+    func testAuxiliaryPagesWireKeyboardSearchAndRefreshToRealWorkflows() throws {
+        let presentation = try Self.readFeatureSource(named: "MacSvnAuxiliaryWorkflowPresentation.swift")
+        let pathList = try Self.sourceSection(startingAt: "struct MacSvnAuxiliaryPathList: View", in: presentation)
+        XCTAssertTrue(pathList.contains("var searchFocus: FocusState<Bool>.Binding?"))
+        XCTAssertTrue(pathList.contains("searchFocus: FocusState<Bool>.Binding? = nil"))
+        XCTAssertTrue(pathList.contains(".focused(searchFocus)"))
+
+        let properties = try Self.readFeatureSource(named: "MacSvnPropertiesView.swift")
+        XCTAssertTrue(properties.contains("@FocusState private var isSearchFocused: Bool"))
+        XCTAssertTrue(properties.contains("searchFocus: $isSearchFocused"))
+        XCTAssertTrue(properties.contains("Button(\"\") { isSearchFocused = true }"))
+        XCTAssertTrue(properties.contains(".keyboardShortcut(\"f\", modifiers: .command)"))
+        XCTAssertTrue(properties.contains(".accessibilityHidden(true)"))
+        let propertiesToolbar = try Self.sourceSection(startingAt: "private var propertiesToolbar", in: properties)
+        XCTAssertTrue(propertiesToolbar.contains("requestPropertiesRefresh()"))
+        XCTAssertTrue(propertiesToolbar.contains(".keyboardShortcut(\"r\", modifiers: .command)"))
+        XCTAssertTrue(propertiesToolbar.contains(".disabled(isPropertyBusy)"))
+
+        let locks = try Self.readFeatureSource(named: "MacSvnLocksView.swift")
+        XCTAssertTrue(locks.contains("@FocusState private var isSearchFocused: Bool"))
+        XCTAssertTrue(locks.contains("searchFocus: $isSearchFocused"))
+        XCTAssertTrue(locks.contains("Button(\"\") { isSearchFocused = true }"))
+        XCTAssertTrue(locks.contains(".keyboardShortcut(\"f\", modifiers: .command)"))
+        XCTAssertTrue(locks.contains(".accessibilityHidden(true)"))
+        let locksToolbar = try Self.sourceSection(startingAt: "private var locksToolbar", in: locks)
+        XCTAssertTrue(locksToolbar.contains("requestTargetRefresh()"))
+        XCTAssertTrue(locksToolbar.contains(".keyboardShortcut(\"r\", modifiers: .command)"))
+        XCTAssertTrue(locksToolbar.contains(".disabled(isBusy)"))
+
+        let shelve = try Self.readFeatureSource(named: "MacSvnShelveView.swift")
+        XCTAssertTrue(shelve.contains("@State private var recordSearchText = \"\""))
+        XCTAssertTrue(shelve.contains("@FocusState private var isRecordSearchFocused: Bool"))
+        XCTAssertTrue(shelve.contains("TextField(\"搜索搁置记录\", text: $recordSearchText)"))
+        XCTAssertTrue(shelve.contains(".focused($isRecordSearchFocused)"))
+        XCTAssertTrue(shelve.contains("private var filteredOfficialShelves"))
+        XCTAssertTrue(shelve.contains("private var filteredLocalSnapshots"))
+        XCTAssertTrue(shelve.contains("ForEach(filteredOfficialShelves)"))
+        XCTAssertTrue(shelve.contains("ForEach(filteredLocalSnapshots)"))
+        XCTAssertTrue(shelve.contains("ContentUnavailableView(\"没有匹配的搁置记录\""))
+        XCTAssertTrue(shelve.contains(".onChange(of: recordSearchText) { _, _ in\n            synchronizeRecordSelection(resetPreviewKind: false)"))
+        XCTAssertTrue(shelve.contains("Button(\"\") { isRecordSearchFocused = true }"))
+        XCTAssertTrue(shelve.contains(".keyboardShortcut(\"f\", modifiers: .command)"))
+        XCTAssertTrue(shelve.contains(".accessibilityHidden(true)"))
+        let shelveToolbar = try Self.sourceSection(startingAt: "private var shelveToolbar", in: shelve)
+        XCTAssertTrue(shelveToolbar.contains("requestShelvesRefresh()"))
+        XCTAssertTrue(shelveToolbar.contains(".keyboardShortcut(\"r\", modifiers: .command)"))
+        XCTAssertTrue(shelveToolbar.contains(".disabled(isBusy)"))
+
+        let settings = try Self.readFeatureSource(named: "MacSvnSettingsView.swift")
+        XCTAssertTrue(settings.contains("@FocusState private var isSettingsSearchFocused: Bool"))
+        XCTAssertTrue(settings.contains(".searchFocused($isSettingsSearchFocused)"))
+        XCTAssertTrue(settings.contains("Button(\"\") { isSettingsSearchFocused = true }"))
+        XCTAssertTrue(settings.contains(".keyboardShortcut(\"f\", modifiers: .command)"))
+        XCTAssertTrue(settings.contains(".accessibilityHidden(true)"))
+        XCTAssertTrue(settings.contains("Task { await reloadSettings() }"))
+        XCTAssertTrue(settings.contains(".keyboardShortcut(\"r\", modifiers: .command)"))
+        XCTAssertTrue(settings.contains(".disabled(isLoading || isSaving || hasUnsavedChanges)"))
+        let load = try Self.sourceSection(startingAt: "private func load() async", in: settings)
+        XCTAssertTrue(load.contains("guard baselineDraft == nil else { return }"))
+        let reload = try Self.sourceSection(startingAt: "private func reloadSettings() async", in: settings)
+        XCTAssertTrue(reload.contains("guard !isLoading, !isSaving, !hasUnsavedChanges else { return }"))
+    }
+
+    func testUserRefreshGuardsCoverFullPageAsyncLifecycles() throws {
+        let properties = try Self.readFeatureSource(named: "MacSvnPropertiesView.swift")
+        XCTAssertTrue(properties.contains("@State private var isRefreshingProperties = false"))
+        let propertiesToolbar = try Self.sourceSection(startingAt: "private var propertiesToolbar", in: properties)
+        XCTAssertTrue(propertiesToolbar.contains("requestPropertiesRefresh()"))
+        XCTAssertFalse(propertiesToolbar.contains("Task { await loadProperties() }"))
+        let propertyBusy = try Self.sourceSection(startingAt: "private var isPropertyBusy", in: properties)
+        XCTAssertTrue(propertyBusy.contains("if isRefreshingProperties { return true }"))
+        let propertyRequest = try Self.sourceSection(startingAt: "private func requestPropertiesRefresh()", in: properties)
+        XCTAssertTrue(propertyRequest.contains("guard !isRefreshingProperties else { return }"))
+        XCTAssertTrue(propertyRequest.contains("guard !isPropertyBusy else { return }"))
+        XCTAssertTrue(propertyRequest.contains("isRefreshingProperties = true"))
+        XCTAssertTrue(propertyRequest.contains("Task { await loadProperties() }"))
+        let propertyLoad = try Self.sourceSection(
+            startingAt: "private func loadProperties(preservingFeedback: Bool = false) async",
+            in: properties
+        )
+        XCTAssertTrue(propertyLoad.contains("isRefreshingProperties = true"))
+        XCTAssertTrue(propertyLoad.contains("defer {"))
+        XCTAssertTrue(propertyLoad.contains("generation == loadGeneration"))
+        XCTAssertTrue(propertyLoad.contains("isRefreshingProperties = false"))
+        XCTAssertTrue(properties.contains(".onChange(of: selected) { _, _ in\n            Task { await loadProperties() }"))
+
+        let locks = try Self.readFeatureSource(named: "MacSvnLocksView.swift")
+        XCTAssertTrue(locks.contains("@State private var isRefreshingTargets = false"))
+        XCTAssertTrue(locks.contains("@State private var targetRefreshGeneration = 0"))
+        let locksToolbar = try Self.sourceSection(startingAt: "private var locksToolbar", in: locks)
+        XCTAssertTrue(locksToolbar.contains("requestTargetRefresh()"))
+        let lockBusy = try Self.sourceSection(startingAt: "private var isBusy", in: locks)
+        XCTAssertTrue(lockBusy.contains("if isRefreshingTargets { return true }"))
+        let lockRequest = try Self.sourceSection(startingAt: "private func requestTargetRefresh()", in: locks)
+        XCTAssertTrue(lockRequest.contains("guard !isRefreshingTargets else { return }"))
+        XCTAssertTrue(lockRequest.contains("guard !isBusy else { return }"))
+        XCTAssertTrue(lockRequest.contains("enqueueTargetRefresh()"))
+        let targetRefresh = try Self.sourceSection(
+            startingAt: "private func enqueueTargetRefresh()",
+            in: locks
+        )
+        XCTAssertTrue(targetRefresh.contains("targetRefreshGeneration += 1"))
+        XCTAssertTrue(targetRefresh.contains("isRefreshingTargets = true"))
+        XCTAssertFalse(targetRefresh.contains("if !userInitiated"))
+        XCTAssertTrue(targetRefresh.contains("defer {"))
+        XCTAssertTrue(targetRefresh.contains("refreshGeneration == targetRefreshGeneration"))
+        XCTAssertTrue(targetRefresh.contains("isRefreshingTargets = false"))
+        XCTAssertTrue(locks.contains(".onChange(of: selected) { _, _ in\n            guard !isApplyingLockIntent else { return }\n            enqueueTargetRefresh()"))
+        let pendingIntent = try Self.sourceSection(startingAt: "private func consumePendingLockIntent() async", in: locks)
+        XCTAssertTrue(pendingIntent.contains("targetRefreshTask?.cancel()"))
+        XCTAssertFalse(pendingIntent.contains("targetRefreshGeneration += 1"))
+        XCTAssertFalse(pendingIntent.contains("isRefreshingTargets = false"))
+
+        let shelve = try Self.readFeatureSource(named: "MacSvnShelveView.swift")
+        XCTAssertTrue(shelve.contains("@State private var isRefreshingShelves = false"))
+        let shelveToolbar = try Self.sourceSection(startingAt: "private var shelveToolbar", in: shelve)
+        XCTAssertTrue(shelveToolbar.contains("requestShelvesRefresh()"))
+        XCTAssertFalse(shelveToolbar.contains("Task { await refreshShelves() }"))
+        let shelveBusy = try Self.sourceSection(startingAt: "private var isBusy", in: shelve)
+        XCTAssertTrue(shelveBusy.contains("isRefreshingShelves"))
+        let shelveRequest = try Self.sourceSection(startingAt: "private func requestShelvesRefresh()", in: shelve)
+        XCTAssertTrue(shelveRequest.contains("guard !isRefreshingShelves else { return }"))
+        XCTAssertTrue(shelveRequest.contains("guard !isBusy else { return }"))
+        XCTAssertTrue(shelveRequest.contains("isRefreshingShelves = true"))
+        XCTAssertTrue(shelveRequest.contains("Task { await refreshShelves() }"))
+        let shelveRefresh = try Self.sourceSection(startingAt: "private func refreshShelves() async", in: shelve)
+        XCTAssertTrue(shelveRefresh.contains("defer { isRefreshingShelves = false }"))
+        XCTAssertTrue(shelveRefresh.contains("await viewModel?.load()"))
+    }
+
+    func testShelveSearchSelectionSyncPreservesCurrentPreviewKind() throws {
+        let shelve = try Self.readFeatureSource(named: "MacSvnShelveView.swift")
+        XCTAssertTrue(shelve.contains(".onChange(of: recordScope) { _, _ in\n            synchronizeRecordSelection()"))
+        XCTAssertTrue(shelve.contains(".onChange(of: recordSearchText) { _, _ in\n            synchronizeRecordSelection(resetPreviewKind: false)"))
+        let synchronization = try Self.sourceSection(
+            startingAt: "private func synchronizeRecordSelection(\n        preferredID: String? = nil,\n        resetPreviewKind: Bool = true\n    )",
+            in: shelve
+        )
+        XCTAssertTrue(synchronization.contains("if resetPreviewKind {\n                previewKind = .diff\n            }"))
+        XCTAssertTrue(synchronization.contains("if resetPreviewKind {\n                previewKind = .patch\n            }"))
+    }
+
+    func testShelveConfirmationActionsStayDisabledAndPreservePendingWorkWhileBusy() throws {
+        let shelve = try Self.readFeatureSource(named: "MacSvnShelveView.swift")
+        for marker in [
+            "Button(officialDestructiveActionTitle, role: .destructive)",
+            "Button(\"删除\", role: .destructive)",
+            "Button(\"迁移到官方\", role: .destructive)",
+        ] {
+            let button = try XCTUnwrap(shelve.range(of: marker))
+            let tail = shelve[button.lowerBound...].prefix(300)
+            XCTAssertTrue(tail.contains(".disabled(isBusy)"), marker)
+        }
+
+        XCTAssertTrue(shelve.contains("Task { await runPendingLocalDelete() }"))
+        XCTAssertTrue(shelve.contains("Task { await runPendingMigration() }"))
+
+        let official = try Self.sourceSection(
+            startingAt: "private func runPendingOfficialDestructiveAction() async",
+            in: shelve
+        )
+        XCTAssertTrue(official.contains("guard !isBusy else { return }"))
+        let officialGuard = try XCTUnwrap(official.range(of: "guard !isBusy else { return }"))
+        let officialClear = try XCTUnwrap(official.range(of: "clearPendingOfficialDestructiveAction()"))
+        XCTAssertLessThan(officialGuard.lowerBound, officialClear.lowerBound)
+
+        let local = try Self.sourceSection(startingAt: "private func runPendingLocalDelete() async", in: shelve)
+        XCTAssertTrue(local.contains("guard !isBusy else { return }"))
+        XCTAssertTrue(local.contains("guard let snapshot = pendingLocalSnapshot else { return }"))
+        let localGuard = try XCTUnwrap(local.range(of: "guard !isBusy else { return }"))
+        let localClear = try XCTUnwrap(local.range(of: "pendingLocalSnapshot = nil"))
+        XCTAssertLessThan(localGuard.lowerBound, localClear.lowerBound)
+
+        let migration = try Self.sourceSection(startingAt: "private func runPendingMigration() async", in: shelve)
+        XCTAssertTrue(migration.contains("guard !isBusy else { return }"))
+        XCTAssertTrue(migration.contains("guard let snapshot = pendingMigrationSnapshot else { return }"))
+        let migrationGuard = try XCTUnwrap(migration.range(of: "guard !isBusy else { return }"))
+        let migrationClear = try XCTUnwrap(migration.range(of: "pendingMigrationSnapshot = nil"))
+        XCTAssertLessThan(migrationGuard.lowerBound, migrationClear.lowerBound)
+
+        let delete = try Self.sourceSection(startingAt: "private func deleteLocalSnapshot(_ snapshot: ShelveSnapshot) async", in: shelve)
+        XCTAssertTrue(delete.contains("guard !isBusy else { return }"))
+        let migrate = try Self.sourceSection(startingAt: "private func migrate(_ snapshot: ShelveSnapshot) async", in: shelve)
+        XCTAssertTrue(migrate.contains("guard !isBusy else { return }"))
     }
 
     private static func readFeatureSource(named fileName: String) throws -> String {
